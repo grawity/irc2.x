@@ -2570,6 +2570,9 @@ int	m_kill(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	char	*user, *path, *killer;
 	int	chasing = 0;
 
+	if (is_allowed(sptr, ACL_KILL))
+		return m_nopriv(cptr, sptr, parc, parv);
+
 	user = parv[1];
 	/* one day we'll require path, remember to change in msgtab[] --B. */
 	path = parv[2]; /* Either defined or NULL (parc >= 2!!) */
