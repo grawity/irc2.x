@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.117 2004/02/27 15:43:48 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.118 2004/03/07 02:47:51 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1915,7 +1915,7 @@ int	read_message(time_t delay, FdAry *fdp, int ro)
 #endif
 		for (i = fdp->highest; i >= 0; i--)
 		    {
-			if (!(cptr = local[fd = fdp->fd[i]]) || IsLog(cptr))
+			if (!(cptr = local[fd = fdp->fd[i]]))
 				continue;
 			Debug((DEBUG_L11, "fd %d cptr %#x %d %#x %s",
 				fd, cptr, cptr->status, cptr->flags,
