@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.3 1997/04/14 20:03:49 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.4 1997/04/21 00:33:11 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -1162,7 +1162,7 @@ int	doall;
 		sendto_one(cptr, reply,
 			   ME, ERR_YOUREBANNEDCREEP, cptr->name);
 	else if (tmp)
-		sendto_one(cptr, ":%s %d %s :*** %s", ME,
+		sendto_one(cptr, ":%s %d %s :%s", ME,
 			   ERR_YOUREBANNEDCREEP, cptr->name,
 			   BadPtr(tmp->passwd) ?
 			   "You are not welcome to this server" : tmp->passwd);
