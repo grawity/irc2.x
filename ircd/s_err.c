@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_err.c,v 1.27 2001/02/10 19:16:52 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_err.c,v 1.24.2.5 2001/02/10 19:11:06 q Exp $";
 #endif
 
 #include "os.h"
@@ -283,7 +283,7 @@ char *	replies[] = {
 /* 252 RPL_LUSEROP */	":%s 252 %s %d :operators online",
 /* 253 RPL_LUSERUNKNOWN */	":%s 253 %s %d :unknown connections",
 /* 254 RPL_LUSERCHANNELS */	":%s 254 %s %d :channels formed",
-/* 255 RPL_LUSERME */	":%s 255 %s :I have %d clients, %d services and %d servers",
+/* 255 RPL_LUSERME */	":%s 255 %s :I have %d users, %d services and %d servers",
 /* 256 RPL_ADMINME */	":%s 256 %s :Administrative info about %s",
 /* 257 RPL_ADMINLOC1 */	":%s 257 %s :%s",
 /* 258 RPL_ADMINLOC2 */	":%s 258 %s :%s",
@@ -467,7 +467,7 @@ char *	replies[] = {
 /* 429 */ (char *)NULL,
 /* 430 */ (char *)NULL,
 /* 431 ERR_NONICKNAMEGIVEN */	":%s 431 %s :No nickname given",
-/* 432 ERR_ERRONEUSNICKNAME */	":%s 432 %s %s :Erroneous Nickname",
+/* 432 ERR_ERRONEOUSNICKNAME */	":%s 432 %s %s :Erroneous Nickname",
 /* 433 ERR_NICKNAMEINUSE */	":%s 433 %s %s :Nickname is already in use.",
 /* 434 ERR_SERVICENAMEINUSE */	(char *)NULL,
 /* 435 ERR_SERVICECONFUSED */	(char *)NULL,
