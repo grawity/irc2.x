@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: a_io.c,v 1.19 1999/03/13 23:14:07 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: a_io.c,v 1.20 1999/06/27 18:26:19 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -189,7 +189,7 @@ AnInstance *last;
 	{
 	    int r;
 
-	    cldata[cl].timeout = time(NULL) + 15; /* hmmpf */
+	    cldata[cl].timeout = time(NULL) + cldata[cl].instance->timeout;
 	    r = cldata[cl].instance->mod->start(cl);
 	    DebugLog((ALOG_DIO, 0,
 		      "next_io(#%d, %x): %s->start() returned %d",
