@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.106 2003/11/03 21:30:42 jv Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.107 2004/01/02 15:52:27 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -635,6 +635,8 @@ static	void	setup_me(aClient *mp)
 	strncpyzt(mp->user->username, (p) ? p->pw_name : "unknown",
 		  sizeof(mp->user->username));
 	(void) strcpy(mp->user->host, mp->name);
+	SetEOB(mp);
+	istat.is_eobservers = 1;
 
 	(void)add_to_client_hash_table(mp->name, mp);
 	(void)add_to_sid_hash_table(mp->serv->sid, mp);
