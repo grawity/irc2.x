@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.131 2004/07/16 22:25:56 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.132 2004/08/10 03:07:53 jv Exp $";
 #endif
 
 #include "os.h"
@@ -1189,6 +1189,7 @@ int	rehash(aClient *cptr, aClient *sptr, int sig)
 #endif
 	(void) initconf(0);
 	close_listeners();
+	reopen_listeners();
 
 	/*
 	 * Flush *unused* config entries.
