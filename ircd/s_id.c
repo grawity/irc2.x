@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_id.c,v 1.21 2002/10/09 21:23:20 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_id.c,v 1.22 2003/07/24 19:17:05 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -102,7 +102,7 @@ long idtol(char *id, int n)
 
 	while (n-- && *id)
 	{
-		l = l * CHIDNB + alphabet_id[*id++];
+		l = l * CHIDNB + alphabet_id[(unsigned char )*id++];
 	}
 
 	return l;
@@ -130,7 +130,7 @@ char *id;
 	    curid = get_chid();
 	    current = curid[0];
 	}
-    if (id_alphabet[1 + alphabet_id[current]] == id[1])
+    if (id_alphabet[1 + alphabet_id[(unsigned char)current]] == id[1])
 	    return 1;
     if (id[0] == current &&
 	idtol(id, CHIDLEN) >= (timeofday % (u_int) pow(CHIDNB, CHIDLEN)))
