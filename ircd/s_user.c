@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.128 2002/06/01 22:11:03 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.129 2002/06/02 00:47:50 jv Exp $";
 #endif
 
 #include "os.h"
@@ -509,7 +509,7 @@ char	*nick, *username;
 			{ EXITC_LHMAX, "Too many host connections (local)" },
 			{ EXITC_YLINEMAX, "Too many connections" },
 			{ EXITC_NOILINE, "Unauthorized connection" },
-			{ EXITC_UNDEF, "Connect failure" } };
+			{ EXITC_FAILURE, "Connect failure" } };
 
 			i += 7;
 			if (i < 0 || i > 6) /* in case.. */
