@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.61 2003/02/11 18:44:20 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.62 2003/10/02 22:42:58 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1687,8 +1687,7 @@ char	**comment;
 					continue;
 		
 		/* user & port matching */
-		if ((!check || match(tmp->name,
-			(*check == '+' ? check+1, check)) == 0) &&
+		if ((!check || match(tmp->name, check) == 0) &&
 		    (!tmp->port || (tmp->port == cptr->acpt->port)))   
 		    {
 #ifdef TIMEDKLINES
