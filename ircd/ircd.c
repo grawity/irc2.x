@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.152 2004/11/14 14:45:02 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.153 2004/11/16 16:56:16 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -492,7 +492,7 @@ static	time_t	check_pings(time_t currenttime)
 	aClient *bysptr = NULL;
 	int	ping = 0, i;
 	time_t	oldest = 0, timeout;
-	char	*reason;
+	char	*reason = NULL;
 
 	for (i = highest_fd; i >= 0; i--)
 	    {
