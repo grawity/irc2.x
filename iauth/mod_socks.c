@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: mod_socks.c,v 1.6 1999/01/13 02:14:36 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: mod_socks.c,v 1.7 1999/01/14 01:20:41 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -242,6 +242,7 @@ AnInstance *self;
 {
 	struct sock_private *mydata = self->data;
 	free(mydata);
+	free(self->popt);
 }
 
 /*
