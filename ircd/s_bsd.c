@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.110 2003/12/09 23:09:14 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.111 2003/12/09 23:12:19 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -107,8 +107,7 @@ void	add_local_domain(char *hname, size_t size)
 			ircd_res_init();
 		    }
 		if (ircd_res.defdname[0] &&
-			sizeof(hname) - 2 /* dot and ending \0 */ >= 
-			strlen(ircd_res.defdname) + strlen(hname))
+			strlen(ircd_res.defdname) + 2 <= size)
 		    {
 			(void)strncat(hname, ".", size-1);
 			(void)strncat(hname, ircd_res.defdname, size-2);
