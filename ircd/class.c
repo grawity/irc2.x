@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: class.c,v 1.12 2004/05/12 16:34:50 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: class.c,v 1.13 2004/06/21 18:10:27 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -70,8 +70,8 @@ int	get_client_class(aClient *acptr)
 			if (!tmp->value.aconf ||
 			    !(cl = tmp->value.aconf->class))
 				continue;
-			if (Class(cl) > retc)
-				retc = Class(cl);
+			retc = Class(cl);
+			break;
 		    }
 
 	Debug((DEBUG_DEBUG,"Returning Class %d For %s",retc,acptr->name));
