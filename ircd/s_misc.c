@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.80 2004/03/20 23:54:00 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.81 2004/03/21 00:39:49 jv Exp $";
 #endif
 
 #include "os.h"
@@ -1168,6 +1168,7 @@ void	check_split(void)
 			if (!firstrejoindone)
 			{
 				firstrejoindone = 1;
+				activate_delayed_listeners();
 			}
 		}
 	}
