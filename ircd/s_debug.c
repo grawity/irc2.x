@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.11 1997/09/03 17:45:59 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.12 1997/10/01 17:43:59 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -311,8 +311,8 @@ char	*nick;
 {
 #ifdef HUB
     	sendto_one(cptr, 
-	   ":%s %d %s :HUB:%d LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
-		   ME, RPL_STATSDEFINE, nick, HUB, LISTENQUEUE, 
+   ":%s %d %s :HUB:%d MS:%d LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
+		   ME, RPL_STATSDEFINE, nick, HUB, MAXSERVERS, LISTENQUEUE, 
 		   MAXCONNECTIONS, TIMESEC, HANGONRETRYDELAY, HANGONGOODLINK,
 		   WRITEWAITDELAY, CONNECTTIMEOUT);
 #else
