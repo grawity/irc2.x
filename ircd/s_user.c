@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.127 2002/05/23 12:39:36 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.128 2002/06/01 22:11:03 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -692,6 +692,7 @@ char	*nick, *username;
 		send_umode(NULL, sptr, 0, ALL_UMODES, buf);
 	check_services_num(sptr, buf);
 #endif
+	add_to_hostname_hash_table(user->host, user);
 	return 1;
     }
 
