@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.107 2004/01/02 15:52:27 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.108 2004/02/09 03:26:58 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -673,7 +673,6 @@ int	main(int argc, char *argv[])
 {
 	uid_t	uid, euid;
 
-	(void) myctime(time(NULL));	/* Don't ask, just *don't* ask */
 	sbrk0 = (char *)sbrk((size_t)0);
 	uid = getuid();
 	euid = geteuid();
