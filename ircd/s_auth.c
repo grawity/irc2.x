@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.28 1999/03/07 23:01:13 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.29 1999/03/07 23:46:55 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -311,8 +311,11 @@ read_iauth()
 			    cptr->flags |= FLAGS_GOTID;
 			}
 		    else if (start[0] == 'D')
+		      {
 			    /*authentication finished*/
 			    ClearXAuth(cptr);
+			    SetDoneXAuth(cptr);
+		      }
 		    else
 			{
 			    /*
