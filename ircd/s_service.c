@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.5 1997/05/28 13:38:14 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.6 1997/05/30 19:07:00 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -574,7 +574,7 @@ char	*parv[];
 				sendto_one(sptr,":%s SERVER %s %d %s :[%s] %s",
 					   acptr->serv->up, acptr->name,
 					   acptr->hopcount+1,
-					   acptr->user->servp->tok,
+					   acptr->serv->tok,
 					   acptr->sockhost, acptr->info);
 			else
 				sendto_one(sptr, ":%s SERVER %s %d %s :%s",
