@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.165 2003/11/13 21:55:54 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.166 2004/02/08 01:57:00 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -808,8 +808,9 @@ badparamcountkills:
 			user = parv[3];
 			host = parv[4];
 		}
-		else /* :old NICK new */
+		else /* parc == 2 */
 		{
+			/* :old NICK new */
 			user = sptr->user->username;
 			host = sptr->user->host;
 		}
