@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.43 2004/06/24 17:34:25 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.44 2004/08/31 13:33:07 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -70,7 +70,7 @@ char	serveropts[] = {
 'J',
 #endif
 #ifdef	OPER_KILL
-# ifdef  LOCAL_KILL_ONLY
+# ifndef  OPER_KILL_REMOTE
 'k',
 # else
 'K',
