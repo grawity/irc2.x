@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.123 2002/05/19 00:54:59 chopin Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.124 2002/06/02 00:27:21 q Exp $";
 #endif
 
 #include "os.h"
@@ -2511,7 +2511,7 @@ char	*parv[];
 		}
 
 		/* For 2.11 servers. */
-		target = HasUID(acptr) ? acptr->name : acptr->user->uid;
+		target = HasUID(acptr) ? acptr->user->uid : acptr->name;
 		while (*target)
 		{
 			*u++ = *target++;
