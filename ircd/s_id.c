@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_id.c,v 1.7 1999/07/04 21:10:27 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_id.c,v 1.8 1999/07/25 19:53:00 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -202,7 +202,7 @@ char *name;
 		    return 0;
 	    l += 1;
 	}
-    if (l == CHIDLEN+1)
+    if (l != CHIDLEN+1)
 	    return 0;
     return 1;
 }
