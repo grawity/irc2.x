@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.39 2002/10/09 21:23:20 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.40 2002/11/22 21:19:26 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -460,7 +460,7 @@ char	*parv[];
 		if (match(dist, acptr->name))
 			continue;
 		mlname = my_name_for_link(ME, acptr->serv->nline->port);
-		if (!ST_UID(acptr) && *mlname == '*' &&
+		if (ST_NOTUID(acptr) && *mlname == '*' &&
 			match(mlname, sptr->service->server)== 0)
 			stok = me.serv->tok;
 		else
