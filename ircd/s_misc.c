@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.78 2004/03/18 00:31:51 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.79 2004/03/18 00:54:46 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1165,6 +1165,10 @@ void	check_split(void)
 			sendto_flag(SCH_NOTICE,
 				"Network rejoined, split mode deactivated");
 			iconf.split = 0;
+			if (!firstrejoin)
+			{
+				firstrejoin = 1;
+			}
 		}
 	}
 }
