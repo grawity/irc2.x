@@ -885,7 +885,7 @@ int	main(int argc, char *argv[])
 		    }
 	    }
 
-	if (strlen(tunefile) > 255)
+	if (strlen(tunefile) > 1023 || strlen(mybasename(tunefile)) > 42)
 	{
 		fprintf(stderr, "Too long tune filename\n");
 		exit(-1);
