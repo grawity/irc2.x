@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.114 2001/12/21 20:10:27 q Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.115 2001/12/21 23:53:14 q Exp $";
 #endif
 
 #include "os.h"
@@ -1069,7 +1069,8 @@ char	*parv[];
 			 * to make sure the right client is affected by the
 			 * mode change.
 			 */
-			if (!(who = find_uid(parv[0], NULL)) &&
+			if (!(IsServer(cptr) &&
+				(who = find_uid(parv[0], NULL))) &&
 				!(who = find_chasing(sptr, parv[0], &chasing)))
 				break;
 	  		if (!IsMember(who, chptr))
