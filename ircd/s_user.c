@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.184 2004/02/29 22:30:57 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.185 2004/03/01 01:22:43 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -557,9 +557,24 @@ int	register_user(aClient *cptr, aClient *sptr, char *nick, char *username)
 
 		aconf = sptr->confs->value.aconf;
 		if (IsUnixSocket(sptr))
+		{
 			strncpyzt(user->host, me.sockhost, HOSTLEN+1);
+		}
 		else
-			strncpyzt(user->host, sptr->sockhost, HOSTLEN+1);
+		{
+			if (IsConfNoResolveMatch(aconf))
+			{
+				/* sockhost contains resolved hostname (if any),
+				 * which we'll use in match_modeid to match. */
+				strncpyzt(user->host, user->sip,
+					HOSTLEN+1);
+			}
+			else
+			{
+				strncpyzt(user->host, sptr->sockhost,
+					HOSTLEN+1);
+			}
+		}
 
 		/* hmpf, why that? --B. */
 		bzero(sptr->passwd, sizeof(sptr->passwd));
