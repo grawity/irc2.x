@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: class.c,v 1.10 2003/10/18 15:31:24 q Exp $";
+static  char rcsid[] = "@(#)$Id: class.c,v 1.11 2004/03/06 20:52:37 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -217,11 +217,13 @@ void	report_classes(aClient *sptr, char *to)
 	Reg	aClass	*cltmp;
 
 	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
+	{
 		sendto_one(sptr, replies[RPL_STATSYLINE], ME, BadTo(to), 'Y',
-			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
-			   MaxLinks(cltmp), MaxSendq(cltmp),
-			   MaxHLocal(cltmp), MaxUHLocal(cltmp),
-			   MaxHGlobal(cltmp), MaxUHGlobal(cltmp));
+			Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
+			MaxLinks(cltmp), MaxSendq(cltmp),
+			MaxHLocal(cltmp), MaxUHLocal(cltmp),
+			MaxHGlobal(cltmp), MaxUHGlobal(cltmp), Links(cltmp));
+	}
 }
 
 int	get_sendq(aClient *cptr)
