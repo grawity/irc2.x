@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.44 1999/02/21 00:33:45 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.45 1999/03/05 02:05:07 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -415,8 +415,10 @@ time_t	currenttime;
 					cptr->count = 0;
 					*cptr->buffer = '\0';
 				    }
-				Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
-					get_client_name(cptr,TRUE)));
+				Debug((DEBUG_NOTICE, "%s/%s timeout %s",
+				       (DoingDNS(cptr)) ? "DNS" : "dns",
+				       (DoingXAuth(cptr)) ? "AUTH" : "auth",
+				       get_client_name(cptr,TRUE)));
 				del_queries((char *)cptr);
 				ClearAuth(cptr);
 #if defined(USE_IAUTH)
