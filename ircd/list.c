@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: list.c,v 1.27 2003/10/18 15:31:24 q Exp $";
+static  char rcsid[] = "@(#)$Id: list.c,v 1.28 2003/10/18 16:26:39 q Exp $";
 #endif
 
 #include "os.h"
@@ -601,6 +601,7 @@ aConfItem	*make_conf()
 	aconf->pref = -1;
 	aconf->hold = time(NULL);
 	aconf->source_ip = NULL;
+	aconf->flags = 0L;
 	Class(aconf) = NULL;
 	return (aconf);
 }
