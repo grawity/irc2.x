@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.60 1998/12/12 23:48:17 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.61 1998/12/13 00:02:37 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1238,7 +1238,9 @@ int	parc, notice;
 				continue;
 			    }
 		    }
-		sendto_one(sptr, err_str(ERR_NOSUCHNICK, parv[0]), nick);
+		if (!notice)
+			sendto_one(sptr, err_str(ERR_NOSUCHNICK, parv[0]),
+				   nick);
 	    }
     return penalty;
 }
