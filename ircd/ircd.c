@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.33 1998/09/21 14:00:07 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.34 1998/09/24 14:41:54 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1049,7 +1049,7 @@ time_t	delay;
 	    }
 	if (restart_iauth)
 	    {
-		start_iauth();
+		start_iauth(1);
 		restart_iauth = 0;
 	    }
 	/*
