@@ -2959,6 +2959,9 @@ int	m_close(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	Reg	int	i;
 	int	closed = 0;
 
+	if (is_allowed(sptr, ACL_CLOSE))
+		return m_nopriv(cptr, sptr, parc, parv);
+
 	for (i = highest_fd; i; i--)
 	    {
 		if (!(acptr = local[i]))
