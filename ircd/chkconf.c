@@ -18,11 +18,11 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.5 1997/11/13 02:02:07 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.6 1998/05/12 16:55:47 kalt Exp $";
 #endif
 
 #include "os.h"
-#include "s_defines.h"
+/* #include "s_defines.h" */
 #define CHKCONF_C
 #include "match_ext.h"
 #undef CHKCONF_C
