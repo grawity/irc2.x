@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.40 2004/03/07 03:02:14 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.41 2004/03/10 15:28:27 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -65,9 +65,6 @@ char	serveropts[] = {
 #endif
 #ifdef	BETTER_CDELAY
 'h',
-#endif
-#ifdef	SHOW_INVISIBLE_LUSERS
-'i',
 #endif
 #ifndef	NO_DEFAULT_INVISIBLE
 'I',
