@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: list.c,v 1.28 2003/10/18 16:26:39 q Exp $";
+static  char rcsid[] = "@(#)$Id: list.c,v 1.29 2004/03/05 16:07:53 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -225,29 +225,6 @@ aServer	*make_server(aClient *cptr)
 
 	if (!serv)
 	    {
-		serv = (aServer *)MyMalloc(sizeof(aServer));
-		memset(serv, 0, sizeof(aServer));
-#ifdef	DEBUGMODE
-		servs.inuse++;
-#endif
-		cptr->serv = serv;
-		serv->user = NULL;
-		serv->snum = -1;
-		*serv->by = '\0';
-		*serv->tok = '\0';
-		serv->stok = 0;
-		serv->up = NULL;
-		serv->refcnt = 1;
-		serv->nexts = NULL;
-		serv->prevs = NULL;
-
-		if (svrtop)
-		{
-			svrtop->prevs = serv;
-			serv->nexts = svrtop;
-		}
-		svrtop = serv;
-
 		/* 
 		** me is number 1 and is first added.
 		** There is a max of MAX210SERVERS.
@@ -265,6 +242,27 @@ aServer	*make_server(aClient *cptr)
 			return NULL;
 		}
 
+		serv = (aServer *)MyMalloc(sizeof(aServer));
+		memset(serv, 0, sizeof(aServer));
+#ifdef	DEBUGMODE
+		servs.inuse++;
+#endif
+		cptr->serv = serv;
+		serv->user = NULL;
+		serv->snum = -1;
+		*serv->by = '\0';
+		*serv->tok = '\0';
+		serv->stok = 0;
+		serv->up = NULL;
+		serv->refcnt = 1;
+		serv->nexts = NULL;
+		serv->prevs = NULL;
+		if (svrtop)
+		{
+			svrtop->prevs = serv;
+			serv->nexts = svrtop;
+		}
+		svrtop = serv;
 		SetBit(tok);
 		serv->ltok = tok;
 		sprintf(serv->tok, "%d", serv->ltok);
