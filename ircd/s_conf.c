@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.63 2003/10/02 23:00:57 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.64 2003/10/13 21:48:53 q Exp $";
 #endif
 
 #include "os.h"
@@ -930,7 +930,7 @@ int	sig;
 			** that it will be deleted when the last client
 			** exits...
 			*/
-			if (!(tmp2->status & (CONF_LISTEN_PORT|CONF_CLIENT)))
+			if (!(tmp2->status & (CONF_LISTEN_PORT|CONF_CLIENT|CONF_RCLIENT)))
 			    {
 				*tmp = tmp2->next;
 				tmp2->next = NULL;
