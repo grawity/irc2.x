@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: parse.c,v 1.18 1998/08/02 18:32:59 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.19 1998/08/05 01:40:37 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -608,13 +608,13 @@ char	*buffer, *bufend;
 				break;
 			    }
 			para[++i] = s;
-			if (i >= paramcount)
+			if (i >= paramcount-1)
 				break;
 			for (; *s != ' ' && *s; s++)
 				;
 		    }
 	    }
-	para[++i] = NULL;
+	para[++i] = NULL; /* at worst, ++i is paramcount (MAXPARA) */
 	if (mptr == NULL)
 		return (do_numeric(numeric, cptr, from, i, para));
 	mptr->count++;
