@@ -2463,26 +2463,14 @@ char	*parv[];
 
 		for (; (user = strtoken(&p2, parv[2], ",")); parv[2] = NULL)
 		    {
-			Link	*lp;
-			
 			penalty++;
 			if (!(who = find_chasing(sptr, user, &chasing)))
 				continue; /* No such user left! */
 			if (nlen + mlen + strlen(who->name) >
 			    (size_t) BUFSIZE - NICKLEN)
 				continue;
-			lp = find_user_link(chptr->members, who);
-
-			if (lp) /*IsMember(who, chptr)*/
+			if (IsMember(who, chptr))
 			    {
-			    	/* yes, !channels are owned >;-> -Kasi */
-			    	if (lp->flags & CHFL_UNIQOP)
-			    	    {
-			                sendto_one(sptr,
-			    		    err_str(ERR_CHANOPRIVSNEEDED,
-						    parv[0]), chptr->chname);
-					continue;
-				    }
 				sendto_channel_butserv(chptr, sptr,
 						":%s KICK %s %s :%s", parv[0],
 						name, who->name, comment);
