@@ -18,21 +18,13 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: match.c,v 1.11 2003/10/18 15:31:28 q Exp $";
+static  char rcsid[] = "@(#)$Id: match.c,v 1.12 2004/06/02 13:59:36 chopin Exp $";
 #endif
 
 #include "os.h"
-#ifndef CLIENT_COMPILE
-# include "s_defines.h"
-#else
-# include "c_defines.h"
-#endif
+#include "s_defines.h"
 #define MATCH_C
-#ifndef CLIENT_COMPILE
-# include "s_externs.h"
-#else
-# include "c_externs.h"
-#endif
+#include "s_externs.h"
 #undef MATCH_C
 
 unsigned char tolowertab[] =
