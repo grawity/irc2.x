@@ -1,0 +1,3 @@
+Usage: OPER <nickname> <password>
+  Gives you operator priviledges if the correct nickname and password
+  are given

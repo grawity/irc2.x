@@ -1,0 +1,148 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, irc/help.h
+ *   Copyright (C) 1990 Jarkko Oikarinen and
+ *                      University of Oulu, Computing Center
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+struct Help {
+  char *command, *syntax, *explanation[5];
+};
+
+#define NULL ((char *) 0)
+
+struct Help helplist[] = {
+  { "ADMIN", "/ADMIN <server>",
+    "Prints administrative information about an IRC server.",
+    "<server> defaults to your own IRC server.", "", "", "" },
+  { "AWAY", "/AWAY <message>",
+    "<Mark yourself as being away. <message> is a message that will be",
+    "automatically sent to anyone who tries sending you a private message.",
+    "If you are already marked as being away, /AWAY will change your status",
+     "back to \"here.\"", "" },
+  { "BYE", "/BYE",
+    "Exit from IRC. /BYE, /EXIT, /QUIT and /SIGNOFF are identical.",
+    "", "", "", "" },
+  { "CHANNEL", "/CHANNEL <channel>",
+    "Leave the current channel and join a new one. Channels above 999",
+    "are private channels; their numbers are not listed by /WHO. Negative",
+    "numbered channels are secret; they do not appear in /WHO at all.",
+    "/JOIN and /CHANNEL are identical.", "" },
+  { "CLEAR", "/CLEAR", "Clear your screen.", "", "", "", "" },
+  { "CMDCH", "/CMDCH <x>",
+    "Changes your command prefix character to <x>. This is useful if you",
+    "often start lines with slashes. For example, after typing \"/cmdch #\"",
+    "your commands would look like #who or #links.", "", "" },
+  { "DATE", "/DATE <server>",
+    "Prints the date and time local to a specific server. <server> defaults",
+    "to your own IRC server. /DATE and /TIME are identical.", "", "", "" },
+  { "EXIT", "/EXIT",
+    "Exit from IRC. /BYE, /EXIT, /QUIT and /SIGNOFF are identical.",
+    "", "", "", "" },
+  { "HELP", "/HELP <command>",
+    "/HELP without parameters lists all IRC commands.",
+    "/HELP followed by a command name prints a description of that command.",
+    "", "", "" },
+  { "IGNORE", "/IGNORE <+|-><nicknames>",
+    "Allows you to automatically ignore messages from certain users. If",
+    "+ is specified before <nicknames>, only public messages are ignored.",
+    "Similarly, - ignores only private messages. If neither symbol is given",
+    "all messages are ignored. /IGNORE without parameters prints the current",
+    "list of ignored users." },
+  { "INFO", "/INFO", "Prints some information about IRC.", "", "", "", "" },
+  { "INVITE", "/INVITE <nickname>",
+    "Invites a user to join your channel. The user must be currently using",
+    "IRC.", "", "", "" },
+  { "JOIN", "/JOIN <channel>",
+    "Leave the current channel and join a new one. Channels above 999",
+    "are private channels; their numbers are not listed by /WHO. Negative",
+    "numbered channels are secret; they do not appear in /WHO at all.", 
+    "/JOIN and /CHANNEL are identical.", "" },
+  { "LINKS", "/LINKS [<pattern>]", "Lists all active IRC servers.", 
+    "If <pattern> is given, list all active irc links matching <pattern>",
+    "For example, /links *.fi lists all links in Finland", "", "" },
+  { "LIST", "/LIST",
+    "Lists all active channels and, if set, their topics.", "", "", "", "" },
+  { "LUSERS", "/LUSERS",
+    "Show the number of people and servers connected to the IRC network.",
+    "", "", "", "" },
+  { "LOG", "/LOG <filename>",
+    "Sends a copy of your IRC session to a file.",
+    "/LOG followed by a filename begins logging in the given file.",
+    "/LOG with no parameters turns logging off.", "", "" },
+  { "MSG", "/MSG <nicknames> <message>",
+    "Send a private message. <nicknames> should be one or more nicknames or",
+    "channel numbers separated by commas (no spaces). If <nicknames> is \",\"",
+    "your message is sent to the last person who sent you a private message.",
+    "If <nicknames> is \".\" it's sent to the last personyou sent one to.",
+    "Messages sent to , or . can (currently) contain no other recipients." },
+  { "MOTD", "/MOTD <server>",
+    "Query for message-of-today in given server. If <server> parameter is",
+    "left out, query local server", "", "", "" },
+  { "NAMES", "/NAMES <channel>",
+    "/NAMES without a parameter lists the nicknames of users on all channels.",
+    "/NAMES followed by a channel number lists the names on that channel.",
+    "", "", "" },
+  { "NICK", "/NICK <nickname>",
+    "Change your nickname. You cannot choose a nickname that is already in",
+    "use. Additionally, some characters cannot be used in nicknames.",
+    "", "", "" },
+  { "QUERY", "/QUERY <nicknames>",
+    "Begin private chat with <nicknames>. All subsequent messages you type",
+    "will be automatically sent only to <nicknames>. /QUERY without",
+    "parameters ends any current chat. You can send a normal message to your",
+    "channel by prefixing it with a slash and a space, like \"/ hi\".", "" },
+  { "QUIT", "/QUIT",
+    "Exit from IRC. /BYE, /EXIT, /QUIT and /SIGNOFF are identical.",
+    "", "", "", "" },
+  { "SERVER", "/SERVER <server>",
+    "Disconnects from currect server and connects your client into a new",
+    "server specified in command line", "", "", "" },
+  { "SIGNOFF", "/SIGNOFF",
+    "Exit from IRC. /BYE, /EXIT, /QUIT and /SIGNOFF are identical.",
+    "", "", "", "" },
+  { "STATS", "/STATS",
+    "Shows various IRC server statistics. This command is rather boring",
+    "", "", "", "" },
+  { "SUMMON", "/SUMMON <user>",
+    "Ask a user to enter IRC. <user> is of the form guest@tolsun.oulu.fi.",
+    "You can only summon users on machines where an IRC server is running.",
+    "Some servers may have disabled the /SUMMON command.", "", "" },
+  { "TIME", "/TIME <server>",
+    "Prints the date and time local to a specific server. <server> defaults",
+    "to your own IRC server. /DATE and /TIME are identical.", "", "", "" },
+  { "TOPIC", "/TOPIC <topic>",
+    "Sets the topic for the channel you're on.", "", "", "", "" },
+  { "UNKILL", "/UNKILL",
+    "Orders to irc reconnect to server if you happen to become killed",
+    "accidentally or in purpose", "", "", "" },
+  { "USERS", "/USERS <host>",
+    "List all users logged in to a host. The host must be running an IRC",
+    "server. Finger(1) usually works better.", "", "", "" },
+  { "VERSION", "/VERSION <server>",
+    "Prints the version number of an IRC server. <server> defaults to your",
+    "own IRC server.", "", "", "" },
+  { "WHO", "/WHO <channel>",
+    "/WHO without parameters lists users on all channels.",
+    "/WHO followed by a channel number lists users on that channel.",
+    "/WHO * lists users that are on the same channel as you.",
+    "You cannot see users that are on negative-numbered channels.", "" },
+  { "WHOIS", "/WHOIS <nicknames>",
+    "/WHOIS prints information about a particular user, including his or",
+    "her name, host name and IRC server. <nicknames> should be one of more",
+    "nicknames separated by commas.", "", "" },
+  { NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+};

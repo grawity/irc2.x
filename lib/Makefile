@@ -1,37 +1,88 @@
-# Makefile for IRC 2.0.1v6
+#!/bin/make -f
+#************************************************************************
+#*   IRC - Internet Relay Chat, lib/Makefile
+#*   Copyright (C) 1990 Casie Ashley Dyerman
+#*
+#*   This program is free software; you can redistribute it and/or modify
+#*   it under the terms of the GNU General Public License as published by
+#*   the Free Software Foundation; either version 1, or (at your option)
+#*   any later version.
+#*
+#*   This program is distributed in the hope that it will be useful,
+#*   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#*   GNU General Public License for more details.
+#*
+#*   You should have received a copy of the GNU General Public License
+#*   along with this program; if not, write to the Free Software
+#*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#*/
+# $Header: Makefile,v 2.3 90/04/06 00:26:52 casie Exp $
+# Makefile for the lib-level of the source tree
+#
+# $Log:	Makefile,v $
+# 
+# Revision 2.3  90/04/06  00:26:52  casie
+#  alpha release
 # 
 
+SYS=bsd
 
-# Object files shared with the server and client
-LIBOBJS= parse.o send.o debug.o sys.o packet.o version.o
+CC = cc 
 
-SYS	 =bsd
-INC	 =.
+MAKE=make
+MK=${MAKE} -${MAKEFLAGS} CFLAGS=${CFLAGS} CC=${CC} SYS=${SYS}
 
-CFLAGS   = -g -I$(INC)
-CC 	 = cc 
+GET=co
+CLEAN=rcsclean 
+ 
+SRC=Makefile ChangeLog
 
-all:  $(LIBOBJS)
+SUB_DIRS=ircd
+# SUB_DIRS=misc server 
 
 
+# Standard targets
+
+all:	build_libs
+ 
+build_libs:
+	@for i in ${SUB_DIRS}; do \
+		echo "Building targets under ${SRC_PREFIX}$$i ..."; \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/); \
+	 done	# $(MAKE)
+ 
+sources: ${SRC}
+	@for i in ${SUB_DIRS} ${MORE_DIRS}; do \
+		echo "Get sources under ${SRC_PREFIX}$$i ..."; \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/ sources); \
+	 done	# $(MAKE)
+ 
+${SRC}:
+	${GET} $@
+ 
+names:
+	@for i in ${SRC}; do echo ${SRC_PREFIX}$$i; done
+	@for i in ${SUB_DIRS} ${MORE_DIRS}; do \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/ names); \
+	 done	# $(MAKE)
+ 
 clean:
-	-@rm *.o *~ TAGS
-
-
-### Dependencies
-
-parse.o : parse.c msg.h struct.h sys.h numeric.h  config.h
-
-send.o : send.c struct.h  config.h
-
-debug.o : debug.c struct.h  config.h
-
-sys.o : sys.c struct.h  config.h
-
-version.o: version.c struct.h
-
-sys.c : $(SYS).c
-	cp $(SYS).c sys.c
-
-sys.h : $(SYS).h
-	cp $(SYS).h sys.h
+	@for i in ${SUB_DIRS}; do \
+		echo "Cleaning under ${SRC_PREFIX}$$i ..."; \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/ clean); \
+	 done	# $(clean)
+ 
+clobber:
+	@for i in ${SUB_DIRS} ${MORE_DIRS}; do \
+		echo "Clobbering under ${SRC_PREFIX}$$i ..."; \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/ clobber); \
+	 done	# $(clobber)
+ 
+nuke:
+	-${CLEAN} ${SRC}
+	-${GET} Makefile
+	@for i in ${SUB_DIRS} ${MORE_DIRS}; do \
+		echo "Nuking under ${SRC_PREFIX}$$i ..."; \
+		(cd $$i; ${MK} SRC_PREFIX=${SRC_PREFIX}$$i/ nuke); \
+	 done	# $(nuke)

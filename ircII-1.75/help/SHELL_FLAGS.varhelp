@@ -1,0 +1,2 @@
+Usage: SET SHELL_FLAGS <flags>
+  Sets any additional flags that the shell (set with SET SHELL) might need.

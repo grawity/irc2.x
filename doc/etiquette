@@ -1,3 +1,22 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/etiquette
+ *   Copyright (C) 1990, Lea Viljanen and Ari Husa
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 HOW TO BEHAVE ON IRC
 
 Authors:      Lea Viljanen (LadyBug)  viljanen@kreeta.helsinki.fi
@@ -64,5 +83,3 @@ read the following, do not ask it on IRC:
 
    Remember, people on IRC form their opinions about you only by 
 your actions, writings and comments on IRC. So think before you type.
-
-

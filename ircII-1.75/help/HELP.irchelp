@@ -1,0 +1,6 @@
+Usage: HELP [command]
+  Shows help on the given command.  If no command is specified,
+  the list of available commands is displayed.  If an ambiguous
+  portion of a command is entered, all matching commands will be
+  displayed.  Help on commands may also be received by typing a
+  question mark on a command line.

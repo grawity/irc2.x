@@ -1,0 +1,2 @@
+Usage: WALL <text of message>
+  Sends a message to all users on irc.  This is an operator command.

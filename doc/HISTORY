@@ -1,6 +1,23 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/HISTORY
+ *   Copyright (C) 1990
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 HISTORY of Recent IRC Versions.
-
 
 Previous version numbering schemes have caused some confusion, which this
 document attempts to resolve.
@@ -17,13 +34,15 @@ and with modified documentation.  From now on, the version number will
 stay relatively constant.  As minor changes and bug fixes are added, they
 will be distributed in the form of context diffs, to be applied with the
 'patch' command.  Each bugfix will bump the patchlevel (PL) of the release
-by 1.  The PL is documented in the version.c file in the lib directory.
+by 1.  The PL is documented in the version.c file in the lib/misc directory.
+
+Version 2.3 was unfortunate mistake containing copyright violations
+so it was soon taken off distribution.
+
+Version 2.4 contains *very* many bug fixes, enhancements, and "hooks" for
+use in future releases. The source tree has been restructured, and the
+Makefiles rewritten to be recursive and follow the new source tree layout.
 
 Hopefully, whoever provides a fix will also update the respective
 ChangeLogs to summarize the changes, as well as adding a description of
 the bug to the BugList file.
-
-
-
-
-

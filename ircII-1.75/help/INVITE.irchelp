@@ -1,0 +1,3 @@
+Usage: INVITE <nickname> [channel no.]
+  Invites another user to a channel.  If no channel is specifed,
+  your current channel is used.

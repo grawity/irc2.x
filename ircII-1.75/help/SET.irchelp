@@ -1,0 +1,7 @@
+Usage: SET [variable name] [value]
+  Sets a specified variable to a given value.  If SET is used with
+  no parameters, all variables and their current settings are listed.
+  If SET is used with a variable name and no value, that variables
+  current setting is listed.  You can do:
+    HELP SET <variable name>
+  to get help on individual variables.

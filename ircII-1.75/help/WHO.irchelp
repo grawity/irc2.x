@@ -1,0 +1,19 @@
+Usage: WHO [-switch [arg]] [channel no.]|[nickname]
+  Gives a listing of the users on irc.  If no channel is given, all
+  users on non-invisible channels are shown.  If a channel is
+  specified, only the users on that channel are shown.  If the
+  channel number is \"*\" (an asterisk), the users on the current
+  channel are shown.  If a nickname is specifed, only users with
+  matching nicknames are shown.  Wildcards (*) may be used in nicknames.
+  The following switches are also recognized:
+    -OPERATORS            - lists only operators
+    -NAME <username>      - lists only people with matching user-ids
+    -HOST <hostname>      - lists only people on the matching host(s)
+    -SERVER <servername>  - lists only people on the matching server(s)
+    -ALL <expression>     - matches the expression with any information
+                            that WHO returns
+  The switches may be abbreviated unambiguously.  All matching of
+  usernames, hostnames, and servernames may contain wildcards (*).
+  Remember, the exception to the wildcard matching is a single 
+  asterisk, which will match the current channel rather than every
+  nickname.  This is a remnant of the olden days.

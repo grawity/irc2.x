@@ -1,0 +1,3 @@
+Usage: SET LOG [ON|OFF|TOGGLE]
+  Turns the session log ON or OFF.  While ON, a record of your IRC session
+  is recorded to file (see HELP SET LOGFILE).  When OFF, no log is made.

@@ -1,0 +1,3 @@
+Usage: HISTORY [number]
+  Displays the command history to the screen.  If number is given, 
+  it will only show that many history entries.

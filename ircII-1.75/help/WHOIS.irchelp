@@ -1,0 +1,6 @@
+Usage: WHOIS <nickname>
+  Shows more detailed information about the nickname specified.  This
+  info includes the users name, host, server, "real" name, and away 
+  status.  If no one is currently using <nickname>, the last person
+  to use it will be shown (see /WHOWAS).
+

@@ -1,3 +1,21 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/INSTALL
+ *   Copyright (C) 1990, Jeff Trim, Mike Bolotski
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
             Installing IRC - The Internet Relay Chat Program
 
@@ -36,7 +54,15 @@ Overview of this document:
       This path is usually /usr/local/lib/irc.conf. The format of this file 
       will be discussed later.
 
-   f) The PORTNUM #define sets the alters the Internet socket port for IRC.  
+   f) The LOGFILE #define should be set to "/dev/null" unless you plan to 
+      debug the program.  Note that the logfile grows very quickly.
+
+      --------------------------------------------------------------------
+      The remaining #defines should not be altered unless you are sure that
+      you know what you are doing.  If you are planning to change them,
+      it is recommended that you contact irclist first.
+
+   g) The PORTNUM #define sets the alters the Internet socket port for IRC.  
       IRC will use this port to accept connections from other irc servers
       and clients.  The current addresses used for irc are 6667 and 
       infrequently 6666.  Note that if you change these values, all other
@@ -46,16 +72,6 @@ Overview of this document:
 
       Although these are not OFFICIALLY reserved for IRC, they are the ports
       we have unofficially claimed for the program.  
-
-
-   g) The LOGFILE #define should be set to "/dev/null" unless you plan to 
-      debug the program.  Note that the logfile grows very quickly.
-
-
-      --------------------------------------------------------------------
-      The remaining #defines should not be altered unless you are sure that
-      you know what you are doing.  If you are planning to change them,
-      it is recommended that you contact irclist first.
 
    h) Define TIMESEC to be the amount of IDLE time you will allow your server
       to WAIT before attempting to request status of your neighboring servers.
@@ -93,23 +109,18 @@ Overview of this document:
       recommend you leave it DEFAULT value.
 
 
-
-2) Edit the Makefile Makefile:
+2) Edit the Makefile:
 
    The only change to the Makefile should be the setting of the SYS variable.
    Since SySV is currently unsupported, the variable should remain as 'bsd',
    and this step is not required.
 
-
 3) Configure and compile the code.
-
-   Type "make config".  This will install the OS-dependent files.
 
    Type "make". This will compile the server, the client, and the services.
    At the end of this step, the server directory will contain 'ircd',
    and the client directory will contain 'irc'.
 
-  
    Note that the ircd executable will have the  SETUID bit set on so that
    other besides you can boot the server if it goes down and you aren't around
    to boot it yourself.  The SETUID bit allows others to run the server,
@@ -119,7 +130,6 @@ Overview of this document:
    would be accessed as USER instead of GROUP or OTHER.  You should ensure
    that "irc.conf" is not readable by others, since it contains the operator
    password.
-
 
 4) The irc.conf file.
 
@@ -132,7 +142,6 @@ Overview of this document:
    names.  If you are unfamiliar with this, you should probably scan 
    through it before proceeding.
 
-
    The irc.conf file contains various records that specify configuration
    options.  The record types are as follows:
    
@@ -144,7 +153,6 @@ Overview of this document:
    6.  Administrative info	(A)
    7.  Excluded accounts	(K)
 
-   
    1. SERVER CONNECTIONS:  How to connect to other servers
 			   How other servers can connect to you
 
@@ -153,9 +161,9 @@ Overview of this document:
    machine "tolsun.oulu.fi" and I want to connect to irc daemons on 3 other
    machines:
 
-         "naakka.tut.fi"           - Primary Connection
-         "orion.cair.du.edu"       - Secondary Connection
          "hal.oce.orst.edu"        - Tertiary Connection
+         "orion.cair.du.edu"       - Secondary Connection
+         "naakka.tut.fi"           - Primary Connection
 
    And I prefer to connect to them in that order, meaning I first want to
    try connecting to "naakka.tut.fi", then to "orion.cair.du.edu", and
@@ -240,7 +248,6 @@ Field: 1        2              3                4               5
    Ircd will attempt a connection to naakka first, then to orion, and 
    finally to hal.
 
-
    Reciprocal entries:
 
    Each "C" entry requires a corresponding 'N' entry that specifies
@@ -248,7 +255,6 @@ Field: 1        2              3                4               5
    the password, if any, that you require other hosts to have before
    they can connect to you.  These entries are of the same format as
    the "C" entries.
-
     
    Let us assume that "orion.cair.du.edu" connects to your server
    and you want to place password authorization authorization on orion.
@@ -270,7 +276,6 @@ Field: 1        2              3                4               5
 
    Note: unlike "C" entries, port numbers are not required for "N" entries.
 
-
    Wildcards: 
 
    Note that wildcards are allowd in hostnames or IP addresses. For 
@@ -281,11 +286,8 @@ Field: 1        2              3                4               5
    N:*.fi::*.fi
 
 
-
-
    2. MACHINE INFORMATION
                             
-
    IRC needs to know a few things about your UNIX site, and the "M" command
    specifies this information for IRC.  The fomat of this command is:
 
@@ -326,7 +328,6 @@ Field: 1        2              3                4               5
                 and my site is located in "Denver
                 Colorado, USA".  I have defined Internet Port
                 number "6667" to be used as my IRCD Socket Port.
-
 
 
    3. CLIENT CONNECTIONS -   How to let clients connect to your IRCD.
@@ -372,7 +373,6 @@ Field: 1        2              3                4               5
       I:naakka.tut.fi:secret:naakka.tu.fi
 
       Allow clients from naakka.tut.fi to connect with the password 'secret'.
-
 
 
    4. DEFAULT HOSTS (for local clients)

@@ -1,0 +1,8 @@
+Usage: JOIN <channel no.>
+  Changes your current channel to <channel no.>.
+  Channel 0 is the limbo channel.
+  Channels 1 thru 10 are public no-user-limit channels.
+  Channels 11 thu 999 are public limit 10 user channels.
+  Channels 1000 and up are private channels
+  Channels below 0 are private/invisible channels.
+  CHANNEL and JOIN are identical.

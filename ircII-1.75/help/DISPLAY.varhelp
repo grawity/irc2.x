@@ -1,0 +1,5 @@
+Usage: SET DISPLAY [ON|OFF|TOGGLE]
+  Turns ON or OFF all output.  It can be useful to SET DISPLAY OFF at the
+  beginning of your .ircrc so you don't have to see everything it does
+  every time you start irc.  Just remember to SET DISPLAY ON again at the
+  end of you .ircrc

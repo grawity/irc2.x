@@ -1,0 +1,3 @@
+Usage: SET HISTORY <value>
+  Sets the size of the command history circular buffer.  Setting HISTORY
+  to zero disables the command history functions.

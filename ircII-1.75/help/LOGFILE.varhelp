@@ -1,0 +1,4 @@
+Usage: SET LOGFILE <filename>
+  Sets the name of the file to be used for the session log.  New session
+  log messages are appended to the end the this file.
+  See also SET LOG

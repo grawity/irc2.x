@@ -1,0 +1,3 @@
+Usage: SET INLINE_ALIASES [ON|OFF|TOGGLE]
+  Turns ON or OFF inline aliases.  When on, normal aliases can be used
+  anywhere in an input line by preceeding the name of the alias with a %.

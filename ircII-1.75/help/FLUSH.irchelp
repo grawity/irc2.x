@@ -1,0 +1,4 @@
+Usage: FLUSH
+  Flushes all pending output from the server.  This has the effect
+  of stopping long lists from the server, such as a LINKS command
+  which can get quite lengthy.

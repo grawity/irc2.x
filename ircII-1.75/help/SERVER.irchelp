@@ -1,0 +1,8 @@
+Usage: SERVER <name of server> [port number]
+  Switch to the server specified at the specified port number.  If no
+  port nunmber is given, the default port number is used.  Your
+  channel and AWAY status will remain unchanged.  Occasionally, you
+  can switch servers faster than the irc network can send out the
+  information that you have left a server.  So don't be suprised if
+  it says your nickname is in use...  just wait a moment and set it
+  with NICK.

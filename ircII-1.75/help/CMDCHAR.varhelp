@@ -1,0 +1,3 @@
+Usage: SET CMDCHAR <character>
+  Sets the character which will tell irc that what follows is a command
+  rather than text.  The default character is \

@@ -1,0 +1,9 @@
+Usage: MSG <nicknames> <text of message>
+  Sends a private message to the nicknames or list of nicknames
+  specified.  A list of nicknames should by separated by
+  commas (no spaces).  Two special case nicknames are defined.
+  If the nickname is \",\" (a comma), the message is sent to the last
+  person who sent you a /MSG.  If the nickname is \".\" (a period), the
+  message is send to the last person to whom you send a message.
+  The nickname may also be a channel number, which will send the
+  message to everyone on that channel.

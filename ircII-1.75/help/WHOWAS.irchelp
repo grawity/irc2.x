@@ -1,0 +1,3 @@
+Usage: WHOWAS <nickname>
+  Shows information about who used the given nickname last, even if
+  no one is currently using it.

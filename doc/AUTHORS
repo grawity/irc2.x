@@ -1,33 +1,81 @@
-# Thanx to mta@tut.fi for creating emacs-like interface in irc.
-#
-# Thanx to kim@kannel.lut.fi for creating original hpux-version.
-#
-# Thanx to jtrim@orion.cair.du.edu for some enchantments and
-#   lotsa good advice and suggestions.
-#
-# Thanx to vijay@lll-winken.llnl.gov for lotsa advice and
-#   telling many people about irc.
-#
-# Thanx to karl@cis.ohio-state.edu for user's manual.
-#
-# Thanx to gl8f@astsun3.astro.virginia.edu for creating Wumpus, AUTOMATON
-#   code and pointing out several bugs and features in irc.
-#
-# Thanx to wisner@mica.berkeley.edu for lotsa fixes and code...
-#
-#       VMS Version created by:
-#       Tom Davis (conslt16@zeus.unl.edu), VMS/Wollongong support
-#       Tim Russell (russell@zeus.unl.edu), VMSMAIL personal name
-#                                              support (IRCNAME)
-#       VMS Version changes (c) Tom Davis and Tim Russell
-#
-# Thanx to savela@tel.vtt.fi for lotsa advice and support.
-#
-# Thanx to all others who have given good advice, opinions and written
-# code for irc.
-#
-# Author:      Jarkko Oikarinen,
-# Internet:    jto@tolsun.oulu.fi
-# UUCP:        ...!mcvax!tut!oulu!jto
-# BITNET:      toljto at finou
-#
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/AUTHORS
+ *   Copyright (C) 1990
+ *
+ * AUTHORS FILE:
+ *   This file attempts to remember all contributors to the IRC
+ *   developement. Names can be only added this file, no name
+ *   should never be removed. This file must be included into all
+ *   distributions of IRC and derived works.
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+IRC was conceived of and written by Jarkko Oikarinen <jto@tolsun.oulu.fi>.
+IRC was originally written in University of Oulu, Computing Center.
+Contributions were made by a cast of dozens, including the following:
+
+Markku Jarvinen <mta@tut.fi>: Emacs-like editing facility for the client
+
+Kimmo Suominen <kim@kannel.lut.fi>: HP-UX port
+
+Jeff Trim <jtrim@orion.cair.du.edu>: enhancements and advice
+
+Vijay Subramaniam <vijay@lll-winken.llnl.gov>: advice and ruthless publicity
+
+Karl Kleinpaste <karl@cis.ohio-state.edu>: user's manual
+
+Greg Lindahl <gl8f@virginia.edu>: AUTOMATON code, the Wumpus GM automaton,
+myriad bug fixes
+
+Bill Wisner <wisner@hayes.fai.alaska.edu>: numerous bug fixes and code
+enhancements
+
+Tom Davis <conslt16@zeus.unl.edu> and Tim Russell <russell@zeus.unl.edu>:
+VMS modifications
+
+Markku Savela <msa@tel4.tel.vtt.fi>: advice and support
+
+The version 2.2 release was coordinated by Mike Bolotski
+<mikeb@salmon.ee.ubc.ca>.
+
+The version 2.4 release was coordinated by Markku Savela and
+Chelsea Ashley Dyerman
+
+Markku Savela <Markku.Savela@vtt.fi> / April 1990
+Fixed various bugs in 2.2PL1 release server (2.2msa.4) and changed
+sockets to use non-blocking mode (2.2msa.9). [I have absolutely
+nothing to do with clients :-]
+
+Chelsea Ashley Dyerman <chelsea@earth.cchem.berkeley.edu> / April 1990
+Rewrote the Makefiles, restructuring of source tree. Added libIrcd.a to
+the Makefile macros, numerous reformatting of server text messages, and
+added mkversion.sh to keep track of compilation statistics. Numerous
+bug fixes and enhancements, and co-coordinator of the 2.4 release.
+
+
+
+Thanks go to those persons not mentioned here who have added their advice,
+opinions, and code to IRC.
+
+Various modifications, bugreports, cleanups and testing by:
+
+Hugo Calendar <hugo@!ucscl.ucsc.edu>
+Bo Adler <beau@through.cs.caltech.edu>
+Michael Sandrof <ms5n+@andrew.cmu.edu>
+Jon Solomon <jsol@buit5.bu.edu>
+Jan Peterson <jlp@hamblin.byu.edu>
+Nathan Glasser <nathan@brokaw.lcs.mit.edu>
+Helen Rose <hrose@uceng.uc.edu>

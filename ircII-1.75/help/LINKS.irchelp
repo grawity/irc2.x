@@ -1,0 +1,4 @@
+Usage: LINKS [servername]
+  Shows all of the servers currently connected to the irc network.
+  If servername is specifed, LINKS shows any servers that match the
+  given servername.  The servername may contain wildcards.

@@ -1,0 +1,3 @@
+Usage: USERS <server>
+  Shows the users logged into the specified server.  If no server
+  is given, the current server is used.

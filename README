@@ -1,36 +1,37 @@
-IRC Distribution  2.2 PL0
+/************************************************************************
+ *   IRC - Internet Relay Chat, README
+ *   Copyright (C) 1990
+ *
+ *   For the list of authors and their e-mail addresses, see
+ *   file doc/AUTHORS
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
+This is the offical 2.4 release of irc. There has been one irc loose
+claiming to be version 2.4, but this is the real one.
 
-The full installation document is in doc/INSTALL.  The site-specific
-parameters are in lib/config.h.
+To install the new server, there is just a few changes to be made.
+Edit the Makefile in the root of the source tree *only* if you need
+to change the system type. It defaults to BSD as is. Edit the
+include/config.h to your hearts content, avoiding going beyond the
+warning line, unless you are *absolute* sure you know what you are doing.
+If you happen to not take heed to this warning, you may end up with
+a server that will not function properly and annoy not only you,
+but users all around the world.
 
-There is a file called HISTORY in the doc directory that documents the
-recent versions of the IRC release and the new numbering/source code control
-system. 
-
-Summary of installation procedure:
-
-1.  Modify the lib/config.h file as appropriate.
-
-2.  Choose the operating system type.  Currently only BSD is supported,
-    so this step isn't necessary.  When SysV support is added, you may
-    have to change the SYS variable in the Makefile.
-
-3.  Type "make config".  This will install the OS dependent files.
-
-4.  Type "make".  This will create the 'ircd' daemon and the 'irc' client
-    in the server and client directories.    
-  
-5.  Modify the irc.conf file appropriately.  There is an example file
-    in the doc directory. 
-
-6.  Install the daemon, the client and the conf file.  A common location is
-    in /usr/local/bin for the binaries, and /usr/local/lib for the conf file.
-
-
-If you are installing IRC for the first time, it is recommended that
-you send e-mail to irclist@tolsun.oulu.fi to get on the IRC mailing list.
-That address is also useful if you experience any problems during installation.
-
-
-
+To install the new client, cd to appropriate directory (whichever
+client you happen to prefer). Read INSTALL is installing ircII, or
+check include/config.h if installing old irc client.

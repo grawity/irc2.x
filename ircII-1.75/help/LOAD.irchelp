@@ -1,0 +1,7 @@
+Usage: LOAD <filename>
+  Loads the given file into irc, treating each line as an irc
+  command, just as if it were typed into the command line.  This
+  is the command used automatically at irc startup to load the
+  .ircrc file
+
+
