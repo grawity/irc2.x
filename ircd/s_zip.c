@@ -54,7 +54,7 @@ static  char rcsid[] = "@(#)$Id: s_zip.c,v 1.4 1998/05/12 16:55:48 kalt Exp $";
 /*
 ** size of the buffer where zlib puts compressed data
 **	must be enough to hold uncompressed data resulting of the
-**	uncompression of zibuffer
+**	uncompression of zipbuffer
 **
 **	I'm assuming that at best, ratio will be 25%. (tests show that
 **	best ratio is around 40%).
@@ -141,6 +141,7 @@ int	*length;
 	    {
 	      sendto_flag(SCH_ERROR, "overflow in unzip_packet(): %d %d",
 			  cptr->zip->incount, *length);
+	      sendto_flag(SCH_ERROR, "Please report to ircd-bugs@irc.org");
 	      *length = -1;
 	      return NULL;
 	    }
