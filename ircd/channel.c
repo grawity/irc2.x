@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.84 1998/12/29 20:14:15 kalt Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.85 1999/01/16 22:10:51 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1998,7 +1998,18 @@ char	*parv[];
 						    sptr->name);
 					continue;
 				    }
-				if (get_channel(sptr, name+2, 0))
+#if 0
+				/* someday, may be */
+				if (*(name+3) == '!')
+				    {
+					sendto_one(sptr,
+						   err_str(ERR_NOSUCHCHANNEL,
+							   parv[0]), name);
+					continue;
+				    }
+#endif
+				chptr = hash_find_channels(name+2);
+				if (chptr)
 				    {
 					sendto_one(sptr,
 						   err_str(ERR_TOOMANYTARGETS,
