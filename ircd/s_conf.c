@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.35 1998/09/22 11:26:57 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.36 1998/12/13 00:02:37 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -302,10 +302,10 @@ aClient *cptr;
 		if (ConfMaxHLocal(aconf) > 0 || ConfMaxUHLocal(aconf) > 0) {
 			Reg     aClient *acptr;
 			Reg     int     i;
-			int	sz = sizeof(cptr->ip);
 
 			for (i = highest_fd; i >= 0; i--)
 				if ((acptr = local[i]) && (cptr != acptr) &&
+				    !IsListening(acptr) &&
 				    !bcmp((char *)&cptr->ip,(char *)&acptr->ip,
 					  sizeof(cptr->ip)))
 				    {
