@@ -99,7 +99,7 @@ res_mkquery(op, dname, class, type, data, datalen, newrr_in, buf, buflen)
 #endif
 	u_char *dnptrs[20], **dpp, **lastdnptr;
 
-	if ((ircd_res.options & RES_INIT) == 0 && res_init() == -1) {
+	if ((ircd_res.options & RES_INIT) == 0 && ircd_res_init() == -1) {
 		h_errno = NETDB_INTERNAL;
 		return (-1);
 	}
