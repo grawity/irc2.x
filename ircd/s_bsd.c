@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.100 2003/10/13 23:58:23 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.101 2003/10/13 23:59:23 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -635,10 +635,6 @@ void	daemonize()
 	if (((bootopt & BOOT_CONSOLE) || isatty(0)) &&
 	    !(bootopt & (BOOT_INETD|BOOT_OPER)))
 	    {
-#ifndef __CYGWIN32__
-		if (fork())
-			exit(0);
-#endif
 #ifdef TIOCNOTTY
 		if ((fd = open("/dev/tty", O_RDWR)) >= 0)
 		    {
