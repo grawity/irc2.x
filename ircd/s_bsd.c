@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.165 2004/10/26 19:20:15 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.166 2004/10/26 19:24:27 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -915,6 +915,7 @@ int	check_client(aClient *cptr)
 				    *((unsigned long *)hp->h_addr));
 #endif
 			hp = NULL;
+			cptr->hostp = NULL;
 		    }
 	    }
 
