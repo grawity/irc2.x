@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.6 1997/05/28 13:38:12 kalt Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.7 1997/06/27 13:38:37 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -1708,7 +1708,7 @@ char	*parv[];
 	    }
 	if (*buf)
 		sendto_serv_butone(cptr, PartFmt, parv[0], buf, comment);
-	return 2;
+	return 4;
     }
 
 /*
