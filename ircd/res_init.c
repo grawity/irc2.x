@@ -55,7 +55,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static char rcsid[] = "$Id: res_init.c,v 1.5 1997/07/18 03:04:34 kalt Exp $";
+static char rcsid[] = "$Id: res_init.c,v 1.6 1997/09/03 17:45:55 kalt Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "os.h"
@@ -239,7 +239,7 @@ ircd_res_init()
 #ifdef	NEXT
 	if (ircd_netinfo_res_init(&haveenv, &havesearch) == 0)
 #endif
-	if ((fp = fopen(_PATH_RESCONF, "r")) != NULL) {
+	if ((fp = fopen(IRC_RESCONF, "r")) != NULL) {
 	    /* read the config file */
 	    while (fgets(buf, sizeof(buf), fp) != NULL) {
 		/* skip comments */
