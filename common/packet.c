@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: packet.c,v 1.3 1997/09/03 17:45:16 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: packet.c,v 1.4 1998/04/05 00:14:32 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -101,7 +101,9 @@ Reg	int	length;
                         length--;
                     }   
                 cptr->flags &= ~FLAGS_ZIPSTART;
-            }   
+            }
+	if (length == 0)
+		return r;
 	if (cptr->flags & FLAGS_ZIP)
 	    {
 		/* uncompressed buffer first */
