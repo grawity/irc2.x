@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.147 2004/10/20 12:56:19 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.148 2004/10/26 19:17:08 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1113,6 +1113,7 @@ int	main(int argc, char *argv[])
 	timeofday = time(NULL);
 	mysrand(timeofday);
 	
+	/* daemonize() closes 0,1,2 -- make sure you don't have any fd open */
 	daemonize();	
 	logfiles_open();
 	write_pidfile();
