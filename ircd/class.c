@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: class.c,v 1.6 1997/12/19 13:35:57 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: class.c,v 1.7 1999/09/20 22:39:56 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -135,8 +135,7 @@ aClass	*clptr;
  */
 void	add_class(class, ping, confreq, maxli, sendq, hlocal, uhlocal,
 		  hglobal, uhglobal)
-int	class, ping, confreq, maxli, hlocal, uhlocal, hglobal, uhglobal;
-long	sendq;
+int	class, ping, confreq, maxli, sendq, hlocal, uhlocal, hglobal, uhglobal;
 {
 	aClass *t, *p;
 
@@ -234,7 +233,7 @@ char	*to;
 			   MaxHGlobal(cltmp), MaxUHGlobal(cltmp));
 }
 
-long	get_sendq(cptr)
+int	get_sendq(cptr)
 aClient	*cptr;
 {
 	Reg	int	sendq = QUEUELEN, retc = BAD_CLIENT_CLASS;
