@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.101 2002/06/01 22:11:02 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.102 2002/06/04 21:44:43 jv Exp $";
 #endif
 
 #include "os.h"
@@ -2920,7 +2920,7 @@ char	*parv[];
 	}
 	else
 	{
-		sendto_serv_v(sptr, SV_UID, ":%s EOB");
+		sendto_serv_v(sptr, SV_UID, ":%s EOB", sptr->serv->sid);
 	}
 	
 	return 1;
