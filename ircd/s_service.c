@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.38 2002/07/30 00:15:00 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.39 2002/10/09 21:23:20 q Exp $";
 #endif
 
 #include "os.h"
@@ -419,10 +419,14 @@ char	*parv[];
 			    get_client_name(sptr, TRUE));
 		istat.is_unknown--;
 		istat.is_myservice++;
+		if (istat.is_myservice > istat.is_m_myservice)
+			istat.is_m_myservice = istat.is_myservice;
 	    }
 #endif
 
 	istat.is_service++;
+	if (istat.is_service > istat.is_m_service)
+		istat.is_m_service = istat.is_service;
 	svc = make_service(sptr);
 	SetService(sptr);
 	svc->servp = sp;
