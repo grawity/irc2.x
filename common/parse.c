@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: parse.c,v 1.88 2005/01/03 22:34:56 q Exp $";
+static const volatile char rcsid[] = "@(#)$Id: parse.c,v 1.89 2005/01/30 13:40:24 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -414,7 +414,7 @@ static	int	find_sender(aClient *cptr, aClient **sptr, char *sender,
 {
 	aClient *from = NULL;
 
-	if (ST_UID(cptr))
+	if (/*ST_UID*/IsServer(cptr))
 	{
 		if (isdigit(*sender))
 		{
@@ -500,7 +500,7 @@ aClient	*find_target(char *name, aClient *cptr)
 {
 	aClient *acptr = NULL;
 	
-	if (ST_UID(cptr))
+	if (/*ST_UID*/IsServer(cptr))
 	{
 		if (isdigit(name[0]))
 		{
