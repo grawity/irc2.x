@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.37 1998/12/13 00:02:35 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.38 1998/12/28 15:44:57 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -993,7 +993,6 @@ time_t	delay;
 
 #if defined(PREFER_SERVER)
 	(void)read_message(1, &fdas);
-	flush_connections(me.fd);
 	Debug((DEBUG_DEBUG, "delay for %d", delay));
 	if (timeofday > nextc)
 	    {
