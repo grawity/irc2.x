@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: mod_rfc931.c,v 1.1 1998/07/19 19:37:26 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: mod_socks.c,v 1.1 1998/08/05 02:44:18 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -140,7 +140,7 @@ u_int cl;
 				if (cldata[cl].instance->opt &&
 				    strstr(cldata[cl].instance->opt, "log"))
 					sendto_log(ALOG_FLOG, LOG_INFO,
-						   "Open SOCKS proxy: %s[%s]",
+						   "socks: open proxy: %s[%s]",
 						   cldata[cl].host,
 						   cldata[cl].itsip);
 			    }
