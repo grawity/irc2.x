@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.167 2004/10/30 14:40:07 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.168 2004/11/10 15:05:36 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -2404,7 +2404,11 @@ deadsocket:
 				}
 				else
 				{
-					cptr->exitc = EXITC_ERROR;
+					/* Keep (primary) error or it will not
+					 * be possible to discriminate socket
+					 * error from mbuf error. --B. */
+					if (cptr->exitc == EXITC_REG)
+						cptr->exitc = EXITC_ERROR;
 					(void)exit_client(cptr, cptr, &me,
 						strerror(get_sockerr(cptr)));
 				}
