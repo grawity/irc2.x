@@ -1393,7 +1393,7 @@ char	*parv[];
 		else 
 		    {
 			who_find(sptr, mask, oper);
-			if (mask && strlen(mask) > 4)
+			if (mask && (int)strlen(mask) > 4)
 				penalty += 3;
 			else
 				penalty += 5;
