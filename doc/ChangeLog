@@ -1,10 +1,23 @@
+Tue Apr 15 19:41:32 1997  Christophe Kalt
+
+	* sock.h: added a check to make sure FD_SETSIZE is big enough.
+
+	* s_bsd.c, struct.h, s_misc.c: added more UDP stats.
+
+	* s_bsd.c: fixed udp_pfd/res_pfd mess, and cleaned the code. (whee)
+
+	* h.h, struct.h, numeric.h, s_err.c, s_conf.c, s_bsd.c: added B lines.
+
+	* channel.c: defining USE_SERVICE would cause buffer corruption
+	when propagating channel modes to servers. (Found by Michael Neumayer)
+
 Wed Apr  2 15:25:54 1997  Christophe Kalt
 
 	* list.c, s_serv.c: added some error notices for users without server.
 
 	* s_bsd.c: fixed UDP port binding when no IP is given.
 
-	* configure.in: add -cckr on SGI when using cc(1)
+	* configure.in: add -cckr to CFLAGS on SGI when using cc(1)
 
 Thu Mar 27 19:03:09 1997  Christophe Kalt
 
@@ -114,7 +127,7 @@ Sun Jan 26 20:02:34 EET 1997  Vesa Ruokonen  (ruokonen@aapo.it.lut.fi)
 	* h.h, struct.h, chkconf.c, s_conf.c, s_serv.c:
 		created V:lines for checking connecting client parameters.
 		passed as PASS command parameters. A matching V:line.
-		refuces the connection (version number & compile flags).
+		refuses the connection (version number & compile flags).
 	* struct.h, channel.c, s_debug.c:
 		penalty threshold used for limiting KICK params.
 	* struct.h: initial QUEUELEN calculation tuned. (->BUFFERPOOL).
