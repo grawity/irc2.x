@@ -22,8 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #include <sys/types.h>	/* HPUX requires sys/types.h for utmp.h */

@@ -1,4 +1,4 @@
-dnl @(#) configure.in,v 1.2 1995/01/07 01:50:18 mrg Exp
+dnl @(#)$Id configure.in,v 1.2 1995/01/07 01:50:18 mrg Exp$
 dnl
 dnl configure.in for ircd 2.9.
 dnl written by matthew green (mrg@mame.mu.oz.au), with portions

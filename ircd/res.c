@@ -31,7 +31,7 @@
 #include "res.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	1.1 1/21/95 (C) 1992 Darren Reed";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */

@@ -17,8 +17,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef	lint
-static char sccsid[] = "@(#)class.c	1.1 1/21/95 (C) 1990 Darren Reed";
+#ifndef lint
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #include "struct.h"

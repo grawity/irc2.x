@@ -22,6 +22,10 @@
  *        E-mail: jarlel@ii.uib.no
  */
 
+#ifndef lint
+static  char rcsid[] = "@(#)$Id$";
+#endif
+
 #include "struct.h"
 #ifdef NPATH
 #include "numeric.h"

@@ -64,6 +64,10 @@
 #endif
 #include "resolv.h"
 
+#ifndef lint
+static  char rcsid[] = "@(#)$Id$";
+#endif
+
 #ifndef	INADDR_NONE
 #define	INADDR_NONE	((u_long)0xffffffff)
 #endif

@@ -18,8 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)match.c	1.1 1/22/95 (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #include "struct.h"

@@ -36,7 +36,7 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 /* Do not define until it is fixed. -krys

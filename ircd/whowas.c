@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 Markku Savela";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #include "struct.h"

@@ -18,8 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
-1992, 1993 Darren Reed";
+static  char rcsid[] = "@(#)$Id$";
 #endif
 
 #include "struct.h"
@@ -53,7 +52,7 @@ char	*s;
 **			of separators
 **			argv 9/90
 **
-**	$Id: support.c,v 6.1 1991/07/04 21:04:01 gruner stable gruner $
+**	$Id: support.c,v 1.1.1.3 1997/04/14 13:36:26 kalt Exp $
 */
 
 char *strtoken(save, str, fs)
@@ -107,7 +106,7 @@ char *str, *fs;
 **	strerror - return an appropriate system error string to a given errno
 **
 **		   argv 11/90
-**	$Id: support.c,v 6.1 1991/07/04 21:04:01 gruner stable gruner $
+**	$Id: support.c,v 1.1.1.3 1997/04/14 13:36:26 kalt Exp $
 */
 
 char *strerror(err_no)
@@ -141,7 +140,7 @@ int err_no;
 **			internet number (some ULTRIX don't have this)
 **			argv 11/90).
 **	inet_ntoa --	its broken on some Ultrix/Dynix too. -avalon
-**	$Id: support.c,v 6.1 1991/07/04 21:04:01 gruner stable gruner $
+**	$Id: support.c,v 1.1.1.3 1997/04/14 13:36:26 kalt Exp $
 */
 
 char	*inetntoa(in)
@@ -164,7 +163,7 @@ char	*in;
 /*
 **	inet_netof --	return the net portion of an internet number
 **			argv 11/90
-**	$Id: support.c,v 6.1 1991/07/04 21:04:01 gruner stable gruner $
+**	$Id: support.c,v 1.1.1.3 1997/04/14 13:36:26 kalt Exp $
 **
 */
 

@@ -53,10 +53,9 @@
  * --Copyright--
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$Id: res_mkquery.c,v 8.3 1995/06/29 09:26:28 vixie Exp $";
-#endif /* LIBC_SCCS and not lint */
+#ifndef lint
+static  char rcsid[] = "@(#)$Id$";
+#endif
 
 #include "config.h"
 #include "sys.h"

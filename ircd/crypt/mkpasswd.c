@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef lint
+static  char rcsid[] = "@(#)$Id$";
+#endif
+
 extern char *getpass();
 
 int main(argc, argv)
