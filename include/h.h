@@ -64,6 +64,7 @@ extern	aServer	*find_tokserver __P((int, aClient *, aClient *));
 extern	aClient	*find_nickserv __P((char *, aClient *));
 extern	aClient	*find_service __P((char *, aClient *));
 extern	aClient	*find_userhost __P((char *, char *, aClient *, int *));
+extern	void	find_bounce __P((aClient *, int));
 
 extern	int	attach_conf __P((aClient *, aConfItem *));
 extern	aConfItem *attach_confs __P((aClient*, char *, int));

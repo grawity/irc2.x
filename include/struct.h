@@ -279,10 +279,10 @@ struct	CPing	{
 	u_short	port;		/* port to send pings to */
 	u_long	rtt;		/* average RTT */
 	u_long	ping;
-	u_long	seq;		/* sequence # of last sent */
-	u_long	lseq;
-	u_long	recv;		/* # received */
-	u_long	lrecv;
+	u_long	seq;		/* # sent still in the "window" */
+	u_long	lseq;		/* sequence # of last sent */
+	u_long	recv;		/* # received still in the "window" */
+	u_long	lrecv;		/* # received */
 };
 
 struct	ConfItem	{
@@ -324,6 +324,7 @@ struct	ConfItem	{
 #define	CONF_LISTEN_PORT	0x08000
 #define	CONF_HUB		0x10000
 #define	CONF_VER		0x20000
+#define	CONF_BOUNCE		0x40000
 
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER |\
@@ -532,7 +533,9 @@ struct	stats {
 	u_int	is_fake; /* MODE 'fakes' */
 	u_int	is_asuc; /* successful auth requests */
 	u_int	is_abad; /* bad auth requests */
-	u_int	is_udp;	/* packets recv'd on udp port */
+	u_int	is_udpok;	/* packets recv'd on udp port */
+	u_int	is_udperr;	/* packets recvfrom errors on udp port */
+	u_int	is_udpdrop;	/* packets recv'd but dropped on udp port */
 	u_int	is_loc;	/* local connections made */
 	u_int	is_ghost; /* ghost dropped */
 	u_int	is_nosrv; /* user without server */
@@ -573,8 +576,8 @@ struct	Message	{
 #define	MSG_NOUK	0x0008	/* Not available to unknowns */
 #define	MSG_REG		0x0010	/* Must be registered */
 #define	MSG_REGU	0x0020	/* Must be a registered user */
-#define	MSG_PP		0x0040
-#define	MSG_FRZ		0x0080
+/*#define	MSG_PP		0x0040*/
+/*#define	MSG_FRZ		0x0080*/
 #define	MSG_OP		0x0100	/* opers only */
 #define	MSG_LOP		0x0200	/* locops only */
 
@@ -767,7 +770,8 @@ typedef	struct	{
 #define	SCH_SERVER	6
 #define	SCH_HASH	7
 #define	SCH_LOCAL	8
-#define	SCH_MAX		8
+#define	SCH_DEBUG	9
+#define	SCH_MAX		9
 
 /* used for async dns values */
 
