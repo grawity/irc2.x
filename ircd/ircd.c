@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.140 2004/08/10 23:19:16 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.142 2004/08/12 22:46:10 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -73,6 +73,7 @@ aClient *ListenerLL = NULL;	/* Listeners linked list */
 
 RETSIGTYPE s_die(int s)
 {
+	sendto_serv_v(NULL, SV_UID, ":%s SDIE", me.serv->sid);
 #ifdef	USE_SYSLOG
 	(void)syslog(LOG_CRIT, "Server Killed By SIGTERM");
 	(void)closelog();
