@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.11 1997/09/03 17:45:58 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.12 1997/09/03 18:16:53 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -146,6 +146,7 @@ attach_iline:
 			find_bounce(cptr, ConfClass(aconf));
 		return i;
 	    }
+	find_bounce(cptr, -1); /* -1 isn't a good way to do this */
 	return -1;
 }
 
