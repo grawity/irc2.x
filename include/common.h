@@ -87,7 +87,11 @@ extern char *strtoken __P((char **, char *, char *));
 #ifdef	SPRINTF
 #undef	SPRINTF
 #endif
+#ifndef USE_STDARG
 #define	SPRINTF	(void) irc_sprintf
+#else
+#define SPRINTF (void) sprintf
+#endif
 
 #define DupString(x,y) do {x = (char *)MyMalloc(strlen((char *)y) + 1);\
 			   (void)strcpy((char *)x, (char *)y);\
@@ -143,7 +147,10 @@ extern unsigned char char_atribs[];
 #define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
 
 extern void	flush_connections __P((int));
+#ifndef USE_STDARG
 extern int	irc_sprintf();
+#endif
+
 /*VARARGS?*/
 
 #endif /* __common_include__ */

@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id$";
+static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.2 1997/04/14 15:04:20 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -165,7 +165,7 @@ aClient	*cptr;
 		goto authsenderr;
 	    }
 
-	(void)irc_sprintf(authbuf, "%u , %u\r\n",
+	SPRINTF(authbuf, "%u , %u\r\n",
 		(unsigned int)ntohs(them.sin_port),
 		(unsigned int)ntohs(us.sin_port));
 
