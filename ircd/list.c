@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: list.c,v 1.11 2001/10/20 17:57:28 q Exp $";
+static  char rcsid[] = "@(#)$Id: list.c,v 1.12 2002/01/05 02:49:07 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -194,6 +194,7 @@ int add;
 	if (!serv)
 	    {
 		serv = (aServer *)MyMalloc(sizeof(aServer));
+		memset(serv, 0, sizeof(aServer));
 #ifdef	DEBUGMODE
 		servs.inuse++;
 #endif
