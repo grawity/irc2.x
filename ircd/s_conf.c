@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.64 2003/10/13 21:48:53 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.65 2003/10/13 23:15:33 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -58,9 +58,9 @@ static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.64 2003/10/13 21:48:53 q Exp $";
 #undef S_CONF_C
 
 #ifdef TIMEDKLINES
-static	int	check_time_interval __P((char *, char *));
+static	int	check_time_interval (char *, char *);
 #endif
-static	int	lookup_confhost __P((aConfItem *));
+static	int	lookup_confhost (aConfItem *);
 
 aConfItem	*conf = NULL;
 aConfItem	*kconf = NULL;
