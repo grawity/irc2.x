@@ -341,7 +341,8 @@ char *nick;
 		  "NOTICE %s :*** Your host is %s, running version %s",
 			   nick, GetClientName(&me,FALSE), version);
 		sendto_one(sptr,
-		  "NOTICE %s :*** This server was created %s\n",
+/*		  "NOTICE %s :*** This server was created %s\n", */
+		  "NOTICE %s :*** This server was created %s",
 			   nick, creation);
 		m_lusers(sptr, sptr, 0, (char **)NULL);
 	    }

@@ -10,7 +10,7 @@
  */
 
 /* set your favorite default server here */
-#define DEFAULT_SERVER "ousrvr.oulu.fi"
+#define DEFAULT_SERVER "choshi.kaba.or.jp"
 
 /*
  * Here you can set the in-line quote character, normally backslash, to
@@ -23,7 +23,8 @@
  * that will be loaded BEFORE the users .ircrc.  If left commented, no global
  * .ircrc will be used. 
  */
-#define GLOBAL_IRCRC "/usr/local/lib/irc/global.ircrc"
+/* #define GLOBAL_IRCRC "/usr/local/lib/irc/global.ircrc" */
+#define GLOBAL_IRCRC "/home/kick/etc/irc2.4/ircII/global.ircrc"
 
 /*
  * Uncomment the following and set the path to that of a motd that will be

@@ -24,8 +24,8 @@
 #include "struct.h"
 #include "patchlevel.h"
 
-char *generation = "2";
-char *creation = "Thu May 10 DST at 14:14:04 EET";
+char *generation = "6";
+char *creation = "Mon May 21 1990 at 15:14:44 JST";
 char *version = PATCHLEVEL;
 
 char *infotext[] =

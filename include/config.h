@@ -82,10 +82,10 @@
  * these are only the reccommened names and paths. Change as needed.
  */
 
-#define SPATH "/usr/users/jto/irc2.4/ircd/ircd" /* Where the server lives.  */
-#define CPATH "/usr/users/jto/ircd.cf"	 /* IRC Configuration file.  */
-#define MPATH "/usr/users/jto/ircd.motd"     /* Message Of The Day file. */
-#define LPATH "/usr/users/jto/ircd.log"      /* Where the Logfile lives. */
+#define SPATH "/home/kick/etc/irc2.4/ircd/ircd" /* Where the server lives.  */
+#define CPATH "/home/kick/etc/irc2.4/ircd/ircd.cf"	 /* IRC Configuration file.  */
+#define MPATH "/home/kick/etc/irc2.4/ircd/ircd.motd"     /* Message Of The Day file. */
+#define LPATH "/home/kick/etc/irc2.4/ircd/ircd.log"      /* Where the Logfile lives. */
 
 
 #define AUTOTOPIC 1	/* Automatic topic notify upon joining a channel  */ 

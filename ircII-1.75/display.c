@@ -179,6 +179,7 @@ char *str;
 	if (*ptr < 32){
 	    switch (*ptr){
 		case '\007':
+		case '\033':
 		    break;
 		case '\011':
 		    foo = (8 - (pos % 8));

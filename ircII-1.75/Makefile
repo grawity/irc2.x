@@ -5,10 +5,12 @@
 # HP-UX modifications by Mark T. Dame (Mark.Dame@UC.EDU)
 
 # Full path and name of installed irc program
-INSTALL_NAME = /usr/local/bin/irc
+#INSTALL_NAME = /usr/local/bin/irc
+INSTALL_NAME = /home/kick/etc/irc2.4/ircII-1.75/irc
 
 # Full path of directory for irc help file
-INSTALL_HELP = /usr/local/lib/irc
+#INSTALL_HELP = /usr/local/lib/irc
+INSTALL_HELP = /home/kick/etc/irc2.4/ircII-1.75/help
 
 # For HPUX machines, comment the first LIBS line and uncomment the second. 
 # For other machines, leave it along.

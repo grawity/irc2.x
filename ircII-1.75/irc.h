@@ -85,7 +85,7 @@ typedef struct {
 
 #define null(type) (type) 0L
 
-#define IRC_PORT 9000
+#define IRC_PORT 6667
 
 extern char *index();
 extern int errno;
