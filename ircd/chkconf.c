@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.33 2004/07/15 13:34:19 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.34 2004/07/15 14:39:05 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -116,9 +116,13 @@ int	main(int argc, char *argv[])
 	/* Initialize counters to be able to print line number even with m4 */
 	mywc();
 # ifdef DEBUGMODE
+	{
+	struct wordcount *filelist;
+
 	for(filelist = files; filelist->next; filelist = filelist->next)
 	  fprintf(stderr, "%s: Min %d - Max %d\n",
 		  filelist->filename, filelist->min, filelist->max);
+	}
 # endif
 #endif
 	/* If I do not use result as temporary return value
