@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.55 1999/06/25 15:36:16 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.56 1999/07/02 16:49:37 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -372,7 +372,7 @@ time_t	currenttime;
 			    }
 		    }
 		ping = IsRegistered(cptr) ? get_client_ping(cptr) :
-					    CONNECTTIMEOUT;
+					    ACCEPTTIMEOUT;
 		Debug((DEBUG_DEBUG, "c(%s) %d p %d k %d r %d a %d",
 			cptr->name, cptr->status, ping, kflag, rflag,
 			currenttime - cptr->lasttime));
