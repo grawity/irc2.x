@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.177 2004/03/22 14:03:51 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.179 2004/03/24 22:52:10 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -2196,12 +2196,10 @@ int	m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 		break;
 	case 'Z':
 #ifdef DEBUGMODE
-		 /* memory use (OPER only) */
+		/* memory use (OPER only) */
 		if (MyOper(sptr))
 			count_memory(cptr, parv[0], 1);
 		else
-			sendto_one(sptr, replies[ERR_NOPRIVILEGES], ME, BadTo(parv[0]));
-		break;
 #endif
 	case 'z' :	      /* memory use */
 		count_memory(cptr, parv[0], 0);
