@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.123 2004/03/20 23:54:00 jv Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.124 2004/03/21 00:39:48 jv Exp $";
 #endif
 
 #include "os.h"
@@ -979,7 +979,7 @@ int	main(int argc, char *argv[])
 
                 (void)strcpy(tmp->serv->namebuf, "*");
 
-                if (inetport(tmp, 0, "0.0.0.0", 0))
+                if (inetport(tmp, 0, "0.0.0.0", 0, 1))
                         tmp->fd = -1;
 		if (tmp->fd == 0) 
 		    {
