@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: list.c,v 1.33 2004/04/13 16:34:07 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: list.c,v 1.34 2004/04/18 15:36:15 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -289,7 +289,7 @@ void	free_user(anUser *user, aClient *cptr)
 		if ((serv = user->servp))
 		    {
 			user->servp = NULL; /* to avoid some impossible loop */
-			free_server(serv, cptr);
+			free_server(serv, serv->bcptr);
 		    }
 		if (user->away)
 		    {
