@@ -172,6 +172,17 @@ static	void	sendnum_toone(aClient *cptr, int wants, aClient *sptr,
 	if (!*umode)
 		umode = "+";
 
+	if ((wants & SERVICE_WANT_UID) && HasUID(sptr))
+		sendto_one(cptr, ":%s UNICK %s %s %s %s %s %s :%s",
+			sptr->user->servp->sid,
+			(wants & SERVICE_WANT_NICK) ? sptr->name : ".",
+			sptr->user->uid,
+			(wants & SERVICE_WANT_USER) ? sptr->user->username : ".",
+			(wants & SERVICE_WANT_USER) ? sptr->user->host : ".",
+			(wants & SERVICE_WANT_USER) ? sptr->user->sip : ".",
+			(wants & (SERVICE_WANT_UMODE|SERVICE_WANT_OPER)) ? umode : "+",
+			(wants & SERVICE_WANT_USER) ? sptr->info : "");
+	else
 	if (wants & SERVICE_WANT_EXTNICK)
 		/* extended NICK syntax */
 		sendto_one(cptr, "NICK %s %d %s %s %s %s :%s",
