@@ -109,10 +109,6 @@ typedef	unsigned long	u_long;
 typedef	unsigned int	u_int;
 #endif
 
-#ifdef	USE_VARARGS
-# include <varargs.h>
-#endif
-
 #define	SETSOCKOPT(fd, o1, o2, p1, o3)	setsockopt(fd, o1, o2, (char *)p1,\
 						   sizeof(o3))
 
