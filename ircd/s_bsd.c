@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.155 2004/08/10 18:55:01 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.156 2004/08/10 19:29:11 jv Exp $";
 #endif
 
 #include "os.h"
@@ -1165,9 +1165,9 @@ check_serverback:
 	/*
 	 * attach the C and N lines to the client structure for later use.
 	 */
+	(void)attach_confs(cptr, name, CONF_HUB|CONF_LEAF);
 	(void)attach_conf(cptr, n_conf);
 	(void)attach_conf(cptr, c_conf);
-	(void)attach_confs(cptr, name, CONF_HUB|CONF_LEAF);
 	if (IsIllegal(n_conf) || IsIllegal(c_conf))
 	{
 		sendto_flag(SCH_DEBUG, "Illegal class!");
