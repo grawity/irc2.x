@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.100 2002/05/22 00:45:46 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.101 2002/06/01 22:11:02 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -2758,6 +2758,8 @@ char	*parv[];
 		closed++;
 	    }
 	sendto_one(sptr, replies[RPL_CLOSEEND], ME, BadTo(parv[0]), closed);
+	sendto_flag(SCH_NOTICE, "%s closed %d unknown connections", sptr->name,
+		    closed);
 	return 1;
 }
 
