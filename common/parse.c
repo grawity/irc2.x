@@ -747,9 +747,19 @@ int	parse(aClient *cptr, char *buffer, char *bufend)
 		mptr->func, mptr->cmd, i, para));
 	if (mptr->minparams > 0 && (i <= mptr->minparams || para[i-1][0] == '\0'))
 	{
-		sendto_one(from, replies[ERR_NEEDMOREPARAMS], 
-			ME, BadTo(para[0]), mptr->cmd);
-		ret = 1;
+		if (status == STAT_SERVER)
+		{
+			char	rbuf[BUFSIZE];
+
+			sprintf(rbuf, "%s: Not enough parameters", mptr->cmd);
+			ret = exit_client(cptr, cptr, &me, rbuf);
+		}
+		else
+		{
+			sendto_one(from, replies[ERR_NEEDMOREPARAMS], 
+				ME, BadTo(para[0]), mptr->cmd);
+			ret = 1;
+		}
 	}
 	else
 	{
