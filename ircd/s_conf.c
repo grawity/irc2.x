@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.32 1998/08/24 02:26:34 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.33 1998/09/13 16:44:46 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -130,8 +130,8 @@ char	*sockhost;
 			for (i = 0, hname = hp->h_name; hname;
 			     hname = hp->h_aliases[i++])
 			    {
-				(void)strncpy(fullname, hname,
-					sizeof(fullname)-1);
+				strncpyzt(fullname, hname,
+					sizeof(fullname));
 				add_local_domain(fullname,
 						 HOSTLEN - strlen(fullname));
 				Debug((DEBUG_DNS, "a_il: %s->%s",
