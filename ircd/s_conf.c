@@ -1932,6 +1932,12 @@ void	find_bounce(aClient *cptr, int class, int fd)
 {
 	Reg	aConfItem	*aconf;
 
+	if (fd < 0 && cptr == NULL)
+	{
+		/* nowhere to send error to */
+		return;
+	}
+
 	for (aconf = conf; aconf; aconf = aconf->next)
 	{
 		if (aconf->status != CONF_BOUNCE)
