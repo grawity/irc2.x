@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.214 2004/06/22 22:19:20 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.215 2004/06/24 16:01:46 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -3562,7 +3562,7 @@ int	m_save(aClient *cptr, aClient *sptr, int parc, char *parv[])
 ** Note: these #ifdefs mimic 2.10 behaviour; this function, however,
 ** is written with O:line permission flags in mind. --B. */
 
-int	is_allowed(aClient *cptr, ACL function)
+int	is_allowed(aClient *cptr, long function)
 {
 	int	ret;
 
