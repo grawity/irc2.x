@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: a_conf.c,v 1.17 1999/03/13 23:14:07 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: a_conf.c,v 1.18 1999/04/12 19:45:04 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -222,6 +222,7 @@ char *cfile;
 			(*last)->in = icount++;
 			(*last)->mod = Mlist[i];
 			(*last)->opt = NULL;
+			(*last)->popt = NULL;
 			(*last)->data = NULL;
 			(*last)->hostname = NULL;
 			(*last)->address = NULL;
