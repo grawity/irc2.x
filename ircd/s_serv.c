@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.36 1998/04/02 19:58:57 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.37 1998/04/05 22:02:47 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -316,6 +316,11 @@ char	*parv[];
 	aConfItem *aconf;
 	int	hop = 0, token = 0;
 
+	if (sptr->user) /* in case NICK hasn't been received yet */
+            {
+                sendto_one(sptr, err_str(ERR_ALREADYREGISTRED, parv[0]));
+                return 1;
+            }
 	info[0] = info[REALLEN] = '\0';	/* strncpy() doesn't guarantee NULL */
 	inpath = get_client_name(cptr, FALSE);
 	if (parc < 2 || *parv[1] == '\0')
