@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.64 1999/03/09 18:40:33 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.65 1999/03/13 23:14:06 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -2116,7 +2116,7 @@ int	ro;
 # endif			
 		    }
 #endif
-		Debug((DEBUG_L11, "udpfd %d resfd %d adfd %s", udpfd, resfd,
+		Debug((DEBUG_L11, "udpfd %d resfd %d adfd %d", udpfd, resfd,
 		       adfd));
 #if ! USE_POLL
 		Debug((DEBUG_L11, "highfd %d", highfd));
