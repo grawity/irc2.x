@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: send.c,v 1.96 2004/12/10 14:39:04 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: send.c,v 1.97 2005/01/03 22:16:58 q Exp $";
 #endif
 
 #include "os.h"
@@ -142,7 +142,7 @@ int	send_message(aClient *to, char *msg, int len)
 	    }
 	if (IsDead(to))
 		return 0; /* This socket has already been marked as dead */
-	if (DBufLength(&to->sendQ) > get_sendq(to))
+	if (DBufLength(&to->sendQ) > get_sendq(to, CBurst(to)))
 	{
 # ifdef HUB
 		if (CBurst(to))
@@ -160,7 +160,7 @@ int	send_message(aClient *to, char *msg, int len)
 				sendto_flag(SCH_NOTICE, "Max SendQ limit "
 					"exceeded for %s: %d > %d",
 					to->name,
-					DBufLength(&to->sendQ), get_sendq(to));
+					DBufLength(&to->sendQ), get_sendq(to, CBurst(to)));
 				lastnotice = timeofday;
 			}
 #  endif
@@ -174,7 +174,7 @@ int	send_message(aClient *to, char *msg, int len)
 				return dead_link(to,
 				"Max SendQ limit exceeded for %s: %d > %d",
 					get_client_name(to, FALSE),
-					DBufLength(&to->sendQ), get_sendq(to));
+					DBufLength(&to->sendQ), get_sendq(to, CBurst(to)));
 			}
 			return dead_link(to, "Max Sendq exceeded");
 		}
