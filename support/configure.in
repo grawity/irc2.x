@@ -1492,7 +1492,6 @@ AC_C_CONST
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, socket)
-AC_CHECK_LIB(gen, basename)
 
 IRC_PATH_ZLIB
 IRC_CURSES_TERMCAP
