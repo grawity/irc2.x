@@ -24,7 +24,7 @@
 #undef RES_C
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: res.c,v 1.18 1998/12/13 00:19:03 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: res.c,v 1.19 1999/02/19 15:12:35 kalt Exp $";
 #endif
 
 /* #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -249,8 +249,6 @@ time_t	now;
 					sendto_iauth("%d d", cptr->fd);
 #endif
 					ClearDNS(cptr);
-					if (!DoingAuth(cptr))	/* XAuth? */
-						SetAccess(cptr); /* unused */
 					break;
 				case ASYNC_CONNECT :
 					sendto_flag(SCH_ERROR,
