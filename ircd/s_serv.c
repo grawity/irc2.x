@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.77 2001/12/29 20:54:07 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.78 2001/12/30 04:42:37 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -477,7 +477,7 @@ char	*parv[];
 			check_servername_errors[tmperr][0],
 			host, get_client_name(cptr, TRUE));
 		return exit_client(cptr, cptr, &me,
-			check_servername_errors[tmperr][1]);
+			(char *)check_servername_errors[tmperr][1]);
 	}
 	
 	/* *WHEN* can it be that "cptr != sptr" ????? --msa */
