@@ -33,6 +33,7 @@
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
+#define bcmp          memcmp
 extern char *strchr(), *strrchr();
 extern char *inet_ntoa();
 #define index strchr
@@ -40,7 +41,6 @@ extern char *inet_ntoa();
 #else 
 #include <strings.h>
 #endif
-#include <ctype.h>
 #include <pwd.h>
 
 #if AIX

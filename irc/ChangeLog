@@ -17,6 +17,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Dec  9 06:38:57 1991  Darren Reed <avalon@coombs.anu.edu.au>
+      * All files
+	Updated to work properly with 2.7. Its early and I'm cold.
+
 Sun Jun 30 14:45:59 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
       * irc.c

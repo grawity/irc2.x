@@ -38,32 +38,30 @@
 #endif /* ! PROTO */
 
 /*
-** AddHistory
+** add_history
 **	Add the currently defined name of the client to history.
 **	usually called before changing to a new name (nick).
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
-int
-AddHistory PROTO((aClient *));
+int add_history PROTO((aClient *));
 
 /*
-** OffHistory
+** off_history
 **	This must be called when the client structure is about to
 **	be released. History mechanism keeps pointers to client
 **	structures and it must know when they cease to exist. This
 **	also implicitly calls AddHistory.
 */
-int
-OffHistory PROTO((aClient *));
+int off_history PROTO((aClient *));
 
 /*
-** GetHistory
+** get_history
 **	Return the current client that was using the given
 **	nickname within the timelimit. Returns NULL, if no
 **	one found...
 */
-aClient *GetHistory PROTO((char *, long));
+aClient *get_history PROTO((char *, long));
 					/* Nick name */
 					/* Time limit in seconds */
 

@@ -30,13 +30,13 @@
  *
  */
 
-char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center\
+and Jarkko Oikarinen";
 
-#include <sys/types.h>
-#include <sys/file.h>
-#include <stdio.h>
 #include "struct.h"
 #include "common.h"
+#include <stdio.h>
+#include <sys/file.h>
 #if HPUX
 #include <fcntl.h>
 #endif

@@ -17,6 +17,29 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sun Dec 1 Greg Lindahl <gl8f@virginia.edu>
+	* general     - gee, avalon, you could at least try. as of pre16
+			numerics restored to old values. MSG_NOTE code
+			removed, because it does not pass Saber C.
+	* support.c   - ctype macros now give values for EOF.
+	* dbuf.c      - test for bozo compilers
+	* example.conf- more documentation
+	* s_msg.c     - pjg's patch to fix m_server
+	* ircd.c      - print message when debugging off and debugtty set
+	* config.h    - remove many dead crufty options.
+
+Sun Dec  1 13:41:11 1991  Darren Reed <avalon@coombs.anu.edu.au>
+	* all files   - There have been so many changes and bug fixes going
+			into 2.7 that it would be impossible to list them all.
+
+Mon Nov  4 14:35:07 1991  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c     - installed msa's patch to m_nick
+
+Mon Nov 4  01:03:45 1991  Darren Reed <avalon@coombs.anu.edu.au>
+	* all files   - changed all functions to have "function_name" style
+		        names. All macros now MacroName.
+	* general     - lots of various different work in preparation for 2.7
+
 Thu Sep 19 14:55:24 1991  Darren Reed <avalon@coombs.anu.edu.au>
 	* s_msg.c, channel.c
 		      - moved m_topic() and m_invite() from s_msg.c to
@@ -28,7 +51,7 @@ Mon Sep 02 16:27:53 1991  Darren Reed <avalon@coombs.anu.edu.au>
 	   for 2.6.2. Following is changes from 2.6.1 to 2.6.2).
 
 	* s_conf.c    - added L-line handling for Leaf Enforcement.
-			(Courtesy Wumpus (Greg Lindhal)
+			(Courtesy Wumpus (Greg Lindhal))
 		      - added det_I_lines_butfirst to make sure each client
 			connection only ever has (at most) 1 I-line attached
 			to it.

@@ -32,6 +32,7 @@
 #include "config.h"
 #include "common.h"
 #include "sys.h"
+#include <sys/types.h>
 
 /*
 **  Compare if a given string (name) matches the given
@@ -42,15 +43,20 @@
 **		1, if no match
 */
 int matches(mask, name)
-char *mask, *name;
+u_char *mask, *name;
     {
-	Reg1 char m;
-	Reg2 char c;
+	Reg1 u_char m;
+	Reg2 u_char c;
 
 	for (;; mask++, name++)
 	    {
-		m = isupper(*mask) ? tolower(*mask) : *mask;
-		c = isupper(*name) ? tolower(*name) : *name;
+#ifdef USE_OUR_CTYPE
+		m = tolower(*mask);
+		c = tolower(*name);
+#else
+		m = islower(*mask) ? *mask : tolower(*mask);
+		c = islower(*mask) ? *mask : tolower(*name);
+#endif
 		if (c == '\0')
 			break;
 		if (m != '?' && m != c || c == '*')

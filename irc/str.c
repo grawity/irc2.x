@@ -62,8 +62,7 @@ real_name(user)
       *cp = '\0';
       strncat(name, user->pw_name, REALLEN-strlen(name));
       name[REALLEN] = '\0';
-      if (islower(*cp))
-	*cp = toupper(*cp);
+      *cp = toupper(*cp);
       cp = index(name, '\0');
       bp++;
       break;

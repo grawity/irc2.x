@@ -57,9 +57,8 @@ To install the new server, there is just a few changes to be made.
      like IRC and if you need to set up a server at your institution.
 
   2) If you still think you want to set up a server, ask for help from
-     irclist@tolsun.oulu.fi, operlist@cs.bu.edu or alt.irc-newsgroup
-     *or* if you know irc-operators having servers close to you, simply
-     ask directly from them.
+     operlist@cs.bu.edu or alt.irc-newsgroup *or* if you know irc-operators
+     having servers close to you, simply ask directly from them.
 
   3) Based on the replies you get, connect to servers which are network
      topologically closest to you (shortest ping times).
@@ -75,19 +74,15 @@ To install the new server, there is just a few changes to be made.
 
 --Jarkko (jto@oulu.fi)
 
-Bug reports and questions about this version 2.6.1 should be directed to
+Bug reports and questions about this version 2.7 should be directed to
 
-	    IRC@Informatik.TU-Muenchen.DE
+	    avalon@coombs.anu.edu.au
 
 as Jarkko isn't coordinating the release currently.
 
+The 2.7 release brings some new features into IRC while cleaning up
+irc. Channel names are now uniformly of the type "#<channelnmame>".
 
-This version is supposed for BUG fixes/cleanup ONLY. Don't expect greater
-enhancements, and please send BUG reports and patches ONLY but no additions
-and enhancements.
+Check 2.7-New for a list of changes from 2.6 to 2.7.
 
-It is planned to clean up code and rewrite some sections for better
-code maintenance (2.6.3), this will (hopefully) result in less code as well as
-less CPU time consumption.
-
---Armin <gruner@informatik.tu-muenchen.de>
+Darren

@@ -30,13 +30,14 @@
  *
  */
 
-char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and\
+ Jarkko Oikarinen";
 
-#include <signal.h>
-#include <sys/errno.h>
 #include "config.h"
 #include "common.h"
 #include "sys.h"
+#include <signal.h>
+#include <sys/errno.h>
 
 extern int errno; /* ...seems that errno.h doesn't define this everywhere */
 
@@ -48,7 +49,7 @@ VOIDSIG dummy()
     }
 
 /*
-** DeliverIt
+** deliver_it
 **	Attempt to send a sequence of bytes to the connection.
 **	Returns
 **
@@ -66,7 +67,7 @@ VOIDSIG dummy()
 **		work equally well whether blocking or non-blocking
 **		mode is used...
 */
-int DeliverIt(fd, str, len)
+int deliver_it(fd, str, len)
 int fd, len;
 char *str;
     {

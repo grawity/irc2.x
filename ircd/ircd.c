@@ -32,22 +32,26 @@
 
 char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
-#include <sys/types.h>
-#include <sys/file.h>
-#include <stdio.h>
-#include <signal.h>
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include <sys/file.h>
+#include <stdio.h>
+#include <signal.h>
 
 aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
 extern aConfItem *conf;
 extern aConfItem *find_me();
-extern char *GetClientName();
+extern char *get_client_name();
 extern aClient *find_server();
-extern aClient *AddConnection();
+extern aClient *add_connection();
+extern aClient *local[];
+
+extern void clear_channel_hash_table();
+extern void clear_client_hash_table();
+extern void write_pidfile();
 
 char **myargv;
 int portnum = -1;               /* Server port number, listening this */
@@ -60,14 +64,12 @@ char *debugmode = "";		/*  -"-    -"-   -"-  */
 
 int maxusersperchannel = MAXUSERSPERCHANNEL;
 
-long nextconnect = -1;		/* time for next TryConnections call */
+long nextconnect = -1;		/* time for next try_connections call */
 long nextping = -1;		/* same as above for check_pings() */
 
 VOIDSIG terminate()
 {
-#ifdef MSG_NOTE
-  save_messages();
-#endif
+  flush_connections(me.fd);
   exit(-1);
 }
 
@@ -88,14 +90,18 @@ VOIDSIG restart()
 
 		restarting = 1;
 		sendto_ops("Aieeeee!!!  Restarting server...");
-#ifdef MSG_NOTE
-		save_messages();
-#endif
 	    }
 	debug(DEBUG_NOTICE,"Restarting server...");
-	
-	for (i = debugtty ? 3 : 0; i < MAXFD; i++) 
+	flush_connections(me.fd);
+	/*
+	** fd 0 must be 'preserved' if either the -d or -i options have
+	** been passed to us before restarting.
+	*/
+	for (i = (debugtty == 0 && debuglevel < 0) ? 0:3; i < MAXFD; i++)
 		shutdown(i, 2);
+	shutdown(1,2);	/* not used for anything but skipped above */
+	if (debugtty >= 0)
+		shutdown(0,2);	/* close fd 0 */
 	execv(MYNAME, myargv);
 	debug(DEBUG_FATAL,"Couldn't restart server !!!!!!!!");
 	exit(-1);
@@ -103,20 +109,19 @@ VOIDSIG restart()
 
 
 /*
-** TryConnections
+** try_connections
 **
 **	Scan through configuration and try new connections.
 **	Returns the calendar time when the next call to this
 **	function should be made latest. (No harm done if this
 **	is called earlier or later...)
 */
-static long TryConnections(currenttime)
+static long try_connections(currenttime)
 long currenttime;
 {
   Reg1 aConfItem *aconf;
   Reg2 aClient *cptr;
-  aClient *acptr;
-  aConfItem *bconf, **pconf;
+  aConfItem **pconf;
   int connecting = 0, confrq = 0;
   long next = 0;
   aClass *cltmp;
@@ -144,7 +149,7 @@ long currenttime;
 	continue;
       }
 
-      confrq = GetConFreq(cltmp);
+      confrq = get_con_freq(cltmp);
       aconf->hold = currenttime + confrq;
       /*
        ** Found a CONNECT config with port specified,
@@ -166,7 +171,7 @@ long currenttime;
     }
   if (connecting) {
     if (con_conf->next) {  /* are we already last? */
-      for (pconf = &conf; aconf = *pconf; pconf = &(aconf->next))
+      for (pconf = &conf; (aconf = *pconf) != NULL; pconf = &(aconf->next))
 	if (aconf == con_conf) /* put the current one at the end */
 	  *pconf = aconf->next; /* makes sure we try all connections */
       (*pconf = con_conf)->next = 0;
@@ -190,24 +195,20 @@ long currenttime;
   extern int find_restrict();
 #endif
   char reply[128];
-  int ping;
-  aClient *ncptr;
+  int ping, smallp = 0, i;
   long oldest = currenttime;
 
-  for (cptr = client; cptr; )
+  for (i = 0; i < MAXCONNECTIONS; i++)
     {
-      ncptr = cptr->next;
-      if (!MyConnect(cptr) || IsMe(cptr)) {
-	cptr = ncptr;
+      if (!(cptr = local[i]) || IsMe(cptr))
 	continue;
-      }
+
       if (cptr->flags & FLAGS_DEADSOCKET) {
 	/*
 	 ** Note: No need to notify opers here. It's
 	 ** already done when "FLAGS_DEADSOCKET" is set.
 	 */
-	ExitClient((aClient *)NULL, cptr, &me, "Dead socket");
-	cptr = ncptr; /* NOTICE THIS! */
+	exit_client((aClient *)NULL, cptr, &me, "Dead socket");
 	continue;
       }
       
@@ -219,7 +220,11 @@ long currenttime;
 	find_restrict(cptr->user->host,
 		      cptr->user->username, reply) : 0;
 #endif
-      ping = GetClientPing(cptr);
+      ping = get_client_ping(cptr);
+      if (smallp <= 0)
+	smallp = ping;
+      else if (ping < smallp)
+	smallp = ping;
       if (killflag || ((currenttime - cptr->since) > ping)
 #ifdef R_LINES_OFTEN
 	  || rflag
@@ -231,11 +236,12 @@ long currenttime;
 	 * If the client is a user and a KILL line was found
 	 * to be active, close this connection too.
 	 */
-	if (((currenttime - cptr->lasttime) >
-	     (2 * ping)) || killflag == ERR_YOUREBANNEDCREEP) {
+	if (((currenttime - cptr->lasttime) > (2 * ping)) ||
+	    (IsUnknown(cptr) && (currenttime - cptr->since) > ping) ||
+	    (killflag == ERR_YOUREBANNEDCREEP)) {
 	  if (IsServer(cptr))
 	    sendto_ops("No response from %s, closing link",
-		       GetClientName(cptr,FALSE));
+		       get_client_name(cptr,FALSE));
 	  /*
 	   * this is used for KILL lines with time
 	   * restrictions on them - send a messgae to the
@@ -243,7 +249,7 @@ long currenttime;
 	   */
 	  if (killflag == ERR_YOUREBANNEDCREEP && IsPerson(cptr)) {
 	    sendto_ops("Kill line active for %s, closing link",
-		       GetClientName(cptr, FALSE));
+		       get_client_name(cptr, FALSE));
 	    sendto_one(cptr, reply, me.name,
 		       killflag, cptr->name);
 	  }
@@ -251,13 +257,12 @@ long currenttime;
 	  if (IsPerson(cptr) && rflag)
 	    {
 	      sendto_ops("Restricting %s (%s), closing link.",
-			 GetClientName(cptr,FALSE),reply);
+			 get_client_name(cptr,FALSE),reply);
 	      sendto_one(cptr,":%s %d :*** %s",me.name,
 			 ERR_YOUREBANNEDCREEP,reply);
 	    }
 #endif
-	  ExitClient((aClient *)NULL, cptr, &me, "Ping timeout");
-	  cptr = ncptr; /* NOTICE THIS! */
+	  exit_client((aClient *)NULL, cptr, &me, "Ping timeout");
 	  continue;
 	} else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
 	  /*
@@ -269,23 +274,24 @@ long currenttime;
 	  sendto_one(cptr, "PING %s", me.name);
 	}
       }
-      if (oldest > cptr->since)
-	oldest = cptr->since;
+      if (oldest > cptr->lasttime)
+	oldest = cptr->lasttime;
       if (killflag == ERR_YOUWILLBEBANNED && IsPerson(cptr))
 	sendto_one(cptr, reply, me.name, killflag, cptr->name);
-      cptr = ncptr; /* This must be here, see "NOTICE THIS!" */
     }
-  debug(DEBUG_DEBUG,"Next check_ping() call at: %s",
-	myctime(oldest + PINGFREQUENCY));
-  return (oldest + PINGFREQUENCY);
+  if (smallp <= 0)
+    smallp = PINGFREQUENCY;
+    debug(DEBUG_DEBUG,"Next check_ping() call at: %s",
+	  myctime(oldest + smallp));
+  return (oldest + smallp);
 }
 
 /*
-** BadCommand
+** bad_command
 **	This is called when the commandline is not acceptable.
 **	Give error message and exit without starting anything.
 */
-static int BadCommand()
+static int bad_command()
 {
   printf(
 	 "Usage: ircd %s[-h servername] [-p portnumber] [-x loglevel] [-t]\n",
@@ -305,18 +311,18 @@ int argc;
 char *argv[];
 {
 	aClient *cptr;
-	aConfItem *aconf;
 	int length;		/* Length of message received from client */
 	char buffer[BUFSIZE];
 	long delay, now;
-	static int OpenLog();
+	static int open_log();
 
-	myargv = argv; umask(077); /* better safe than sorry --SRB */
+	myargv = argv;
+	umask(077);                /* better safe than sorry --SRB */
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, catch_hup);
 	signal(SIGALRM, dummy);   
-	signal(SIGTERM, restart); 
-	signal(SIGINT, terminate);
+	signal(SIGTERM, terminate); 
+	signal(SIGINT, restart);
 #if !DEBUGMODE
 	signal(SIGQUIT, SIG_IGN);
 #endif
@@ -328,7 +334,6 @@ char *argv[];
 	*/
 	siginterrupt(SIGALRM, 1);
 #endif
-	getmyname(me.sockhost,sizeof(me.sockhost)-1);
 	/*
 	** All command line parameters have the syntax "-fstring"
 	** or "-f string" (e.g. the space is optional). String may
@@ -352,13 +357,13 @@ char *argv[];
 		switch (flag)
 		    {
 		    case 'd': /* Per user local daemon... */
-                        seteuid(getuid());
+                        setuid(getuid());
 			autodie = 1;
                         debugtty = -1;  /* mark fd 0 to be oper connection */
 		        break;
 #ifdef CMDLINE_CONFIG
 		    case 'f':
-                        seteuid(getuid());
+                        setuid(getuid());
 			configfile = p;
 			break;
 #endif
@@ -373,19 +378,19 @@ char *argv[];
 				portnum = length;
 			break;
 		    case 'x':
-                        seteuid(getuid());
+                        setuid(getuid());
 			debuglevel = atoi(p);
 			debugmode = *p ? p : "0";
 			break;
 		    case 't':
-                        seteuid(getuid());
+                        setuid(getuid());
 			debugtty = 1;
 			break;
 		    case 'i':
                         debugtty = -2;
 		        break;
 		    default:
-			BadCommand();
+			bad_command();
 			break;
 		    }
 	    }
@@ -393,32 +398,35 @@ char *argv[];
 	setuid(geteuid());
 	if (getuid() == 0)
 	    {
-		int nobody = -2;
-		fprintf(stderr,"WARNING: running ircd with uid = 0\n");
-		fprintf(stderr,"         changing to gid/uid %d.\n",nobody);
-		setgid(nobody);
-		setuid(nobody);
+		fprintf(stderr,
+			"ERROR: do not run ircd setuid root. Make it setuid a\
+ normal user.\n"
+			);
+		exit(-1);
 	    } 
 
 	if (debuglevel == -1)  /* didn't set debuglevel */
-           if (debugtty > 0)   /* but asked for debugging output to tty */
-               debugtty = 0;   /* turn it off */
+           if (debugtty > 0) {  /* but asked for debugging output to tty */
+	     fprintf( stderr, "you specified -t without -x. use -x 9...\n" );
+	     exit(-1);
+	   }
 
 	if (argc > 0)
-	  BadCommand(); /* Should never return from here... */
+	  bad_command(); /* Should never return from here... */
 
-	clearClientHashTable();
-	clearChannelHashTable();
+	clear_client_hash_table();
+	clear_channel_hash_table();
 	initclass();
-	if (initconf() == -1)
+	if (initconf(0) == -1)
 	  {
 	    debug(DEBUG_FATAL,
 		  "Failed in reading configuration file %s", configfile);
 	    printf("Couldn't open configuration file %s\n", configfile);
 	    exit(-1);
 	  }
+	get_my_name(me.name, me.sockhost,sizeof(me.sockhost)-1);
 	init_sys();   
-	OpenLog();
+	open_log();
 	/*
 	** If neither command line nor configuration defined any, use
 	** compiled default port and sockect hostname.
@@ -427,26 +435,26 @@ char *argv[];
 		strncpyzt(me.name,me.sockhost,sizeof(me.name));
 	if (portnum < 0)
 	  portnum = PORTNUM;
+	me.hopcount = 0;
 	me.next = NULL;
 	me.from = &me;
 	me.user = NULL;
 	me.confs = NULL;
 	me.fd = (debugtty == -2) ? 0 : open_port(portnum);
-	me.status = STAT_ME;
+	SetMe(&me);
 	me.lasttime = me.since = me.firsttime = time(NULL);
-	addToClientHashTable(me.name, &me);
+	add_to_client_hash_table(me.name, &me);
 
-#ifdef MSG_NOTE
-	init_messages();
-#endif
 	check_class();
 	if (debugtty == -1) {
-	  aClient *tmp = AddConnection(0);
+	  aClient *tmp = add_connection(0);
 	  if (tmp)
-	    tmp->status = STAT_MASTER;
+	    SetMaster(tmp);
 	  else
 	    exit(1);
 	}
+	else
+	  write_pidfile();
 	debug(DEBUG_DEBUG,"Server ready...");
 	for (;;)
 	    {
@@ -458,7 +466,7 @@ char *argv[];
 		** made once only; it will return 0. - avalon
 		*/
 		if (nextconnect && now >= nextconnect)
-			nextconnect = TryConnections(now);
+			nextconnect = try_connections(now);
 
 		/*
 		** take the smaller of the two 'timed' event times as
@@ -481,14 +489,15 @@ char *argv[];
 		if (delay < 1)
 			delay = 1;
 		else delay = MIN(delay, TIMESEC);
-		if ((length = ReadMessage(buffer, BUFSIZE, &cptr, delay)) > 0)
-		    {
-			cptr->lasttime = time(NULL);
-			cptr->flags &= ~FLAGS_PINGSENT;
-			dopacket(cptr, buffer, length);
-		    } 
+		read_message(buffer, BUFSIZE, &cptr, delay);
+		/*
+		** Flush output buffers on all connections now if they
+		** have data in them (or at least try to flush)
+		** -avalon
+		*/
+		flush_connections(me.fd);
 		
-		debug(DEBUG_DEBUG,"Got message");
+		debug(DEBUG_DEBUG,"Got message(s)");
 		
 		now = time(NULL);
 		/*
@@ -512,12 +521,12 @@ char *argv[];
 	    }
     }
 
-static int OpenLog()
+static int open_log()
     {
 	int fd;
 	if (debuglevel >= 0)
 	    {
-	      if (!debugtty) /* leave debugging output on stderr */
+	      if (debugtty != 1) /* leave debugging output on stderr */
 		{
 		  if ((fd = open(LOGFILE, O_WRONLY | O_CREAT, 0600)) < 0) 
 		    if ((fd = open("/dev/null", O_WRONLY)) < 0)
@@ -527,6 +536,7 @@ static int OpenLog()
 		      dup2(fd, 2);
 		      close(fd); 
 		    }
+		  lseek(2, 0L, 2);	/* SEEK_END == 2 */
 		}
 	    }
 	else

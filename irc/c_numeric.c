@@ -70,7 +70,7 @@ char *parv[];
 			parv[0], parv[2]);
 		sendto_one(&me, "WHOWAS %s", parv[2]);
 		break;
-            case ERR_WASNOSUCHNICK:
+	    case ERR_WASNOSUCHNICK:
 		mybuf[0] = '\0';
 		break;
 	    case ERR_NOSUCHSERVER:
@@ -81,12 +81,32 @@ char *parv[];
 		sprintf(mybuf, "*** Error: %s: No such channel (%s)",
 			parv[0], parv[2]);
 		break;
+	    case ERR_NOSUCHSERVICE:
+		sprintf(mybuf, "*** Error: %s: No such service (%s)",
+			parv[0], parv[2]);
+		break;
+	    case ERR_TOOMANYCHANNELS:
+		sprintf(mybuf, "*** Error: %s: You have join max. channels",
+			parv[0]);
+		break;
+	    case ERR_TOOMANYTARGETS:
+		sprintf(mybuf, "*** Error: %s: Too many targets given",
+			parv[0]);
+		break;
 	    case ERR_NORECIPIENT:
 		sprintf(mybuf, "*** Error: %s: Message had no recipient",
 			parv[0]);
 		break;
 	    case ERR_NOTEXTTOSEND:
 		sprintf(mybuf, "*** Error: %s: Empty messages cannot be sent",
+			parv[0]);
+		break;
+	    case ERR_NOTOPLEVEL:
+		sprintf(mybuf, "*** Error: %s: No toplevel domainname given",
+			parv[0]);
+		break;
+	    case ERR_WILDTOPLEVEL:
+		sprintf(mybuf, "*** Error: %s: Wildcard in toplevel name",
 			parv[0]);
 		break;
 	    case ERR_UNKNOWNCOMMAND:
@@ -106,18 +126,30 @@ char *parv[];
 			"*** Error: %s: Nickname %s is already in use. %s",
 			parv[0], parv[1], "Please choose another.");
 		break;
+	    case ERR_SERVICENAMEINUSE:
+		sprintf(mybuf, "*** Error: %s: Service %s is already in use.",
+			parv[0], parv[1]);
+		break;
+	    case ERR_SERVICECONFUSED:
+		sprintf(mybuf, "Error: %s: Your service name is confused",
+			parv[0]);
+		break;
 	    case ERR_USERNOTINCHANNEL:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
 			(parv[2][0]) ? parv[2] :
 			"You have not joined any channel");
 		break;
-            case ERR_NOTONCHANNEL:
+	    case ERR_NOTONCHANNEL:
 		sprintf(mybuf, "*** Error: %s: %s is not on channel %s",
 			parv[0], parv[2], parv[3]);
 		break;
-            case ERR_INVITEONLYCHAN:
+	    case ERR_INVITEONLYCHAN:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
 			"Magic locks open only with an invitation key");
+		break;
+	    case ERR_BANNEDFROMCHAN:
+		sprintf(mybuf,"*** Error: %s: You are banned from the channel",
+			parv[0]);
 		break;
 	    case ERR_NOTREGISTERED:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
@@ -146,7 +178,7 @@ char *parv[];
 			(parv[2][0]) ? parv[2] :
 			"You're banned from irc...");
 		break;
-            case ERR_YOUWILLBEBANNED:
+	    case ERR_YOUWILLBEBANNED:
 		sprintf(mybuf, "*** Warning: You will be banned in %d minutes",
 			atoi(parv[2]));
 		break;
@@ -154,7 +186,7 @@ char *parv[];
 		sprintf(mybuf, "*** Error: %s: Channel %s is full",
 			parv[0], parv[2]);
 		break;
-            case ERR_CANNOTSENDTOCHAN:
+	    case ERR_CANNOTSENDTOCHAN:
 		sprintf(mybuf, "*** Error: Sending to channel is %s",
 			"forbidden from heathens");
 		break;
@@ -168,6 +200,14 @@ char *parv[];
 			(parv[2][0]) ? parv[2] :
 	      "Only few of mere mortals may try to enter the twilight zone..");
 		break;
+	    case ERR_UMODEUNKNOWNFLAG:
+		sprintf(mybuf, "*** Error: %s: Unknown User Mode Flag",
+			parv[0]);
+		break;
+	    case ERR_USERSDONTMATCH:
+		sprintf(mybuf, "*** Error: %s: Can only change your own mode",
+			parv[0]);
+		break;
 	    case RPL_AWAY:
 		sprintf(mybuf, "*** %s: %s is away: %s", parv[0],
 			(parv[2][0]) ? parv[2] : "*Unknown*",
@@ -180,9 +220,8 @@ char *parv[];
 		sprintf(mybuf, "*** ISON reply: %s", parv[2]);
 		break;
 	    case RPL_WHOISUSER:
-		sprintf(mybuf, "*** %s is %s@%s (%s) on channel %s",
-			parv[2], parv[3], parv[4], parv[6],
-			(*parv[5] == '*') ? "*Private*" : parv[5]);
+		sprintf(mybuf, "*** %s is %s@%s (%s)",
+			parv[2], parv[3], parv[4], parv[6]);
 		break;
 	    case RPL_WHOWASUSER:
 		sprintf(mybuf, "*** %s was %s@%s (%s)", 
@@ -205,7 +244,7 @@ char *parv[];
 			parv[2], parv[3], parv[4]);
 		break;
 	    case RPL_WHOISCHANNELS:
-		sprintf(mybuf, "*** On Channels: %s", parv[2]);
+		sprintf(mybuf, "*** On Channels: %s", parv[3]);
 		break;
 	    case RPL_LISTSTART:
 		sprintf(mybuf, "*** Chn Users  Name");
@@ -248,29 +287,90 @@ char *parv[];
 	   "You have operator privileges now. Be nice to mere mortal souls" :
 			parv[2]);
 		break;
+	    case RPL_NOTOPERANYMORE:
+		sprintf(mybuf, "*** %s: You are No Longer Have Operator %s",
+			parv[0], "Privileges");
+		break;
 	    case RPL_REHASHING:
 		sprintf(mybuf, "*** %s: %s", parv[0], (parv[2][0] == '\0') ?
 			"Rereading configuration file.." : parv[2]);
 		break;
-            case RPL_MYPORTIS:
+	    case RPL_MYPORTIS:
 		sprintf(mybuf, "*** %s: %s %s", parv[0], parv[2], parv[1]);
 		break;
 	    case RPL_TIME:
 		sprintf(mybuf, "*** Time on host %s is %s",
 			parv[2], parv[3]);
 		break;
-            case RPL_CHANNELMODEIS:
+	    case RPL_CHANNELMODEIS:
 		sprintf(mybuf, "*** Mode is %s %s %s",
 			parv[2],parv[3],parv[4]);
 		break;
 	    case RPL_LINKS:
-		sprintf(mybuf, "*** Server %s >> %s",
-			parv[2], parv[3]);
+		m_linreply(cptr, sptr, parc, parv);
+		break;
+	    case RPL_WHOREPLY:
+		m_newwhoreply(parv[2],parv[3],parv[4],parv[6],parv[7],parv[8]);
+		break;
+	    case RPL_NAMREPLY:
+		m_newnamreply(cptr, sptr, parc, parv);
+		break;
+	    case RPL_BANLIST:
+		sprintf(mybuf, "*** %s has banned %s on %s",
+			parv[5], parv[4], parv[3]);
+		break;
+	    case RPL_TRACECONNECTING:
+	    case RPL_TRACEHANDSHAKE:
+	    case RPL_TRACEUNKNOWN:
+	    case RPL_TRACEOPERATOR:
+	    case RPL_TRACEUSER:
+	    case RPL_TRACESERVER:
+	    case RPL_TRACESERVICE:
+	    case RPL_TRACENEWTYPE:
+		sprintf(mybuf,"*** %s: %s Class: %s %4s: %s",
+			parv[0], parv[4], parv[3], parv[5]);
+		break;
+	    case RPL_TRACECLASS:
+		sprintf(mybuf,"*** %s: %s Class: %s Links: %s",
+			parv[0], parv[4], parv[5]);
+		break;
+	    case RPL_STATSLINKINFO:
+		sprintf(mybuf,"*** %s: %s %s %s %s %s %s %s",
+			parv[0], parv[3], parv[4], parv[5], parv[6],
+			parv[7], parv[8], parv[9]);
+		break;
+	    case RPL_STATSCOMMANDS:
+		sprintf(mybuf, "*** %s: %s has been used %d times",
+			parv[0], parv[3], parv[4]);
+		break;
+	    case RPL_STATSCLINE:
+	    case RPL_STATSNLINE:
+	    case RPL_STATSILINE:
+		sprintf(mybuf, "*** %s: %s:%s:*:%s:%s:%s",
+			parv[0], parv[3], parv[4], parv[6], parv[7], parv[8]);
+		break;
+	    case RPL_STATSKLINE:
+	    case RPL_STATSQLINE:
+	    case RPL_STATSYLINE:
+		sprintf(mybuf, "*** %s: %s:%s:%s:%s:%s:%s",
+			parv[0], parv[3], parv[4], parv[5],
+			parv[6], parv[7], parv[8]);
+		break;
+	    case RPL_UMODEIS:
+		sprintf(mybuf, "*** %s: Mode for user %s is %s",
+			parv[0], parv[2], parv[3]);
+		break;
+	    case RPL_SERVICEINFO:
+		sprintf(mybuf, "*** %s: Info For Service %s: %s",
+			parv[0], parv[3], parv[4]);
 		break;
 	    case RPL_ENDOFWHO:
 	    case RPL_ENDOFWHOIS:
 	    case RPL_ENDOFLINKS:
 	    case RPL_ENDOFNAMES:
+	    case RPL_ENDOFSTATS:
+	    case RPL_ENDOFBANLIST:
+	    case RPL_ENDOFSERVICES:
 		mybuf[0] = '\0';
 		break;
 	    default:

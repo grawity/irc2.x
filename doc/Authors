@@ -77,6 +77,8 @@ Chelsea Ashley Dyerman
 The version 2.5.2 release was coordinated by Christopher Davis, Helen Rose,
 and Tom Hopkins.
 
+The version 2.6.2 and 2.7 releases were coordinated by Darren Reed.
+
 Markku Savela <Markku.Savela@vtt.fi> / April 1990
 Fixed various bugs in 2.2PL1 release server (2.2msa.4) and changed
 sockets to use non-blocking mode (2.2msa.9). [I have absolutely

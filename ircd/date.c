@@ -32,6 +32,7 @@
 
 char date_id[]="date.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
+#include <stdio.h>
 #include "config.h"
 #include "common.h"
 #include "sys.h"
@@ -82,11 +83,11 @@ long clock;
  ** myctime()
  **   This is like standard ctime()-function, but it zaps away
  **   the newline from the end of that string. Also, it takes
- **   the time valie as parameter, instead of pointer to it.
+ **   the time value as parameter, instead of pointer to it.
  **   Note that it is necessary to copy the string to alternate
  **   buffer (who knows how ctime() implements it, maybe it statically
- **   has newline there ane never 'refreshes' it--zapping that
- **   might break things in other places..
+ **   has newline there and never 'refreshes' it -- zapping that
+ **   might break things in other places...)
  **
  **/
 

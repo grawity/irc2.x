@@ -36,6 +36,7 @@ char irc_id[]="irc.c v2.0 (c) 1988 University of Oulu, Computing Center and Jark
 #define KILLMAX 10  /* Number of kills to accept to really die */
                     /* this is to prevent looping with /unkill */
 #include "struct.h"
+#include "common.h"
 #include <sys/types.h>
 #if VMS
 #include stdlib
@@ -70,7 +71,6 @@ char *a_myuser();
 #endif
 #include <signal.h>
 
-#include "common.h"
 #include "msg.h"
 #include "sys.h"
 #include "irc.h"
@@ -386,8 +386,7 @@ int sock;
 static char cmdch = '/';
 static char queryuser[QUERYLEN+2] = "";
 
-int
-do_cmdch(ptr, temp)
+int do_cmdch(ptr, temp)
 char *ptr, *temp;
 {
   if (BadPtr(ptr)) {
@@ -410,8 +409,7 @@ char *ptr, *temp;
   return (0);
 }
 
-int
-do_query(ptr, temp)
+int do_query(ptr, temp)
 char *ptr, *temp;
 {
   if (BadPtr(ptr)) {
@@ -427,8 +425,7 @@ char *ptr, *temp;
   return (0);
 }
 
-int
-do_mypriv(buf1, buf2)
+int do_mypriv(buf1, buf2)
 char *buf1, *buf2;
 {
   char *tmp = index(buf1, ' ');
@@ -460,8 +457,7 @@ char *buf1, *buf2;
   return (0);
 }
 
-int
-do_myqpriv(buf1, buf2)
+int do_myqpriv(buf1, buf2)
 char *buf1, *buf2;
 {
   if (BadPtr(buf1)) {
@@ -477,8 +473,7 @@ char *buf1, *buf2;
 
 static char *querychannel = "0";
 
-int
-do_mytext(buf1, temp)
+int do_mytext(buf1, temp)
 char *buf1, *temp;
 {
   sendto_one(&me, "PRIVMSG %s :%s", querychannel, buf1);
@@ -487,8 +482,7 @@ char *buf1, *temp;
   return (0);
 }
 
-int
-do_unkill(buf, temp)
+int do_unkill(buf, temp)
 char *buf, *temp;
 {
   if (unkill_flag)
@@ -500,8 +494,7 @@ char *buf, *temp;
   return (0);
 }
 
-int
-do_bye(buf, tmp)
+int do_bye(buf, tmp)
 char *buf, *tmp;
 {
   unkill_flag = 0;
@@ -524,8 +517,7 @@ char *buf, *tmp;
   return (0);
 }
 
-int
-do_server(buf, tmp)
+int do_server(buf, tmp)
 char *buf, *tmp;
 {
   strncpyzt(currserver, buf, HOSTLEN);
@@ -536,8 +528,7 @@ char *buf, *tmp;
   return (-1);
 }
 
-int
-sendit(sock,line)
+int sendit(sock,line)
 int sock;
 char *line;
 {
@@ -587,7 +578,7 @@ char *str1, *str2;
   char *s1;
   for (s1 = str1; *s1 != ' ' && *s1 && *str2; s1++, str2++) {
     if (!isascii(*s1)) return 0;
-    if (islower(*s1)) *s1 = toupper(*s1);
+    *s1 = toupper(*s1);
     if (*s1 != *str2) flag = 1;
   }
   if (*s1 && *s1 != ' ' && *str2 == '\0')
@@ -853,7 +844,6 @@ char *ptr, *xtra;
 #endif
 
 /* Fake routine (it's only in server...) */
-int IsMember() { return 0; }
 
 do_channel(ptr, xtra)
 char *ptr, *xtra;

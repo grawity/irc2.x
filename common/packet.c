@@ -84,5 +84,6 @@ int length;
 			ch1++; /* There is always room for the null */
 	    }
 	cptr->count = ch1 - cptr->buffer;
+	return 0;
     }
  

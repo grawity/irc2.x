@@ -30,14 +30,14 @@
 INCLUDE =../include
 
 #For MIPS, use this:
-#CFLAGS =-O -systype bsd43 -I${INCLUDE}
-CFLAGS =-O -I${INCLUDE}
+#CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
+CFLAGS = -g -I${INCLUDE}
 
 # For AIX, use the following:
 #IRCLIBS=-lcurses -lcur
 IRCLIBS=-lcurses -ltermcap
 
-CC=/bsd/bin/cc
+CC=/bin/cc
 RM=/bin/rm
 OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
      irc.o screen.o str.o c_debug.o

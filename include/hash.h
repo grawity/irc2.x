@@ -32,7 +32,7 @@ typedef	struct	hashentry {
 	aHashLink	*list;
 	} aHashEntry;
 
-#define	HASHSIZE	701	/* prime number */
+#define	HASHSIZE	809	/* prime number */
 /*
  * choose hashsize from these:
  *
@@ -40,4 +40,4 @@ typedef	struct	hashentry {
  * 563, 587, 607, 631, 653, 673, 701, 721, 739, 761, 787, 809
  */
 
-#define	CHANNELHASHSIZE	167	/* prime number */
+#define	CHANNELHASHSIZE	293	/* prime number */

@@ -48,7 +48,8 @@
  * Changed memset(xx,0,yy) into bzero(xx,yy)
  */
 
-char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center\
+ and Jarkko Oikarinen";
 
 #include "struct.h"
 #include "common.h"
@@ -92,10 +93,17 @@ aClient *from;
 	cptr->history = NULL;
 	cptr->status = STAT_UNKNOWN;
 	cptr->fd = -1;
-	cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
+	cptr->hopcount = 0;
 	if (size == CLIENT_LOCAL_SIZE) {
+	  cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
 	  cptr->confs = (Link *) 0;
 	  cptr->sockhost[0] = '\0';
+#ifdef DOUBLE_BUFFER
+	  cptr->ocount = 0;
+	  cptr->obuffer[0] = '\0';
+#endif
+	  cptr->count = 0;
+	  cptr->buffer[0] = '\0';
 	}
 	return (cptr);
     }
@@ -109,13 +117,12 @@ aClient *sptr;
     {
 	if (sptr->user != NULL)
 		return -1;
-	if ((sptr->user = (anUser *)malloc(sizeof(anUser))) == NULL)
-		outofmemory();
+	sptr->user = (anUser *)MyMalloc(sizeof(anUser));
 	bzero((char *)sptr->user,sizeof(anUser));
 	sptr->user->away = NULL;
-	sptr->user->invited = NULL;
 	sptr->user->refcnt = 1;
-	sptr->user->channel = (aChannel *) 0;
+	sptr->user->channel = NULL;
+	sptr->user->invited = NULL;
 	return 0;
     }
 
@@ -149,7 +156,7 @@ aClient	*cptr;
 	if (cptr->next)
 		cptr->next->prev = cptr->prev;
 	if (cptr->user) {
-		OffHistory(cptr);
+		off_history(cptr);
 		free_user(cptr->user);
 	}
 	free(cptr);
@@ -164,8 +171,25 @@ aClient	*cptr;
 add_client_to_list(cptr)
 aClient	*cptr;
 {
+	/*
+	 * since we always insert new clients to the top of the list,
+	 * this should mean the "me" is the bottom most item in the list.
+	 */
 	cptr->next = client;
 	client = cptr;
 	if (cptr->next)
 		cptr->next->prev = cptr;
 }
+
+Link *find_user_link(link, ptr)
+Reg1 Link *link;
+Reg2 aClient *ptr;
+{
+  while (link && ptr) {
+    if (link->value.cptr == ptr)
+      return (link);
+    link = link->next;
+  }
+  return (Link *)NULL;
+}
+

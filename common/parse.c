@@ -34,9 +34,9 @@
  * Changed the order of defines...
  */
 
-char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center\
+ and Jarkko Oikarinen";
 
-#include <ctype.h>
 #include "struct.h"
 #include "common.h"
 #define MSGTAB
@@ -48,14 +48,24 @@ char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center an
 extern aClient *client;
 extern aClient *hash_find_client(), *hash_find_server();
 
+#ifdef CLIENT_COMPILE
+static char sender[NICKLEN+USERLEN+HOSTLEN+3];
+char userhost[USERLEN+HOSTLEN+2];
+#else
 static char sender[HOSTLEN+1];
+#endif
 
 int myncmp(str1, str2, n)
-char *str1, *str2;
+Reg1 u_char *str1;
+Reg2 u_char *str2;
 int n;
     {
-	while ((islower(*str1) ? toupper(*str1) : *str1) ==
-	       (islower(*str2) ? toupper(*str2) : *str2))
+#ifdef USE_OUR_CTYPE
+	while (toupper(*str1) == toupper(*str2))
+#else
+	while ( (islower(*str1) ? *str1 : tolower(*str1)) ==
+		(islower(*str2) ? *str2 : tolower(*str2)))
+#endif
 	    {
 		str1++; str2++; n--;
 		if (n == 0 || (*str1 == '\0' && *str2 == '\0'))
@@ -71,11 +81,15 @@ int n;
 **		1, if not equal
 */
 int mycmp(str1, str2)
-Reg1 char *str1;
-Reg2 char *str2;
+Reg1 u_char *str1;
+Reg2 u_char *str2;
     {
-	while ((islower(*str1) ? toupper(*str1) : *str1) ==
-	       (islower(*str2) ? toupper(*str2) : *str2))
+#ifdef USE_OUR_CTYPE
+	while (toupper(*str2) == toupper(*str1))
+#else
+	while ( (islower(*str1) ? *str1 : tolower(*str1)) ==
+		(islower(*str2) ? *str2 : tolower(*str2)))
+#endif
 	    {
 		if (*str1 == '\0')
 			return(0);
@@ -106,6 +120,7 @@ aClient *cptr;
 	}
 	return cptr;
     }
+
 #else
 aClient *find_client(name, cptr)
 char *name;
@@ -172,6 +187,17 @@ aClient *cptr;
 {
   Reg1 aClient *c2ptr = (aClient *) 0;
 
+  if (name)
+    c2ptr = hash_find_server(name, (aClient *)NULL);
+  return (c2ptr ? c2ptr : cptr);
+}
+
+aClient *find_name(name, cptr)
+char *name;
+aClient *cptr;
+{
+  Reg1 aClient *c2ptr = (aClient *) 0;
+
   if (name) {
     if (c2ptr = hash_find_server(name, (aClient *)NULL))
       return (c2ptr);
@@ -218,7 +244,7 @@ aClient *cptr;
     {
 	aClient *c2ptr = find_client(name, (aClient *)NULL);
 
-	if (c2ptr != NULL && !IsServer(c2ptr) && !IsMe(c2ptr))
+	if (c2ptr != NULL && IsClient(c2ptr) && c2ptr->user)
 		return c2ptr;
 	else
 		return cptr;
@@ -249,6 +275,22 @@ struct Message *mptr;
 			if (i < sizeof(sender)-1) /* Leave room for NULL */
 				sender[i++] = *ch;
 		sender[i] = '\0';
+#ifdef CLIENT_COMPILE
+		{
+		    Reg1 char *s;
+
+			if (s = index(sender, '!'))
+			    {
+				*s++ = '\0';
+				strncpy(userhost, s, sizeof(userhost));
+			    }
+			else if (s = index(sender, '@'))
+			    {
+				*s++ = '\0';
+				strncpy(userhost, s, sizeof(userhost));
+			    }
+		}
+#endif
 		/*
 		** Actually, only messages coming from servers can have
 		** the prefix--prefix silently ignored, if coming from
@@ -349,8 +391,8 @@ struct Message *mptr;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
-		if (mptr->flags & 1 && !IsServer(cptr) && !IsService(cptr) && !IsOper(cptr))
-		  cptr->since += 1;  /* Allow only 1 msg per 2 seconds
+		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr)))
+		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
 				      * (on average) to prevent dumping.
 				      * to keep the response rate up,
 				      * bursts of up to 5 msgs are allowed--SRB

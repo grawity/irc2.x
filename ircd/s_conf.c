@@ -53,13 +53,19 @@
  *  Added close() into configuration file (was forgotten...)
  */
 
-char conf_id[] = "conf.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char conf_id[] = "conf.c v2.0 (c) 1988 University of Oulu, Computing Center\
+ and Jarkko Oikarinen";
 
-#include <stdio.h>
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include <stdio.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#ifdef __hpux
+#include <arpa/inet.h>
+#endif
 
 aConfItem *conf = NULL;
 
@@ -95,16 +101,16 @@ char *p; int x;
 
 static aConfItem *make_conf()
     {
-	aConfItem *cptr =(struct ConfItem *) MyMalloc(sizeof(struct ConfItem));
+	aConfItem *aconf =(struct ConfItem *) MyMalloc(sizeof(struct ConfItem));
 	
-	cptr->next = NULL;
-	cptr->host = cptr->passwd = cptr->name = NULL;
-	cptr->status = CONF_ILLEGAL;
-	cptr->clients = 0;
-	cptr->port = 0;
-	cptr->hold = 0;
-	Class(cptr) = 0;
-	return (cptr);
+	aconf->next = NULL;
+	aconf->host = aconf->passwd = aconf->name = NULL;
+	aconf->status = CONF_ILLEGAL;
+	aconf->clients = 0;
+	aconf->port = 0;
+	aconf->hold = 0;
+	Class(aconf) = 0;
+	return (aconf);
     }
 
 static free_conf(aconf)
@@ -128,12 +134,12 @@ aConfItem *aconf;
 {
   Reg1 Link *tmp;
   tmp = cptr->confs;
-  while (tmp && tmp->value == (char *) aconf)
+  while (tmp && tmp->value.aconf == aconf)
     tmp = tmp->next;
   while (tmp) {
-    detach_conf(cptr, tmp->value);
+    detach_conf(cptr, tmp->value.aconf);
     tmp = cptr->confs;
-    while (tmp && tmp->value == (char *) aconf)
+    while (tmp && tmp->value.aconf == aconf)
       tmp = tmp->next;
   }
 }
@@ -148,10 +154,10 @@ int mask;
 {
   Reg1 Link *tmp, *tmp2;
   tmp = cptr->confs;
-  while (tmp && tmp->value) {
+  while (tmp && tmp->value.aconf) {
     tmp2 = tmp->next;
-    if ( ( ((aConfItem *)tmp->value)->status & mask) == 0)
-      detach_conf(cptr, tmp->value);
+    if ((tmp->value.aconf->status & mask) == 0)
+      detach_conf(cptr, tmp->value.aconf);
     tmp = tmp2;
   }
 }
@@ -164,11 +170,11 @@ aClient *cptr;
   Reg1 Link *tmp, *tmp2;
   Link *first = (Link *)NULL;
   tmp = cptr->confs;
-  while (tmp && tmp->value) {
+  while (tmp && tmp->value.aconf) {
     tmp2 = tmp->next;
-    if ( ((aConfItem *)tmp->value)->status == CONF_CLIENT)
+    if (tmp->value.aconf->status == CONF_CLIENT)
       if (first)
-	detach_conf(cptr, tmp->value);
+	detach_conf(cptr, tmp->value.aconf);
       else
 	first = tmp;
     tmp = tmp2;
@@ -190,13 +196,13 @@ aConfItem *aconf;
   link = &(cptr->confs);
 
   while (*link) {
-    if ((*link)->value == (char *) aconf) {
+    if ((*link)->value.aconf == aconf) {
       if ((aconf) && (Class(aconf))) {
 	status = aconf->status;
 	if (IsIllegal(aconf))
 	  aconf->status *= CONF_ILLEGAL;
-	if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
-	    CONF_NOCONNECT_SERVER))
+	if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER | CONF_LOCOP |
+	    CONF_OPERATOR | CONF_NOCONNECT_SERVER))
 	  if (ConfLinks(aconf) > 0)
 	     --ConfLinks(aconf);
         if (ConfMaxLinks(aconf) == -1 && ConfLinks(aconf) == 0)
@@ -220,7 +226,7 @@ aClient *cptr;
 {
   Reg1 Link *link = cptr->confs;
   while (link) {
-    if (link->value == (char *) aconf)
+    if (link->value.aconf == aconf)
       break;
     link = link->next;
   }
@@ -241,13 +247,16 @@ aClient *cptr;
   Reg1 Link *link;
   if (IsAttached(aconf, cptr))
     return 1;
+  if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR)) &&
+      ConfLinks(aconf) >= ConfMaxLinks(aconf))
+    return 0;
   link = (Link *) MyMalloc(sizeof(Link));
   link->next = cptr->confs;
-  link->value = (char *) aconf;
+  link->value.aconf = aconf;
   cptr->confs = link;
   aconf->clients += 1;
-  if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
-      CONF_NOCONNECT_SERVER))
+  if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER | CONF_OPERATOR |
+      CONF_NOCONNECT_SERVER | CONF_LOCOP))
     ConfLinks(aconf)++;
   return 1;
 }
@@ -274,7 +283,40 @@ aConfItem *find_me()
 	return (aconf);
     }
 
-aConfItem *attach_confs(cptr, host, statmask)
+aConfItem *attach_confs(cptr, name, statmask)
+aClient *cptr;
+char *name;
+int statmask;
+{
+  Reg1 aConfItem *tmp;
+  aConfItem *first = (aConfItem *) 0;
+  int len = strlen(name);
+  
+  if (len > HOSTLEN)
+    return (aConfItem *) 0;
+
+  for (tmp = conf; tmp; tmp = tmp->next) {
+    if ((tmp->status & statmask) &&
+	(tmp->status & (CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)) == 0 &&
+	(matches(tmp->name, name) == 0)) {
+      if (!first)
+	first = tmp;
+      attach_conf(tmp, cptr);
+    } else if ((tmp->status & statmask) &&
+	       (tmp->status & (CONF_CONNECT_SERVER|CONF_NOCONNECT_SERVER)) &&
+	       (mycmp(tmp->name, name) == 0)) {
+      if (!first)
+	first = tmp;
+      attach_conf(tmp, cptr);
+    }
+  }
+  return(first);
+}
+
+/*
+ * Added for new access check    meLazy
+ */
+aConfItem *attach_confs_host(cptr, host, statmask)
 aClient *cptr;
 char *host;
 int statmask;
@@ -304,7 +346,33 @@ int statmask;
   return(first);
 }
 
-aConfItem *FindConfName(name, statmask)
+/*
+ * find a conf entry which matches the hostname and has the same name.
+ */
+aConfItem *find_conf_exact(name, host, statmask)
+char *name, *host;
+int statmask;
+{
+  Reg1 aConfItem *tmp;
+
+  for (tmp = conf; tmp; tmp = tmp->next)
+    if ((tmp->status & statmask) && (mycmp(tmp->name, name) == 0) &&
+	(matches(tmp->host, host)==0))
+    /*
+     ** Accept if the *real* hostname (usually sockecthost)
+     ** matches *either* host or name field of the configuration.
+     */
+	if ((tmp->status & (CONF_OPERATOR|CONF_LOCOP))) {
+	  if (tmp->clients < MaxLinks(Class(tmp)))
+	    break;
+	  else
+	    continue;
+	} else
+	  break;
+  return (tmp);
+}
+
+aConfItem *find_conf_name(name, statmask)
 char *name;
 int statmask;
 {
@@ -323,7 +391,7 @@ int statmask;
   return(tmp);
 }
 
-aConfItem *FindConf(link, name, statmask)
+aConfItem *find_conf(link, name, statmask)
 char *name;
 Link *link;
 int statmask;
@@ -335,12 +403,38 @@ int statmask;
     return (aConfItem *) 0;
 
   for (; link; link = link->next) {
-    tmp = (aConfItem *) link->value;
+    tmp = link->value.aconf;
+    if ((tmp->status & statmask) &&
+	(((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER))
+	 && (!name || mycmp(tmp->name, name) == 0)) ||
+	((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)) == 0
+	 && (!name || matches(tmp->name, name) == 0))))
+      break;
+  }
+  return(link ? tmp : (aConfItem *) 0);
+}
+
+/*
+ * Added for new access check    meLazy
+ */
+aConfItem *find_conf_host(link, host, statmask)
+char *host;
+Link *link;
+int statmask;
+{
+  Reg1 aConfItem *tmp;
+  int hostlen = host ? strlen(host) : 0;
+  
+  if (hostlen > HOSTLEN)
+    return (aConfItem *) 0;
+
+  for (; link; link = link->next) {
+    tmp = link->value.aconf;
     if ((tmp->status & statmask) &&
 	(((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)) == 0
-	 && (!name || matches(tmp->name, name) == 0)) ||
+	 && (!host || matches(tmp->host, host) == 0)) ||
 	((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)
-	 && (!name || mycmp(tmp->name, name) == 0)))))
+	 && (!host || mycmp(tmp->host, host) == 0)))))
       break;
   }
   return(link ? tmp : (aConfItem *) 0);
@@ -349,7 +443,7 @@ int statmask;
 rehash()
     {
 	Reg1 aConfItem *tmp = conf, *tmp2;
-	Reg2 aClass *cltmp, *cltmp2;
+	Reg2 aClass *cltmp;
 
 	while (tmp)
 	  {
@@ -379,7 +473,7 @@ rehash()
 	  MaxLinks(cltmp) = -1;
 
 	conf = (aConfItem *) 0;
-	initconf();
+	initconf(1);
     }
 
 extern char *getfield();
@@ -394,12 +488,15 @@ extern char *getfield();
 
 #define MAXCONFLINKS 150
 
-initconf()
+initconf(rehashing)
+int rehashing;
     {
 	FILE *fd;
-	char line[256], *tmp, type, c[80];
-	int ccount = 0, ncount = 0, illegal;
+	char line[256], *tmp, c[80];
+	int ccount = 0, ncount = 0;
 	aConfItem *aconf;
+	struct hostent *hp;
+
 	if (!(fd = fopen(configfile,"r")))
 		return(-1);
 	while (fgets(line,255,fd))
@@ -408,9 +505,19 @@ initconf()
 		    line[0] == ' ' || line[0] == '\t')
 			continue;
 		aconf = make_conf();
-		illegal = 0;
 
-		switch (*getfield(line))
+		if (tmp = index(line, '\n'))
+			*tmp = 0;
+		else while(fgets(c, sizeof(c), fd))
+		    {
+			if (tmp = index(c, '\n'))
+				*tmp= 0;
+				break;
+		    }
+		tmp = getfield(line);
+		if (!tmp)
+			continue;
+		switch (*tmp)
 		    {
 		    case 'C':   /* Server where I should try to connect */
 		    case 'c':   /* in case of link failures             */
@@ -509,7 +616,7 @@ initconf()
                 ** for it and make the conf_line illegal and delete it.
                 */
 		if (aconf->status & CONF_CLASS) {
-		  AddClass(atoi(aconf->host), atoi(aconf->passwd),
+		  add_class(atoi(aconf->host), atoi(aconf->passwd),
 			   atoi(aconf->name), aconf->port);
 		}
 
@@ -539,6 +646,30 @@ initconf()
 		    Class(aconf) = find_class(0);
 		  if (MaxLinks(Class(aconf)) < 0)
 		    Class(aconf) = find_class(0);
+		}
+		/*
+		** Do name lookup now on hostnames given and store the
+		** ip numbers in conf structure.
+		*/
+		aconf->ipnum.s_addr = -1;
+		while (!rehashing && (aconf->status &
+		       (CONF_CONNECT_SERVER|CONF_NOCONNECT_SERVER))) {
+		    if (aconf->host && (hp = gethostbyname(aconf->host))) {
+			bcopy(hp->h_addr, &(aconf->ipnum), hp->h_length);
+			if (aconf->ipnum.s_addr)
+				break;
+		    }
+		    if (isdigit(*aconf->host)) {
+			aconf->ipnum.s_addr = inet_addr(aconf->host);
+			if (aconf->ipnum.s_addr != -1)
+				break;
+		    }
+		    if (aconf->name && (hp = gethostbyname(aconf->name))) {
+			bcopy(hp->h_addr, &(aconf->ipnum), hp->h_length);
+			if (aconf->ipnum.s_addr)
+				break;
+		    }
+		    break;
 		}
 		/*
 		** Own port and name cannot be changed after the startup.
@@ -575,22 +706,17 @@ char *host, *name, *reply;
 	static int check_time_interval();
 	int rc = ERR_YOUREBANNEDCREEP;
 
-	if (!host || !reply)
-		return (0);
 	if (strlen(host)  > HOSTLEN || (name ? strlen(name) : 0) > HOSTLEN)
 		return (0);
 	strcpy(reply, ":%s %d %s :*** Ghosts are not allowed on IRC.");
 	for (tmp = conf; tmp; tmp = tmp->next)
-	    {
-		if (tmp->status == CONF_KILL &&
-		    (BadPtr(tmp->host) || matches(tmp->host, host) == 0) &&
-		    (BadPtr(tmp->name) || BadPtr(name) ||
-matches(tmp->name, name) == 0))
+ 		if ((matches(tmp->host, host) == 0) &&
+		    tmp->status == CONF_KILL &&
+ 		    (name == NULL || matches(tmp->name, name) == 0))
  			if (BadPtr(tmp->passwd) ||
  			   (rc = check_time_interval(tmp->passwd, reply)))
  			break;
-	    }
-	return (tmp ? rc : 0);
+ 		return (tmp ? rc : 0);
      }
 
 #ifdef R_LINES
@@ -657,7 +783,7 @@ char	*interval, *reply;
 {
 	struct tm *tptr;
  	long	tick;
- 	char	*p, *oldp;
+ 	char	*p;
  	int	perm_min_hours, perm_min_minutes,
  		perm_max_hours, perm_max_minutes;
  	int	now, perm_min, perm_max;

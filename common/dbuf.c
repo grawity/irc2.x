@@ -47,10 +47,17 @@
 **
 */
 
+#include <stdio.h>
 #include "config.h"
 #include "common.h"
 #include "dbuf.h"
 #include "sys.h"
+
+/* This is a dangerous define because a broken compiler will set DBUFSIZ
+** to 4, which will work but will be very inefficient. However, there
+** are other places where the code breaks badly if this is screwed
+** up, so... -- Wumpus
+*/
 
 #define DBUFSIZ sizeof(((dbufbuf *)0)->data)
 

@@ -52,15 +52,18 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-extern char *malloc();
-extern void free();
+#if MIPS || pyr
+char *malloc(), *calloc();
+void free();
+#else
+#include <malloc.h>
+#endif
 
 #if NEED_INET_ADDR
 extern unsigned long inet_addr PROTO((char *));
 #endif
 
 #if NEED_INET_NTOA || NEED_INET_NETOF
-#include <sys/types.h>
 #include <netinet/in.h>
 #endif
 
@@ -76,8 +79,59 @@ extern long time();
 extern char *myctime PROTO((long));
 extern char *strtoken PROTO((char **, char *, char *));
 
+
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 #define MyFree(x)       if ((x) != NULL) free(x)
 #define DupString(x,y) do { x = MyMalloc(strlen(y)+1); strcpy(x, y);}while (0)
+
+#ifdef USE_OUR_CTYPE
+
+extern char tolowertab[];
+
+#undef tolower
+#define tolower(c) (tolowertab[1+(c)])
+
+extern char touppertab[];
+
+#undef toupper
+#define toupper(c) (touppertab[1+(c)])
+
+#undef isalpha
+#undef isdigit
+#undef isalnum
+#undef isprint
+#undef isascii
+#undef isgraph
+#undef ispunct
+#undef islower
+#undef isupper
+#undef isspace
+
+extern char char_atribs[];
+
+#define PRINT 1
+#define CNTRL 2
+#define ALPHA 4
+#define PUNCT 8
+#define DIGIT 16
+#define SPACE 32
+
+#define isalpha(c) (char_atribs[1+(c)]&ALPHA)
+#define isspace(c) (char_atribs[1+(c)]&SPACE)
+#define islower(c) ((char_atribs[1+(c)]&ALPHA) && ((c) > 0x5f))
+#define isupper(c) ((char_atribs[1+(c)]&ALPHA) && ((c) < 0x60))
+#define isdigit(c) (char_atribs[1+(c)]&DIGIT)
+#define isalnum(c) (char_atribs[1+(c)]&(DIGIT|ALPHA))
+#define isprint(c) (char_atribs[1+(c)]&PRINT)
+#define isascii(c) ((c) >= 0 && (c) <= 0x7f)
+#define isgraph(c) ((char_atribs[1+(c)]&PRINT) && ((c) != 0x32))
+#define ispunct(c) (!(char_atribs[1+(c)]&(CNTRL|ALPHA|DIGIT)))
+#else
+#include <ctype.h>
+#endif
+
+extern char *MyMalloc();
+extern void flush_connections();
+extern struct SLink *find_user_link(/* struct SLink *, struct Client * */);

@@ -137,16 +137,16 @@ int dbuf_delete PROTO((dbuf *, long int));
 					/* Number of bytes to delete */
 
 /*
-** dbuf_length
+** DBufLength
 **	Return the current number of bytes stored into the buffer.
 **	(One should use this instead of referencing the internal
 **	length field explicitly...)
 */
-#define dbuf_length(dyn) ((dyn)->length)
+#define DBufLength(dyn) ((dyn)->length)
 
 /*
-** dbuf_clear
+** DBufClear
 **	Scratch the current content of the buffer. Release all
 **	allocated buffers and make it empty.
 */
-#define dbuf_clear(dyn)	dbuf_delete((dyn),dbuf_length(dyn))
+#define DBufClear(dyn)	dbuf_delete((dyn),DBufLength(dyn))

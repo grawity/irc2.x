@@ -54,10 +54,6 @@ char *ptr, *temp;
     putline("\"/HELP cmdch\"");
     putline("*** End Help");
   } else {
-/*    for (ch = ptr; *ch; ch++)
-      if (islower(*ch))
-	*ch = toupper(*ch); */
-
     for (hptr = helplist; hptr->command; hptr++) 
       if (mycncmp(ptr, hptr->command)) 
 	break;

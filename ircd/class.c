@@ -28,12 +28,15 @@
  * frozen beta revision 2.6.1
  *
  */
+static char class_id[] = "class.c v1.4 (c) 1991 Darren Reed";
 
 #include "struct.h"
 #include "common.h"
+#include "numeric.h"
 
 extern char *strerror();
 extern int errno;
+extern void restart();
 
 #define BAD_CONF_CLASS		-1
 #define BAD_PING		-2
@@ -41,7 +44,7 @@ extern int errno;
 
 aClass *classes;
 
-int	GetConfClass(aconf)
+int	get_conf_class(aconf)
 aConfItem	*aconf;
 {
 	if ((aconf) && Class(aconf))
@@ -54,7 +57,7 @@ aConfItem	*aconf;
 
 }
 
-static	int	GetConfPing(aconf)
+static	int	get_conf_ping(aconf)
 aConfItem	*aconf;
 {
 	if ((aconf) && Class(aconf))
@@ -68,7 +71,7 @@ aConfItem	*aconf;
 
 
 
-int	GetClientClass(acptr)
+int	get_client_class(acptr)
 aClient	*acptr;
 {
 	int i = 0, retc = BAD_CLIENT_CLASS;
@@ -76,9 +79,9 @@ aClient	*acptr;
 
 	if (acptr && !IsMe(acptr)  && (acptr->confs))
 		for (tmp = acptr->confs; tmp; tmp = tmp->next) {
-			if (tmp->value == (char *)0)
+			if (!tmp->value.aconf)
 				continue;
-			i = GetConfClass((aConfItem *)tmp->value);
+			i = get_conf_class(tmp->value.aconf);
 			if (i > retc)
 				retc = i;
 		}
@@ -88,7 +91,7 @@ aClient	*acptr;
 	return (retc);
 }
 
-int	GetClientPing(acptr)
+int	get_client_ping(acptr)
 aClient	*acptr;
 {
 	int	ping = 0, ping2;
@@ -100,10 +103,15 @@ aClient	*acptr;
 	if (link)
 		while (link)
 		    {
-			aconf = (aConfItem *)link->value;
-			ping2 = GetConfPing(aconf);
-			if ((ping2 != BAD_PING) && ((ping > ping2) || !ping))
-				ping = ping2;
+			aconf = link->value.aconf;
+			if (aconf->status & (CONF_CLIENT|CONF_CONNECT_SERVER|
+					     CONF_NOCONNECT_SERVER))
+			    {
+				ping2 = get_conf_ping(aconf);
+				if ((ping2 != BAD_PING) && ((ping > ping2) ||
+				    !ping))
+					ping = ping2;
+			     }
 			link = link->next;
 		    }
 	else {
@@ -114,7 +122,7 @@ aClient	*acptr;
 	return (ping);
 }
 
-int	GetConFreq(clptr)
+int	get_con_freq(clptr)
 aClass	*clptr;
 {
 	if (clptr)
@@ -130,18 +138,14 @@ aClass	*clptr;
  * if no present entry is found, then create a new one and add it in
  * immeadiately after the first one (class 0).
  */
-void AddClass(class, ping, confreq, maxli)
+void add_class(class, ping, confreq, maxli)
 int class, ping, confreq, maxli;
 {
   aClass *t, *p;
 
   t = find_class(class);
   if ((t == classes) && (class != 0)) {
-    p = (aClass *) malloc(sizeof(aClass));
-    if (!p) {
-      debug(DEBUG_FATAL, "malloc (addclass) %s", strerror(errno));
-      restart();
-    }
+    p = (aClass *)MyMalloc(sizeof(aClass));
     NextClass(p) = NextClass(t);
     NextClass(t) = p;
   }
@@ -189,12 +193,8 @@ void check_class()
 
 void initclass()
 {
-  classes = (aClass *) malloc(sizeof(aClass));
+  classes = (aClass *)MyMalloc(sizeof(aClass));
 
-  if (!FirstClass()) {
-    debug(DEBUG_FATAL, "malloc (initclass) %s", strerror(errno));
-    restart();
-  }
   Class(FirstClass()) = 0;
   ConFreq(FirstClass()) = CONNECTFREQUENCY;
   PingFreq(FirstClass()) = PINGFREQUENCY;
@@ -203,13 +203,14 @@ void initclass()
   NextClass(FirstClass()) = (aClass *) NULL;
 }
 
-ReportClasses(cptr,sptr)
-aClient *cptr,*sptr;
+report_classes(sptr)
+aClient *sptr;
 {
 	Reg1 aClass *cltmp;
 
 	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
-		sendto_one(sptr,"NOTICE %s :Y:%d:%d:%d:%d", sptr->name,
+		sendto_one(sptr,":%s %d %s Y %d %d %d %d",
+			   me.name, RPL_STATSYLINE, sptr->name,
 			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
 			   MaxLinks(cltmp));
 }

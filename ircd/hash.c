@@ -16,14 +16,14 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+static char hash_id[] = "hash.c v1.2 (c) 1991 Darren Reed";
 
-#include <stdio.h>
-#include "config.h"
 #include "struct.h"
+#include "common.h"
 #include "sys.h"
 #include "hash.h"
-#include <ctype.h>
 
+extern  char *MyMalloc();
 extern	aClient	*client;
 extern	aChannel	*channel;
 
@@ -44,18 +44,20 @@ static	int	hash_mult[] = { 103, 107, 109, 113, 127, 131,
  * operations allowed.
  */
 
-int	HashNickName(name)
-Reg1	char	*name;
+int	hash_nick_name(name)
+Reg1	u_char	*name;
 {
-	Reg2	char	ch;
+	Reg2	u_char	ch;
 	Reg3	int	i = 0;
 	Reg4	int	hash = 7, *tab;
 
 	for (tab = hash_mult, i = 0; (ch = *name) && i < 10;
 	     name++, i++, tab++) {
-		if (islower(ch))
-			ch ^= 0x20;
-		hash += ch + *tab + hash + i + i;
+#ifdef USE_OUR_CTYPE
+		hash += tolower(ch) + *tab + hash + i + i;
+#else
+		hash += (islower(ch) ? ch : tolower(ch)) + *tab + hash + i + i;
+#endif
 	}
 	if (hash < 0)
 		hash = -hash;
@@ -63,18 +65,20 @@ Reg1	char	*name;
 	return (hash);
 }
 
-int	HashChannelName(name)
-Reg1	char	*name;
+int	hash_channel_name(name)
+Reg1	u_char	*name;
 {
-	Reg2	char	ch;
+	Reg2	u_char	ch;
 	Reg3	int	i = 0;
-	Reg4	int	hash = 0, *tab;
+	Reg4	int	hash = 5, *tab;
 
 	for (tab = hash_mult, i = 0; (ch = *name) && i < 30;
 	     name++, i++, tab++) {
-		if (islower(ch))
-			ch ^= 0x20;
-		hash += ch + *tab + hash + i + i;
+#ifdef USE_OUR_CTYPE
+		hash += tolower(ch) + *tab + hash + i + i;
+#else
+		hash += (islower(ch) ? ch : tolower(ch)) + *tab + hash + i + i;
+#endif
 	}
 	if (hash < 0)
 		hash = -hash;
@@ -82,75 +86,74 @@ Reg1	char	*name;
 	return (hash);
 }
 
-void	clearClientHashTable()
+void	clear_client_hash_table()
 {
 	register	int	i;
 
-	for (i = 0; i < HASHSIZE; i++)
+	for (i = 0; i < HASHSIZE; i++) {
 		bzero(&clientTable[i], sizeof(aHashEntry));
+	}
 }
 
-void	clearChannelHashTable()
+void	clear_channel_hash_table()
 {
 	register	int	i;
 
-	for (i = 0; i < CHANNELHASHSIZE; i++)
+	for (i = 0; i < CHANNELHASHSIZE; i++) {
 		bzero(&channelTable[i], sizeof(aHashEntry));
+	}
 }
 
-int	addToClientHashTable(name, cptr)
+int	add_to_client_hash_table(name, cptr)
 char	*name;
 aClient	*cptr;
 {
-	return (addHashTableLink(name, cptr, clientTable,
-		HashNickName(name)));
+	return (add_hash_table_link(cptr, clientTable, hash_nick_name(name)));
 }
 
-int	addToChannelHashTable(name, chptr)
+int	add_to_channel_hash_table(name, chptr)
 char	*name;
 aChannel	*chptr;
 {
-	return (addHashTableLink(name, chptr, channelTable,
-		HashChannelName(name)));
+	return (add_hash_table_link(chptr, channelTable,
+				    hash_channel_name(name)));
 }
 
-static	int	addHashTableLink(name, cptr, table, hashv)
-char	*name;
+static	int	add_hash_table_link(cptr, table, hashv)
 void	*cptr;
 aHashEntry	table[];
 int	hashv;
 {
-	Reg1	aHashLink	*tmp;
+	aHashLink	*tmp;
 
-	if (!(tmp = (aHashLink *)MyMalloc(sizeof(aHashLink))))
-		return 0;
-	table[hashv].links++;
-	table[hashv].hits++;
+	tmp = (aHashLink *)MyMalloc(sizeof(aHashLink));
 	bzero(tmp, sizeof(aHashLink));
 	tmp->next = table[hashv].list;
 	table[hashv].list = tmp;
 	tmp->ptr.client = (aClient *)cptr;
 	tmp->ptr.channel = (aChannel *)cptr;
+	table[hashv].links++;
+	table[hashv].hits++;
 	return 1;
 }
 
-int	delFromClientHashTable(name, cptr)
+int	del_from_client_hash_table(name, cptr)
 char	*name;
 aClient	*cptr;
 {
-	return (delHashTableLink(name, cptr, clientTable, HashNickName(name)));
+	return (del_hash_table_link(cptr, clientTable,
+				    hash_nick_name(name)));
 }
 
-int	delFromChannelHashTable(name, chptr)
+int	del_from_channel_hash_table(name, chptr)
 char	*name;
 aChannel	*chptr;
 {
-	return (delHashTableLink(name, chptr, channelTable,
-		HashChannelName(name)));
+	return (del_hash_table_link(chptr, channelTable,
+				    hash_channel_name(name)));
 }
 
-static	int	delHashTableLink(name, cptr, table, hashv)
-char	*name;
+static	int	del_hash_table_link(cptr, table, hashv)
 aClient	*cptr;
 aHashEntry	table[];
 int	hashv;
@@ -175,6 +178,9 @@ int	hashv;
 	return 0;
 }
 
+/*
+ * hash_find_client
+ */
 aClient	*hash_find_client(name, cptr)
 char	*name;
 aClient	*cptr;
@@ -184,7 +190,7 @@ aClient	*cptr;
 	aHashLink	*prv;
 	aHashEntry	*tmp3;
 
-	hashv = HashNickName(name);
+	hashv = hash_nick_name(name);
 	tmp3 = &clientTable[hashv];
 
 	for (prv = (aHashLink *)NULL, tmp = tmp3->list; tmp;
@@ -221,7 +227,7 @@ aClient	*cptr;
 
 	int hashv;
 
-	hashv = HashNickName(server);
+	hashv = hash_nick_name(server);
 	tmp3 = &clientTable[hashv];
 
 	for (prv = (aHashLink *)NULL, tmp = tmp3->list; tmp;
@@ -245,14 +251,14 @@ aClient	*cptr;
 		for (; t >= server; t--)
 			if (*t == '.' || *t == '*')
 				break;
-		if (*t != '.')
+		if ((t >= server) && (*t != '.'))
 			break;
 		s = t;
 		if (--s < server)
 			break;
 		ch = *s;
 		*s = '*';
-		if (acptr = hash_find_client(s, (aClient *)NULL)) {
+		if ((acptr = hash_find_client(s, NULL))!=NULL) {
 			*s = ch;
 			return (acptr);
 		}
@@ -279,7 +285,7 @@ aChannel	*chptr;
 	aHashLink	*prv;
 	aHashEntry	*tmp3;
 
-	hashv = HashChannelName(name);
+	hashv = hash_channel_name(name);
 	tmp3 = &channelTable[hashv];
 
 	for (prv = (aHashLink *)NULL, tmp = tmp3->list; tmp;
@@ -327,7 +333,7 @@ char	*parv[];
 	aHashEntry	*table;
 
 	if (!IsRegisteredUser(sptr) || !MyConnect(sptr))
-		return;
+		return 0;
 	if (parc > 1) {
 		ch = *parv[1];
 		if (islower(ch))
@@ -385,7 +391,7 @@ char	*parv[];
 		int	bad = 0, listlength = 0;
 
 		for (acptr = client; acptr; acptr = acptr->next) {
-			if (hash_find_client(acptr->name, acptr) != acptr) {
+			if (hash_find_client(acptr->name,acptr) != acptr) {
 				if (ch == 'V')
 				sendto_one(sptr, "NOTICE %s :Bad hash for %s",
 					   parv[0], acptr->name);
@@ -406,9 +412,9 @@ char	*parv[];
 		Reg1	aClient	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Client List.", parv[0]);
-		clearClientHashTable();
+		clear_client_hash_table();
 		for (acptr = client; acptr; acptr = acptr->next)
-			addToClientHashTable(acptr->name, acptr);
+			add_to_client_hash_table(acptr->name, acptr);
 		break;
 	    }
 	case 'R' :
@@ -416,22 +422,22 @@ char	*parv[];
 		Reg1	aChannel	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Client List.", parv[0]);
-		clearChannelHashTable();
+		clear_channel_hash_table();
 		for (acptr = channel; acptr; acptr = acptr->nextch)
-			addToChannelHashTable(acptr->chname, acptr);
+			add_to_channel_hash_table(acptr->chname, acptr);
 		break;
 	    }
 	case 'H' :
 		if (parc > 2)
 			sendto_one(sptr,"NOTICE %s :%s hash to entry %d",
 				   parv[0], parv[2],
-				   HashChannelName(parv[2]));
+				   hash_channel_name(parv[2]));
 		return (0);
 	case 'h' :
 		if (parc > 2)
 			sendto_one(sptr,"NOTICE %s :%s hash to entry %d",
 				   parv[0], parv[2],
-				   HashNickName(parv[2]));
+				   hash_nick_name(parv[2]));
 		return (0);
 	case 'n' :
 	    {

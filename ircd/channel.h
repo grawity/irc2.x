@@ -44,12 +44,11 @@
 extern aChannel *find_channel PROTO((char *, aChannel *));
 extern int ChannelModes PROTO((char *, aChannel *));
 
-extern int IsChanOp PROTO((aClient *, aChannel *));
-extern int CanSend PROTO((aClient *, aChannel *));
-extern int IsMember PROTO((aClient *, aChannel *));
-extern int CanJoin PROTO((aClient *, aChannel *));
+extern int is_chan_op PROTO((aClient *, aChannel *));
+extern int can_send PROTO((aClient *, aChannel *));
+extern int can_join PROTO((aClient *, aChannel *));
 
-extern void RemoveUserFromChannel PROTO((aClient *, aChannel *));
+extern void remove_user_from_channel PROTO((aClient *, aChannel *));
 
-extern void AddInvite PROTO((aClient *, aChannel *));
-extern void DelInvite PROTO((aClient *));
+extern void add_invite PROTO((aClient *, aChannel *));
+extern void del_invite PROTO((aClient *));

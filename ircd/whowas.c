@@ -85,7 +85,7 @@ static int HistoryLength = 0;
 */
 static int MaxHistoryLength = NICKNAMEHISTORYLENGTH;
 
-AddHistory(cptr)
+add_history(cptr)
 aClient *cptr;
     {
 	Reg1 aName *new;
@@ -148,16 +148,17 @@ aClient *cptr;
 		HistoryLength -= 1;
 		free(new);
 	    }
+	return 0;
     }
 
 /*
 ** OffHistory
 **	This is called when client signs off the system.
 */
-OffHistory(cptr)
+off_history(cptr)
 aClient *cptr;
     {
-	AddHistory(cptr);
+	add_history(cptr);
 	if (cptr->history)
 		((aHome *)(cptr->history))->online = NULL;
     }
@@ -168,7 +169,7 @@ aClient *cptr;
 **	nickname within the timelimit. Returns NULL, if no
 **	one found...
 */
-aClient *GetHistory(nick,timelimit)
+aClient *get_history(nick,timelimit)
 char *nick;
 long timelimit;
     {
@@ -229,5 +230,6 @@ char *parv[];
 		    }
 	sendto_one(sptr, ":%s %d %s %s :There was no such nickname",
 		   me.name, ERR_WASNOSUCHNICK, sptr->name, parv[1]);
+	return 0;
     }
 

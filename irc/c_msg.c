@@ -1,7 +1,7 @@
 /************************************************************************
  *   IRC - Internet Relay Chat, irc/c_msg.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
- *                      University of Oulu, Computing Center
+ *		      University of Oulu, Computing Center
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center an
 char mybuf[513];
 
 extern anIgnore *find_ignore();
-extern char *last_to_me();
+extern char *last_to_me(), userhost[];
 extern aClient *client;
 
 m_restart() {
@@ -320,28 +320,32 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  /* ...dirty hack, just assume all parameters present.. --msa */
+  m_newwhoreply(parv[1], parv[2], parv[3], parv[5], parv[6], parv[7]);
+  putline(mybuf);
+}
 
-  char *channel = parv[1],
-       *username = parv[2],
-       *host = parv[3],
-  /*   *server = parv[4], not used .. --argv */
-       *nickname = parv[5],
-       *away = parv[6],
-       *realname = parv[7];
+m_newwhoreply(channel, username, host, nickname, away, realname)
+char *channel, *username, *host, *nickname, *away, *realname;
+{
+  /* ...dirty hack, just assume all parameters present.. --msa */
 
   if (*away == 'S')
     sprintf(mybuf, "  %-13s    %s %-42s %s",
 	"Nickname", "Chan", "Name", "<User@Host>");
-  else 
+  else
     {
-    int i = 50-strlen(realname)-strlen(username);
+    int i;
     char uh[USERLEN + HOSTLEN + 1];
+    if (!realname)
+      realname = "";
+    if (!username)
+      username = "";
+    i = 50-strlen(realname)-strlen(username);
 
     if (channel[0] == '*')
 	channel = "";
 
-    if (strlen(host) > i)	/* kludge --argv */
+    if (strlen(host) > i)       /* kludge --argv */
 	{
 	host += strlen(host) - i;
 	}
@@ -351,10 +355,9 @@ char *parv[];
     sprintf(mybuf, "%c %s%s %*s %s %*s",
 	away[0], nickname, away+1,
 	21-strlen(nickname)-strlen(away), channel,
-	realname, 
+	realname,
 	53-strlen(realname), uh);
     }
-  putline(mybuf);
 }
 
 m_text(sptr, cptr, parc, parv)
@@ -363,7 +366,7 @@ int parc;
 char *parv[];
 {
   anIgnore *iptr;
-  if ((iptr = find_ignore(parv[0], (anIgnore *) 0)) &&
+  if ((iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost)) &&
       (iptr->flags & IGNORE_PUBLIC))
       return(0);
   if (!BadPtr(parv[0])) {
@@ -382,24 +385,36 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  if (parv[1]) {
-    switch (*parv[1]) {
+  parv[5] = parv[4];
+  parv[4] = parv[3];
+  parv[3] = parv[2];
+  parv[2] = parv[1];
+  m_newnamreply(sptr, cptr, parc, parv);
+  putline(mybuf);
+}
+
+m_newnamreply(sptr, cptr, parc, parv)
+aClient *sptr, *cptr;
+int parc;
+char *parv[];
+{
+  if (parv[2]) {
+    switch (parv[2][0]) {
       case '*':
-	sprintf(mybuf,"Prv: %-3s %s", parv[2], parv[3]);
-        break;
+	sprintf(mybuf,"Prv: %-3s %s", parv[3], parv[4]);
+	break;
       case '=':
-        sprintf(mybuf,"Pub: %-3s %s", parv[2], parv[3]);
-        break;
+	sprintf(mybuf,"Pub: %-3s %s", parv[3], parv[4]);
+	break;
       case '@':
-        sprintf(mybuf,"Sec: %-3s %s", parv[2], parv[3]);
-        break;
+	sprintf(mybuf,"Sec: %-3s %s", parv[3], parv[4]);
+	break;
       default:
-        sprintf(mybuf,"???: %-3s %s", parv[2], parv[3]);
-        break;
+	sprintf(mybuf,"???: %s %s %s", parv[3], parv[4], parv[5]);
+	break;
     }
   } else
     sprintf(mybuf, "*** Internal Error: namreply");
-  putline(mybuf);
 }
 
 m_linreply(sptr, cptr, parc, parv)
@@ -407,8 +422,7 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf,"*** Server: %s (%s)", parv[1], parv[2]);
-  putline(mybuf);
+  sprintf(mybuf,"*** Server: %s (%s)", parv[2], parv[3]);
 }
 
 m_private(sptr, cptr, parc, parv)
@@ -418,10 +432,9 @@ char *parv[];
 {
   anIgnore *iptr;
   int ignoreflag = 0;
-  if ((iptr = find_ignore(parv[0], (anIgnore *) 0)) &&
-      (iptr->flags & IGNORE_PRIVATE)) {
+  iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost);
+  if ((iptr != (anIgnore *)NULL) && iptr->flags & IGNORE_PRIVATE)
     ignoreflag = 1;
-  }
   if (parv[0] && parv[0][0]) {
 #ifdef AUTOMATON
     a_privmsg(sender, parv[2]);
@@ -461,30 +474,6 @@ char *parv[];
   putline(mybuf);
 }
 
-m_voice(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
-{
-    m_private(sptr,cptr,parc,parv);
-}
-
-m_grph(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
-{
-    m_private(sptr,cptr,parc,parv);
-}
-
-m_xtra(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
-{
-    m_private(sptr,cptr,parc,parv);
-}
-
 m_notice(sptr, cptr, parc, parv)
 aClient *sptr, *cptr;
 int parc;
@@ -507,7 +496,7 @@ int parc;
 char *parv[];
 {
   anIgnore *iptr;
-  if ((iptr = find_ignore(parv[0], (anIgnore *) 0)) &&
+  if ((iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost)) &&
       (iptr->flags & IGNORE_PRIVATE) && (iptr->flags & IGNORE_PUBLIC)) {
 	sendto_one(client,
 		   "NOTICE %s :*** Automatic reply: You have been ignored",
@@ -537,4 +526,8 @@ m_userhost() {
 
 m_ison() {
   putline("*** Oh boy... server asking ison from client... exiting...");
+}
+
+m_deop() {
+  putline("*** Oh boy... server asking deop from client... exiting...");
 }

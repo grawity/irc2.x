@@ -32,7 +32,7 @@ char *user, *temp;
 {
   char *ch;
   anIgnore *iptr;
-  char *apu = user;
+  char *apu = user, *uh;
   int status;
   if ((user == (char *) 0) || (*user == '\0')) {
 
@@ -61,14 +61,21 @@ char *user, *temp;
       status = IGNORE_TOTAL;
     if (apu = index(ch, ','))
       *(apu++) = '\0';
-    if (iptr = find_ignore(ch, (anIgnore *) 0)) {
-      sprintf(ibuf,"*** Ignore removed: user %s", iptr->user);
+    if (uh = index(ch, '!'))
+      *uh++ = '\0';
+    else if (uh = index(ch, '@'))
+      *uh++ = '\0';
+    else
+      uh = NULL;
+    if (iptr = find_ignore(ch, (anIgnore *)NULL, uh)) {
+      sprintf(ibuf,"*** Ignore removed: user %s!%s",
+      iptr->user, iptr->from);
       putline(ibuf);
       kill_ignore(iptr);
     } else {
       if (strlen(ch) > NICKLEN)
 	ch[NICKLEN] = '\0';
-      if (add_ignore(ch, status) >= 0) {
+      if (add_ignore(ch, status, uh) >= 0) {
 	sprintf(ibuf,"*** Ignore %s messages from user %s", 
 		(status == IGNORE_TOTAL) ? "all" :
 		(status == IGNORE_PRIVATE) ? "private" : "public", ch);
@@ -79,21 +86,20 @@ char *user, *temp;
   }
 }    
 
-anIgnore *
-find_ignore(user, para)
-char *user;
+anIgnore *find_ignore(user, para, fromhost)
+char *user, *fromhost;
 anIgnore *para;
 {
   anIgnore *iptr;
   for (iptr = ignore; iptr; iptr=iptr->next)
-    if (myncmp(iptr->user, user, NICKLEN) == 0)
+    if ((myncmp(iptr->user, user, NICKLEN) == 0) &&
+	(!fromhost || !*fromhost || matches(iptr->from, fromhost)==0))
       break;
 
   return iptr ? iptr : para;
 }
 
-int
-kill_ignore(iptr)
+int kill_ignore(iptr)
 anIgnore *iptr;
 {
   anIgnore *i2ptr, *i3ptr = (anIgnore *) 0;
@@ -113,8 +119,8 @@ anIgnore *iptr;
   return (-1);
 }
 
-int add_ignore(ch, status)
-char *ch;
+int add_ignore(ch, status, fromhost)
+char *ch, *fromhost;
 int status;
 {
   anIgnore *iptr;
@@ -122,6 +128,10 @@ int status;
   if (iptr == (anIgnore *) 0)
     return(-1);
   strncpyzt(iptr->user, ch, sizeof(iptr->user));
+  if (fromhost && *fromhost)
+    strncpyzt(iptr->from, fromhost, sizeof(iptr->from));
+  else
+    strncpy(iptr->from, "*", sizeof(iptr->from));
   iptr->next = ignore;
   ignore = iptr;
   iptr->flags = status;

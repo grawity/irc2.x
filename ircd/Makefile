@@ -28,11 +28,11 @@ IRCDMODE=4711
 INCLUDE=../include
 
 # For MIPS, use the following:
-# CFLAGS=-g -systype bsd43 -I${INCLUDE}
-CFLAGS=-g -I${INCLUDE}
-
+# CFLAGS= -g -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
+CFLAGS= -g -I${INCLUDE}
 #use the following on SUN OS without nameserver libraries inside libc
-# IRCDLIBS=-lresolv
+#NOTE: most dont have the resolver libraries inside libc
+IRCDLIBS= -lresolv
 #
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
@@ -41,17 +41,21 @@ CFLAGS=-g -I${INCLUDE}
 # IRCDLIBS=-lBSD
 #
 #and otherwise:
-IRCDLIBS=
+#IRCDLIBS=
 
 OBJS=channel.o date.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o note.o class.o hash.o
+     whowas.o s_debug.o class.o hash.o
 
 SRC=channel.c date.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c note.c class.c hash.c
+     whowas.c s_debug.c class.c hash.c
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
            ../common/match.o ../common/parse.o ../common/support.o
+
+COMMONSRC=../common/bsd.c ../common/dbuf.c \
+	  ../common/packet.c ../common/send.c\
+	  ../common/match.c ../common/parse.c ../common/support.c
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
@@ -62,28 +66,32 @@ build: ircd
 ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
+	$(CC) -g $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
 	chmod $(IRCDMODE) ircd
 
-../common/parse.o: ../include/msg.h
-	(cd ../common; ${MAKE} build);
+saber: $(SRC)
+	#load $(SRC) $(COMMONSRC) version.c $(IRCDLIBS)
 
-../common/bsd.o:
+../common/parse.o: ../common/parse.c ../include/msg.h ../include/config.h\
+		   ../include/struct.h ../include/sys.h ../include/numeric.h
 	(cd ../common; ${MAKE} build);
-
-../common/dbuf.o:
+../common/bsd.o: ../common/bsd.c ../include/config.h ../include/common.h\
+		 ../include/struct.h ../include/sys.h
 	(cd ../common; ${MAKE} build);
-
-../common/packet.o:
+../common/dbuf.o: ../common/dbuf.c ../include/config.h ../include/common.h\
+		  ../include/struct.h ../include/dbuf.h
 	(cd ../common; ${MAKE} build);
-
-../common/send.o:
+../common/packet.o: ../common/packet.c ../include/config.h ../include/common.h\
+		    ../include/struct.h ../include/msg.h
 	(cd ../common; ${MAKE} build);
-
-../common/match.o:
+../common/send.o: ../common/send.c ../include/config.h ../include/common.h\
+		  ../include/struct.h ../include/sys.h
 	(cd ../common; ${MAKE} build);
-
-../common/support.o:
+../common/match.o: ../common/match.c ../include/config.h ../include/common.h\
+		   ../include/sys.h
+	(cd ../common; ${MAKE} build);
+../common/support.o: ../common/support.c ../include/config.h ../include/sys.h\
+		     ../include/common.h
 	(cd ../common; ${MAKE} build);
 
 clean:
@@ -94,7 +102,6 @@ depend:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-note.o: ../include/struct.h ../include/numeric.h
 channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 channel.o: ../include/numeric.h channel.h
 date.o: ../include/struct.h ../include/config.h ../include/dbuf.h

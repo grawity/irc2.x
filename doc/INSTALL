@@ -29,13 +29,15 @@ Overview of this document:
 
 
 1) Edit the "config.h" file and make changes to the various #DEFINE's:
-   
-   a) Define what type of UNIX your machine uses. IRC currently
+ 
+   a) Copy the config.h.dist file to confiig.h before editing.
+  
+   b) Define what type of UNIX your machine uses. IRC currently
       supports, BSD42, BSD43, HPUX, APOLLO.  To select the one you want, 
       replace the "0" with a "1" next to the choice you want.  All the other
       UNIX #defines should be set to "0".
 
-   b) Define DEBUGMODE if you want to see the ircd debugging information
+   c) Define DEBUGMODE if you want to see the ircd debugging information
       as the daemon is running. Normally this function will be undefined
       as ircd produces a considerable amount of output.
       
@@ -129,6 +131,7 @@ Overview of this document:
    7.  Excluded accounts	(K)
    8.  Excluded machines        (Q)
    9.  Connection Classes       (Y)
+  10.  Leaf connections         (L)
 
 
    1. SERVER CONNECTIONS:  How to connect to other servers
@@ -572,7 +575,7 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
 	       Users get kicked off if they're already signed on when the
 	       line becomes active (they'll get a warning 5 minutes ago).
 
-  7. Disallowing SERVERS in your irc net.
+  8. Disallowing SERVERS in your irc net.
 
    In some cases people run into difficulties in net administration.
    For one reason or another you do not want a certain server to be
@@ -594,7 +597,7 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
    is given to be security holes (you should give a reason, it is
    polite). The first field is unused, so leave it empty.
 
- 8. Connection Classes.
+ 9. Connection Classes.
 
    To enable more efficient use of MAXIMUM_LINKS, connection classes
    were implemented. To give a connection a class, add another field
@@ -651,6 +654,27 @@ Field: 1       2                3                4                5
    'behind' it, the server will disconnect the lower class one and
    schedule a 'new' connection for the higher class server.
 
+ 10. Leaf Connections.
+
+   To stop servers which should only act as leaves from hubs becoming
+   hubs accidently, the L line was introduced so that hubs can be aware
+   of which servers should and shouldnt be treated as leaves. A leaf
+   server is supposed to remain a node for the entirity of its life
+   whilst connected to the IRC server network. It is quite easy, however
+   for a leaf server to be incorrectly setup and create problems by
+   becoming a node of 2 or more servers, ending its life as a leaf. The
+   L line enables the administrator of an IRC 'Hub server' to 'stop' a
+   server which is meant to act as a leaf trying to make itself a hub.
+   If, for example, the leaf server connects to another server which doesnt
+   have an L-line for it, the one which does will drop the connection, once
+   again making the server a leaf.
+
+       L:*:*:<SERVER NAME>
+Field: 1 2 3       4
+
+   Field 4 is the only 'active' field in the L-line at the moment.
+   The <server name> given is that for which you want to enforce leaf-like
+   attributes upon.
 
 Appendix A: Difference between IP addresses and hostnames
 

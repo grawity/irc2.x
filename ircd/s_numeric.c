@@ -100,11 +100,11 @@ char *parv[];
 					  ** ...one might consider sendto_ops
 					  ** here... --msa
 					  */
-			sendto_one(acptr,":%s %d %s%s", parv[0],
-				   numeric, nick, buffer);
+			sendto_prefix_one(acptr, sptr,":%s %d %s%s", parv[0],
+					  numeric, nick, buffer);
 		    }
-		else if (chptr = find_channel(nick, (aClient *)NULL))
-			sendto_channel_butone(cptr,chptr,":%s %d %s%s",
+		else if (chptr = find_channel(nick, (aChannel *)NULL))
+			sendto_channel_butone(cptr,sptr,chptr,":%s %d %s%s",
 					      parv[0],
 					      numeric, chptr->chname, buffer);
 	    }
