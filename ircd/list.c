@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: list.c,v 1.15 2002/01/08 03:40:20 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: list.c,v 1.16 2002/03/14 02:06:17 jv Exp $";
 #endif
 
 #include "os.h"
@@ -153,6 +153,7 @@ aClient	*from;
 		cptr->authfd = -1;
 		cptr->auth = cptr->username;
 		cptr->exitc = EXITC_UNDEF;
+		cptr->receiveB = cptr->sendB = cptr->receiveM = cptr->sendM = 0;
 #ifdef	ZIP_LINKS
 		cptr->zip = NULL;
 #endif
