@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: parse.c,v 1.6 1997/09/03 17:45:16 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.7 1997/09/03 18:05:23 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -607,6 +607,8 @@ char	*buffer, *bufend;
 	if (mptr == NULL)
 		return (do_numeric(numeric, cptr, from, i, para));
 	mptr->count++;
+	if (!MyConnect(from))
+		mptr->rcount++;
 	if (IsRegisteredUser(cptr) &&
 #ifdef	IDLE_FROM_MSG
 	    mptr->func == m_private)
