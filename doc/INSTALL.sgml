@@ -683,7 +683,10 @@ They define privileges of an operator.
 <item>D - allows DIE
 <item>e - allows SET
 <item>T - allows TKLINE
+<item>&amp; - allows joining &amp;CLIENTS
 </itemize>
+``L'' flag cannot be overridden by other flags.
+Warning: If flags field is left empty, no privileges will be granted. 
 <tag/Example/ o:orion.cair.du.edu:pyunxc:Jeff::1
 <p>
 There is an OPERATOR at ``orion.cair.du.edu'' that can get
