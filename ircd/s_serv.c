@@ -1887,6 +1887,7 @@ static	void	report_configured_links(aClient *sptr, char *to, int mask)
 			if (tmp->status == CONF_KILL
 			    || tmp->status == CONF_OTHERKILL
 			    || tmp->status == CONF_HUB
+			    || tmp->status == CONF_QUARANTINED_SERVER
 			    || tmp->status == CONF_VER)
 			{
 				sendto_one(sptr, replies[p[1]], ME, BadTo(to),
