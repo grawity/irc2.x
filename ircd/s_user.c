@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.220 2004/06/24 17:53:27 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.221 2004/06/26 12:57:46 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -3551,7 +3551,7 @@ int	is_allowed(aClient *cptr, long function)
 	if (!MyClient(cptr))
 		return 0;
 
-	for (tmp = cptr->confs; tmp; tmp->next)
+	for (tmp = cptr->confs; tmp; tmp = tmp->next)
 	{
 		if (tmp->value.aconf->status & CONF_OPERATOR)
 			break;
