@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.51 2003/10/18 19:48:21 q Exp $";
+static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.52 2004/09/13 01:34:44 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -232,6 +232,7 @@ void	read_iauth(void)
 			    sendto_flag(SCH_AUTH, "iauth version %s running.",
 					iauth_version);
 			    start = end;
+			    sendto_iauth("0 M %s", me.name);
 			    continue;
 			}
 		    if (*start == 'a')
