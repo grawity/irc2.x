@@ -95,12 +95,13 @@ Computing Center and Jarkko Oikarinen";
 #define IN_LOOPBACKNET	0x7f
 #endif
 
+extern  char    serveropts[];
+
 aClient	*local[MAXCONNECTIONS];
 FdAry	fdas, fdaa, fdall;
 int	highest_fd = 0, readcalls = 0, udpfd = -1, resfd = -1;
 time_t	timeofday;
 static	struct	sockaddr_in	mysk;
-static  int     setup_ping __P((int));
 static	void	polludp();
 
 static	struct	sockaddr *connect_inet __P((aConfItem *, aClient *, int *));
@@ -222,13 +223,13 @@ aClient *cptr;
  * inetport
  *
  * Create a socket in the AF_INET domain, bind it to the port given in
- * 'port' and listen to it.  Connections are accepted to this socket
- * depending on the IP# mask given by 'name'.  Returns the fd of the
- * socket created or -1 on error.
+ * 'port' and listen to it. If 'ip' has a value, use it as vif to listen.
+ * Connections are accepted to this socket depending on the IP# mask given
+ * by 'ipmask'.  Returns the fd of the socket created or -1 on error.
  */
-int	inetport(cptr, name, ip, port)
+int	inetport(cptr, ip, ipmask, port)
 aClient	*cptr;
-char	*name, *ip;
+char	*ipmask, *ip;
 int	port;
 {
 	static	struct sockaddr_in server;
@@ -242,10 +243,10 @@ int	port;
 	 * byte requires endian knowledge or some nasty messing. Also means
 	 * easy conversion of "*" 0.0.0.0 or 134.* to 134.0.0.0 :-)
 	 */
-	(void)sscanf(name, "%d.%d.%d.%d", &ad[0], &ad[1], &ad[2], &ad[3]);
+	(void)sscanf(ipmask, "%d.%d.%d.%d", &ad[0], &ad[1], &ad[2], &ad[3]);
 	(void)sprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
 
-	(void)sprintf(cptr->sockhost, "%-.42s.%u", name, (unsigned int)port);
+	(void)sprintf(cptr->sockhost, "%-.42s.%u", ipmask, (unsigned int)port);
 	(void)strcpy(cptr->name, ME);
 	/*
 	 * At first, open a new socket
@@ -272,10 +273,10 @@ int	port;
 	if (port)
 	    {
 		server.sin_family = AF_INET;
-		if (!ip || *ip == '*')
+		if (!ip || !*ip || *ip == '*')
 			server.sin_addr.s_addr = INADDR_ANY;
 		else
-			server.sin_addr.s_addr = inet_addr(vipname);
+			server.sin_addr.s_addr = inet_addr(ip);
 		server.sin_port = htons(port);
 		/*
 		 * Try 10 times to bind the socket with an interval of 20
@@ -954,9 +955,12 @@ aClient	*cptr;
 	    }
 	if (!BadPtr(aconf->passwd))
 #ifndef	ZIP_LINKS
-		sendto_one(cptr, "PASS %s %s", aconf->passwd, pass_version);
+		sendto_one(cptr, "PASS %s %s %s", aconf->passwd, pass_version,
+			   serveropts);
 #else
-		sendto_one(cptr, "PASS %s %sZ", aconf->passwd, pass_version);
+		sendto_one(cptr, "PASS %s %s %s %s", aconf->passwd,
+			   pass_version, serveropts,
+			   (aconf->status == CONF_ZCONNECT_SERVER) ? "Z" : "");
 #endif
 
 	aconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
@@ -982,7 +986,7 @@ aClient	*cptr;
 	aClient	*acptr;
 	int	fd;
 
-	return -1; /* needs to be fixed */
+	return -1; /* needs to be fixed, don't forget virtual hosts */
 
 #ifdef	ZIP_LINKS
 	/*
@@ -1046,7 +1050,9 @@ aClient	*cptr;
 	acptr->acpt = &me;
 	add_client_to_list(acptr);
 	(void)strcpy(acptr->name, cptr->name);
+	/* broken syntax
 	sendto_one(acptr, "PASS %s %s", aconf->passwd, pass_version);
+	*/
 	sendto_one(acptr, "RECONNECT %s %d", acptr->name, cptr->sendM);
 	sendto_flag(SCH_NOTICE, "Reconnecting to %s", acptr->name);
 	Debug((DEBUG_NOTICE, "Reconnect %s %#x via %#x %d", cptr->name, cptr,
@@ -1464,7 +1470,7 @@ add_con_refuse:
 #ifdef	CLONE_CHECK
 	if (check_clones(acptr) > CLONE_MAX)
 	    {
-		sendto_flag(SCH_NOTICE, "Rejecting connection from %s[%s].",
+		sendto_flag(SCH_LOCAL, "Rejecting connection from %s[%s].",
 			    (acptr->hostp) ? acptr->hostp->h_name : "",
 			    acptr->sockhost);
 		sendto_flog(myctime(acptr->firsttime), " ?Clone? ", 0,
@@ -1805,7 +1811,7 @@ FdAry	*fdp;
 #endif
 			if (IsListening(cptr))
 			    {
-#ifdef	SLOW_ACCEPT
+#ifndef	SLOW_ACCEPT
 				if (IsUnixSocket(cptr))
 				    {
 #endif
@@ -1815,7 +1821,7 @@ FdAry	*fdp;
 					    }
 					else if (delay2 > 2)
 						delay2 = 2;
-#ifdef	SLOW_ACCEPT
+#ifndef	SLOW_ACCEPT
 				    }
 				else
 					SET_READ_EVENT( fd );
@@ -1877,8 +1883,10 @@ FdAry	*fdp;
 			res_pfd = pfd;
 #endif			
 		    }
-		Debug((DEBUG_L11, "udpfd %d resfd %d highfd %d",
-		       udpfd, resfd, highfd));
+		Debug((DEBUG_L11, "udpfd %d resfd %d", udpfd, resfd));
+#ifndef	_DO_POLL_
+		Debug((DEBUG_L11, "highfd %d", highfd));
+#endif
 		
 		wait.tv_sec = MIN(delay2, delay);
 		wait.tv_usec = usec;
@@ -2028,7 +2036,7 @@ FdAry	*fdp;
 					   "ERROR :All connections in use\r\n",
 					   32, 0);
 				(void)close(fdnew);
-				break;
+				continue;
 			    }
 			/*
 			 * Use of add_connection (which never fails :) meLazy
@@ -2588,12 +2596,16 @@ int	len;
 	static	char tmp[HOSTLEN+1];
 	struct	hostent	*hp;
 	char	*cname = cptr->name;
+	aConfItem	*aconf;
 
 	/*
 	** Setup local socket structure to use for binding to.
 	*/
 	bzero((char *)&mysk, sizeof(mysk));
 	mysk.sin_family = AF_INET;
+	
+	if ((aconf = find_me())->passwd)
+		mysk.sin_addr.s_addr = inet_addr(aconf->passwd);
 
 	if (gethostname(name, len) == -1)
 		return;
@@ -2633,8 +2645,9 @@ int	len;
 			strncpyzt(name, hp->h_name, len);
 		else
 			strncpyzt(name, tmp, len);
-		bcopy(hp->h_addr, (char *)&mysk.sin_addr,
-			sizeof(struct in_addr));
+		if (!aconf->passwd)
+			bcopy(hp->h_addr, (char *)&mysk.sin_addr,
+			      sizeof(struct in_addr));
 		Debug((DEBUG_DEBUG,"local name is %s",
 				get_client_name(&me,TRUE)));
 	    }
@@ -2644,7 +2657,7 @@ int	len;
 /*
 ** setup a UDP socket and listen for incoming packets
 */
-static	int	setup_ping(port)
+int	setup_ping(port)
 int	port;
 {
 	struct	sockaddr_in	from;
@@ -2653,7 +2666,7 @@ int	port;
 	if (udpfd != -1)
 		return udpfd;
 	bzero((char *)&from, sizeof(from));
-	from.sin_addr.s_addr = htonl(INADDR_ANY);
+	from.sin_addr.s_addr = htonl(INADDR_ANY); /* hmmpf */
 	from.sin_port = (u_short) port;
 	from.sin_family = AF_INET;
 
