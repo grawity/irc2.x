@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.11 1998/08/06 02:05:00 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_auth.c,v 1.12 1998/08/06 02:43:56 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -135,7 +135,7 @@ read_iauth()
 		    if (*start != 'U' && *start != 'u' &&
 			*start != 'K' && *start != 'D')
 			{
-			    sendto_flag(SCH_AUTH, "Garbage from iauth [%.*]",
+			    sendto_flag(SCH_AUTH, "Garbage from iauth [%s]",
 					start);
 			    start = end;
 			    continue;
