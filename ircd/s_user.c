@@ -256,7 +256,11 @@ int	server;
 		return 0;
 
 	for (ch = nick; *ch && (ch - nick) < NICKLEN; ch++)
-		if (!isvalidnick(*ch))
+		/* Transition period. Until all 2.10 are gone, disable
+		** these chars in nicks for users. Then reenable and
+		** drop scandinavian origin from match --B. */
+		if ((!server && (*ch == '{' || *ch == '}' || *ch == '\\')) ||
+		!isvalidnick(*ch))
 			break;
 
 	*ch = '\0';
