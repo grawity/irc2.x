@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.113 2001/12/08 01:49:02 q Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.114 2001/12/21 20:10:27 q Exp $";
 #endif
 
 #include "os.h"
@@ -1725,7 +1725,7 @@ char	*parv[];
 	*mbuf = '\0';
 	mbuf = modebuf;
 
-	if ((!ischop) && MyConnect(sptr) && !IsServer(sptr))
+	if ((!ischop) && (count) && MyConnect(sptr) && !IsServer(sptr))
 	{
 		/* rejected mode change */
 		int num = ERR_CHANOPRIVSNEEDED;
