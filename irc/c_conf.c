@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: c_conf.c,v 1.2 1997/09/03 17:45:32 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: c_conf.c,v 1.3 1999/02/21 00:33:45 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -28,9 +28,7 @@ static  char rcsid[] = "@(#)$Id: c_conf.c,v 1.2 1997/09/03 17:45:32 kalt Exp $";
 #include "c_externs.h"
 #undef C_CONF_C
 
-initconf(host, passwd, myname, port)
-char	*host, *passwd, *myname;
-int	*port;
+void	initconf(char *host, char *passwd, char *myname, int *port)
 {
 	FILE	*fd;
 	char	line[256], *tmp;
