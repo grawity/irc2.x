@@ -457,6 +457,7 @@ Reg	aClient	*cptr;
 		/* we probably don't need this error message -kalt */
 		report_error("getpeername for auth request %s:%s", cptr);
 		close(cptr->authfd);
+		cptr->authfd = -1;
 		return;
 	    }
 	them.SIN_FAMILY = AFINET;
