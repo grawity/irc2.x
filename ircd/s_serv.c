@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_serv.c,v 1.270 2005/02/09 18:35:32 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_serv.c,v 1.271 2005/02/10 16:54:42 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1448,7 +1448,8 @@ int	m_links(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			continue;
 		sendto_one(sptr, replies[RPL_LINKS], ME, BadTo(parv[0]),
 			   acptr->name, acptr->serv->up->name,
-			   acptr->hopcount, (acptr->info[0] ? acptr->info :
+			   acptr->hopcount, acptr->serv->sid,
+			   (acptr->info[0] ? acptr->info :
 			   "(Unknown Location)"));
 	    }
 
