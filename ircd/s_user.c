@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.39 1998/03/22 00:28:35 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.40 1998/04/02 19:58:58 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -2174,7 +2174,7 @@ char	*parv[];
 #endif
 		return 1;
 	    }
-	else if (IsOper(sptr))
+	else if (IsAnOper(sptr))
 	    {
 		if (MyConnect(sptr))
 			sendto_one(sptr, rpl_str(RPL_YOUREOPER, parv[0]));
