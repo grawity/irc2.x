@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.143 2004/08/13 00:00:47 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: ircd.c,v 1.144 2004/10/01 20:22:14 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -963,6 +963,7 @@ int	main(int argc, char *argv[])
 
 #endif
 	timeofday = time(NULL);
+	initanonymous();
 	initstats();
 	initruntimeconf();
 	ircd_readtune(tunefile);
