@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.41 2003/02/15 19:25:12 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.42 2003/07/29 23:34:58 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -331,7 +331,7 @@ char	*parv[];
 		server = parv[2];
 		sptr->hopcount = atoi(parv[5]);
 		sp = find_tokserver(atoi(server), cptr, NULL);
-		if (!sp)
+		if (sp == NULL)
 		    {
 			sendto_flag(SCH_ERROR,
                        	    "ERROR: SERVICE:%s without SERVER:%s from %s",
