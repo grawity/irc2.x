@@ -1343,7 +1343,7 @@ int	m_server_estab(aClient *cptr, char *sid, char *versionbuf)
 			      ":%s SERVER %s %d %s :%s", ME, cptr->name,
 			      cptr->hopcount+1, cptr->serv->tok, cptr->info);
 #endif
-	sendto_flag(SCH_SERVER, "Sending SERVER %s (%d %s)", cptr->name,
+	sendto_flag(SCH_SERVER, "Received SERVER %s (%d %s)", cptr->name,
 		    1, cptr->info);
 	introduce_server(cptr, cptr);
 	
