@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.24 1997/09/12 02:09:34 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.25 1997/09/12 17:01:18 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1334,8 +1334,9 @@ char	*parv[];
 	     mask && penalty < MAXPENALTY;
              mask = strtoken(&p, NULL, ","))
 	    { 
-		clean_channelname(mask);
+		channame = NULL;
 		mychannel = NullChn;
+		clean_channelname(mask);
 		if (sptr->user && (lp = sptr->user->channel))
 				mychannel = lp->value.chptr;
 		/*
