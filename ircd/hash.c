@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: hash.c,v 1.19 2001/12/08 01:04:17 q Exp $";
+static  char rcsid[] = "@(#)$Id: hash.c,v 1.20 2001/12/08 01:17:04 q Exp $";
 #endif
 
 #include "os.h"
@@ -705,7 +705,7 @@ aClient	*cptr;
 }
 
 /*
-** del_from_server_hash_table
+** del_from_sid_hash_table
 */
 int	del_from_sid_hash_table(aServer *sptr, aClient *cptr)
 {
