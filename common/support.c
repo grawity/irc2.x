@@ -27,6 +27,7 @@ static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
 #include "sys.h"
 #include "h.h"
 #include "patchlevel.h"
+#include <signal.h>
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
 #ifndef	CLIENT_COMPILE
