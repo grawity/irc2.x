@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.34 2003/08/08 21:56:28 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.35 2003/10/13 21:48:53 q Exp $";
 #endif
 
 #include "os.h"
@@ -60,9 +60,6 @@ char	serveropts[] = {
 #ifdef	CLONE_CHECK
 'F',
 #endif
-#ifdef	SUN_GSO_BUG
-'g',
-#endif
 #ifdef	HUB
 'H',
 #endif
@@ -100,9 +97,6 @@ char	serveropts[] = {
 #ifdef	IDLE_FROM_MSG
 'M',
 #endif
-#ifdef	NPATH /* gone */
-'N',
-#endif
 #ifdef	BETTER_NDELAY
 'n',
 #endif
@@ -132,12 +126,6 @@ char	serveropts[] = {
 #endif
 #ifdef	ENABLE_USERS
 'U',
-#endif
-#ifdef	VALLOC
-'V',
-#endif
-#ifdef	NOWRITEALARM
-'w',
 #endif
 #ifdef	UNIXPORT
 'X',
