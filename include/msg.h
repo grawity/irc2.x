@@ -102,7 +102,7 @@ struct Message msgtab[] = {
   { MSG_WHOWAS,  m_whowas,   0, 4 },
   { MSG_USER,    m_user,     0, 4 },
   { MSG_SERVER,  m_server,   0, 2 },
-  { MSG_LIST,    m_list,     0, 1 },
+  { MSG_LIST,    m_list,     0, 2 },
   { MSG_TOPIC,   m_topic,    0, 1 },
   { MSG_INVITE,  m_invite,   0, 2 },
   { MSG_CHANNEL, m_channel,  0, 2 },

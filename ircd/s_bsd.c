@@ -60,6 +60,10 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include "sock.h"
 #endif
 #include "sys.h"
+#ifdef NeXT
+#include <arpa/nameser.h>
+#include <resolv.h>
+#endif
 
 #ifndef NULL
 #define NULL 0
@@ -159,7 +163,7 @@ int portnum;
 	server.sin_port = htons(portnum);
 	for (length = 0; length < 10; length++)
 	    {
-		if (bind(sock, &server, sizeof(server)))
+		if (bind(sock, (struct sockaddr *)&server, sizeof(server)))
 		    {
 			ReportError("binding stream socket %s:%s",
 				    (aClient *)NULL);
@@ -265,7 +269,7 @@ int flags;
 	char *hname;
 	int len = sizeof(name);
 
-	if (getpeername(cptr->fd, &name, &len) == -1)
+	if (getpeername(cptr->fd, (struct sockaddr *)&name, &len) == -1)
 	    {
 	      ReportError("Failed in connecting to %s :%s", cptr);
 	      return -2;
@@ -288,9 +292,26 @@ int flags;
 	    {
 		int i = 0;
 
-		for (hname = host->h_name; hname; hname = host->h_aliases[i++])
-			if (check_name(cptr,hname,flags))
+		for (hname = host->h_name; hname;
+		    hname = host->h_aliases[i++]) {
+#ifdef RES_INIT
+		    /* try to fix up unqualified names */
+		    if (!index(hname, '.')) {
+			if (!(_res.options&RES_INIT)) res_init();
+			if (_res.defdname[0]) {
+#ifndef MAXDNAME
+#define MAXDNAME 256
+#endif
+			    char fqname[MAXDNAME];
+			    sprintf(fqname, "%s.%s", hname, _res.defdname);
+			    if (check_name(cptr,fqname,flags)) return 0;
+		    	}
+		    }
+#endif
+		    if (check_name(cptr,hname,flags))
 				return 0;
+		}
+
 	    }
 #if !ULTRIX
 	/*
@@ -741,10 +762,24 @@ int len;
 	name[len] = '\0';
 	
 	/* assume that a name containing '.' is a fully qualified domain name */
-	if (index(name, '.') == (char *) 0)
+	if (!index(name, '.'))
 	    {
-		if ((hp = gethostbyname(name)) != (struct hostent *) 0)
-			strncpy(name, hp->h_name, len);
+		if (hp = gethostbyname(name)) {
+		    strncpy(name, hp->h_name, len);
+#ifdef RES_INIT
+		    /* if we still don't have a FQDN, ask resolver */
+		    if (!index(name, '.')) {
+			if (!(_res.options&RES_INIT)) res_init();
+			if (_res.defdname[0]) {
+			    char mydname[2+sizeof _res.defdname];
+			    mydname[0]='.';
+			    strcpy(&mydname[1], _res.defdname);
+			    strncat(name, mydname, len-strlen(name));
+			}
+		    }
+#endif
+		}
+
 	    }
 	
 	return (0);

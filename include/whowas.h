@@ -24,6 +24,9 @@
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
+#ifdef __GNUC__
+int
+#endif
 AddHistory(
 #ifdef ANSI_PROTO
 	   aClient *
@@ -37,6 +40,9 @@ AddHistory(
 **	structures and it must know when they cease to exist. This
 **	also implicitly calls AddHistory.
 */
+#ifdef __GNUC__
+void
+#endif
 OffHistory(
 #ifdef ANSI_PROTO
 	   aClient *

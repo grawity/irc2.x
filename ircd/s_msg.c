@@ -94,6 +94,8 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include "sys.h"
 #include <sys/types.h>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include "config.h"  /* To pick up name of userlogging file */
 #if APOLLO
 #include <sys/types.h>
 #endif
@@ -404,6 +406,9 @@ aClient *sptr;
 char *nick;
 
     {
+	FILE *userlogfile; /* Added to log users of server */
+	struct stat stbuf;
+
 	sptr->status = STAT_CLIENT;
 	sendto_serv_butone(cptr,":%s USER %s %s %s :%s", nick,
 			   sptr->user->username, sptr->user->host,
@@ -411,6 +416,18 @@ char *nick;
 	AddHistory(sptr);
 	if (MyConnect(sptr))
 	    {
+
+/* This conditional makes the logfile active only after it's been
+   created -- thus logging can be turned off by removing the file. */
+
+		if(!stat(FNAME_USERLOG, &stbuf)) { 
+			userlogfile = fopen(FNAME_USERLOG, "a");
+			fprintf(userlogfile, "%s: %s@%s\n", 
+			   date(0), sptr->user->username, sptr->user->host);
+		 	fclose(userlogfile);
+		}
+/* Modification by stealth@caen.engin.umich.edu */
+
 		sendto_one(sptr,
 		  "NOTICE %s :*** Welcome to the Internet Relay Network, %s",
 			   nick, nick);
@@ -452,8 +469,8 @@ char *parv[];
 	nick = parv[1];
 	if (DoNickName(nick) == 0)
 	    {
-		sendto_one(sptr,":%s %d %s :Erroneus Nickname", me.name,
-			   ERR_ERRONEUSNICKNAME, sptr->name);
+		sendto_one(sptr,":%s %d %s %s :Erroneous Nickname", me.name,
+			   ERR_ERRONEUSNICKNAME, sptr->name, parv[1]);
 		return 0;
 	    }
 	if ((acptr = find_person(nick,(aClient *)NULL)) && 
@@ -485,7 +502,12 @@ char *parv[];
 					   acptr->name,
 					   me.name,
 					   acptr->from->name,
-					   cptr->name);
+ 					   /* Note: cannot use GetClientName
+ 					   ** twice here, it returns static
+ 					   ** string pointer--the other info
+ 					   ** would be lost.
+ 					   */
+ 					   GetClientName(cptr,FALSE));
 			ExitClient((aClient *)NULL, acptr);
 		    }
 		return 0; /* Duplicate NICKNAME handled */
@@ -925,8 +947,12 @@ char *parv[];
 					   a2cptr->name,
 					   a2cptr->info);
 			else
-				sendto_one(sptr,":%s %d %s * *", me.name, 
-					   RPL_WHOISSERVER, sptr->name);
+				sendto_one(sptr,":%s %d %s \"%s\" :%s",
+					   me.name, 
+					   RPL_WHOISSERVER,
+					   sptr->name,
+					   user->server,
+					   "*Not on this net*");
 			if (user->away)
 				sendto_one(sptr,":%s %d %s %s :%s",
 					   me.name, RPL_AWAY,
@@ -1047,6 +1073,7 @@ char *parv[];
 /*
 ** m_list
 **	parv[0] = sender prefix
+**      parv[1] = channel
 */
 m_list(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
@@ -1058,7 +1085,8 @@ char *parv[];
 	
 	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
 		   me.name, RPL_LISTSTART, sptr->name);
-	for (chptr = channel; chptr; chptr = chptr->nextch)
+ 	if (parc < 2 || *parv[1] == '\0')
+	  for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
 		if (sptr->user == NULL ||
 		    (SecretChannel(chptr) && chptr != sptr->user->channel))
@@ -1068,6 +1096,16 @@ char *parv[];
 			   (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
 			   chptr->users, chptr->topic);
 	    }
+	else
+	  {
+	    chptr = find_channel(parv[1],(aChannel *) 0);
+	    if (chptr != (aChannel *) 0 && ShowChannel(sptr, chptr)
+		&& sptr->user != NULL)
+		sendto_one(sptr,":%s %d %s %s %d :%s",
+			   me.name, RPL_LIST, sptr->name,
+			   (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
+			   chptr->users, chptr->topic);
+	  }
 	sendto_one(sptr,":%s %d %s :End of /LIST",
 		   me.name, RPL_LISTEND, sptr->name);
 	return 0;
@@ -1145,17 +1183,62 @@ char *parv[];
 		return -1;
 	    }
 	
-	if (parc < 3)
-		chptr = (aChannel *) 0;
-	else 
-		chptr = find_channel(parv[2], (char *) 0);
-	if (chptr == (aChannel *) 0)
+	if (parc < 3 || (parv[2][0] == '*' && parv[2][1] == '\0'))
+		{
 		chptr = sptr->user->channel;
-	if (!chptr) {
-	  sendto_one(sptr,":%s %d %s :Not enough parameters", me.name,
-		     ERR_NOTONCHANNEL, sptr->name);
-	  return -1;
+		if (!chptr) 
+			{
+	  sendto_one(sptr,":%s %d %s :You have not joined any channel",
+		     me.name, ERR_USERNOTINCHANNEL, sptr->name);
+			return -1;
+			}
+		}			
+	else 
+		chptr = find_channel(parv[2], (aChannel *) 0);
+	if (chptr == (aChannel *) 0)
+	    {
+		char *ptr = parv[2];
+
+		if (atoi(parv[2]) == 0 && parv[2][0] != '+' &&
+		    !(parv[2][0] == '0' && parv[2][1] == '\0'))
+		      {
+			sendto_one(sptr,":%s %d %s %s :Not a valid channel",
+			   me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[2]);
+			return -1;
+		      }
+
+		while (*ptr) {
+		  if ((*ptr < 'a' || *ptr > 'z') &&
+		   (*ptr < 'A' || *ptr > 'Z') &&
+		   *ptr != '+' && *ptr != '{' && *ptr != '}' &&
+		   *ptr != '[' && *ptr != ']' && *ptr != '^' && 
+		   *ptr != '~' && *ptr != '(' && *ptr != ')' && *ptr != '*' &&
+		   *ptr != '!' && *ptr != '@' && *ptr != '.' && *ptr != '-' &&
+		   *ptr != ',' && (*ptr < '0' || *ptr > '9') && *ptr != '_')
+		      {
+			sendto_one(sptr,":%s %d %s %s :Not a valid channel",
+			   me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[2]);
+			return -1;
+		      }
+		  ptr++;
+		}
 	}
+	if ((chptr) && (chptr->mode.mode & MODE_INVITEONLY)) 
+	  if (!IsChanOp(sptr))
+	    {
+	      sendto_one(sptr, ":%s %d %s :You're not channel operator",
+			 me.name, ERR_NOPRIVILEGES, sptr->name);
+	      return -1;
+	    }
+	  else
+	    if (chptr != sptr->user->channel)
+	      {
+		sendto_one(sptr,":%s %d %s %s :Channel is invite only.",
+			   me.name, ERR_INVITEONLYCHAN, sptr->name, 
+			   ((chptr) ? (chptr->chname) : parv[2]));
+		return -1;
+	      }
+
 	acptr = find_person(parv[1],(aClient *)NULL);
 	if (acptr == NULL)
 	    {
@@ -1167,7 +1250,7 @@ char *parv[];
 	    {
 		sendto_one(sptr,":%s %d %s %s %s", me.name,
 			   RPL_INVITING, sptr->name, acptr->name,
-			   ((chptr) ? (chptr->chname) : "0"));
+			   ((chptr) ? (chptr->chname) : parv[2]));
 		/* 'find_person' does not guarantee 'acptr->user' --msa */
 		if (acptr->user && acptr->user->away)
 			sendto_one(sptr,":%s %d %s %s :%s", me.name,
@@ -1175,11 +1258,11 @@ char *parv[];
 				   acptr->user->away);
 	    }
 	if (MyConnect(acptr))
-	  if ((chptr->mode.mode & MODE_INVITEONLY) && sptr->user &&
+	  if ((chptr) && (chptr->mode.mode & MODE_INVITEONLY) && sptr->user &&
 	      (chptr == sptr->user->channel) && IsChanOp(sptr))
 	    AddInvite(acptr, chptr);
 	sendto_one(acptr,":%s INVITE %s %s",sptr->name,
-		   acptr->name, ((chptr) ? (chptr->chname) : "0"));
+		   acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
 	return 0;
     }
 
@@ -1288,12 +1371,23 @@ char *parv[];
 		sendto_one(cptr,"ERROR :No such server (%s)",server);
 		return 0;
 	    }
+ 	if (MyConnect(acptr) && !IsOper(cptr))
+#ifdef WALLOPS_REMOTES
+  	/*
+ 	**  Notify all opers, if my local link is remotely squitted
+  	*/
+ 		sendto_ops_butone((aClient *)NULL,
+ 				  ":%s WALLOPS :Received SQUIT %s from %s",
+ 				  me.name,
+ 				  server,
+ 				  GetClientName(sptr,FALSE));
+#else
 	/*
 	**  Notify local opers, if my local link is remotely squitted
 	*/
-	if (MyConnect(acptr) && !IsOper(cptr))
 		sendto_ops("Received SQUIT %s from %s",server,
 			   GetClientName(sptr,FALSE));
+#endif
 	return ExitClient(cptr, acptr);
     }
 
@@ -1380,6 +1474,39 @@ char *parv[];
 			sendto_one(cptr,"ERROR :No server info specified");
 			return 0;
 		    }
+ 		/*
+		** See if the newly found server has a Q line for it
+ 		** in our conf.  If it does, lose the link that brought 
+ 		** it into our network.  Format:
+ 		**
+ 		**    Q:<unused>:<reason>:<servername>
+ 		**
+ 		** Example:  Q:*:for the hell of it:test.berkeley.edu
+ 		*/
+
+		if (aconf = find_conf(host, (aConfItem *)NULL,
+				      host,CONF_QUARANTINED_SERVER))
+		  {
+#ifdef WALLOPS_QUARANTINE
+		    sendto_ops_butone((aClient *)NULL,
+				      ":%s WALLOPS :%s brought in %s, closing link because %s",
+				      me.name,
+				      GetClientName(sptr,FALSE),
+				      host,
+				      BadPtr(aconf->passwd) ?
+				      "reason unspecified" : aconf->passwd);
+#else
+		    sendto_ops("%s brought in %s, closing link because %s",
+			       GetClientName(cptr,FALSE),host,
+			       BadPtr(aconf->passwd) ?
+			       "reason unspecified" : aconf->passwd);
+#endif
+		    sendto_one(cptr,"ERROR :%s is not welcome because %s.  Go away.",
+			       host,
+			       BadPtr(aconf->passwd) ?
+			       "reason unspecified" : aconf->passwd);
+		    return ExitClient(cptr,cptr);
+		  }
 		acptr = make_client(cptr);
 		strncpyzt(acptr->name,host,sizeof(acptr->name));
 		strncpyzt(acptr->info,info,sizeof(acptr->info));
@@ -1786,7 +1913,43 @@ char *parv[];
 **	Currently supported are:
 **		M = Message frequency (the old stat behaviour)
 **		L = Local Link statistics
+**		C = Report C and N configuration lines
 */
+
+/*
+** m_stats/stats_conf
+**	Report N/C-configuration lines from this server. This could
+**	report other configuration lines too, but converting the
+**	status back to "char" is a bit akward--not worth the code
+**	it needs...
+**
+**	Note:	The info is reported in the order the server uses
+**		it--not reversed as in ircd.conf!
+*/
+static ReportConfiguredLinks(cptr, sptr)
+aClient *cptr, *sptr;
+    {
+	aConfItem *tmp;
+	char flag;
+	static char noinfo[] = "<NULL>";
+
+	for (tmp = conf; tmp; tmp = tmp->next)
+	    {
+		if (tmp->status == CONF_CONNECT_SERVER)
+			flag = 'C';
+		else if (tmp->status == CONF_NOCONNECT_SERVER)
+			flag = 'N';
+		else
+			continue;
+		sendto_one(sptr,"NOTICE %s :%c:%s:%c:%s:%d",sptr->name,
+			   flag,
+			   BadPtr(tmp->host) ? noinfo : tmp->host,
+			   BadPtr(tmp->passwd) ? ' ' : '*',
+			   BadPtr(tmp->name) ? noinfo : tmp->name,
+			   (int)tmp->port);
+	    }
+      }
+
 m_stats(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
@@ -1828,6 +1991,8 @@ char *parv[];
 					   myctime(acptr->since));
 			      }
 	    }
+	else if (*stat == 'C' || *stat == 'c')
+		ReportConfiguredLinks(cptr,sptr);
 	else
 		for (mptr = msgtab; mptr->cmd; mptr++)
 			sendto_one(sptr,
@@ -2257,6 +2422,17 @@ char *parv[];
 		return -1;
 	    }
 
+#ifdef WALLOPS_REMOTES
+  	/*
+	** Notify all operators about remote connect requests
+  	*/
+  	if (!IsOper(cptr))
+		sendto_ops_butone((aClient *)NULL,
+				 ":%s WALLOPS :Remote 'CONNECT %s %s' from %s",
+				  me.name,
+				  parv[1], parv[2] ? parv[2] : "",
+				  GetClientName(sptr,FALSE));
+#else
 	/*
 	** Notify local operator(s) about remote connect requests
 	*/
@@ -2264,6 +2440,7 @@ char *parv[];
 		sendto_ops("Remote 'CONNECT %s %s' from %s",
 			   parv[1], parv[2] ? parv[2] : "",
 			   GetClientName(sptr,FALSE));
+#endif
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status == CONF_CONNECT_SERVER &&
@@ -2547,7 +2724,7 @@ char *parv[];
     {
 	char *message = parc > 1 ? parv[1] : NULL;
 
-	CheckRegisteredUser(sptr);
+	CheckRegistered(sptr); /* Allow servers and users to send WALLOPS */
 	
 	if (BadPtr(message))
 	    {

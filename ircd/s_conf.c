@@ -264,6 +264,10 @@ initconf()
 		    case 'a':   /* of this server. */
 			aconf->status = CONF_ADMIN;
 			break;
+		      case 'Q': /* a server that you don't want in your */
+		      case 'q': /* network.  USE WITH CAUTION! */
+			aconf->status = CONF_QUARANTINED_SERVER;
+			break;
 		    default:
 			debug(DEBUG_ERROR, "Error in config file: %s", line);
 			break;
@@ -314,7 +318,7 @@ initconf()
 		      aconf->status, aconf->host, aconf->passwd,
 		      aconf->name, aconf->port);
 	    }
-	close(fd);
+	fclose(fd);
 	return (0);
     }
 

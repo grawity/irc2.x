@@ -158,6 +158,9 @@ aClient *cptr;
 ** OffHistory
 **	This is called when client signs off the system.
 */
+#ifdef __GNUC__
+void
+#endif
 OffHistory(cptr)
 aClient *cptr;
     {

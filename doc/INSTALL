@@ -1,22 +1,3 @@
-/************************************************************************
- *   IRC - Internet Relay Chat, doc/INSTALL
- *   Copyright (C) 1990, Jeff Trim, Mike Bolotski
- *
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation; either version 1, or (at your option)
- *   any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
             Installing IRC - The Internet Relay Chat Program
 
 
@@ -35,26 +16,20 @@ Overview of this document:
       replace the "0" with a "1" next to the choice you want.  All the other
       UNIX #defines should be set to "0".
 
-   b) Define DOMAINNAME, if your systems supports the "getdomainname()" system
-      call.  You can check this by typing "domainname" at the UNIX prompt and
-      seeing if anything appears.  IRC will attempt to add your UNIX Internet
-      System Domain to your hostname if it is not currently present on your
-      "hostname()".  You should define this if you do support getdomainame(). 
-      
-   c) Define TTYON if you want to see the ircd debugging information as
+   b) Define DEBUGMODE if you want to see the ircd debugging information as
       the daemon is running.  Normally this function will be undefined as
       ircd produces a considerable amount of output. 
 
 
-   d) Define MYNAME to be the directory path to ircd.  This is usually
+   d) Define SPATH to be the directory path to ircd.  This is usually
       /usr/local/bin/ircd, unless you don't have installation permission
       there. 
 
-   e) Define CONFIGFILE to be the directory path to the "irc.conf" file.
+   e) Define CPATH to be the directory path to the "irc.conf" file.
       This path is usually /usr/local/lib/irc.conf. The format of this file 
       will be discussed later.
 
-   f) The LOGFILE #define should be set to "/dev/null" unless you plan to 
+   f) The LPATH #define should be set to "/dev/null" unless you plan to 
       debug the program.  Note that the logfile grows very quickly.
 
       --------------------------------------------------------------------
@@ -73,47 +48,30 @@ Overview of this document:
       Although these are not OFFICIALLY reserved for IRC, they are the ports
       we have unofficially claimed for the program.  
 
-   h) Define TIMESEC to be the amount of IDLE time you will allow your server
-      to WAIT before attempting to request status of your neighboring servers.
-      After TIMESEC seconds have passed and no activity has occured on IRC,
-      IRC will enter a routine where it will send a PING message to all of
-      the servers connected to your IRCD.  It will send one PING to every
-      server and will expect the other servers to send a PONG message back
-      saying that they are "okay and functioning".  The program has a built
-      in time stamp that tells IRC the last time that something was received
-      from a curtain server.  PINGFREQUENCY refers to the amount of time
-      you will allow server connections to be IDLE.  After this IDLE time
-      has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
+   h) Define PINGFREQUENCY to be the amount of IDLE time you will allow
+      your server to WAIT before attempting to request status of your
+      neighboring servers.  After TIMESEC seconds have passed and no activity
+      has occured on IRC, IRC will enter a routine where it will send a PING
+      message to all of the servers connected to your IRCD.  It will send one
+      PING to every server and will expect the other servers to send a PONG
+      message back saying that they are "okay and functioning".  The program
+      has a built in time stamp that tells IRC the last time that something
+      was received from a curtain server.  PINGFREQUENCY refers to the amount
+      of time you will allow server connections to be IDLE.  After this IDLE
+      time has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
       the program will PING that particular server and will expect a PONG
       message response from that server.  If no reply to a PING message is
-      received in 2 * PINGFREQUENCY seconds the connection will be closed,
-      and reconnection attempts can be made by your IRCD or the remote IRCD
+      received in 2 * PINGFREQUENCY seconds the connection will be closed, and
+      reconnection attempts can be made by your IRCD or the remote IRCD
       depending upon which server connects to whom.
 
-   i) Define PINGFREQUENCY - (see "h" above)
-
-   j) Define CONNECTFREQUENCY - will define the number of SECONDS for your
+      i) Define CONNECTFREQUENCY - will define the number of SECONDS for your
       server to wait before it attempts reconnection at it's neighboring
       IRC hosts.  The default value is 20 minutes (1200 seconds) and that
       is generally pretty good for RECONNECTION time.  You should probably
-      not change this Define.
+      not change this Define, unless you are a backbone server, then it is
+      suggested you cut the value in half to 600 seconds.
 
-   k) Define WRITEDELAY affects the UNIX Socket command WRITE() which is used
-      to write socket information to the IRCD socket.. and beyond!  Sometimes
-      a socket can become very crowded (if say 10-20 people were using IRC)
-      and it will lock up the users keyboard until it can get a return value
-      from the socket, which tells IRC some information about the WRITE() call.
-      To BREAK this lockup, you need to specify the number of seconds you'll
-      allow the SOCKET to stay locked up before you'll BREAK the lock - this
-      typically is 15 seconds and that is a pretty good number for it.  I
-      recommend you leave it DEFAULT value.
-
-
-2) Edit the Makefile:
-
-   The only change to the Makefile should be the setting of the SYS variable.
-   Since SySV is currently unsupported, the variable should remain as 'bsd',
-   and this step is not required.
 
 3) Configure and compile the code.
 
@@ -152,24 +110,25 @@ Overview of this document:
    5.  Operator priviliges	(O)
    6.  Administrative info	(A)
    7.  Excluded accounts	(K)
+   8.  Excluded machines        (Q)
 
    1. SERVER CONNECTIONS:  How to connect to other servers
 			   How other servers can connect to you
 
    Now you must decide WHICH hosts you want to connect to and WHAT ORDER you
    want to connect to them in.  For my example let us assume I am on the
-   machine "tolsun.oulu.fi" and I want to connect to irc daemons on 3 other
+   machine "bucsd.bu.edu" and I want to connect to irc daemons on 3 other
    machines:
 
-         "hal.oce.orst.edu"        - Tertiary Connection
-         "orion.cair.du.edu"       - Secondary Connection
-         "naakka.tut.fi"           - Primary Connection
+         "netserv2.its.rpi.edu"                - Tertiary Connection
+         "astsun.astro.virginia.edu"       - Secondary Connection
+         "garfield.mit.edu"            - Primary Connection
 
    And I prefer to connect to them in that order, meaning I first want to
-   try connecting to "naakka.tut.fi", then to "orion.cair.du.edu", and
-   finally to "hal.oce.orst.edu".  So if "naakka.tut.fi" is down or
-   unreachable, the program will try to connect to "orion".
-   If orion is down it will try to connect to "hal" and so forth.
+   try connecting to "garfield.mit.edu", then to "astsun.astro.virginia.edu",
+   and finally to "netserv2.its.rpi.edu".  So if "garfield.mit.edu" is down or
+   unreachable, the program will try to connect to "astsun".
+   If orion is down it will try to connect to "netserv2" and so forth.
    PLEASE limit the number of hosts you will attempt to connect to down to 3.
    We are trying to limit the amount of Network Traffic IRC creates.
 
@@ -180,11 +139,11 @@ Field: 1        2              3                4               5
 
    for example:
    
-    C:orion.cair.du.edu:passwd:orion.cair.du.edu:6667 
+    C:garfield.mit.edu:passwd:garfield.mit.edu:6667
 
           - or -
 
-    C:130.253.1.15:passwd:orion.cair.du.edu:6667
+    C:18.72.0.252:passwd:garfield.mit.edu:6667
 
     Explanation:
 
@@ -203,8 +162,8 @@ Field: 1        2              3                4               5
 
     Field 4: The full hostname of the target machine. This is the name that 
 	     the TARGET server will identify itself with when you connect 
-	     to it.  If you were connecting to orion you would receive
-	     "orion.cair.du.edu" and that is what you should place in 
+	     to it.  If you were connecting to garfield you would receive
+	     "garfield.mit.edu" and that is what you should place in 
 	     this field.
   
     Field 5: The INTERNET Port that you want to connect to on the TARGET 
@@ -215,38 +174,39 @@ Field: 1        2              3                4               5
 
    Some examples:
 
-            C:naakka.tut.fi::naakka.tut.fi:6667
+            C:bucsd.bu.edu::bucsd.bu.edu:6667
  
-            This reads: Connect to host "naakka.tut.fi", with no password
-            and expect this server to identify itself to you as "naakka.tu.fi".
+            This reads: Connect to host "bucsd.bu.edu", with no password
+            and expect this server to identify itself to you as "bucsd.bu.edu"
             Your machine will connect to this host at PORT 6667.
 
-            C:130.253.1.15:Jeff:orion.cair.du.edu:6667
+            C:128.42.4.37:gwydion:tavi.rice.edu:6667
 
-            This reads: Connect to a host at adress "130.253.1.15", using a
-            password of "Jeff".  The TARGET server should identify
-            itself as "orion.cair.du.edu".  *YOU* will connect at Internet
+            This reads: Connect to a host at adress "128.42.4.37" with a 
+            password of "gwydion".  The TARGET server should identify
+            itself as "tavi.rice.edu".  *YOU* will connect at Internet
             Port 6667 on this host.
 
-            C:orion.cair.du.edu::orion.cair.du.edu
+            C:betwixt.cs.caltech.edu::betwixt.cs.caltech.edu
                                                                                
-            This reads: do not attempt to connect to "orion.cair.du.edu", 
-			but if "orion.cair.du.edu" requests a connection,
+            This reads: do not attempt to connect to "betwixt.cs.caltech.edu"
+			but if "betwixt.cs.caltech.edu" requests a connection,
 			allow it to connect.
 
    Now back to our original problem, we wanted OUR server CONNECT to 3
-   hosts,  "naakka.tut.fi", "orion.cair.du.edu" and "hal.oce.orst.edu" in
-   that order.  So as we enter these entries into the file they must be
-   done in REVERSE order of how we could want to connect to them.
-   Note that the reversal is a bug, and should be fixed in future releases.
-   Here's how it would look if we connected "naakka.tut.fi" first:
+   hosts,  "garfield.mit.edu", "astsun.astro.virginia.edu" and
+   "netserv2.its.rpi.edu" in that order.  So as we enter these entries
+   into the file they must be done in REVERSE order of how we could want to
+   connect to them. Note that the reversal is a bug, and should be fixed in
+   future releases. Here's how it would look if we connected "naakka.tut.fi"
+   first:
 
-      C:hal.oce.orst.edu::hal.oce.orst.edu:6667
-      C:orion.cair.du.edu::orion.cair.du.edu:6667
-      C:naakka.tut.fi::naakka.tut.fi:6667
+        C:netserv2.its.rpi.edu::netserv2.its.rpi.edu:6667
+	C:astsun.astro.virginia.edu::astsun.astro.virginia.edu:6667
+	C:garfield.mit.edu::garfield.mit.edu:6667  
 
-   Ircd will attempt a connection to naakka first, then to orion, and 
-   finally to hal.
+   Ircd will attempt a connection to garfield first, then to astsun, 
+   and finally to netserv2.
 
    Reciprocal entries:
 
@@ -276,7 +236,9 @@ Field: 1        2              3                4               5
 
    Note: unlike "C" entries, port numbers are not required for "N" entries.
 
-   Wildcards: 
+   Wildcards:  (please note that wildcards are a big security hole.
+               use them at your own risk when applying them to C and N
+	       lines. However, using them on I lines is safe)
 
    Note that wildcards are allowd in hostnames or IP addresses. For 
    instance, to allow all hosts in Finland to connect to tolsun,
@@ -588,53 +550,3 @@ Appendix A: Difference between IP addresses and hostnames
    should be directed to "man hosts".
 
 
-
-Appendix B: Enabling Summon Messages
-
-   +-----------------------------------------------------------------------+
-   |            E N A B L I N G    / S U M M O N    M E S S A G E S        |
-   +-----------------------------------------------------------------------+
-
-   *NOTE* You must have ROOT or special access to the GROUP tty ('/dev')
-   to do this.  It is IMPORTANT that you do enable this option if at all
-   possible!!!   The /SUMMON command is pretty important to your users
-   as it allows them to be SUMMONED to IRC by other users inside of the
-   IRC program.
-
-   The "IRCD" program also needs access to the GROUP of '/dev'.   This
-   directory is where user TTY's are stored (as UNIX treats each Terminal
-   as a FILE! (which is a bit uncommon - but interesting!))   IRCD needs
-   GROUP ACCESS to /dev so that users can be SUMMONED to the program
-   by others users that are *in* the program.  This allows people from
-   other Universities around the world to SUMMON your users to IRC so that
-   they can chat with them.  Berkeley, SUN, HP-UX and most of the newer
-   versions of UNIX check to see if a USER is accepting MESSAGES via the
-   GROUP access rights on their TTY listing in the /dev directory.
-   For example an entry in '/dev' looks like this:
-
-  (Unix Path on BSD 4.3 UNIX is:  /dev/ttyp0)
-
-        crw------- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
-
-   You will note that 'jtrim' OWNS this terminal and can READ/WRITE to this
-   terminal as well (which makes sense because I am ENTERING DATA and
-   RECEIVEING DATA back from the UNIX).  I logged into this particular
-   UNIX on "April 29th" at "10:35am" and my TTY is "ttyp0".  But further
-   of *note* is that I do not have my MESSAGES ON! (mesg n)  -- This is
-   how my terminal would look with MESSAGES ON (mesg y):
-
-        crw--w---- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
-
-   With my MESSAGES ON (mesg y) I can receive TALK(1) requests, use the 
-   UNIX WRITE(1) command and other commands that allow users to talk
-   to one another.  In IRC this would also allow me to get IRC /SUMMON
-   messages.  To set up the "IRCD" program to work with /SUMMON type
-   the following:  (using ROOT or an account that has access to '/dev').
-
-       % chgrp tty ircd
-       % chmod 6111 ircd 
-
-   The above commands read: "Give IRCD access to GROUP tty (which is /dev)
-   and then when ANYONE runs the IRCD allow SETUID and SETGID priviliges
-   so that they can use the /SUMMON command.
- 

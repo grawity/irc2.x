@@ -91,7 +91,7 @@
   /* MSGBASE is a system which allows you to leave messages       */
   /* for users and make them be sent to recipient when he/she     */
   /* signs on IRC. This does not work on all systems !            */
-/* #define MSG_MAIL     "MAIL" /* */
+/* #define MSG_MAIL     "MAIL" */
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
@@ -137,21 +137,7 @@
  * it to zero just wastes CPU time.
  */
 
-#define MAXIMUM_LINKS 1 /* Maximum links attempted */
-
-#define WALLOPS_REMOTES /* Notify all opers of remote SQUITS/CONNECTS */
-
-#define WALLOPS_QUARANTINE /* Notify all opers of closing */
-                              /* undesirable links */
-
-/* #define CMDLINE_CONFIG /* allow conf file to be specified on command line */
-
-/*
- * Define this filename to maintain a list of persons who log
- * into this server.  Logging will stop when the file does not exist.
- */
-
-#define FNAME_USERLOG "/usr/local/lib/irc/userlog" /* */
+/* #define MAXIMUM_LINKS 1 */
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
@@ -221,8 +207,7 @@
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
 
-#define MAXSENDQLENGTH 24000 /* Recommended value: 24000 for leaves */
-                             /* 32000 (or more) for backbone sites */
+#define MAXSENDQLENGTH 24000
 
 
 #if LOG

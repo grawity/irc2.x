@@ -40,8 +40,8 @@ build: ircd
 ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 	sh mkversion.sh
 	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd
-	chmod 4711 ircd
+	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
+	chmod $(IRCDMODE) ircd
 
 ../common/bsd.o:
 	(cd ../common; ${MAKE} build);

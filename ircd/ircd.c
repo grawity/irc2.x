@@ -44,6 +44,7 @@ char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and 
 #include <sys/file.h>
 #include <stdio.h>
 #include <signal.h>
+#include "config.h"  /* pick up CMDLINE_CONFIG define */
 #include "struct.h"
 #include "numeric.h"
 
@@ -135,7 +136,7 @@ long currenttime;
 	      }
 	  }
 	if ( connections >= MAXIMUM_LINKS ) {
-	  sendto_ops( "Punting because we have enough connections." ); 
+/*	  sendto_ops( "Punting because we have enough connections." ); */
 	  return nexttime;
 	}
 #endif
@@ -242,9 +243,14 @@ static int check_pings()
 */
 static int BadCommand()
     {
+#ifdef CMDLINE_CONFIG
 	printf(
 "Usage: ircd [-f config] [-h servername] [-p portnumber] [-x loglevel] [-t]\n");
 	printf("Server not started\n\n");
+#else
+	fputs("Usage: ircd [-h servername] [-p portnumber] [-x loglevel] [-t]\n\
+Server not started\n\n", stdout);
+#endif
 	exit(-1);
     }
 
@@ -297,9 +303,11 @@ char *argv[];
 
 		switch (flag)
 		    {
+#ifdef CMDLINE_CONFIG
 		    case 'f':
 			configfile = p;
 			break;
+#endif
 		    case 'h':
 			strncpyzt(me.name, p, sizeof(me.name));
 			break;

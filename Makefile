@@ -22,10 +22,16 @@ INCLUDE = ../include
 # use the next line if using MIPS:
 # CFLAGS = -O -systype bsd43 -I${INCLUDE}
 # and on all other systems:
-CFLAGS = -g -I${INCLUDE}
+CFLAGS = -I${INCLUDE}
+# uncomment the following if you are using SunOS and NIS or YP
+# IRCDLIBS = -lresolv
+IRCDLIBS =
+# we use 4750, most people use 4711
+IRCDMODE = 4750
+# IRCDMODE = 4711
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
-SUBDIRS=include common ircd irc
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' 'IRCDMODE = ${IRCDMODE}'
+SUBDIRS=include common ircd
 SHELL=/bin/sh
 
 all: build

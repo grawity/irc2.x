@@ -135,8 +135,8 @@ char *parv[];
       chptr = (aChannel *) 0;
   }
   if (!chptr) {
-    sendto_one(sptr, ":%s %d %s :Channel not found",
-	       me.name, ERR_NOSUCHCHANNEL, sptr->name);
+    sendto_one(sptr, ":%s %d %s %s :Channel not found",
+	       me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[1]);
     return -1;
   }
   if (parc > 2)
@@ -530,8 +530,8 @@ char *parv[];
 	      ClearChanOp(sptr);
 	    }
 	  } else 
-	    sendto_one(sptr, ":%s %d %s",
-		       me.name, ERR_NOSUCHCHANNEL, sptr->name);
+	    sendto_one(sptr, ":%s %d %s %s :Not a valid channel",
+		       me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[1]);
 	  return 0;
 	}
 
@@ -589,7 +589,7 @@ char *parv[];
   aClient *who;
   CheckRegisteredUser(sptr);
 
-  if (parc < 2 || *parv[1] == '\0')
+  if (parc <= 2 || *parv[1] == '\0')
     {
       sendto_one(sptr,
 		 "NOTICE %s :%s", sptr->name,
@@ -606,7 +606,7 @@ char *parv[];
     if (MyClient(sptr))
       sendto_one(sptr,
 		 ":%s %d %s %s :%s", me.name,
-		 ERR_NOSUCHNICK, sptr->name, parv[0],
+		 ERR_NOSUCHNICK, sptr->name, parv[2], /* GUESSWORK */
 		 "Cannot kick user off channel");
     return 0;
   }

@@ -1,0 +1,1772 @@
+diff -cr irc2.5.1/2.4.notes irc2.5.1.bu.08/2.4.notes
+*** irc2.5.1/2.4.notes	Wed May  9 16:29:04 1990
+--- irc2.5.1.bu.08/2.4.notes	Mon Oct 22 11:32:56 1990
+***************
+*** 94,100 ****
+  
+  1.4 Short term "WHOWAS" history
+  
+!    The server has a short inmemory cache of the recent nickname changes
+  (the current default is set to 200 last changes). The design goal of
+  this is that it remembers changes in last few minutes, there is no
+  intention of this to be a long term history. That must be a separate
+--- 94,100 ----
+  
+  1.4 Short term "WHOWAS" history
+  
+!    The server has a short in memory cache of the recent nickname changes
+  (the current default is set to 200 last changes). The design goal of
+  this is that it remembers changes in last few minutes, there is no
+  intention of this to be a long term history. That must be a separate
+Only in irc2.5.1.bu.08: ChangeLog
+diff -cr irc2.5.1/Makefile irc2.5.1.bu.08/Makefile
+*** irc2.5.1/Makefile	Fri Jun  8 11:47:13 1990
+--- irc2.5.1.bu.08/Makefile	Mon Oct 22 11:32:55 1990
+***************
+*** 22,31 ****
+  # use the next line if using MIPS:
+  # CFLAGS = -O -systype bsd43 -I${INCLUDE}
+  # and on all other systems:
+! CFLAGS = -g -I${INCLUDE}
+  
+! MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
+! SUBDIRS=include common ircd irc
+  SHELL=/bin/sh
+  
+  all: build
+--- 22,37 ----
+  # use the next line if using MIPS:
+  # CFLAGS = -O -systype bsd43 -I${INCLUDE}
+  # and on all other systems:
+! CFLAGS = -I${INCLUDE}
+! # uncomment the following if you are using SunOS and NIS or YP
+! # IRCDLIBS = -lresolv
+! IRCDLIBS =
+! # we use 4750, most people use 4711
+! IRCDMODE = 4750
+! # IRCDMODE = 4711
+  
+! MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' 'IRCDMODE = ${IRCDMODE}'
+! SUBDIRS=include common ircd
+  SHELL=/bin/sh
+  
+  all: build
+diff -cr irc2.5.1/README irc2.5.1.bu.08/README
+*** irc2.5.1/README	Sat Jul  7 13:55:08 1990
+--- irc2.5.1.bu.08/README	Mon Oct 22 11:32:56 1990
+***************
+*** 20,42 ****
+   *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   */
+  
+! To install the new server, there is just a few changes to be made.
+! Edit the Makefile in the root of the source tree *only* if you need
+! to change the system type. It defaults to BSD as is. Edit the
+! include/config.h to your hearts content, avoiding going beyond the
+! warning line, unless you are *absolute* sure you know what you are doing.
+! If you happen to not take heed to this warning, you may end up with
+! a server that will not function properly and annoy not only you,
+  but users all around the world.
+  
+! Old irc client can be found in this package and if you want to use it,
+! check Makefile in directory irc before compiling. There are other,
+! better irc clients in distribution and the client distributed with
+! this version is simply something to begin with if you don't happen
+! to have other clients available.
+  
+! This version was brought to you by jto@tolsun.oulu.fi and send any
+! bug fixes and suggestions to me.
+  
+  NOTE: This server does *NOT* have MAIL system installed by default.
+        The reason is that it doesn't work with many systems.
+--- 20,40 ----
+   *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   */
+  
+! To install the new server, there is just a few changes to be made.  Edit
+! the Makefile in the root of the source tree *only* if you need to change
+! the system type (it defaults to BSD as is) or you are using a Sun with
+! NIS or YP.  Edit the include/config.h to your hearts content, avoiding
+! going beyond the warning line, unless you are *absolutely* sure you know
+! what you are doing.  If you happen to not heed this warning, you may end
+! up with a server that will not function properly and annoy not only you,
+  but users all around the world.
+  
+! Both the original irc client and IRC II can be found in this package.
+! Compile whichever you prefer, but check the Makefile in directory irc
+! (or IRC II) before compiling.
+  
+! This version was brought together from several sources by ckd@cs.bu.edu;
+! please send any bug fixes and suggestions to me.
+  
+  NOTE: This server does *NOT* have MAIL system installed by default.
+        The reason is that it doesn't work with many systems.
+Common subdirectories: irc2.5.1/common and irc2.5.1.bu.08/common
+Common subdirectories: irc2.5.1/doc and irc2.5.1.bu.08/doc
+Common subdirectories: irc2.5.1/include and irc2.5.1.bu.08/include
+Common subdirectories: irc2.5.1/irc and irc2.5.1.bu.08/irc
+Only in irc2.5.1.bu.08: ircII1.95
+Common subdirectories: irc2.5.1/ircd and irc2.5.1.bu.08/ircd
+Common subdirectories: irc2.5.1/vms and irc2.5.1.bu.08/vms
+Only in irc2.5.1/doc: ADVERTISEMENT
+Only in irc2.5.1/doc: AUTHORS
+Only in irc2.5.1/doc: BugList
+diff -cr irc2.5.1/doc/ChangeLog irc2.5.1.bu.08/doc/ChangeLog
+*** irc2.5.1/doc/ChangeLog	Sat Jul  7 05:27:15 1990
+--- irc2.5.1.bu.08/doc/ChangeLog	Mon Oct 22 11:45:49 1990
+***************
+*** 1,21 ****
+! /************************************************************************
+!  *   IRC - Internet Relay Chat, doc/ChangeLog
+!  *   Copyright (C) 1990, Mike Bolotski
+!  *
+!  *   This program is free software; you can redistribute it and/or modify
+!  *   it under the terms of the GNU General Public License as published by
+!  *   the Free Software Foundation; either version 1, or (at your option)
+!  *   any later version.
+!  *
+!  *   This program is distributed in the hope that it will be useful,
+!  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  *   GNU General Public License for more details.
+!  *
+!  *   You should have received a copy of the GNU General Public License
+!  *   along with this program; if not, write to the Free Software
+!  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+!  */
+  
+  Fri Jun 29 18:54:40 1990  Armin Gruner (gruner@informatik.tu-muenchen.de)
+  
+--- 1,26 ----
+! Sat Oct 20 17:12:53 1990  Helen Trillian Rose  (hrose at bucsd)
+! 
+! 	* Operator Etiquette 
+! 
+! 	New file.
+! 
+! 	* All files
+! 
+! 	Renamed several files.
+! 
+! 	* NETWORKING
+! 
+! 	Completely reworked it to include the net split, the new backbone,
+! 	and the new coordinators, as well as rewriting previously
+! 	confusing or misleading portions.
+! 
+! 	* MANUAL
+! 
+! 	Reworked slightly for IRC II/2.5.1 compatibility.
+! 
+! 	* INSTALL
+! 
+! 	Reworked to add 2.5.1.bu.7 functionality.
+  
+  Fri Jun 29 18:54:40 1990  Armin Gruner (gruner@informatik.tu-muenchen.de)
+  
+Only in irc2.5.1/doc: Comms
+Only in irc2.5.1/doc: EXTENSIONS
+Only in irc2.5.1/doc: HISTORY
+diff -cr irc2.5.1/doc/INSTALL irc2.5.1.bu.08/doc/INSTALL
+*** irc2.5.1/doc/INSTALL	Wed May  9 16:53:25 1990
+--- irc2.5.1.bu.08/doc/INSTALL	Mon Oct 22 11:45:49 1990
+***************
+*** 1,22 ****
+- /************************************************************************
+-  *   IRC - Internet Relay Chat, doc/INSTALL
+-  *   Copyright (C) 1990, Jeff Trim, Mike Bolotski
+-  *
+-  *   This program is free software; you can redistribute it and/or modify
+-  *   it under the terms of the GNU General Public License as published by
+-  *   the Free Software Foundation; either version 1, or (at your option)
+-  *   any later version.
+-  *
+-  *   This program is distributed in the hope that it will be useful,
+-  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-  *   GNU General Public License for more details.
+-  *
+-  *   You should have received a copy of the GNU General Public License
+-  *   along with this program; if not, write to the Free Software
+-  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+-  */
+- 
+              Installing IRC - The Internet Relay Chat Program
+  
+  
+--- 1,3 ----
+***************
+*** 35,60 ****
+        replace the "0" with a "1" next to the choice you want.  All the other
+        UNIX #defines should be set to "0".
+  
+!    b) Define DOMAINNAME, if your systems supports the "getdomainname()" system
+!       call.  You can check this by typing "domainname" at the UNIX prompt and
+!       seeing if anything appears.  IRC will attempt to add your UNIX Internet
+!       System Domain to your hostname if it is not currently present on your
+!       "hostname()".  You should define this if you do support getdomainame(). 
+!       
+!    c) Define TTYON if you want to see the ircd debugging information as
+        the daemon is running.  Normally this function will be undefined as
+        ircd produces a considerable amount of output. 
+  
+  
+!    d) Define MYNAME to be the directory path to ircd.  This is usually
+        /usr/local/bin/ircd, unless you don't have installation permission
+        there. 
+  
+!    e) Define CONFIGFILE to be the directory path to the "irc.conf" file.
+        This path is usually /usr/local/lib/irc.conf. The format of this file 
+        will be discussed later.
+  
+!    f) The LOGFILE #define should be set to "/dev/null" unless you plan to 
+        debug the program.  Note that the logfile grows very quickly.
+  
+        --------------------------------------------------------------------
+--- 16,35 ----
+        replace the "0" with a "1" next to the choice you want.  All the other
+        UNIX #defines should be set to "0".
+  
+!    b) Define DEBUGMODE if you want to see the ircd debugging information as
+        the daemon is running.  Normally this function will be undefined as
+        ircd produces a considerable amount of output. 
+  
+  
+!    d) Define SPATH to be the directory path to ircd.  This is usually
+        /usr/local/bin/ircd, unless you don't have installation permission
+        there. 
+  
+!    e) Define CPATH to be the directory path to the "irc.conf" file.
+        This path is usually /usr/local/lib/irc.conf. The format of this file 
+        will be discussed later.
+  
+!    f) The LPATH #define should be set to "/dev/null" unless you plan to 
+        debug the program.  Note that the logfile grows very quickly.
+  
+        --------------------------------------------------------------------
+***************
+*** 73,120 ****
+        Although these are not OFFICIALLY reserved for IRC, they are the ports
+        we have unofficially claimed for the program.  
+  
+!    h) Define TIMESEC to be the amount of IDLE time you will allow your server
+!       to WAIT before attempting to request status of your neighboring servers.
+!       After TIMESEC seconds have passed and no activity has occured on IRC,
+!       IRC will enter a routine where it will send a PING message to all of
+!       the servers connected to your IRCD.  It will send one PING to every
+!       server and will expect the other servers to send a PONG message back
+!       saying that they are "okay and functioning".  The program has a built
+!       in time stamp that tells IRC the last time that something was received
+!       from a curtain server.  PINGFREQUENCY refers to the amount of time
+!       you will allow server connections to be IDLE.  After this IDLE time
+!       has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
+        the program will PING that particular server and will expect a PONG
+        message response from that server.  If no reply to a PING message is
+!       received in 2 * PINGFREQUENCY seconds the connection will be closed,
+!       and reconnection attempts can be made by your IRCD or the remote IRCD
+        depending upon which server connects to whom.
+  
+!    i) Define PINGFREQUENCY - (see "h" above)
+! 
+!    j) Define CONNECTFREQUENCY - will define the number of SECONDS for your
+        server to wait before it attempts reconnection at it's neighboring
+        IRC hosts.  The default value is 20 minutes (1200 seconds) and that
+        is generally pretty good for RECONNECTION time.  You should probably
+!       not change this Define.
+  
+-    k) Define WRITEDELAY affects the UNIX Socket command WRITE() which is used
+-       to write socket information to the IRCD socket.. and beyond!  Sometimes
+-       a socket can become very crowded (if say 10-20 people were using IRC)
+-       and it will lock up the users keyboard until it can get a return value
+-       from the socket, which tells IRC some information about the WRITE() call.
+-       To BREAK this lockup, you need to specify the number of seconds you'll
+-       allow the SOCKET to stay locked up before you'll BREAK the lock - this
+-       typically is 15 seconds and that is a pretty good number for it.  I
+-       recommend you leave it DEFAULT value.
+  
+- 
+- 2) Edit the Makefile:
+- 
+-    The only change to the Makefile should be the setting of the SYS variable.
+-    Since SySV is currently unsupported, the variable should remain as 'bsd',
+-    and this step is not required.
+- 
+  3) Configure and compile the code.
+  
+     Type "make". This will compile the server, the client, and the services.
+--- 48,78 ----
+        Although these are not OFFICIALLY reserved for IRC, they are the ports
+        we have unofficially claimed for the program.  
+  
+!    h) Define PINGFREQUENCY to be the amount of IDLE time you will allow
+!       your server to WAIT before attempting to request status of your
+!       neighboring servers.  After TIMESEC seconds have passed and no activity
+!       has occured on IRC, IRC will enter a routine where it will send a PING
+!       message to all of the servers connected to your IRCD.  It will send one
+!       PING to every server and will expect the other servers to send a PONG
+!       message back saying that they are "okay and functioning".  The program
+!       has a built in time stamp that tells IRC the last time that something
+!       was received from a curtain server.  PINGFREQUENCY refers to the amount
+!       of time you will allow server connections to be IDLE.  After this IDLE
+!       time has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
+        the program will PING that particular server and will expect a PONG
+        message response from that server.  If no reply to a PING message is
+!       received in 2 * PINGFREQUENCY seconds the connection will be closed, and
+!       reconnection attempts can be made by your IRCD or the remote IRCD
+        depending upon which server connects to whom.
+  
+!       i) Define CONNECTFREQUENCY - will define the number of SECONDS for your
+        server to wait before it attempts reconnection at it's neighboring
+        IRC hosts.  The default value is 20 minutes (1200 seconds) and that
+        is generally pretty good for RECONNECTION time.  You should probably
+!       not change this Define, unless you are a backbone server, then it is
+!       suggested you cut the value in half to 600 seconds.
+  
+  
+  3) Configure and compile the code.
+  
+     Type "make". This will compile the server, the client, and the services.
+***************
+*** 152,157 ****
+--- 110,116 ----
+     5.  Operator priviliges	(O)
+     6.  Administrative info	(A)
+     7.  Excluded accounts	(K)
++    8.  Excluded machines        (Q)
+  
+     1. SERVER CONNECTIONS:  How to connect to other servers
+  			   How other servers can connect to you
+***************
+*** 158,175 ****
+  
+     Now you must decide WHICH hosts you want to connect to and WHAT ORDER you
+     want to connect to them in.  For my example let us assume I am on the
+!    machine "tolsun.oulu.fi" and I want to connect to irc daemons on 3 other
+     machines:
+  
+!          "hal.oce.orst.edu"        - Tertiary Connection
+!          "orion.cair.du.edu"       - Secondary Connection
+!          "naakka.tut.fi"           - Primary Connection
+  
+     And I prefer to connect to them in that order, meaning I first want to
+!    try connecting to "naakka.tut.fi", then to "orion.cair.du.edu", and
+!    finally to "hal.oce.orst.edu".  So if "naakka.tut.fi" is down or
+!    unreachable, the program will try to connect to "orion".
+!    If orion is down it will try to connect to "hal" and so forth.
+     PLEASE limit the number of hosts you will attempt to connect to down to 3.
+     We are trying to limit the amount of Network Traffic IRC creates.
+  
+--- 117,134 ----
+  
+     Now you must decide WHICH hosts you want to connect to and WHAT ORDER you
+     want to connect to them in.  For my example let us assume I am on the
+!    machine "bucsd.bu.edu" and I want to connect to irc daemons on 3 other
+     machines:
+  
+!          "netserv2.its.rpi.edu"                - Tertiary Connection
+!          "astsun.astro.virginia.edu"       - Secondary Connection
+!          "garfield.mit.edu"            - Primary Connection
+  
+     And I prefer to connect to them in that order, meaning I first want to
+!    try connecting to "garfield.mit.edu", then to "astsun.astro.virginia.edu",
+!    and finally to "netserv2.its.rpi.edu".  So if "garfield.mit.edu" is down or
+!    unreachable, the program will try to connect to "astsun".
+!    If orion is down it will try to connect to "netserv2" and so forth.
+     PLEASE limit the number of hosts you will attempt to connect to down to 3.
+     We are trying to limit the amount of Network Traffic IRC creates.
+  
+***************
+*** 180,190 ****
+  
+     for example:
+     
+!     C:orion.cair.du.edu:passwd:orion.cair.du.edu:6667 
+  
+            - or -
+  
+!     C:130.253.1.15:passwd:orion.cair.du.edu:6667
+  
+      Explanation:
+  
+--- 139,149 ----
+  
+     for example:
+     
+!     C:garfield.mit.edu:passwd:garfield.mit.edu:6667
+  
+            - or -
+  
+!     C:18.72.0.252:passwd:garfield.mit.edu:6667
+  
+      Explanation:
+  
+***************
+*** 203,210 ****
+  
+      Field 4: The full hostname of the target machine. This is the name that 
+  	     the TARGET server will identify itself with when you connect 
+! 	     to it.  If you were connecting to orion you would receive
+! 	     "orion.cair.du.edu" and that is what you should place in 
+  	     this field.
+    
+      Field 5: The INTERNET Port that you want to connect to on the TARGET 
+--- 162,169 ----
+  
+      Field 4: The full hostname of the target machine. This is the name that 
+  	     the TARGET server will identify itself with when you connect 
+! 	     to it.  If you were connecting to garfield you would receive
+! 	     "garfield.mit.edu" and that is what you should place in 
+  	     this field.
+    
+      Field 5: The INTERNET Port that you want to connect to on the TARGET 
+***************
+*** 215,252 ****
+  
+     Some examples:
+  
+!             C:naakka.tut.fi::naakka.tut.fi:6667
+   
+!             This reads: Connect to host "naakka.tut.fi", with no password
+!             and expect this server to identify itself to you as "naakka.tu.fi".
+              Your machine will connect to this host at PORT 6667.
+  
+!             C:130.253.1.15:Jeff:orion.cair.du.edu:6667
+  
+!             This reads: Connect to a host at adress "130.253.1.15", using a
+!             password of "Jeff".  The TARGET server should identify
+!             itself as "orion.cair.du.edu".  *YOU* will connect at Internet
+              Port 6667 on this host.
+  
+!             C:orion.cair.du.edu::orion.cair.du.edu
+                                                                                 
+!             This reads: do not attempt to connect to "orion.cair.du.edu", 
+! 			but if "orion.cair.du.edu" requests a connection,
+  			allow it to connect.
+  
+     Now back to our original problem, we wanted OUR server CONNECT to 3
+!    hosts,  "naakka.tut.fi", "orion.cair.du.edu" and "hal.oce.orst.edu" in
+!    that order.  So as we enter these entries into the file they must be
+!    done in REVERSE order of how we could want to connect to them.
+!    Note that the reversal is a bug, and should be fixed in future releases.
+!    Here's how it would look if we connected "naakka.tut.fi" first:
+  
+!       C:hal.oce.orst.edu::hal.oce.orst.edu:6667
+!       C:orion.cair.du.edu::orion.cair.du.edu:6667
+!       C:naakka.tut.fi::naakka.tut.fi:6667
+  
+!    Ircd will attempt a connection to naakka first, then to orion, and 
+!    finally to hal.
+  
+     Reciprocal entries:
+  
+--- 174,212 ----
+  
+     Some examples:
+  
+!             C:bucsd.bu.edu::bucsd.bu.edu:6667
+   
+!             This reads: Connect to host "bucsd.bu.edu", with no password
+!             and expect this server to identify itself to you as "bucsd.bu.edu"
+              Your machine will connect to this host at PORT 6667.
+  
+!             C:128.42.4.37:gwydion:tavi.rice.edu:6667
+  
+!             This reads: Connect to a host at adress "128.42.4.37" with a 
+!             password of "gwydion".  The TARGET server should identify
+!             itself as "tavi.rice.edu".  *YOU* will connect at Internet
+              Port 6667 on this host.
+  
+!             C:betwixt.cs.caltech.edu::betwixt.cs.caltech.edu
+                                                                                 
+!             This reads: do not attempt to connect to "betwixt.cs.caltech.edu"
+! 			but if "betwixt.cs.caltech.edu" requests a connection,
+  			allow it to connect.
+  
+     Now back to our original problem, we wanted OUR server CONNECT to 3
+!    hosts,  "garfield.mit.edu", "astsun.astro.virginia.edu" and
+!    "netserv2.its.rpi.edu" in that order.  So as we enter these entries
+!    into the file they must be done in REVERSE order of how we could want to
+!    connect to them. Note that the reversal is a bug, and should be fixed in
+!    future releases. Here's how it would look if we connected "naakka.tut.fi"
+!    first:
+  
+!         C:netserv2.its.rpi.edu::netserv2.its.rpi.edu:6667
+! 	C:astsun.astro.virginia.edu::astsun.astro.virginia.edu:6667
+! 	C:garfield.mit.edu::garfield.mit.edu:6667  
+  
+!    Ircd will attempt a connection to garfield first, then to astsun, 
+!    and finally to netserv2.
+  
+     Reciprocal entries:
+  
+***************
+*** 276,282 ****
+  
+     Note: unlike "C" entries, port numbers are not required for "N" entries.
+  
+!    Wildcards: 
+  
+     Note that wildcards are allowd in hostnames or IP addresses. For 
+     instance, to allow all hosts in Finland to connect to tolsun,
+--- 236,244 ----
+  
+     Note: unlike "C" entries, port numbers are not required for "N" entries.
+  
+!    Wildcards:  (please note that wildcards are a big security hole.
+!                use them at your own risk when applying them to C and N
+! 	       lines. However, using them on I lines is safe)
+  
+     Note that wildcards are allowd in hostnames or IP addresses. For 
+     instance, to allow all hosts in Finland to connect to tolsun,
+***************
+*** 588,640 ****
+     should be directed to "man hosts".
+  
+  
+- 
+- Appendix B: Enabling Summon Messages
+- 
+-    +-----------------------------------------------------------------------+
+-    |            E N A B L I N G    / S U M M O N    M E S S A G E S        |
+-    +-----------------------------------------------------------------------+
+- 
+-    *NOTE* You must have ROOT or special access to the GROUP tty ('/dev')
+-    to do this.  It is IMPORTANT that you do enable this option if at all
+-    possible!!!   The /SUMMON command is pretty important to your users
+-    as it allows them to be SUMMONED to IRC by other users inside of the
+-    IRC program.
+- 
+-    The "IRCD" program also needs access to the GROUP of '/dev'.   This
+-    directory is where user TTY's are stored (as UNIX treats each Terminal
+-    as a FILE! (which is a bit uncommon - but interesting!))   IRCD needs
+-    GROUP ACCESS to /dev so that users can be SUMMONED to the program
+-    by others users that are *in* the program.  This allows people from
+-    other Universities around the world to SUMMON your users to IRC so that
+-    they can chat with them.  Berkeley, SUN, HP-UX and most of the newer
+-    versions of UNIX check to see if a USER is accepting MESSAGES via the
+-    GROUP access rights on their TTY listing in the /dev directory.
+-    For example an entry in '/dev' looks like this:
+- 
+-   (Unix Path on BSD 4.3 UNIX is:  /dev/ttyp0)
+- 
+-         crw------- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+- 
+-    You will note that 'jtrim' OWNS this terminal and can READ/WRITE to this
+-    terminal as well (which makes sense because I am ENTERING DATA and
+-    RECEIVEING DATA back from the UNIX).  I logged into this particular
+-    UNIX on "April 29th" at "10:35am" and my TTY is "ttyp0".  But further
+-    of *note* is that I do not have my MESSAGES ON! (mesg n)  -- This is
+-    how my terminal would look with MESSAGES ON (mesg y):
+- 
+-         crw--w---- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+- 
+-    With my MESSAGES ON (mesg y) I can receive TALK(1) requests, use the 
+-    UNIX WRITE(1) command and other commands that allow users to talk
+-    to one another.  In IRC this would also allow me to get IRC /SUMMON
+-    messages.  To set up the "IRCD" program to work with /SUMMON type
+-    the following:  (using ROOT or an account that has access to '/dev').
+- 
+-        % chgrp tty ircd
+-        % chmod 6111 ircd 
+- 
+-    The above commands read: "Give IRCD access to GROUP tty (which is /dev)
+-    and then when ANYONE runs the IRCD allow SETUID and SETGID priviliges
+-    so that they can use the /SUMMON command.
+-  
+--- 550,552 ----
+Only in irc2.5.1/doc: MANUAL
+Only in irc2.5.1/doc: NETWORKING
+Only in irc2.5.1.bu.08/doc: TO-DO
+Only in irc2.5.1.bu.08/doc: advertisement
+Only in irc2.5.1.bu.08/doc: authors
+Only in irc2.5.1.bu.08/doc: comms
+diff -cr irc2.5.1/doc/etiquette irc2.5.1.bu.08/doc/etiquette
+*** irc2.5.1/doc/etiquette	Wed May  9 16:55:06 1990
+--- irc2.5.1.bu.08/doc/etiquette	Mon Oct 22 11:45:50 1990
+***************
+*** 58,73 ****
+  to join in, but do not try to force your topic into the discussion
+  if that doesn't come naturally.
+  
+  
+- 4) Limits
+- 
+-    On channel numbers above 10 there can be only 10 persons
+- per channel. So if the channel is full and you don't actively
+- participate, please move to another channel to let someone else in.
+- 
+- 
+- 5) {}|[]\
+- 
+     IRC has quite a lot of people from Scandinavian countries,
+  the above characters are letters in their alphabet. This 
+  has been explained on IRC about a thousand and one times, so
+--- 58,65 ----
+  to join in, but do not try to force your topic into the discussion
+  if that doesn't come naturally.
+  
++ 4) {}|[]\
+  
+     IRC has quite a lot of people from Scandinavian countries,
+  the above characters are letters in their alphabet. This 
+  has been explained on IRC about a thousand and one times, so
+***************
+*** 83,85 ****
+--- 75,82 ----
+  
+     Remember, people on IRC form their opinions about you only by 
+  your actions, writings and comments on IRC. So think before you type.
++ Do not "dump" to a channel (send large amounts of unwanted information.)
++ Doing this is likely to get you /kick'ed (removed from a channel by the
++ current channel operator), or /kill'ed (removal from IRC from one of the
++ IRC operators on line.)
++ 
+diff -cr irc2.5.1/doc/example.conf irc2.5.1.bu.08/doc/example.conf
+*** irc2.5.1/doc/example.conf	Sun Jun  3 02:33:00 1990
+--- irc2.5.1.bu.08/doc/example.conf	Wed Oct 24 00:39:28 1990
+***************
+*** 19,24 ****
+--- 19,27 ----
+  # -- Jto -- 03 Jun 1990
+  # Added some Kill line documentation
+  #
++ # -- htr -- 05 Oct 1990
++ # Added Quarantine line documentation
++ #
+  # IRC example configuration file
+  #
+  # This file describes the information that should be present in your IRC
+***************
+*** 35,41 ****
+  #    Some older versions of IRC have problems handling long fields in this
+  #    line. You may find that they have been truncated.
+  #
+! A:Boston University Computer Science:Boston, MA, USA:Bill Wisner <wisner@mica.Berkeley.EDU>
+  #
+  # I: authorize clients to connect to your server. You can use domains,
+  #    IP addresses, and asterisk wildcards. The second field can contain a
+--- 38,44 ----
+  #    Some older versions of IRC have problems handling long fields in this
+  #    line. You may find that they have been truncated.
+  #
+! A:Boston University Computer Science:Boston, MA, USA:Chris Davis <ckd@cs.bu.edu> and Helen Rose <hrose@cs.bu.edu>
+  #
+  # I: authorize clients to connect to your server. You can use domains,
+  #    IP addresses, and asterisk wildcards. The second field can contain a
+***************
+*** 44,63 ****
+  I:*.bu.edu::*.bu.edu
+  I:128.197.*.*::128.197.*.*
+  I:fenchurch.mit.edu:xyzzy:fenchurch.mit.edu
+  #
+  # O: authorize operators. Fields are, in order, host name the operator must
+  #    be logged in from (wildcards allowed), operator's password, operator's
+  #    nickname. The first example allows me to become an operator from any
+! #    machine in BU.EDU by typing /oper wisner foo.
+  #
+! O:*.bu.edu:foo:wisner
+! O:bu-cs.bu.edu:bar:jsol
+  #
+  # U: tell IRC clients what server to connect to. This line can contain
+  #    a password in the second field, although passwords are rarely (if ever) 
+  #    used. The fourth field is the port number for the client to connect on.
+  #    Newer versions of IRC allow you to permanently set the server name by
+! #    defining UPHOST in struct.h.
+  #
+  U:bucsd.bu.edu::bucsd.bu.edu:6667
+  #
+--- 47,67 ----
+  I:*.bu.edu::*.bu.edu
+  I:128.197.*.*::128.197.*.*
+  I:fenchurch.mit.edu:xyzzy:fenchurch.mit.edu
++ I:*.harvard.edu::*.harvard.edu
+  #
+  # O: authorize operators. Fields are, in order, host name the operator must
+  #    be logged in from (wildcards allowed), operator's password, operator's
+  #    nickname. The first example allows me to become an operator from any
+! #    machine in BU.EDU by typing /oper ckd jolt-cola.
+  #
+! O:*.bu.edu:jolt-cola:ckd
+! O:*.mit.edu:emerald:GEM
+  #
+  # U: tell IRC clients what server to connect to. This line can contain
+  #    a password in the second field, although passwords are rarely (if ever) 
+  #    used. The fourth field is the port number for the client to connect on.
+  #    Newer versions of IRC allow you to permanently set the server name by
+! #    defining UPHOST in config.h.
+  #
+  U:bucsd.bu.edu::bucsd.bu.edu:6667
+  #
+***************
+*** 74,93 ****
+  #
+  # Note that these lines may also contain a password in the second field.
+  #
+! # The following two lines instruct my server to try connecting to bu-cs.bu.edu.
+  #
+! C:bu-cs.bu.edu::bu-cs.bu.edu:6667
+! N:bu-cs.bu.edu::bu-cs.bu.edu
+  #
+  # The following two lines allow a server to connect to my server, but my
+  # server will not make any attempt to connect to it.
+  #
+! C:buit5.bu.edu::buit5.bu.edu
+! N:buit5.bu.edu::buit5.bu.edu
+  #
+  # Kill lines
+  #
+  # All users on tuminfo3 cannot connect to server during
+  # 9 am and 12 am, and 2 pm till 5 pm.
+  # K:tuminfo3.informatik.tu-muenchen.de:0900-1200,1400-1700:*
+! # Just leaving the time field emply disallows access day around
+--- 78,111 ----
+  #
+  # Note that these lines may also contain a password in the second field.
+  #
+! # The following two lines tell my server to try connecting to garfield.mit.edu
+  #
+! C:garfield.mit.edu::garfield.mit.edu:6667
+! N:garfield.mit.edu::garfield.mit.edu
+  #
+  # The following two lines allow a server to connect to my server, but my
+  # server will not make any attempt to connect to it.
+  #
+! C:helium.elec.ufl.edu::helium.elec.ufl.edu
+! N:helium.elec.ufl.edu::helium.elec.ufl.edu
+  #
++ #
++ # The following lines tell my server to connect to betwixt.cs.caltech.edu
++ # But to use the specified password previously set up with Thumper!
++ C:betwixt.cs.caltech.edu:bunny-rabbits:betwixt.cs.caltech.edu:6667
++ N:betwixt.cs.caltech.edu:bunny-rabbits:betwixt.cs.caltech.edu
++ #
+  # Kill lines
+  #
++ # Just leaving the time field emply disallows access day around
++ #
++ # hoppie on various BU machines is having access denied indefinitely
++ K:*.bu.edu::hoppie
++ #
+  # All users on tuminfo3 cannot connect to server during
+  # 9 am and 12 am, and 2 pm till 5 pm.
+  # K:tuminfo3.informatik.tu-muenchen.de:0900-1200,1400-1700:*
+! #
+! # Quarantine lines. These lines disallow connections to the 
+! # specified server and drops the link to anyone connecting to them.
+! Q::they have a server open server:eris.berkeley.edu
+Only in irc2.5.1.bu.08/doc: extensions
+Only in irc2.5.1.bu.08/doc: history
+Only in irc2.5.1.bu.08/doc: manual
+Only in irc2.5.1.bu.08/doc: networking
+Only in irc2.5.1.bu.08/doc: operators
+diff -cr irc2.5.1/include/config.h irc2.5.1.bu.08/include/config.h
+*** irc2.5.1/include/config.h	Sat Jul 14 13:09:57 1990
+--- irc2.5.1.bu.08/include/config.h	Tue Oct 23 22:19:24 1990
+***************
+*** 91,97 ****
+    /* MSGBASE is a system which allows you to leave messages       */
+    /* for users and make them be sent to recipient when he/she     */
+    /* signs on IRC. This does not work on all systems !            */
+! /* #define MSG_MAIL     "MAIL" */
+  
+  /*
+   * Full pathnames and defaults of irc system's support files. Please note that
+--- 91,97 ----
+    /* MSGBASE is a system which allows you to leave messages       */
+    /* for users and make them be sent to recipient when he/she     */
+    /* signs on IRC. This does not work on all systems !            */
+! /* #define MSG_MAIL     "MAIL" /* */
+  
+  /*
+   * Full pathnames and defaults of irc system's support files. Please note that
+***************
+*** 99,105 ****
+   */
+  
+  #define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
+! #define CPATH "/usr/local/lib/irc/ircd.conf"	 /* IRC Configuration file.  */
+  #define MPATH "/usr/local/lib/irc/ircd.motd"     /* Message Of The Day file. */
+  #define LPATH "/usr/local/lib/irc/ircd.log"      /* Where the Logfile lives. */
+  #ifdef MSG_MAIL
+--- 99,105 ----
+   */
+  
+  #define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
+! #define CPATH "/other/irc/lib/ircd.conf"	 /* IRC Configuration file.  */
+  #define MPATH "/usr/local/lib/irc/ircd.motd"     /* Message Of The Day file. */
+  #define LPATH "/usr/local/lib/irc/ircd.log"      /* Where the Logfile lives. */
+  #ifdef MSG_MAIL
+***************
+*** 107,113 ****
+  #define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
+  #endif
+  
+! #define UPHOST "tolsun.oulu.fi"              /* Default UPHOST for irc */
+                                               /* standard client        */
+  
+  /* MAXIMUM LINKS
+--- 107,113 ----
+  #define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
+  #endif
+  
+! #define UPHOST "garfield.mit.edu"              /* Default UPHOST for irc */
+                                               /* standard client        */
+  
+  /* MAXIMUM LINKS
+***************
+*** 137,144 ****
+   * it to zero just wastes CPU time.
+   */
+  
+! /* #define MAXIMUM_LINKS 1 */
+  
+  /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
+  
+  /* You shouldn't change anything below this line, unless absolutely needed. */
+--- 137,158 ----
+   * it to zero just wastes CPU time.
+   */
+  
+! #define MAXIMUM_LINKS 1 /* Maximum links attempted */
+  
++ #define WALLOPS_REMOTES /* Notify all opers of remote SQUITS/CONNECTS */
++ 
++ #define WALLOPS_QUARANTINE /* Notify all opers of closing */
++                               /* undesirable links */
++ 
++ /* #define CMDLINE_CONFIG /* allow conf file to be specified on command line */
++ 
++ /*
++  * Define this filename to maintain a list of persons who log
++  * into this server.  Logging will stop when the file does not exist.
++  */
++ 
++ #define FNAME_USERLOG "/usr/local/lib/irc/userlog" /* */
++ 
+  /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
+  
+  /* You shouldn't change anything below this line, unless absolutely needed. */
+***************
+*** 207,213 ****
+   * Max amount of internal send buffering when socket is stuck (bytes)
+   */
+  
+! #define MAXSENDQLENGTH 24000
+  
+  
+  #if LOG
+--- 221,228 ----
+   * Max amount of internal send buffering when socket is stuck (bytes)
+   */
+  
+! #define MAXSENDQLENGTH 24000 /* Recommended value: 24000 for leaves */
+!                              /* 32000 (or more) for backbone sites */
+  
+  
+  #if LOG
+diff -cr irc2.5.1/include/msg.h irc2.5.1.bu.08/include/msg.h
+*** irc2.5.1/include/msg.h	Sat Jun 16 12:23:14 1990
+--- irc2.5.1.bu.08/include/msg.h	Mon Oct 22 11:32:34 1990
+***************
+*** 102,108 ****
+    { MSG_WHOWAS,  m_whowas,   0, 4 },
+    { MSG_USER,    m_user,     0, 4 },
+    { MSG_SERVER,  m_server,   0, 2 },
+!   { MSG_LIST,    m_list,     0, 1 },
+    { MSG_TOPIC,   m_topic,    0, 1 },
+    { MSG_INVITE,  m_invite,   0, 2 },
+    { MSG_CHANNEL, m_channel,  0, 2 },
+--- 102,108 ----
+    { MSG_WHOWAS,  m_whowas,   0, 4 },
+    { MSG_USER,    m_user,     0, 4 },
+    { MSG_SERVER,  m_server,   0, 2 },
+!   { MSG_LIST,    m_list,     0, 2 },
+    { MSG_TOPIC,   m_topic,    0, 1 },
+    { MSG_INVITE,  m_invite,   0, 2 },
+    { MSG_CHANNEL, m_channel,  0, 2 },
+diff -cr irc2.5.1/include/patchlevel.h irc2.5.1.bu.08/include/patchlevel.h
+*** irc2.5.1/include/patchlevel.h	Sat Jul 14 09:42:54 1990
+--- irc2.5.1.bu.08/include/patchlevel.h	Mon Oct 22 11:32:35 1990
+***************
+*** 18,21 ****
+   */
+  
+  /* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
+! #define PATCHLEVEL "2.5.1"
+--- 18,21 ----
+   */
+  
+  /* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
+! #define PATCHLEVEL "2.5.1.bu.08"
+diff -cr irc2.5.1/include/struct.h irc2.5.1.bu.08/include/struct.h
+*** irc2.5.1/include/struct.h	Sat Jul 14 09:05:11 1990
+--- irc2.5.1.bu.08/include/struct.h	Mon Oct 22 11:32:35 1990
+***************
+*** 108,113 ****
+--- 108,114 ----
+  
+  #define CONF_ILLEGAL          0
+  /* #define CONF_SKIPME           1 /* not used any more --msa */
++ #define CONF_QUARANTINED_SERVER 1 /* reusing it now -hoppie */
+  #define CONF_CLIENT           2
+  #define CONF_CONNECT_SERVER   4
+  #define CONF_NOCONNECT_SERVER 8
+diff -cr irc2.5.1/include/whowas.h irc2.5.1.bu.08/include/whowas.h
+*** irc2.5.1/include/whowas.h	Wed May  9 17:13:22 1990
+--- irc2.5.1.bu.08/include/whowas.h	Mon Oct 22 11:32:35 1990
+***************
+*** 24,29 ****
+--- 24,32 ----
+  **	Client must be a fully registered user (specifically,
+  **	the user structure must have been allocated).
+  */
++ #ifdef __GNUC__
++ int
++ #endif
+  AddHistory(
+  #ifdef ANSI_PROTO
+  	   aClient *
+***************
+*** 37,42 ****
+--- 40,48 ----
+  **	structures and it must know when they cease to exist. This
+  **	also implicitly calls AddHistory.
+  */
++ #ifdef __GNUC__
++ void
++ #endif
+  OffHistory(
+  #ifdef ANSI_PROTO
+  	   aClient *
+Only in irc2.5.1.bu.08/irc: irc
+diff -cr irc2.5.1/ircd/ChangeLog irc2.5.1.bu.08/ircd/ChangeLog
+*** irc2.5.1/ircd/ChangeLog	Wed Jun 20 04:46:44 1990
+--- irc2.5.1.bu.08/ircd/ChangeLog	Mon Oct 22 11:32:37 1990
+***************
+*** 1,21 ****
+! /************************************************************************
+!  *   IRC - Internet Relay Chat, ircd/ChangeLog
+!  *   Copyright (C) 1990 Mike Bolotski
+!  *
+!  *   This program is free software; you can redistribute it and/or modify
+!  *   it under the terms of the GNU General Public License as published by
+!  *   the Free Software Foundation; either version 1, or (at your option)
+!  *   any later version.
+!  *
+!  *   This program is distributed in the hope that it will be useful,
+!  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  *   GNU General Public License for more details.
+!  *
+!  *   You should have received a copy of the GNU General Public License
+!  *   along with this program; if not, write to the Free Software
+!  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+!  */
+  
+  Wed Jun 20 11:53:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+  
+--- 1,7 ----
+! Sun Oct 21 18:53:02 1990  Christopher Davis  (ckd at bucsd)
+! 
+! 	* Makefile
+! 	  Added IRCDLIBS and IRCDMODE variables
+  
+  Wed Jun 20 11:53:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+  
+diff -cr irc2.5.1/ircd/Makefile irc2.5.1.bu.08/ircd/Makefile
+*** irc2.5.1/ircd/Makefile	Sat Jul  7 09:57:20 1990
+--- irc2.5.1.bu.08/ircd/Makefile	Mon Oct 22 11:32:38 1990
+***************
+*** 40,47 ****
+  ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
+  	sh mkversion.sh
+  	$(CC) $(CFLAGS) -c version.c
+! 	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd
+! 	chmod 4711 ircd
+  
+  ../common/bsd.o:
+  	(cd ../common; ${MAKE} build);
+--- 40,47 ----
+  ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
+  	sh mkversion.sh
+  	$(CC) $(CFLAGS) -c version.c
+! 	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
+! 	chmod $(IRCDMODE) ircd
+  
+  ../common/bsd.o:
+  	(cd ../common; ${MAKE} build);
+diff -cr irc2.5.1/ircd/channel.c irc2.5.1.bu.08/ircd/channel.c
+*** irc2.5.1/ircd/channel.c	Sat Jul 14 09:30:49 1990
+--- irc2.5.1.bu.08/ircd/channel.c	Mon Oct 22 11:32:38 1990
+***************
+*** 135,142 ****
+        chptr = (aChannel *) 0;
+    }
+    if (!chptr) {
+!     sendto_one(sptr, ":%s %d %s :Channel not found",
+! 	       me.name, ERR_NOSUCHCHANNEL, sptr->name);
+      return -1;
+    }
+    if (parc > 2)
+--- 135,142 ----
+        chptr = (aChannel *) 0;
+    }
+    if (!chptr) {
+!     sendto_one(sptr, ":%s %d %s %s :Channel not found",
+! 	       me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[1]);
+      return -1;
+    }
+    if (parc > 2)
+***************
+*** 530,537 ****
+  	      ClearChanOp(sptr);
+  	    }
+  	  } else 
+! 	    sendto_one(sptr, ":%s %d %s",
+! 		       me.name, ERR_NOSUCHCHANNEL, sptr->name);
+  	  return 0;
+  	}
+  
+--- 530,537 ----
+  	      ClearChanOp(sptr);
+  	    }
+  	  } else 
+! 	    sendto_one(sptr, ":%s %d %s %s :Not a valid channel",
+! 		       me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[1]);
+  	  return 0;
+  	}
+  
+***************
+*** 589,595 ****
+    aClient *who;
+    CheckRegisteredUser(sptr);
+  
+!   if (parc < 2 || *parv[1] == '\0')
+      {
+        sendto_one(sptr,
+  		 "NOTICE %s :%s", sptr->name,
+--- 589,595 ----
+    aClient *who;
+    CheckRegisteredUser(sptr);
+  
+!   if (parc <= 2 || *parv[1] == '\0')
+      {
+        sendto_one(sptr,
+  		 "NOTICE %s :%s", sptr->name,
+***************
+*** 606,612 ****
+      if (MyClient(sptr))
+        sendto_one(sptr,
+  		 ":%s %d %s %s :%s", me.name,
+! 		 ERR_NOSUCHNICK, sptr->name, parv[0],
+  		 "Cannot kick user off channel");
+      return 0;
+    }
+--- 606,612 ----
+      if (MyClient(sptr))
+        sendto_one(sptr,
+  		 ":%s %d %s %s :%s", me.name,
+! 		 ERR_NOSUCHNICK, sptr->name, parv[2], /* GUESSWORK */
+  		 "Cannot kick user off channel");
+      return 0;
+    }
+diff -cr irc2.5.1/ircd/ircd.c irc2.5.1.bu.08/ircd/ircd.c
+*** irc2.5.1/ircd/ircd.c	Sat Jul 14 06:54:06 1990
+--- irc2.5.1.bu.08/ircd/ircd.c	Mon Oct 22 11:32:38 1990
+***************
+*** 44,49 ****
+--- 44,50 ----
+  #include <sys/file.h>
+  #include <stdio.h>
+  #include <signal.h>
++ #include "config.h"  /* pick up CMDLINE_CONFIG define */
+  #include "struct.h"
+  #include "numeric.h"
+  
+***************
+*** 135,141 ****
+  	      }
+  	  }
+  	if ( connections >= MAXIMUM_LINKS ) {
+! 	  sendto_ops( "Punting because we have enough connections." ); 
+  	  return nexttime;
+  	}
+  #endif
+--- 136,142 ----
+  	      }
+  	  }
+  	if ( connections >= MAXIMUM_LINKS ) {
+! /*	  sendto_ops( "Punting because we have enough connections." ); */
+  	  return nexttime;
+  	}
+  #endif
+***************
+*** 242,250 ****
+--- 243,256 ----
+  */
+  static int BadCommand()
+      {
++ #ifdef CMDLINE_CONFIG
+  	printf(
+  "Usage: ircd [-f config] [-h servername] [-p portnumber] [-x loglevel] [-t]\n");
+  	printf("Server not started\n\n");
++ #else
++ 	fputs("Usage: ircd [-h servername] [-p portnumber] [-x loglevel] [-t]\n\
++ Server not started\n\n", stdout);
++ #endif
+  	exit(-1);
+      }
+  
+***************
+*** 297,305 ****
+--- 303,313 ----
+  
+  		switch (flag)
+  		    {
++ #ifdef CMDLINE_CONFIG
+  		    case 'f':
+  			configfile = p;
+  			break;
++ #endif
+  		    case 'h':
+  			strncpyzt(me.name, p, sizeof(me.name));
+  			break;
+diff -cr irc2.5.1/ircd/s_bsd.c irc2.5.1.bu.08/ircd/s_bsd.c
+*** irc2.5.1/ircd/s_bsd.c	Sat Jul  7 05:00:53 1990
+--- irc2.5.1.bu.08/ircd/s_bsd.c	Mon Oct 22 11:32:39 1990
+***************
+*** 60,65 ****
+--- 60,69 ----
+  #include "sock.h"
+  #endif
+  #include "sys.h"
++ #ifdef NeXT
++ #include <arpa/nameser.h>
++ #include <resolv.h>
++ #endif
+  
+  #ifndef NULL
+  #define NULL 0
+***************
+*** 159,165 ****
+  	server.sin_port = htons(portnum);
+  	for (length = 0; length < 10; length++)
+  	    {
+! 		if (bind(sock, &server, sizeof(server)))
+  		    {
+  			ReportError("binding stream socket %s:%s",
+  				    (aClient *)NULL);
+--- 163,169 ----
+  	server.sin_port = htons(portnum);
+  	for (length = 0; length < 10; length++)
+  	    {
+! 		if (bind(sock, (struct sockaddr *)&server, sizeof(server)))
+  		    {
+  			ReportError("binding stream socket %s:%s",
+  				    (aClient *)NULL);
+***************
+*** 265,271 ****
+  	char *hname;
+  	int len = sizeof(name);
+  
+! 	if (getpeername(cptr->fd, &name, &len) == -1)
+  	    {
+  	      ReportError("Failed in connecting to %s :%s", cptr);
+  	      return -2;
+--- 269,275 ----
+  	char *hname;
+  	int len = sizeof(name);
+  
+! 	if (getpeername(cptr->fd, (struct sockaddr *)&name, &len) == -1)
+  	    {
+  	      ReportError("Failed in connecting to %s :%s", cptr);
+  	      return -2;
+***************
+*** 288,296 ****
+  	    {
+  		int i = 0;
+  
+! 		for (hname = host->h_name; hname; hname = host->h_aliases[i++])
+! 			if (check_name(cptr,hname,flags))
+  				return 0;
+  	    }
+  #if !ULTRIX
+  	/*
+--- 292,317 ----
+  	    {
+  		int i = 0;
+  
+! 		for (hname = host->h_name; hname;
+! 		    hname = host->h_aliases[i++]) {
+! #ifdef RES_INIT
+! 		    /* try to fix up unqualified names */
+! 		    if (!index(hname, '.')) {
+! 			if (!(_res.options&RES_INIT)) res_init();
+! 			if (_res.defdname[0]) {
+! #ifndef MAXDNAME
+! #define MAXDNAME 256
+! #endif
+! 			    char fqname[MAXDNAME];
+! 			    sprintf(fqname, "%s.%s", hname, _res.defdname);
+! 			    if (check_name(cptr,fqname,flags)) return 0;
+! 		    	}
+! 		    }
+! #endif
+! 		    if (check_name(cptr,hname,flags))
+  				return 0;
++ 		}
++ 
+  	    }
+  #if !ULTRIX
+  	/*
+***************
+*** 741,750 ****
+  	name[len] = '\0';
+  	
+  	/* assume that a name containing '.' is a fully qualified domain name */
+! 	if (index(name, '.') == (char *) 0)
+  	    {
+! 		if ((hp = gethostbyname(name)) != (struct hostent *) 0)
+! 			strncpy(name, hp->h_name, len);
+  	    }
+  	
+  	return (0);
+--- 762,785 ----
+  	name[len] = '\0';
+  	
+  	/* assume that a name containing '.' is a fully qualified domain name */
+! 	if (!index(name, '.'))
+  	    {
+! 		if (hp = gethostbyname(name)) {
+! 		    strncpy(name, hp->h_name, len);
+! #ifdef RES_INIT
+! 		    /* if we still don't have a FQDN, ask resolver */
+! 		    if (!index(name, '.')) {
+! 			if (!(_res.options&RES_INIT)) res_init();
+! 			if (_res.defdname[0]) {
+! 			    char mydname[2+sizeof _res.defdname];
+! 			    mydname[0]='.';
+! 			    strcpy(&mydname[1], _res.defdname);
+! 			    strncat(name, mydname, len-strlen(name));
+! 			}
+! 		    }
+! #endif
+! 		}
+! 
+  	    }
+  	
+  	return (0);
+diff -cr irc2.5.1/ircd/s_conf.c irc2.5.1.bu.08/ircd/s_conf.c
+*** irc2.5.1/ircd/s_conf.c	Thu Jun 21 04:25:27 1990
+--- irc2.5.1.bu.08/ircd/s_conf.c	Mon Oct 22 11:32:39 1990
+***************
+*** 264,269 ****
+--- 264,273 ----
+  		    case 'a':   /* of this server. */
+  			aconf->status = CONF_ADMIN;
+  			break;
++ 		      case 'Q': /* a server that you don't want in your */
++ 		      case 'q': /* network.  USE WITH CAUTION! */
++ 			aconf->status = CONF_QUARANTINED_SERVER;
++ 			break;
+  		    default:
+  			debug(DEBUG_ERROR, "Error in config file: %s", line);
+  			break;
+***************
+*** 314,320 ****
+  		      aconf->status, aconf->host, aconf->passwd,
+  		      aconf->name, aconf->port);
+  	    }
+! 	close(fd);
+  	return (0);
+      }
+  
+--- 318,324 ----
+  		      aconf->status, aconf->host, aconf->passwd,
+  		      aconf->name, aconf->port);
+  	    }
+! 	fclose(fd);
+  	return (0);
+      }
+  
+diff -cr irc2.5.1/ircd/s_msg.c irc2.5.1.bu.08/ircd/s_msg.c
+*** irc2.5.1/ircd/s_msg.c	Sat Jul 14 09:40:02 1990
+--- irc2.5.1.bu.08/ircd/s_msg.c	Mon Oct 22 11:32:40 1990
+***************
+*** 94,99 ****
+--- 94,101 ----
+  #include "sys.h"
+  #include <sys/types.h>
+  #include <sys/file.h>
++ #include <sys/stat.h>
++ #include "config.h"  /* To pick up name of userlogging file */
+  #if APOLLO
+  #include <sys/types.h>
+  #endif
+***************
+*** 404,409 ****
+--- 406,414 ----
+  char *nick;
+  
+      {
++ 	FILE *userlogfile; /* Added to log users of server */
++ 	struct stat stbuf;
++ 
+  	sptr->status = STAT_CLIENT;
+  	sendto_serv_butone(cptr,":%s USER %s %s %s :%s", nick,
+  			   sptr->user->username, sptr->user->host,
+***************
+*** 411,416 ****
+--- 416,433 ----
+  	AddHistory(sptr);
+  	if (MyConnect(sptr))
+  	    {
++ 
++ /* This conditional makes the logfile active only after it's been
++    created -- thus logging can be turned off by removing the file. */
++ 
++ 		if(!stat(FNAME_USERLOG, &stbuf)) { 
++ 			userlogfile = fopen(FNAME_USERLOG, "a");
++ 			fprintf(userlogfile, "%s: %s@%s\n", 
++ 			   date(0), sptr->user->username, sptr->user->host);
++ 		 	fclose(userlogfile);
++ 		}
++ /* Modification by stealth@caen.engin.umich.edu */
++ 
+  		sendto_one(sptr,
+  		  "NOTICE %s :*** Welcome to the Internet Relay Network, %s",
+  			   nick, nick);
+***************
+*** 452,459 ****
+  	nick = parv[1];
+  	if (DoNickName(nick) == 0)
+  	    {
+! 		sendto_one(sptr,":%s %d %s :Erroneus Nickname", me.name,
+! 			   ERR_ERRONEUSNICKNAME, sptr->name);
+  		return 0;
+  	    }
+  	if ((acptr = find_person(nick,(aClient *)NULL)) && 
+--- 469,476 ----
+  	nick = parv[1];
+  	if (DoNickName(nick) == 0)
+  	    {
+! 		sendto_one(sptr,":%s %d %s %s :Erroneous Nickname", me.name,
+! 			   ERR_ERRONEUSNICKNAME, sptr->name, parv[1]);
+  		return 0;
+  	    }
+  	if ((acptr = find_person(nick,(aClient *)NULL)) && 
+***************
+*** 485,491 ****
+  					   acptr->name,
+  					   me.name,
+  					   acptr->from->name,
+! 					   cptr->name);
+  			ExitClient((aClient *)NULL, acptr);
+  		    }
+  		return 0; /* Duplicate NICKNAME handled */
+--- 502,513 ----
+  					   acptr->name,
+  					   me.name,
+  					   acptr->from->name,
+!  					   /* Note: cannot use GetClientName
+!  					   ** twice here, it returns static
+!  					   ** string pointer--the other info
+!  					   ** would be lost.
+!  					   */
+!  					   GetClientName(cptr,FALSE));
+  			ExitClient((aClient *)NULL, acptr);
+  		    }
+  		return 0; /* Duplicate NICKNAME handled */
+***************
+*** 925,932 ****
+  					   a2cptr->name,
+  					   a2cptr->info);
+  			else
+! 				sendto_one(sptr,":%s %d %s * *", me.name, 
+! 					   RPL_WHOISSERVER, sptr->name);
+  			if (user->away)
+  				sendto_one(sptr,":%s %d %s %s :%s",
+  					   me.name, RPL_AWAY,
+--- 947,958 ----
+  					   a2cptr->name,
+  					   a2cptr->info);
+  			else
+! 				sendto_one(sptr,":%s %d %s \"%s\" :%s",
+! 					   me.name, 
+! 					   RPL_WHOISSERVER,
+! 					   sptr->name,
+! 					   user->server,
+! 					   "*Not on this net*");
+  			if (user->away)
+  				sendto_one(sptr,":%s %d %s %s :%s",
+  					   me.name, RPL_AWAY,
+***************
+*** 1047,1052 ****
+--- 1073,1079 ----
+  /*
+  ** m_list
+  **	parv[0] = sender prefix
++ **      parv[1] = channel
+  */
+  m_list(cptr, sptr, parc, parv)
+  aClient *cptr, *sptr;
+***************
+*** 1058,1064 ****
+  	
+  	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
+  		   me.name, RPL_LISTSTART, sptr->name);
+! 	for (chptr = channel; chptr; chptr = chptr->nextch)
+  	    {
+  		if (sptr->user == NULL ||
+  		    (SecretChannel(chptr) && chptr != sptr->user->channel))
+--- 1085,1092 ----
+  	
+  	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
+  		   me.name, RPL_LISTSTART, sptr->name);
+!  	if (parc < 2 || *parv[1] == '\0')
+! 	  for (chptr = channel; chptr; chptr = chptr->nextch)
+  	    {
+  		if (sptr->user == NULL ||
+  		    (SecretChannel(chptr) && chptr != sptr->user->channel))
+***************
+*** 1068,1073 ****
+--- 1096,1111 ----
+  			   (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
+  			   chptr->users, chptr->topic);
+  	    }
++ 	else
++ 	  {
++ 	    chptr = find_channel(parv[1],(aChannel *) 0);
++ 	    if (chptr != (aChannel *) 0 && ShowChannel(sptr, chptr)
++ 		&& sptr->user != NULL)
++ 		sendto_one(sptr,":%s %d %s %s %d :%s",
++ 			   me.name, RPL_LIST, sptr->name,
++ 			   (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
++ 			   chptr->users, chptr->topic);
++ 	  }
+  	sendto_one(sptr,":%s %d %s :End of /LIST",
+  		   me.name, RPL_LISTEND, sptr->name);
+  	return 0;
+***************
+*** 1145,1161 ****
+  		return -1;
+  	    }
+  	
+! 	if (parc < 3)
+! 		chptr = (aChannel *) 0;
+  	else 
+! 		chptr = find_channel(parv[2], (char *) 0);
+  	if (chptr == (aChannel *) 0)
+! 		chptr = sptr->user->channel;
+! 	if (!chptr) {
+! 	  sendto_one(sptr,":%s %d %s :Not enough parameters", me.name,
+! 		     ERR_NOTONCHANNEL, sptr->name);
+! 	  return -1;
+  	}
+  	acptr = find_person(parv[1],(aClient *)NULL);
+  	if (acptr == NULL)
+  	    {
+--- 1183,1244 ----
+  		return -1;
+  	    }
+  	
+! 	if (parc < 3 || (parv[2][0] == '*' && parv[2][1] == '\0'))
+! 		{
+! 		chptr = sptr->user->channel;
+! 		if (!chptr) 
+! 			{
+! 	  sendto_one(sptr,":%s %d %s :You have not joined any channel",
+! 		     me.name, ERR_USERNOTINCHANNEL, sptr->name);
+! 			return -1;
+! 			}
+! 		}			
+  	else 
+! 		chptr = find_channel(parv[2], (aChannel *) 0);
+  	if (chptr == (aChannel *) 0)
+! 	    {
+! 		char *ptr = parv[2];
+! 
+! 		if (atoi(parv[2]) == 0 && parv[2][0] != '+' &&
+! 		    !(parv[2][0] == '0' && parv[2][1] == '\0'))
+! 		      {
+! 			sendto_one(sptr,":%s %d %s %s :Not a valid channel",
+! 			   me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[2]);
+! 			return -1;
+! 		      }
+! 
+! 		while (*ptr) {
+! 		  if ((*ptr < 'a' || *ptr > 'z') &&
+! 		   (*ptr < 'A' || *ptr > 'Z') &&
+! 		   *ptr != '+' && *ptr != '{' && *ptr != '}' &&
+! 		   *ptr != '[' && *ptr != ']' && *ptr != '^' && 
+! 		   *ptr != '~' && *ptr != '(' && *ptr != ')' && *ptr != '*' &&
+! 		   *ptr != '!' && *ptr != '@' && *ptr != '.' && *ptr != '-' &&
+! 		   *ptr != ',' && (*ptr < '0' || *ptr > '9') && *ptr != '_')
+! 		      {
+! 			sendto_one(sptr,":%s %d %s %s :Not a valid channel",
+! 			   me.name, ERR_NOSUCHCHANNEL, sptr->name, parv[2]);
+! 			return -1;
+! 		      }
+! 		  ptr++;
+! 		}
+  	}
++ 	if ((chptr) && (chptr->mode.mode & MODE_INVITEONLY)) 
++ 	  if (!IsChanOp(sptr))
++ 	    {
++ 	      sendto_one(sptr, ":%s %d %s :You're not channel operator",
++ 			 me.name, ERR_NOPRIVILEGES, sptr->name);
++ 	      return -1;
++ 	    }
++ 	  else
++ 	    if (chptr != sptr->user->channel)
++ 	      {
++ 		sendto_one(sptr,":%s %d %s %s :Channel is invite only.",
++ 			   me.name, ERR_INVITEONLYCHAN, sptr->name, 
++ 			   ((chptr) ? (chptr->chname) : parv[2]));
++ 		return -1;
++ 	      }
++ 
+  	acptr = find_person(parv[1],(aClient *)NULL);
+  	if (acptr == NULL)
+  	    {
+***************
+*** 1167,1173 ****
+  	    {
+  		sendto_one(sptr,":%s %d %s %s %s", me.name,
+  			   RPL_INVITING, sptr->name, acptr->name,
+! 			   ((chptr) ? (chptr->chname) : "0"));
+  		/* 'find_person' does not guarantee 'acptr->user' --msa */
+  		if (acptr->user && acptr->user->away)
+  			sendto_one(sptr,":%s %d %s %s :%s", me.name,
+--- 1250,1256 ----
+  	    {
+  		sendto_one(sptr,":%s %d %s %s %s", me.name,
+  			   RPL_INVITING, sptr->name, acptr->name,
+! 			   ((chptr) ? (chptr->chname) : parv[2]));
+  		/* 'find_person' does not guarantee 'acptr->user' --msa */
+  		if (acptr->user && acptr->user->away)
+  			sendto_one(sptr,":%s %d %s %s :%s", me.name,
+***************
+*** 1175,1185 ****
+  				   acptr->user->away);
+  	    }
+  	if (MyConnect(acptr))
+! 	  if ((chptr->mode.mode & MODE_INVITEONLY) && sptr->user &&
+  	      (chptr == sptr->user->channel) && IsChanOp(sptr))
+  	    AddInvite(acptr, chptr);
+  	sendto_one(acptr,":%s INVITE %s %s",sptr->name,
+! 		   acptr->name, ((chptr) ? (chptr->chname) : "0"));
+  	return 0;
+      }
+  
+--- 1258,1268 ----
+  				   acptr->user->away);
+  	    }
+  	if (MyConnect(acptr))
+! 	  if ((chptr) && (chptr->mode.mode & MODE_INVITEONLY) && sptr->user &&
+  	      (chptr == sptr->user->channel) && IsChanOp(sptr))
+  	    AddInvite(acptr, chptr);
+  	sendto_one(acptr,":%s INVITE %s %s",sptr->name,
+! 		   acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
+  	return 0;
+      }
+  
+***************
+*** 1288,1299 ****
+  		sendto_one(cptr,"ERROR :No such server (%s)",server);
+  		return 0;
+  	    }
+  	/*
+  	**  Notify local opers, if my local link is remotely squitted
+  	*/
+- 	if (MyConnect(acptr) && !IsOper(cptr))
+  		sendto_ops("Received SQUIT %s from %s",server,
+  			   GetClientName(sptr,FALSE));
+  	return ExitClient(cptr, acptr);
+      }
+  
+--- 1371,1393 ----
+  		sendto_one(cptr,"ERROR :No such server (%s)",server);
+  		return 0;
+  	    }
++  	if (MyConnect(acptr) && !IsOper(cptr))
++ #ifdef WALLOPS_REMOTES
++   	/*
++  	**  Notify all opers, if my local link is remotely squitted
++   	*/
++  		sendto_ops_butone((aClient *)NULL,
++  				  ":%s WALLOPS :Received SQUIT %s from %s",
++  				  me.name,
++  				  server,
++  				  GetClientName(sptr,FALSE));
++ #else
+  	/*
+  	**  Notify local opers, if my local link is remotely squitted
+  	*/
+  		sendto_ops("Received SQUIT %s from %s",server,
+  			   GetClientName(sptr,FALSE));
++ #endif
+  	return ExitClient(cptr, acptr);
+      }
+  
+***************
+*** 1380,1385 ****
+--- 1474,1512 ----
+  			sendto_one(cptr,"ERROR :No server info specified");
+  			return 0;
+  		    }
++  		/*
++ 		** See if the newly found server has a Q line for it
++  		** in our conf.  If it does, lose the link that brought 
++  		** it into our network.  Format:
++  		**
++  		**    Q:<unused>:<reason>:<servername>
++  		**
++  		** Example:  Q:*:for the hell of it:test.berkeley.edu
++  		*/
++ 
++ 		if (aconf = find_conf(host, (aConfItem *)NULL,
++ 				      host,CONF_QUARANTINED_SERVER))
++ 		  {
++ #ifdef WALLOPS_QUARANTINE
++ 		    sendto_ops_butone((aClient *)NULL,
++ 				      ":%s WALLOPS :%s brought in %s, closing link because %s",
++ 				      me.name,
++ 				      GetClientName(sptr,FALSE),
++ 				      host,
++ 				      BadPtr(aconf->passwd) ?
++ 				      "reason unspecified" : aconf->passwd);
++ #else
++ 		    sendto_ops("%s brought in %s, closing link because %s",
++ 			       GetClientName(cptr,FALSE),host,
++ 			       BadPtr(aconf->passwd) ?
++ 			       "reason unspecified" : aconf->passwd);
++ #endif
++ 		    sendto_one(cptr,"ERROR :%s is not welcome because %s.  Go away.",
++ 			       host,
++ 			       BadPtr(aconf->passwd) ?
++ 			       "reason unspecified" : aconf->passwd);
++ 		    return ExitClient(cptr,cptr);
++ 		  }
+  		acptr = make_client(cptr);
+  		strncpyzt(acptr->name,host,sizeof(acptr->name));
+  		strncpyzt(acptr->info,info,sizeof(acptr->info));
+***************
+*** 1786,1792 ****
+--- 1913,1955 ----
+  **	Currently supported are:
+  **		M = Message frequency (the old stat behaviour)
+  **		L = Local Link statistics
++ **		C = Report C and N configuration lines
+  */
++ 
++ /*
++ ** m_stats/stats_conf
++ **	Report N/C-configuration lines from this server. This could
++ **	report other configuration lines too, but converting the
++ **	status back to "char" is a bit akward--not worth the code
++ **	it needs...
++ **
++ **	Note:	The info is reported in the order the server uses
++ **		it--not reversed as in ircd.conf!
++ */
++ static ReportConfiguredLinks(cptr, sptr)
++ aClient *cptr, *sptr;
++     {
++ 	aConfItem *tmp;
++ 	char flag;
++ 	static char noinfo[] = "<NULL>";
++ 
++ 	for (tmp = conf; tmp; tmp = tmp->next)
++ 	    {
++ 		if (tmp->status == CONF_CONNECT_SERVER)
++ 			flag = 'C';
++ 		else if (tmp->status == CONF_NOCONNECT_SERVER)
++ 			flag = 'N';
++ 		else
++ 			continue;
++ 		sendto_one(sptr,"NOTICE %s :%c:%s:%c:%s:%d",sptr->name,
++ 			   flag,
++ 			   BadPtr(tmp->host) ? noinfo : tmp->host,
++ 			   BadPtr(tmp->passwd) ? ' ' : '*',
++ 			   BadPtr(tmp->name) ? noinfo : tmp->name,
++ 			   (int)tmp->port);
++ 	    }
++       }
++ 
+  m_stats(cptr, sptr, parc, parv)
+  aClient *cptr, *sptr;
+  int parc;
+***************
+*** 1828,1833 ****
+--- 1991,1998 ----
+  					   myctime(acptr->since));
+  			      }
+  	    }
++ 	else if (*stat == 'C' || *stat == 'c')
++ 		ReportConfiguredLinks(cptr,sptr);
+  	else
+  		for (mptr = msgtab; mptr->cmd; mptr++)
+  			sendto_one(sptr,
+***************
+*** 2257,2262 ****
+--- 2422,2438 ----
+  		return -1;
+  	    }
+  
++ #ifdef WALLOPS_REMOTES
++   	/*
++ 	** Notify all operators about remote connect requests
++   	*/
++   	if (!IsOper(cptr))
++ 		sendto_ops_butone((aClient *)NULL,
++ 				 ":%s WALLOPS :Remote 'CONNECT %s %s' from %s",
++ 				  me.name,
++ 				  parv[1], parv[2] ? parv[2] : "",
++ 				  GetClientName(sptr,FALSE));
++ #else
+  	/*
+  	** Notify local operator(s) about remote connect requests
+  	*/
+***************
+*** 2264,2269 ****
+--- 2440,2446 ----
+  		sendto_ops("Remote 'CONNECT %s %s' from %s",
+  			   parv[1], parv[2] ? parv[2] : "",
+  			   GetClientName(sptr,FALSE));
++ #endif
+  
+  	for (aconf = conf; aconf; aconf = aconf->next)
+  		if (aconf->status == CONF_CONNECT_SERVER &&
+***************
+*** 2547,2553 ****
+      {
+  	char *message = parc > 1 ? parv[1] : NULL;
+  
+! 	CheckRegisteredUser(sptr);
+  	
+  	if (BadPtr(message))
+  	    {
+--- 2724,2730 ----
+      {
+  	char *message = parc > 1 ? parv[1] : NULL;
+  
+! 	CheckRegistered(sptr); /* Allow servers and users to send WALLOPS */
+  	
+  	if (BadPtr(message))
+  	    {
+diff -cr irc2.5.1/ircd/whowas.c irc2.5.1.bu.08/ircd/whowas.c
+*** irc2.5.1/ircd/whowas.c	Wed Jun 20 06:05:45 1990
+--- irc2.5.1.bu.08/ircd/whowas.c	Mon Oct 22 11:32:40 1990
+***************
+*** 158,163 ****
+--- 158,166 ----
+  ** OffHistory
+  **	This is called when client signs off the system.
+  */
++ #ifdef __GNUC__
++ void
++ #endif
+  OffHistory(cptr)
+  aClient *cptr;
+      {

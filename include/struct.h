@@ -108,6 +108,7 @@
 
 #define CONF_ILLEGAL          0
 /* #define CONF_SKIPME           1 /* not used any more --msa */
+#define CONF_QUARANTINED_SERVER 1 /* reusing it now -hoppie */
 #define CONF_CLIENT           2
 #define CONF_CONNECT_SERVER   4
 #define CONF_NOCONNECT_SERVER 8

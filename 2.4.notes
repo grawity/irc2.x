@@ -94,7 +94,7 @@ is not found.
 
 1.4 Short term "WHOWAS" history
 
-   The server has a short inmemory cache of the recent nickname changes
+   The server has a short in memory cache of the recent nickname changes
 (the current default is set to 200 last changes). The design goal of
 this is that it remembers changes in last few minutes, there is no
 intention of this to be a long term history. That must be a separate

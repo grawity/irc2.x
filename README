@@ -20,23 +20,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-To install the new server, there is just a few changes to be made.
-Edit the Makefile in the root of the source tree *only* if you need
-to change the system type. It defaults to BSD as is. Edit the
-include/config.h to your hearts content, avoiding going beyond the
-warning line, unless you are *absolute* sure you know what you are doing.
-If you happen to not take heed to this warning, you may end up with
-a server that will not function properly and annoy not only you,
+To install the new server, there is just a few changes to be made.  Edit
+the Makefile in the root of the source tree *only* if you need to change
+the system type (it defaults to BSD as is) or you are using a Sun with
+NIS or YP.  Edit the include/config.h to your hearts content, avoiding
+going beyond the warning line, unless you are *absolutely* sure you know
+what you are doing.  If you happen to not heed this warning, you may end
+up with a server that will not function properly and annoy not only you,
 but users all around the world.
 
-Old irc client can be found in this package and if you want to use it,
-check Makefile in directory irc before compiling. There are other,
-better irc clients in distribution and the client distributed with
-this version is simply something to begin with if you don't happen
-to have other clients available.
+Both the original irc client and IRC II can be found in this package.
+Compile whichever you prefer, but check the Makefile in directory irc
+(or IRC II) before compiling.
 
-This version was brought to you by jto@tolsun.oulu.fi and send any
-bug fixes and suggestions to me.
+This version was brought together from several sources by ckd@cs.bu.edu;
+please send any bug fixes and suggestions to me.
 
 NOTE: This server does *NOT* have MAIL system installed by default.
       The reason is that it doesn't work with many systems.
