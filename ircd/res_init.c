@@ -54,8 +54,8 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static char rcsid[] = "$Id: res_init.c,v 1.13 2003/10/18 15:31:25 q Exp $";
+static const volatile char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
+static const volatile char rcsid[] = "$Id: res_init.c,v 1.14 2004/03/15 18:19:54 chopin Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include "os.h"

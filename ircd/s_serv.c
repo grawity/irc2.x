@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.234 2004/10/01 16:16:51 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_serv.c,v 1.235 2004/10/01 17:14:32 chopin Exp $";
 #endif
 
 #include "os.h"

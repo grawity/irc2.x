@@ -17,7 +17,7 @@
  *
  */
 
-static  char rcsid[] = "@(#)$Id: ircdwatch.c,v 1.7 2003/10/15 19:55:48 q Exp $";
+static const volatile char rcsid[] = "@(#)$Id: ircdwatch.c,v 1.8 2003/10/18 17:26:36 q Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>     /* atol() */

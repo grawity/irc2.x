@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: mod_webproxy.c,v 1.35 2003/10/18 16:26:39 q Exp $";
+static const volatile char rcsid[] = "@(#)$Id: mod_webproxy.c,v 1.1 2004/09/21 13:43:32 chopin Exp $";
 #endif
 
 #include "os.h"
