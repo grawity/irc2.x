@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.56 2002/07/29 22:38:50 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.57 2002/07/30 00:14:59 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1686,7 +1686,7 @@ char	**comment;
 			ME, cptr->name,
 			BadPtr(tmp->name) ? "*" : tmp->name,
 			BadPtr(tmp->host) ? "*" : tmp->host,
-			*comment ? ":" : "",
+			*comment ? ": " : "",
 			*comment ? *comment : "");
 	}
 
