@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.11 1997/09/22 12:18:39 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.12 1997/11/13 02:02:08 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -234,11 +234,7 @@ time_t	currenttime;
 		** a D(eny) line.
 		*/
 		if (find_denied(aconf->name, Class(cltmp)))
-		    {
-			sendto_flag(SCH_DEBUG, "%s", aconf->name);
 			continue;
-		    }
-		sendto_flag(SCH_DEBUG, "%s OK", aconf->name);
 		/* We have a candidate, let's see if it could be the best. */
 		if (!cptr && (Links(cltmp) < MaxLinks(cltmp)) &&
 		    (!con_conf ||
