@@ -2167,7 +2167,13 @@ int	m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	case 'I' : case 'i' : /* I (and i) conf lines */
 		report_configured_links(cptr, parv[0], CONF_CLIENT);
 		break;
-	case 'K' : case 'k' : /* K lines */
+#ifdef TKLINE
+	case 'k' : /* temporary K lines */
+		report_configured_links(cptr, parv[0],
+				(CONF_TKILL|CONF_TOTHERKILL));
+		break;
+#endif
+	case 'K' : /* K lines */
 		report_configured_links(cptr, parv[0],
 					(CONF_KILL|CONF_OTHERKILL));
 		break;
