@@ -1,0 +1,24 @@
+This file documents Release 2.1 (beta) of IRC
+
+
+The release consists of the source code in the top level directory.
+Other directories are:
+
+
+doc        documentation and installation guide
+contrib    various contributed programs
+services   various IRC services (currently wumpus and diplomacy)
+
+
+
+Installation Note:
+
+     Change the SYS variable in the Makefile as appropriate and
+     do 'make config'.  The default setup is for bsd, which is
+     correct for most machines.
+ 
+Note:  This release does not support simple VMS configuration.
+
+Note:  The conf.setup script in contrib is an alternative method
+       of setting up the configuration file.
+ 

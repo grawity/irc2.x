@@ -1,0 +1,891 @@
+                                               Author: Jeff Trim
+                                                       jtrim@orion.cair.du.edu
+                                                 Date: Mar 23, 1989
+                                        Last Modified: May 15, 1989
+
+
+            Installing IRC - The Internet Relay Chat Program
+
+
+System Requirements:
+TCP/IP Sockets
+BSD Unix [4.3]/[4.2], SUN Unix, HP Unix, Dec Ultrix, Most Socket Compat. Unix
+Knowledge of UNIX/C Programming, helps ;-)
+
+....if you don't have sockets (and a good way to know is if the UNIX TELNET(1)
+and FTP(1) programs don't work at all) then you can't run IRC! ;-( DRAT!
+Wouldn't it be great if all UNIX destributions had SOCKETS?
+
+
+                        -=> To Install IRC <=-
+
+This manual attempts to give you the ENTIRE installation procedure for IRC,
+and I have made it so that you can skip over the parts you don't want to read
+by looking at the NUMBERS located on the right side of the screen.  Here are
+the CHAPTERS contained in this DOCUMENT:
+
+  1) FTP - Getting the program files from "tolsun.oulu.fi" in Finland
+  2) EDITING THE "struct.h" FILE - and what the various #define's do
+  3) EDITING THE "Makefile" 
+  4) HOW TO COMPILE AND INITIALIZE THE SOURCE FILES
+  5) OVERVIEW - of the "irc.conf" file: an introduction to networking
+  6) A TOUR OF THE /etc/hosts DATABASE - Brief description what it does
+  7) SERVER CONNECTIONS - How to set up the "irc.conf" file for SERVERS
+  8) DEFINING YOUR LOCAL HOST INFORMATION - and placing it in "irc.conf"
+  9) CLIENT CONNECTIONS - How to allow Clients to connect to Servers
+ 10) OPERATOR PRIVILEDGES - How to make yourself an IRC Adminestrator
+ 11) ADMINESTRATOR COMMAND - Telling other IRC users about your site...
+ 12) REMOVING USERS COMPLETELY FROM IRC - How to remove errent users
+ 13) AN EXAMPLE "irc.conf" FILE - Shows you what one REALLY looks like!
+ 14) UPDATES TO THE PROGRAM:   - That effect the "irc.conf" file
+
+ Appendix:
+
+     A) ADDING SUBNETS: - Adding Multiple Unix Sites (V2.01.5+)
+
+If you want to just view over a curtain chapter, take this file into VI and
+use the VI SEARCH command to search for the NUMBER of your choice, like
+"1)", "2)" and so forth - those numbers are unique to this table of contents
+and the CHAPTER headings themselves.
+
+Because we have provided you with this nice manual, DON'T BOTHER ME OR
+ANYONE ELSE UNTIL YOU HAVE PERSONALLY WORKED ATLEAST 40 HOURS ON THE
+PROGRAM YOURSELF.  That way when you do ask questions they'll be
+intelligent questions ;-)
+
+----------===========>>>>>>>> Begin Manual <<<<<<<==========-------------
+
+
+1) FTP: Getting the program files and Unarchiveing them:
+
+   First grab a copy of the program files from the anonymous FTP area of
+   "tolsun.oulu.fi".  The files are usually COMPRESS(ed) and TAR(ed) into
+   an ARCHIVE format so you will need to unarchive them.  To do this, first
+   transfer the archive file on to your UNIX and make a SUBDRIECTORY to
+   hold the files in -- usually "mkdir IRC".  Then place the IRC ARCHIVE into
+   this new sub-directory.
+
+   To uncompress the ARCHIVE type: "uncompress <archive_file>"
+                      For example: "uncompress irc.v2.01.6.tar.Z"
+
+   To UNARCHIVE the program files type: "tar -xf <archive_file>"
+                           For example: "tar -xf irc.v2.01.6.tar"
+
+
+2) EDIT: The "struct.h" file and make changes to the various #DEFINE's:
+   
+   a) Define what type of UNIX OPERATING SYSTEM your machine uses. IRC currently
+      supports, BSD42, BSD43, APOLLO, SYSV.  To select the one you want, 
+      replace the "0" with a "1" next to the choice you want.  All the other
+      UNIX OPERATING SYSTEM DEFINES should be set to "0".
+
+   b) Define DOMAINNAME, if your systems supports the "getdomainname()" system
+      call.  You can check this by typing "domainname" at the UNIX prompt and
+      seeing if anything appears.  IRC will attempt to add your UNIX Internet
+      System Domain to your hostname if it is not currently present on your
+      "hostname()".  You should define this if you do support getdomainame(). 
+      
+   c) Define NOTTY if you want the IRCD to run as a DAEMON.  As a Daemon it
+      will sit in Unix Background and run independant of any Terminal or TTY.
+      If you want to run IRCD in FOREGROUND and attached to a TTY, undefine
+      this option.  NORMALLY you will want to DEFINE this option and run IRCD
+      in Unix Background. 
+
+   d) Define MYNAME to be the Unix Directory path (pwd) to the "ircd"   
+
+   e) Define CONFIGFILE to the Unix Directory path to the "irc.conf"
+      password file.  The Format of this file will be discussed later.
+
+   f) Define PORTNUM alters the Internet Socket Port for IRC.  IRC will use 
+      this port to accept connections from other IRCD Servers and IRC Clients.
+      The current ports being used for IRC are Internet Ports "6667" and "6666"
+      although these are not OFFICIALLY reserved for IRC, they are the ports
+      we have unofficially claimed for the program.  I recommend you set your
+      program to use port "6667".
+
+   g) Define LOGFILE should be set to "/dev/null" unless you plan to DEBUG
+      the program.  You should be aware that the logfile grows very quickly
+      so unless you really need a LOGFILE it should be set to "/dev/null".
+
+   h) Define TIMESEC to be the amount of IDLE time you will allow your server
+      to WAIT before attempting to request status of your neighboring servers.
+      After TIMESEC seconds have passed and no activity has occured on IRC,
+      IRC will enter a routine where it will send a PING message to all of
+      the servers connected to your IRCD.  It will send one PING to every
+      server and will expect the other servers to send a PONG message back
+      saying that they are "okay and functioning".  The program has a built
+      in time stamp that tells IRC the last time that something was received
+      from a curtain server.  PINGFREQUENCY refers to the amount of time
+      you will allow server connections to be IDLE.  After this IDLE time
+      has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
+      the program will PING that particular server and will expect a PONG
+      message response from that server.  If no reply to a PING message is
+      received in 2 * PINGFREQUENCY seconds the connection will be closed,
+      and reconnection attempts can be made by your IRCD or the remote IRCD
+      depending upon which server connects to whom.
+
+   i) Define PINGFREQUENCY - (see "h" above)
+
+   j) Define CONNECTFREQUENCY - will define the number of SECONDS for your
+      server to wait before it attempts reconnection at it's neighboring
+      IRC hosts.  The default value is 20 minutes (1200 seconds) and that
+      is generally pretty good for RECONNECTION time.  You should probably
+      not change this Define.
+
+   k) Define MAXUSERSPERCHANNEL - Defines the maximum allowed users per 
+      channel in IRC.  This effects the number of users that can all talk
+      at once in a given channel and it should be left at 10 unless you 
+      have at first consulted with an authorized IRC Adminestrator about
+      it.  DO NOT CHANGE THIS DEFINE UNLESS YOU HAVE PERMISSION TO DO SO.
+      It should be defined to "10" users.
+
+   l) Define WRITEDELAY effects the UNIX Socket command WRITE() which is used
+      to write socket information to the IRCD socket.. and beyond!  Sometimes
+      a socket can become very crowded (if say 10-20 people were using IRC)
+      and it will lock up the users keyboard until it can get a return value
+      from the socket, which tells IRC some information about the WRITE() call.
+      To BREAK this lockup, you need to specify the number of seconds you'll
+      allow the SOCKET to stay locked up before you'll BREAK the lock - this
+      typically is 15 seconds and that is a pretty good number for it.  I
+      recommend you leave it DEFAULT value.
+
+           --> Shouldn't have to change anything else! < --
+
+3) EDIT Makefile:
+
+   Take the file "Makefile" into a text editor and DEFINE (IE remove the "#")
+   from the Machine type that is yours.  Currently the Makefile supports
+   Berkeley Unix 4.2/4.3, System V and Hewlett Packard Unix.  The following
+   example shows the Makefile defined for Berkeley Unix:
+
+       #            
+       # SYS = sysv
+       # SYS = hpux
+       SYS = bsd
+
+   .. all the other machine types should be UNCOMMENTED (IE should have "#"
+   in front of them).
+
+4) HOW TO COMPILE AND INITIALIZE THE SORUCE FILES:
+  
+   To compile everything type "make".  Make will compile all of the program
+   files and produce two files for you:  "irc" and "ircd".  You will need to
+   make sure that the "ircd" has the SETUID bit set on so that OTHER users
+   besides you can boot server if it goes down and you aren't around to boot
+   it yourself.  This will allow them to BOOT the server but it will run under
+   *YOUR* UID so that you can kill it later if you need to.  To turn on the 
+   SETUID bit for IRCD type:
+
+        % chmod 4111 ircd
+
+   then your directory files should look something like this:
+
+       -rwx--x--x  1 wiz        142336 Mar 16 14:17 irc
+       -rwx------  1 wiz           707 Mar 16 02:42 irc.conf
+       -rws--x--x  1 wiz        110592 Mar 16 14:20 ircd
+          ^
+          |
+   the SETUID also allows the "IRCD" to read the "irc.conf" file, because it
+   would be accessed as USER instead of GROUP or OTHER.  You want to keep the
+   "irc.conf" file PROTECTED because there are PASSWORD in it.   Keep your
+   protection up on this file.
+
+   +-----------------------------------------------------------------------+
+   |            E N A B L I N G    / S U M M O N    M E S S A G E S        |
+   +-----------------------------------------------------------------------+
+
+   *NOTE* You must have ROOT or special access to the GROUP tty ('/dev')
+   to do this.  It is IMPORTANT that you do enable this option if at all
+   possible!!!   The /SUMMON command is pretty important to your users
+   as it allows them to be SUMMONED to IRC by other users inside of the
+   IRC program.
+
+   The "IRCD" program also needs access to the GROUP of '/dev'.   This
+   directory is where user TTY's are stored (as UNIX treats each Terminal
+   as a FILE! (which is a bit uncommon - but interesting!))   IRCD needs
+   GROUP ACCESS to /dev so that users can be SUMMONED to the program
+   by others users that are *in* the program.  This allows people from
+   other Universities around the world to SUMMON your users to IRC so that
+   they can chat with them.  Berkeley, SUN, HP-UX and most of the newer
+   versions of UNIX check to see if a USER is accepting MESSAGES via the
+   GROUP access rights on their TTY listing in the /dev directory.
+   For example an entry in '/dev' looks like this:
+
+  (Unix Path on BSD 4.3 UNIX is:  /dev/ttyp0)
+
+        crw------- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+
+   You will note that 'jtrim' OWNS this terminal and can READ/WRITE to this
+   terminal as well (which makes sense because I am ENTERING DATA and
+   RECEIVEING DATA back from the UNIX).  I logged into this particular
+   UNIX on "April 29th" at "10:35am" and my TTY is "ttyp0".  But further
+   of *note* is that I do not have my MESSAGES ON! (mesg n)  -- This is
+   how my terminal would look with MESSAGES ON (mesg y):
+
+        crw--w---- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+
+   With my MESSAGES ON (mesg y) I can receive TALK(1) requests, use the 
+   UNIX WRITE(1) command and other commands that allow users to talk
+   to one another.  In IRC this would also allow me to get IRC /SUMMON
+   messages.  To set up the "IRCD" program to work with /SUMMON type
+   the following:  (using ROOT or an account that has access to '/dev').
+
+       % chgrp tty ircd
+       % chmod 6111 ircd 
+
+   The above commands read: "Give IRCD access to GROUP tty (which is /dev)
+   and then when ANYONE runs the IRCD allow SETUID and SETGID priviledges
+   so that they can use the /SUMMON command.
+ 
++--------------------------------------------------------------------------+
++      M A K I N G   T H E   I R C . C O N F    F I L E                    +
++--------------------------------------------------------------------------+
+
+When you first look at this file it can be a bit confusing, so you should pay
+close attention to the following.  I get a lot of messages from people telling
+me how confusing this is so PLEASE - really read this:
+
+5) OVERVIEW:   (difference bewtween NAME and NUMERIC Addresses)
+
+   There are 2 different types of INETERNET addresses, NAME addresses and
+   NUMERIC addresses.  NAME addresses look like ENGLISH words (and indeed
+   they are ENGLISH words that refer to a given host).  A NAME address looks
+   like "tolsun.oulu.fi" - and that particular address refers to the UNIX
+   named TOLSUN in Finland.  It is a UNIQUE address because no other UNIX in
+   the world has its NAME address the same as "tolsun.oulu.edu".  Anytime
+   you say "telnet tolsun.oulu.fi" - you would always connect to TOLSUN in
+   Finland.  NUMERIC addresses refer to those addresses that are made up of
+   NUMBERS for example "128.214.5.6" is the NUMERIC address for TOLSUN.  This
+   address is also UNIQUE in that no other UNIX in the would should be using 
+   those NUMERIC numbers.  The NUMERIC address is sometimes more reliable than
+   the NAME address because not all sites can recognize and translate the
+   NAME address into it's numeric counterpart.  NUMERIC always seems to work
+   best, but use a NAME address when you can because it is easier to tell
+   what host you are connected to.
+
+6) The /ect/hosts Database:  The 0.25 Cent Tour ;-)
+
+   Every UNIX has a file called "/etc/hosts" on it and this file contains 
+   NAME and NUMERIC addresses in it.  When you supply IRC with a NAME address
+   it will at first try to look it up in /ect/hosts, and then (if it's 
+   really smart), use the Local Network File Server (NFS) to find the NUMERIC
+   address for the host you want to connect to.  Thus if you plan to use NAME
+   addresses keep in mind that on SOME sites the entry for the TARGET UNIX must 
+   be found in /etc/hosts or the NAME address will fail.  A typical entry in
+   /etc/hosts looks like this:
+
+   130.253.1.15    orion.cair.du.edu orion.du.edu orion    # BSD 4.3
+
+   This particular example is the Host ORION at the University of Denver. 
+   Notice that on the far left is the NUMERIC Address for orion.  The
+   next few ENGLISH words are the NAME addresses that can be used for orion,
+   "orion.cair.du.edu", "orion.du.edu", "orion".  ALL of these NAME addresses
+   will return the NUMERIC address "130.253.1.15" which IRC will use to
+   connect to the TARGET UNIX. (when I say TARGET UNIX I am refering to the
+   UNIX you want to connect to for IRC). Any futher questions about /etc/hosts 
+   should be directed to "man hosts".
+
+
+7) SERVER CONNECTIONS:  How to connect to other servers/ How other servers can
+                        connect to you:
+
+   EDIT the file you speicifed in "struct.h" under the #DEFINE CONFIGFILE:
+   Create this file using the same UNIX path and Filename you specified in 
+   that #DEFINE.  (typically this file should be called "irc.conf").
+
+   Now you must decide WHICH hosts you want to connect to and WHAT ORDER you
+   want to connect to them in.  For my example let us assume I am on the
+   UNIX "tolsun.oulu.fi" and I want to establish SOCKET connections to 3
+   other IRCD running hosts (yeah - they must be running an IRCD there ;-)
+
+   My other three hosts I want to connect to are:
+
+         "naakka.tut.fi"           - PRIMARY Connection
+         "orion.cair.du.edu"       - Secondary Connection
+         "hal.oce.orst.edu"        - Third Connection
+
+   And I want to connect to them in THAT order, meaning I first want to
+   try connecting to "naakka.tut.fi", then to "orion.cair.du.edu", and
+   finally to "hal.oce.orst.edu".  So if "naakka.tut.fi" is DOWN (not
+   functioning or whatever) - the program will try to connect to "orion".
+   If orion is DOWN it will try to connect to "hal" and so forth.
+   PLEASE limit the number of hosts you will attempt to connect to 3
+   hosts - we are trying to limit the amount of Network Traffic IRC creates.
+
+   The format for the CONNECT entry in the "irc.conf" is:
+
+       C:<TARGET Host Addr>:<Password>:<TARGET Host NAME>:<TARGET Host PORT>
+Field: 1        2              3                4               5
+
+   for example:
+   
+    C:orion.cair.du.edu:passwd:orion.cair.du.edu:6667 
+
+          - or -
+
+    C:130.253.1.15:passwd:orion.cair.du.edu:6667
+
+    Explaination:
+
+    Each field is separted with a ":" charcter:
+
+    Field 1: Field 1 tells the IRC program why type of COMMAND we want to 
+             carry out.  In this case I have specified "C", stating I want
+             to CONNECT to another host.
+
+    Field 2: Tells the IRC program what HOST we want to connect to and the
+             NAME or NUMERIC address to connect to it.  You can use either
+             the NAME or NUMERIC address, but don't use both of them.  Use
+             the address that works the best.  If the host is listed in
+             /etc/hosts or your program can use the NFS server use the NAME
+             Address, otherwise use the NUMERIC address.
+
+    Field 3: Is the password needed to CONNECT to the TARGET host.  Some hosts
+             require Password protected validation when you connect to them,
+             and it is in this field that you specify any passwords you might
+             need.  If there is NO password needed, leave this field BLANK
+             with no SPACES. 
+
+    Field 4: The HOSTNAME of the TARGET Host goes here, including DOMAINNAME
+             if any.  This is the name that the TARGET server will identify
+             itself with when you connect to it.  If you were connecting to
+             orion you would recieve "orion.cair.du.edu" - and that is what
+             you should place in this field.
+  
+    Field 5: The INTERNET Port that you want to connect to on the TARGET Unix.
+             Most of the time this will be set to "6667".  If there is NO
+             information in this field (IT'S BLANK) then no connections will 
+             be attempted to the TARGET HOST, and your host will ACCEPT
+             connections FROM the TARGET Host instead.
+
+   Some examples:
+
+            C:naakka.tut.fi::naakka.tut.fi:6667
+ 
+            This reads: Connect to host "naakka.tut.fi", with NO PASSWORD,
+            and expect this server to identify itself to you as "naakka.tu.fi".
+            *YOU* will connect to this host at PORT 6667.
+
+            C:130.253.1.15:Jeff:orion.cair.du.edu:6667
+
+            This reads: Connect to a host at adress "130.253.1.15", using a
+            login password of "Jeff".  The TARGET server should Identify
+            itself as "orion.cair.du.edu".  *YOU* will connect at Internet
+            Port 6667 on this host.
+
+            C:orion.cair.du.edu::orion.cair.du.edu
+                                                                               
+            This reads: *DO NOT CONNECT* to "orion.cair.du.edu", but if         
+            "orion.cair.du.edu" happens to request a CONNECTION with me,       
+            allow it, and let "orion.cair.du.edu" connect TO ME.               
+
+   Now back to our original problem, we wanted OUR server CONNECT to 3
+   hosts,  "naakka.tut.fi", "orion.cair.du.edu" and "hal.oce.orst.edu" in
+   that order.  So as we enter these entries into the file they must be
+   done in REVERSE order of how we could want to connect to them.
+   Here's how it would look if we connected "naakka.tut.fi" first:
+
+      C:hal.oce.orst.edu::hal.oce.orst.edu:6667
+      C:orion.cair.du.edu::orion.cair.du.edu:6667
+      C:naakka.tut.fi::naakka.tut.fi:6667
+
+   IRCD would first connect to "naakka..", then to "orion..." and finally
+   to "hal...".
+
+          *** RECIPROCAL ENTRIES - MUST HAVE FOR IRC TO WORK ***
+
+   FOR THESE SERVERS TO CONNECT TO YOU, you must also have a CORRESPONDING
+   "N" entry in your file that takes the SAME FORMAT as the "C" entry
+   did (above).
+
+   Even though you have a "C" entry you also need the "N" entry or the IRC
+   Program will fail.  the "N" entry allows you to SPECIFY any passwords
+   that you will REQUIRE from any CONNECING servers to give you so that they 
+   can be authorized to connect to your IRCD.  (If your lost, stay with me it
+   will be clearer in a moment).
+    
+   Let us assume that "orion.cair.du.edu" connects to *YOUR* server: 
+   Well you want to place PASSWORD authorization on ORION so you
+   make your "N" entry for Orion to be:
+
+          N:orion.cair.du.edu:golden:orion.cair.du.edu
+  
+   What this line says is: Expect a Connection from host "orion.cair.du.edu",
+   and expect a login password of "golden" (or any other password *YOU* want)
+   and expect the host to Identify itself as "orion.cair.du.edu".
+     
+          N:130.253.1.15::orion.cair.du.edu
+
+   What this line says is: Expect a Connection from host "130.253.1.15", and 
+   DON'T EXPECT a login password.  The TARGET Host should identify itself
+   as "orion.cair.du.edu".
+
+   ** NOTE ** Do not add a PORT NUMBER to any "N" entry fields, it is not 
+   needed because the OTHER HOSTS are CONNECTING TO YOU, you aren't connecting
+   to them.
+
+   So now, our "irc.conf" file looks like this:
+
+
+      C:hal.oce.orst.edu::hal.oce.orst.edu:6667
+      C:orion.cair.du.edu::orion.cair.du.edu:6667
+      C:naakka.tut.fi::naakka.tut.fi:6667
+
+      N:hal.oce.orst.edu::hal.oce.orst.edu
+      N:orion.cair.du.edu::orion.cair.du.edu
+      N:naakka.tut.fi::naakka.tut.fi
+
+
+   a good rule of thumb is - "For every "C" entry you have in the file, you
+   MUST have a cooresponding "N" entry".
+
+
+8) DEFINING YOUR LOCAL HOST INFORMATION  - How to tell IRC about your local
+                                           UNIX Host.
+
+   IRC needs to know a few things about your UNIX site, and the "M" command
+   specifies this information for IRC.  The fomat of this command is:
+
+           M:<YOUR Host NAME>:xxx:<Geographic Location>:<Internet Port>
+   Field:  1         2         3           4                 5
+
+   Explaination:
+
+      Field 1: Tells IRC that you are providing local UNIX HOST infomation
+               Command "M".
+
+      Field 2: The name of YOUR host adding any Internet DOMAINNAME that 
+               might also be present.  
+
+      Field 3: -- NOT USED --: Set to Value NULL (No spaces at ALL!).
+    
+      Field 4: Geographic Location is used to say WHERE YOUR SEVRER is,
+               and gives people in other parts of the world a good
+               idea of where you are!  If your server is in the USA, it is
+               usually best to say: <CITY> <STATE>, USA.  Like for Denver
+               I say: "Denver Colorado, USA".  Finnish sites (like
+               tolsun.oulu.fi generally say something like "Oulu, Finland".
+ 
+      Field 5: This specifed which Internet Port you wish to use for your
+              IRC Server.  Use the same port as you defined in "struct.h".
+
+      Example:
+                M:tolsun.oulu.fi::Oulu, Finland:6667
+
+                This line reads: My Host's name is "tolsun.oulu.fi" and
+                my site is Geographically located in "Oulu, Finland".
+                I have defied Internet Port Number "6667" to be used as
+                my IRCD Socket Port.
+
+
+                M:orion.cair.du.edu::Denver Colorado, USA:6667
+
+                This line reads: My Hosts name is "orion.cair.du.edu"
+                and my site is geographically located in "Denver
+                Colorado, USA".  I have defined Internet Port
+                number "6667" to be used as my IRCD Socket Port.
+
+
+9) CLIENT CONNECTIONS -   How to let Clients Connect to your IRCD.
+
+   A Client is a program that connects to the "ircd".  When you compile
+   all of the program files, two different files are created "irc" and
+   "ircd".  The "irc" program is the CLIENT and the "ircd" is the SERVER
+   [Deamon].  Whenever ANYONE wants to talk to other users on IRC they 
+   must run the CLIENT program (irc).
+
+   To allow you and your users to connect and run a session of Internet Relay 
+   Chat you must make some entries to the "irc.conf" file.  
+
+   A) LOCAL CLIENTS: (Defined the DEFAULT Host to connect to when IRC is run) 
+
+      This defines the DEFAULT connection for the "irc" CLIENT.  If you are
+      running an "ircd" SERVER on this SAME UNIX, you will want to define
+      this command to connect to *YOUR OWN* host.  If your site is not running
+      a server then this command should contain the TARGET Hosts connection
+      information and login password (if any).  The format for this command is:
+
+              U:<TARGET Host addr>:<Password>:<TARGET Host NAME>:<Internet Port>
+      Field:  1         2              3                4            5
+   
+      [ For a DETAILED description of the FIELD NUMBERS - see item "7)" above ]
+
+      For example:
+
+           U:tolsun.oulu.fi::tolsun.oulu.fi:6667
+
+                          - OR -
+
+           U:128.214.5.6::tolsun.oulu.fi:6667
+
+      You can also optionally leave off the Internet PORT Number
+      and IRC will attempt a DEFAULT connection to Internet Port 6667 as in:
+ 
+           U:tolsun.oulu.fi::tolsun.oulu.fi
+
+   B) REMOTE CLIENTS:
+
+      This command tells the "ircd" SERVER what clients are allowed to connect
+      to *YOUR SERVER*.  Obviously you want to let your *OWN* clients connect,
+      and also any other CLIENTS that want to connect as well.  REMOTE CLIENTS
+      are those clients which are run by users on other UNIXES (anywhere in
+      the world) and connect your server so that they can talk to other users.
+      The CLIENTS would be using your server as a CONNECTION point, therefore
+      the SERVER will be SERVE-ING the CLIENT, even though the REMOTE client
+      was not part of your LOCAL UNIX Network.  All IRC Messages that were
+      sent to this REMOTE CLIENT would be sent to your server and then passed
+      on to where-ever the REMOTE CLIENT was connecting from by *your* "ircd".
+  
+      -----------------------------------------------------------------------
+ 
+      The way a REMOTE CLIENT can connect to your "ircd" server is to type: 
+      (At the UNIX "%" prompt:)
+ 
+             % irc <nickname> <TARGET Host Addr> <Internet Port>
+
+                    - For Example -
+
+             % irc Jeff tolsun.oulu.fi 6667
+      
+          ... would connect a USER on a REMOTE UNIX to the IRCD Server at
+          "tolsun.oulu.edu" - using a NICKNAME of "Jeff" and connecting
+          to TOLSUN's Internet Port 6667.    
+
+      ------------------------------------------------------------------------
+
+      Format of this command in the "irc.conf" file is:
+
+             I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Internet Port>
+      Field: 1         2               3             4                5
+
+          [For a detailed description of these fields see item "7)" above]
+
+      For examples sake let us assume you were making this file for TOLSUN
+      and you wanted to let your *OWN* clients to connect to your server,
+      you would add this entry to the file:
+
+          I:tolsun.oulu.fi::tolsun.oulu.fi
+
+      If you wanted to let REMOTE CLIENTS from other UNIX's to connect to your
+      server (for examples sake let's say you wanted let REMOTE UNIX Sites:
+      "naakka.tut.fi", "orion.cair.du.edu" and "hal.oce.orst.edu" connect their
+      CLIENTS to your site)  You *could* add them to "irc.conf" like this:
+
+          I:orion.cair.du.edu::orion.cair.du.edu
+          I:128.193.64.132::hal.oce.orst.edu
+          I:naakka.tut.fi:password:naakka.tu.fi
+
+      and any REMOTE CLIENTS that want to connect to you can.  The ORDER in
+      which these is entered into the file is NOT IMPORTANT, enter them in
+      any way you want, it won't effect the PRIORITY of IRC in any way.
+
+
+
+10) OPERATOR PRIVILEDGES:  How to become the IRC Adminestor on your site
+
+   To become an IRC Adminestrator, IRC must know who is authorized to become
+   an operator and what their "Nickname" and "Password" is.  To add this
+   information, EDIT your "irc.conf" file and add the following command
+   line to it:
+
+          O:<TARGET Host NAME>:<password>:<nickname>
+  Field:  1          2             3          4
+
+  Explaination:
+ 
+     Field 1: Is the command to tell IRC that this is an OPERATOR command
+              entry.  This is the "O" command.
+ 
+     Field 2: Tells IRC which host you have the PRIVILEDGES FROM.  This
+              means that you should be logged into this host when you
+              ask for the priviledges.  If you specify "tolsun.oulu.fi"
+              then IRC will expect your CLIENT to be connected at 
+              "tolsun.oulu.fi" - when you ask for OPERATOR PRIVILEDGES
+              from "tolsun.oulu.fi".  You cannot be logged in at any
+              other host and be able to use your OPERATOR PRIVILEDGES
+              at tolsun, only when you are connected at TOLSUN will this
+              work - this is a safe guard against unauthorized sites
+              trying to STEAL your operator priviledges.
+
+     Field 3: If your AUTHORIZATION Password - this is the password that 
+              let's IRC know you are who you say you are!  Never tell anyone
+              your password and always keep the "irc.conf" file protected
+              from all of the other users.
+ 
+     Field 4: The Nickname you usually go by - but you can make this what
+              you want.  It is better to make this a NICKNAME that no one
+              else knows, but anything will do.  I usually use my own
+              loginname (or Unix)
+
+  Example:
+              O:orion.cair.du.edu:pyunxc:Jeff
+
+              There is an OPERATOR at "orion.cair.du.edu" that can get
+              Operator priviledges if he specifies a password of "pyunxc"
+              and uses a NICKNAME of "Jeff".
+
+  +-----------------------------------------------------------------------+
+  +        E N A B L I N G    O P E R A T O R    P R I V I L E D G E S    +
+  +-----------------------------------------------------------------------+
+ 
+  If you ever want (or need) to use your OPERATOR priviledges, run "irc" and
+  login to the "ircd" normally - then type the following:
+
+      /oper <nickname> <password>
+
+  If you entered the OPERATOR COMMAND the way I did in the example above you
+  would type:
+
+      /oper Jeff pyunxc
+  
+  and if you entered everything correctly you would get the message:
+  "Good morning Gentleman, I am a Hal 9000 Computer" - if you MESSED up
+  you will probable get a message like "No mere mortals may enter the
+  twilight zone" - or other funny messages ;-)
+
+  You can confirm that your operator priviledges are ACTIVE by typing "/w"
+  and seeing if there is a "*" next to your name in the listing.  If there
+  is then you have successfully become an IRC ADMINESTRATOR.
+
+
+
+11) ADMINESTRATOR - Tell Other IRC users about your IRCD server:
+
+  The "A" command is used for telling a few things about youself, like who
+  you are, who is responsible for your server, and who users should contact
+  at your site if they have any questions.  The "A" command stands for 
+  the ADMINESTRATOR Command line, and in the "irc.conf" file it looks like
+  this:
+  
+            A:<Your Name/Location>:<Your Electronic Mailing Addr>:<other> 
+  Field:    1        2                    3                         4
+
+  Explaination:
+
+       Field 1: "A" tells IRC that you are making an Adminestrative Command
+                entry.
+
+       Field 2: Use this field to say tell your FULL NAME and where in the 
+                world your UNIX is.  Be sure to add your City, State
+                (Province?) and Country to this entry so everyone will know
+                what country your UNIX Host is in.
+
+       Field 3: Use this field to specify your Electronic Mailing Address
+                preferably your Internet Mailing Address.  If you have
+                a UUCP or ARAPnet address - please add that as well.  Be
+                sure to add any extra DOMAIN information that is needed,
+                for example "mail jtrim@orion" probably won't work as a 
+                mail address to me if you happen to be in Alaska.  But 
+                "mail jtrim@orion.cair.du.edu" would work because you 
+                know that "orion" is part of the DOMAIN "cair.du.edu". 
+                So be sure to add your DOMAINNAMES to your mailing addresses.
+
+       Field 4: Is really an OTHER field - you can add what you want here,
+                I suggest you add your Government Mailing Address in this
+                field so that people can send you REAL mail if they want to,
+                but you can add funny sayings or just general comments
+                in this field as well if you so desire.
+
+
+  Examples:
+
+A:Jeff Trim - Denver Colorado, USA:INET jtrim@orion.cair.du.edu   UUCP {hao, isi
+s}!udenva!jtrim:Terve! Hei! Moro! Heippa!  Have you said hello in Finnish today?
+ ;)
+
+  Would look like this when printed out with the /admin command:
+
+      Jeff Trim -  Denver Colorado, USA
+      INET jtrim@orion.cair.du.edu   UUCP {hao, isis}!udenva!jtrim
+      Terve! Hei! Moro! Heippa!  Have you said hello in Finnish today? ;)
+ 
+ 
+  *NOTE* that the "A" line cannot be BROKEN in anway - so you must WRAP THIS
+  line so that is remains one CONTINUOUS line with *NO* Carrige Return Line
+  Feeds in it. *ALSO* Remeber that you CANNOT use the ':' within the TEXT
+  of the message it'self - all *other* pieces of text are usable.
+
+
+
+12) REMOVING A USER FROM IRC - Remove an Errent User from IRC on your site.
+
+  Obviously it is hoped that you wouldn't have to use this command ;-(.
+  Unfortunately sometimes a user can become unmannagable and this is your
+  only recourse - the KILL USER command.  THIS COMMAND ONLY EFFECTS YOUR
+  SERVER - If this user can connect to another SERVER somewhere else in
+  the IRC-Network then you would have to talk to the adminestrator on that
+  site to disable his access from that IRCD Server as well.
+
+  The format of this command is:
+
+         K:<Host Name>::<User>
+  Field: 1     2      3   4
+
+  Explaination:
+
+       Field 1:  "K" tells the IRCD that you are making a KILL USER command
+                 entry.
+
+       Field 2:  In this field you specify the Hostname that the user is 
+                 connecting from.  If you user you wanted REMOVED connects
+                 to IRC from "orion.cair.du.edu" then you would want to enter
+                 "orion.cair.du.edu".  If you want to REMOVE ALL HOSTS
+                 access you can use '*' (Wild Card notation) and no matter
+                 what host the USERNAME (specified in Field 4) connects from
+                 s/he will be denied access.
+
+       Field 3:  ** NOT USED ** -- leave NULL (no spaces)
+    
+       Field 4:  The USERNAME of the user you want removed from IRC.  For
+                 example 'root'.
+
+   
+   Some Examples:
+                   K:orion.cair.du.edu::jtrim
+ 
+               If user 'jtrim' connects to IRC from host "orion.cair.du.edu"
+               then IMMEDIATELY REMOVE HIM from my IRCD.
+
+                   K:*.cair.du.edu::root
+
+               If user 'root' connects to IRC from any host that has the 
+               suffix "cair.du.edu" - then IMMEDIATELY REMOVE THEM from
+               my IRCD.
+
+                   K:*::vijay
+
+               This line reads "I don't care WHAT HOST user 'vijay' is on,
+               I will NEVER allow username 'vijay' to login to my IRCD.
+
+
+
+13) AN EXAMPLE "irc.conf" FILE:
+
+    Keep one last thought in mind, if the OTHER IRCD Unix Site doesn't have
+    your site listed in THEIR "irc.conf" file - you won't be able to 
+    connect to them - no matter how right your file is!  It is simply
+    useless to attempt connections to IRCD Hosts that don't have you listed
+    in their files because they'll just HANGUP on you everytime you 
+    connect.
+
+    After an exhausting description of every aspect of the "irc.conf" file,
+    here is a REAL and working example of a totally complete "irc.conf"
+    file.  This is the real file I use on my UNIX site (orion.cair.du.edu)
+    and I am displaying it for you now so that you'll know how yours should
+    look after you've completed it:
+
+    Since this is that last time I will be speaking to you - good luck and
+    make a prayer to whichever UNIX God's you may worship ;-)  I pray to
+    UUCP and Yellow Pages myself ;-)  Have fun and hope to talk to you 
+    soon on IRC.
+
+----------------- Cut here -------------------------- Cut here ---------------
+
+C:128.193.64.132::hal.oce.orst.edu:6667
+C:accuvax.nwu.edu::accuvax.nwu.edu:6667
+C:128.214.5.6::tolsun.oulu.fi
+
+N:128.193.64.132::hal.oce.orst.edu
+N:accuvax.nwu.edu::accuvax.nwu.edu
+N:128.214.5.6::tolsun.oulu.fi
+
+I:orion.cair.du.edu::orion.cair.du.edu
+I:128.193.64.132::hal.oce.orst.edu
+I:accuvax.nwu.edu::accuvax.nwu.edu
+I:128.214.5.6::tolsun.oulu.fi
+I:128.193.32.13::jacobs.CS.ORST.EDU
+
+O:orion.cair.du.edu:*censored*:jtrim
+
+K:*.cair.du.edu::root
+
+U:orion.cair.du.edu::orion.cair.du.edu:6667
+M:orion.cair.du.edu::Denver Colorado, USA:6667
+
+A:Jeff Trim - Denver Colorado, USA:INET jtrim@orion.cair.du.edu   UUCP {hao, isi
+s}!udenva!jtrim:Terve! Hei! Moro! Heippa!  Have you said hello in Finnish today?
+ ;)
+
+-------------- Cut Here ---------------------------- Cut Here ----------------
+
+
+14) UPDATES TO THE PROGRAM:   Lists any program changes that were done after
+                              this manual was written
+
+    This section was written to show any changes or upgrading that was done
+    after version v2.01.4 was released.  We have been releasing new versions
+    of the program very quickly so it is necessary to Document what's new
+    about each version to the best of our ability ;-)  The above documentation
+    is by no means out of date - and any MAJOR changes that take place in
+    the program will mean that I will rewrite the ABOVE Documentation so
+    that it once again reflect reality.  This section is used to tell you
+    about the SMALL fixes to the program that may or may not effect you,
+    for example MY SITE does not use SUBNETING, but many other sites do,
+    so if you were using a SUBNET you would want to know that we do in fact
+    support subneting.
+
+    *NOTE* That if we added a new feature in ONE VERSION, the feature *is*
+    included in the next version as well.  For example we added SUBNETING
+    in version v2.01.5 and it will be included in all future versions of
+    IRC.
+    
+
+    A) SUBNETING  (v2.01.5+)
+
+       IRC now supports SUBNETING, which is the ability to use WILD CARDS
+       (*.*) notation when refering to a NAME or NUMERIC host.  For example,
+       Let us say that you wanted the CLIENTS of ANY HOST in your UNIX domain 
+       of "cair.du.edu" to be able to connect to your IRCD Server.  You can
+       now specify a WILD CARD host listing in the "irc.conf" file of:
+      
+           C:*.cair.du.edu::*.cair.du.edu:6667
+           N:*.cair.du.edu::*.cair.du.edu
+          
+       ... and that would allow ANY HOST that has a UNIX domainname of 
+       "cair.du.edu" to connect to your host.
+
+       This also works for NUMERIC addresses as well.  If you wanted all
+       of the UNIX.  For example if you wanted to allow ANY UNIX with
+       a NUMERIC address of "130.253.1.*" to be able to connect to your
+       host you could say:
+
+           C:130.253.1.*::*.cair.du.edu:6667
+           N:130.253.1.*::*.cair.du.edu
+
+       The reason I added the "*.cair.du.edu" is because the CONNECTING
+       Host would indetify itself as a REAL NAME address, like
+       "orion.cair.du.edu", but your don't care if IT IS "orion", but
+       rather you care that it is FROM A DOMAIN of "cair.du.edu".  You
+       would set this up so that "130.253.1.*" refers to ALL OF THE 
+       MACHINES in the "cair.du.edu" domain, and you would hope that any
+       Machine within this UNIX DOMAIN would have an INTERNET ADRESS
+       that begins with "130.253.1", the LAST NUMBER would be the only
+       ones that's different.  But, this isn't always the case.
+ 
+       Examples:
+
+              C:128.214.5.*::*.oulu.fi:6667
+              N:128.214.5.*::*.oulu.fi
+  
+              This line reads: If any machine with an INTERNET ADDRESS
+              that starts with "128.214.5" connects to my server, and
+              identifies itself with a NAME address that ENDS in "oulu.fi",
+              let them connect to my server.
+
+              C:*.du.edu::*.du.edu:6667
+              N:*.du.edu::*.du.edu
+ 
+              This line reads: If any host conects to me and identifies itself
+              as a host that ENDS with a NAME Address of "du.edu".
+
+              C:*::*:6667
+              N:*::*
+
+              This ones says: Let ANYONE connect to my server! ;-)  In
+              Reality the computer reads this as:  I don't care what
+              what INTERNET ADRESS or NAME ADDRESS they are from, just
+              let them connect.  I DON'T RECOMMEND YOU DO THIS, but this
+              is a possible option if you need it.
+
+
+     -=> End of IRC README Document <=-

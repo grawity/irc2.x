@@ -1,0 +1,32 @@
+/*****************************************************************************
+ **
+ ** IRC - Internet Relay Chat 
+ **
+ ** Author:          Jarkko Oikarinen
+ **        Internet: jto@tolsun.oulu.fi
+ **            UUCP: ...!mcvax!tut!oulu!jto
+ **          BITNET: toljto at finou
+ **
+ ** Copyright 1988, 1989 by Jarkko Oikarinen and
+ **                         University of Oulu, Computing Center
+ **
+ ** All rights reserved
+ **
+ ** Permission is hereby granted to use and distribute this program freely.
+ ** Permission to use this program for commercial purposes and in
+ ** commercial Bulletin Board or similar systems is not given.
+ ** Permission to modify this program and distribute modified version is
+ ** not given. This copyright notice may not be modified or removed.
+ **
+ ** IRC is provided 'as is', without warranty of any kind, either
+ ** expressed or implied, including, but not limited to, the implied
+ ** merchantability and fitness for a particular purpose. The entire
+ ** risk as to the quality and performance of the program is with you.
+ ** Should the IRC program prove defective, you assume the cost of all
+ ** necessary servicing, repair or correction.
+ **
+ ** All bug reports and suggestions for improvements etc. are welcome.
+ **
+ ** VMS Version changes (c) Tom Davis and Tim Russell
+ **
+ ****************************************************************************/

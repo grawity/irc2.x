@@ -1,0 +1,215 @@
+                                               Author: Jeff Trim
+                                                       jtrim@orion.cair.du.edu
+                                                 Date: 6 Jun 1989
+
+*** UNFINISHED - IreNetwork Instructions **
+
+
+                        Irc Networking Protocol
+
+We are very serious when it comes to networking our servers.  Irc Server
+connections must be done with intelligence and agreed upon by the network
+coordinator.  The Network coordinator has the right to remove you from
+the network ENTIRELY if he feels you are not coorperating with the Network.
+Please DO NOT just connect your server ANYWHERE - we have a specific place
+we want you to be.  If you are in DENVER we don't want you connecting your
+server to FINLAND when you *could* be connecting it in Kansas.  It does
+not make legistical sense for you to do that.
+
+Here's how you can help us:
+
+1) see if your system has the following programs: "traceroute", "/etc/ping",
+   or "nslookup".  The programs will GREATLY help you when you start setting
+   up your IRC network to other sites.  (I will go into how to USE these 
+   programs later)
+
+2) We have set up the current network keeping in mind the various Network
+   gateways.  The current USA Gateway map looks like this:
+   (map by vijay@lll-winken.llnl.gov)
+
+
+                    FINLAND            SURANET
+                      \       \ /       /
+        JVNCNET-BU----MIT     NWU     ODU
+                        \      |      /
+                         \     |     /
+                          \    |    /
+                           \   |   /
+                            \  |  /
+                             \ | / 
+                              \|/
+      BARRNET--AMES-----------OSU---RPI-NYSERNET
+             ORST/                   \-CANADA
+
+
+   These are highspeed gateways - and this is what makes IRC fast.  All
+   roads currently lead to Ohio-State University, but at some future time
+   this may change depending upon how the network grows.
+
+   We need you to CONFORM to this pattern - and find out where you are in
+   this MAP.  If you get your FASTEST connection by being on the OSU gaetway
+   then that is where you should be.
+
+3) HOW DO I GET CONNECTED??
+
+   The official Irc-Network coordinators are: "vijay@lll-winken.llnl.gov"
+   and "karl@cheops.cis.ohio-state.edu" for the USA.  FINISH and EUROPEAN
+   sites should contact "jto@tolsun.oulu.fi" and he can direct you to your
+   best connection.
+
+   Everyone that has mailed me and goes "where should i connect?" I generally
+   say what is your PING statistic to <some host>?".  You will greatly help
+   us in the early stage by sending us your PING times to these hosts when
+   you first send us mail:
+
+   -------------------------------------------------------------------------
+   IN THE USA:
+
+           NAMED Addr.                  Numeric Addr.         Geographic loc.
+           ----- -----                  ------- -----         ---------- ----
+       "cheops.cis.ohio-state.edu"      (128.146.8.62)        Ohio
+       "accuvax.nwu.edu"                (129.105.49.1)        Illinois
+       "hal.oce.orst.edu"               (128.193.64.132)      Oregon
+       "anableps.berkeley.edu"          (128.32.152.176)      California
+       "osiris.gatech.edu"              (128.61.1.33)         Georgia
+       "bu-cs.bu.edu"                   (128.197.2.1)         Massachusetts
+       "orion.cair.du.edu"              (130.253.1.15)        Colorado
+   -------------------------------------------------------------------------
+   OUTSIDE USA:
+
+     Finland:
+
+       "tolsun.oulu.fi"                 (128.214.5.6)         Finland
+       "naakka.tut.fi"                  (128.214.1.4)         Finland/Sweden
+  
+    Canada:
+
+       "neat.ai.toronto.edu"            (128.100.1.65)        Canada
+
+   This list will GROW I hope ;-).
+   ------------------------------------------------------------------------
+
+  4) HOW CAN I CONNECT TO ANOTHER HOST?
+
+     Unless you have an entry in somone elses "irc.conf" file - your IRCD
+     will not have permission to connect to another host.   For example 
+     if you set your server up and then tried connecting to "accuvax.nwu.edu"
+     and your site was *not* listed in "accuvax.nwu.edu"'s irc.conf file,
+     you would be REFUSED CONNECTION!  .. And this is how it should be as
+     you would be trying to illegally connect to a site that you are not
+     authorized to connect at.
+
+     So after mailing us the PING information, we would tell you who your
+     best connections would be too and then give you the E-Mail address 
+     and HOSTNAME of the IRC adminestrators you would need to talk to.
+     They will then need the following information from you:
+
+     
+ 
+
+
+  5) HOW CAN I PING OTHER HOSTS?  (using the /etc/ping command)
+
+     The way you PING (IE find the fastest repsonse time) from *YOUR* host
+     to another host is to use the "/etc/ping" command (commonly found on
+     most BSD Unix systems).  What "ping" does is send a set of packits to
+     the host you have specified and return the SPEED at which these packits
+     are reaching that host.  In this way you can find out WHICH host is 
+     the FASTEST host for you and also which host has the LEAST ERROR's!!!
+     If you encounter ERROR's in packits that means much LOWER reliability
+     in the connection that that host.
+
+     Here is a SAMPLE senario.  *I* want to know what the PING statistic
+     between DU and ACCUVAX (accuvax.nwu.edu).  So I type (at the % prompt)
+     (when I am on orion.cair.du.edu):
+
+          % /etc/ping accuvax.nwu.edu
+
+     and here's what happens:
+     ==================================================================
+
+       PING accuvax.nwu.edu: 64 data bytes
+       72 bytes from 129.105.49.1: icmp_seq=0. time=291. ms
+       72 bytes from 129.105.49.1: icmp_seq=1. time=256. ms
+       72 bytes from 129.105.49.1: icmp_seq=2. time=290. ms
+       72 bytes from 129.105.49.1: icmp_seq=3. time=259. ms
+       72 bytes from 129.105.49.1: icmp_seq=4. time=378. ms
+       72 bytes from 129.105.49.1: icmp_seq=5. time=256. ms
+       72 bytes from 129.105.49.1: icmp_seq=6. time=305. ms
+       72 bytes from 129.105.49.1: icmp_seq=7. time=270. ms
+       72 bytes from 129.105.49.1: icmp_seq=8. time=287. ms
+       72 bytes from 129.105.49.1: icmp_seq=9. time=254. ms
+       72 bytes from 129.105.49.1: icmp_seq=10. time=289. ms
+       72 bytes from 129.105.49.1: icmp_seq=11. time=275. ms
+       72 bytes from 129.105.49.1: icmp_seq=12. time=271. ms
+       72 bytes from 129.105.49.1: icmp_seq=13. time=297. ms
+       72 bytes from 129.105.49.1: icmp_seq=14. time=303. ms
+
+       ----accuvax.nwu.edu PING Statistics----
+      15 packets transmitted, 15 packets received, 0% packet loss
+      round-trip (ms)  min/avg/max = 254/285/378
+    ====================================================================
+     
+      The way you read this is by looking at each line of the OUTPUT
+      carefully.  For starters not that each PACKIT send to the target
+      was 64 Bytes long, when it was returned from the TARGET host it's
+      length increased to 72 Bytes long (that is *normal*).  Now notice
+      the numbers after "icmp_seq" - they start with "1" and go to "14".
+      Those are the packits themselves being sent 1 at a time.  Finnally
+      "time =" refers to the RESPONSE time that it took for this packit
+      to be sent to the TARGET HOST and acck again.  Time in this case is
+      represented in MILLIONS OF SECONDS (miliseconds).
+
+      The FINAL output tells you how the how session went.  According to
+      what we read above:
+
+                ----accuvax.nwu.edu PING Statistics----
+         15 packets transmitted, 15 packets received, 0% packet loss
+
+      reads: 15 packets were sent from YOUR HOST to the TARGET HOST. 
+      Since 15 packets were SENT and 15 packets were RECIEVED that means
+      that NO PACKITS WERE LOST!!  That accounts for "0% loss".  If 
+      any of these 15 packets had been LOST or DAMAGED along the way (for
+      various reasons to complicated to go into here) then you would have
+      an ERROR rating a little higher.
+ 
+         round-trip (ms)  min/avg/max = 254/285/378
+  
+      Reads: ROUND-TRIP TIME of these packets represents the time it takes
+      for a packet to travel FROM your host TO the TARGET HOST and back 
+      TO your host again.   It is ROUNDTRIP time, NOT one way time.
+
+
+  5) WHAT IS A GOOD PING STAT?  (How can you tell who your best hosts are)
+
+     Generally we consider the BEST TIMES without PACKET LOSS to be good
+     IRC sites for you.  When you loose a packet, that packet must be
+     resent and that generally means more Intenet Load Time on your
+     machine than neccessary.  
+
+      (assuming 0% packet loss)
+
+           The EXCELLENT ping times are generally 40-60ms
+           The VERY GOOD ping times are generally < 100ms
+           The GOOD ping times are generally 100-200ms
+           The AVERAGE ping times are generally 200-350ms
+     
+           Not as good ping times are generally 350-600ms
+           BAD ping times are 600ms+
+
+     DO NOT CONNECT TO MACHINES THAT YOU GET A BAD PING STAT FROM.  There
+     are various reasons for this, the number 1 reason is that IEFT
+     (Internet Engineering Task Force) monitors ALL of the International
+     Internet usage and if IRC ever uses more that it's share of 
+     International Net-Load IRC WILL BE REMOVED!!! ;-(  We don't want that
+     to happen, but do not kid yourself into believing that the IEFT
+     wouldn't do this.   Please keep your connections intelligent.
+
+
+  5) USING TRACEROUTE TO SEE HOW FAR AWAY A HOST IS:
+
+     'traceroute' does exactly what it says it does - traces the route of
+     packets from your host to another.  This is real handy when you want
+     to see how far away and how fast a ping is to another host.
+ 
+

@@ -1,0 +1,82 @@
+[ Obsolete Installation file. Read README for new (and far better) document]
+
+NOTE: *READ* this file before installing ircd. 
+
+How to INSTALL irc:
+
+1)  Scan through struct.h for machine dependent parameters and, only
+    if absolutely necessary, change the default port to a new one.
+
+2)  Check system type in Makefile
+
+3)  Run make
+
+4)  Read through example irc.conf file and set up your file.
+    You can at first just remove all links to other daemons and
+    add them when you've tested irc works ok.
+
+5)  Install irc, ircd, irc.conf, irc.1 and ircd.8 in their appropriate places.
+    Remember to install ircd as setuid program to a user who can read
+    irc.conf-file. irc.conf-file should NOT be readable by everyone.
+    If you have set up passwords for irc-client, then you should install
+    irc as a setuid program, too.
+
+6)  Check if everything seems to work:
+    Start ircd without parameters.
+    Start irc
+    Now you should be in normal irc-screen, and that means irc and ircd
+    have compiled successfully.
+
+7)  If in internet, ask from some (preferably nearest) irc-administrator
+    where you should connect your ircd to be able to chat with other hosts
+    You should get your authoritative host's domain-name and/or
+    internet address. If you do not know any irc-administrator, mail
+    a query to irc@tolsun.oulu.fi or irc%tolsun.oulu.fi@tut.fi.
+    If you're from states, you can send your queries to
+    vijay@lll-winken.llnl.gov
+
+    Then you should get an internet address and port where to connect your
+    daemon (in some cases you might get several of them) and two passwords,
+    one for other daemon to be able to log into your system and the other
+    for your daemon to be able to connect other daemon. Note that you
+    always need two passwords, both ends must have a password before
+    connection is established ok.
+
+8)  After you have got permission to connect to some other ircd,
+    start your ircd. (Remember to kill the previous one if it still is alive).
+    You should set irc so that it starts when rc.local is executed, if you
+    want to have irc running there all the time. That is; you may want to
+    add the following lines to /etc/rc.local (or some equivalent file that
+    is executed at system boot time):
+
+    if [ -f /usr/local/bin/ircd ]; then
+      /usr/local/bin/ircd & (echo -n ' ircd ') >/dev/console
+    fi
+
+    This requires of course that ircd is installed in directory
+    /usr/local/bin. 
+
+8)  Check if irc works:
+    irc
+    When irc-screen appears in front of you, type /links and see, if there
+    are other links up. If not, either irc has been started/installed
+    unsuccessfully or authoritative host/ircd is down. It is also known
+    that daemons may disconnect their links sometimes, so to be sure
+    try irc again after a half an hour or so, if it still doesn't show
+    other hosts, something is wrong somewhere... 
+
+9)  As a 'normal user' you should know about a couple of things which
+    simplify the use of irc a little bit. You can specify an environment
+    variable IRCNICK and that will become automatically your nickname
+    in irc. Also you can specify environment variable IRCSERVER and that
+    is the name of server you want to connect to. Note that these
+    variables apply only to clients, they have nothing to do when
+    starting ircdaemon (ircd).
+
+If you encounter any bugs or other problems (you sure will have them !),
+mail your suggestions and bug reports to me.
+
+Jarkko Oikarinen            OuluBox: WIZARD     UUCP:...!mcvax!tut!oulu!jto
+Institute of Information Processing Science    INTERNET: jto@tolsun.oulu.fi
+University of Oulu, Finland                    EARN/BITNET: toljto at finou
+

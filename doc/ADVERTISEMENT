@@ -1,0 +1,96 @@
+                                                Author: Jeff Trim
+                                                        jtrim@orion.cair.du.edu
+                                                  Date: 04 Apr 1989
+                                     Last modification: 04 Apr 1989
+
+                 The Internet Relay Chat Program  -  IRC
+
+Have you ever wanted to talk with other computer users in other parts of
+the world?  Well guess what?  You can!  The program is called IRC and
+it is networked over much of the United States, Finland, Sweden and very
+soon I think it's going to appear in the United Kingdom.  This program
+is a substitution for talk(1), chat(1), vco(1) and many other multiple
+talk programs you might have read about.  When you are talking in IRC, 
+everything you type will instantly be transmitted around the world to
+other users that might be watching their terminals at the time - they can
+then type something and RESPOND to your messages - and vise versa.  I will
+tell you that the program can be very addictive once you begin to make
+friends and contacts on IRC ;)  .. and the Finnish people are as curious
+about Amercians as we are about them - so the topics can become very 
+interesting sometimes.  I think I have talked about everything from Politics
+to Living expenses in the United States - in return they have told me about
+life in Finnland (which is quite interesting!) - I even know a few Finnish
+curse words - but we won't go into those ;)
+
+The first step to beginning to getting aquinted to IRC is to throw off the
+fear of embarrising yourself -- the fact of the matter is that the people
+on the other end of the terminal are as scared as you are.  The Finnish
+people speak VERY GOOD english, so you can feel comfortable speaking to
+them in english.  (I will add, however, that it's also interesting to see
+how they communicate in Finnish - some of their words can be 25 characters
+long - and I am talking just one word!)  When you /join a conference and 
+they recognize that you are an english speaking person they always nicely
+switch immediately into english - they are very cordial about that.  But
+be aware that finnish is their native language so they might stumble a bit
+on some of our english counter parts  (especially english SLANG words).
+Also you might need to give them a second or too to make the switch into
+english because there might be a heated argument going on when you /join 
+the conference and they need time to finish what they are saying.
+
+Beyond the Finnish there are users from Oregon State University, Ohio State
+University, MIT, Northwestern State University and we even picked up a
+site from NASA about a week ago.  At my last count there were 22 servers
+running 24 hours aday all over the US/Finland - so you can loggin just
+about any time of day and find people talking on IRC (as a side note - the
+Finnish are 9 Hours ahead of us -- meaning when it's 11:00pm at night in Denver
+it's 8:00am THE NEXT DAY in Finland!)  You should note that late afternoon
+in Denver is EARLY in the morning for the Finnish ;)  But the US users
+should keep the same time schedual you have (keeping in mind Mountain Time,
+Central Time, Pacific Time, ...etc).  
+
+WHAT DO I TALK ABOUT?
+
+That is the most common question I get so I will answer it now.  Sometimes
+you'll notice that all conversation STOPS and you know everyone is waiting
+on everyone else to say something - so this is a good time to talk about
+News, weather or whatever -- best thing is to ask a question - like "How's
+the weather in finland?", "What's TV like in Finland?", "Did you know that
+an Oil Tanker just spilt oil all over the Alaskan sea-shore?".  If things
+get real desperate say something like "well why don't we choose a topic?"
+..then you should also try to think up something, maybe a good topic over
+your favoite beer, Broncos mainia (I haven't explained that to the Finnish
+yet (I still don't get it) ;), Denver, skiing, computers, people, vacation
+spots, travel, cars, housing, whatever you can think of.  ..but be assertive.
+
+
+A finally note is about IRC protocol.  Try not to CUSS out the other users
+(meaning use your best english - keep your laungauge printable ;), and
+when you are going to LEAVE IRC - say "goodbye" and give the other users
+about 30 seconds to in turn say their goodbye's.  Never just /signoff 
+because it makes the other users think you didn't like what they were
+saying - so try to leave on a good note.  A finally you should be aware
+that the program does allow <CTRL>G's (The ASCII BELL character).  They
+are used only when absolutely necessary - and usually in PRIVATE messages
+only - so please restrict them to that.  If you need to wake up a sleeping
+user (IE one that's away from his terminal for awhile) then send him a few
+^G's (like 2) and wake him up in private message.  Don't post ^G's in
+public messages.
+
+
+RUNNING THE PROGRAM:
+
+I have it set up currently on the 3 academic UNIXES - on EOS/TYCHE/ORION
+type: "irc".  I am Posting the IRC User Manual in the next posting so 
+please read that to get familiar with IRC and the various commands.  if
+you want help in the program type "/help".  If you see a topic you want to
+read about then type "/help <topic>", like "/help who".  But anyway to
+run the program type:
+
+      irc
+
+If you have any questions at all feel free to write me a note.  I am the
+current IRC Adminestrator for The University of Denver so I can answer 
+all of your questions.  I am "jtrim@orion.cair.du.edu".
+
+The program was written by "Jarkko Oikarinen" - and in IRC you can usually
+find him as NICKNAME "Wiz".

@@ -1,0 +1,35 @@
+.\" @(#)irc.1 2.0 (beta version) 21 Oct 88 
+.TH Irc 1 "21 October 1988"
+.SH NAME
+irc \- User Interface to Internet Relay Chat Protocol
+.SH SYNOPSIS
+\fBirc\fP [-pportnum] [ \fBnickname\fP [ \fBhost\fP ]]
+.SH DESCRIPTION
+.LP
+\fIIrc\fP is an user interface to Internet Relay Chat. It connects to
+host (if host is not given, default is the same host irc is running).
+if nickname is not given, default is your login name.
+If portnum is given, irc tries to connect that port on given host.
+.LP
+Inside \fIIrc\fP you can get more help by writing /help in the beginning of
+line.
+.SH EXAMPLE
+.RS
+.nf
+tolmoon% \fBirc -p6667 Wizard tolsun\fP
+.fi
+.RE
+.LP
+connects you to irc server in host tolsun (port 6667) with nickname Wizard
+.SH COPYRIGHT
+Copyright (c) 1988 University of Oulu, Computing Center, Finland.
+All rights reserved.
+For full COPYRIGHT see COPYRIGHT file with IRC package.
+.SH "SEE ALSO"
+ircd(8)
+.SH BUGS
+Sometimes users get logged off when some server dies. Reason unknown.
+Irc should never be stopped with CTRL-Z, with time buffers fill up and
+server may hang.
+.SH AUTHOR
+Jarkko Oikarinen, currently jto@tolsun.oulu.fi

@@ -1,0 +1,62 @@
+.\" @(#)ircd.8 2.0 (beta version) 29 Mar 1989 
+.TH IRCD 8 "29 March 1989"
+.SH NAME
+ircd \- The Internet Relay Chat Program Server 
+.SH SYNOPSIS
+\fBircd\fP [-hhostname] [-pportnum] 
+.SH DESCRIPTION
+.LP
+\fIircd\fP is the server (daemon) program for the Internet Relay Chat
+Program.  The \fIircd\fP is a server in that its function is to "serve"
+the client program \fIirc(1)\fP with messages and commands.  All commands
+and user messages are passed directly to the \fIircd\fP for processing
+and relaying to other UNIX sites.  The \fIirc(1)\fP program depends upon
+there being an \fIircd\fP server running somewhere (either on your local
+UNIX site or a remote UNIX site) so that it will have somewhere to connect
+to and thus allow the user to begin talking to other users. 
+.LP
+If you plan to connect your \fIircd\fP server to an existing Irc-Network,
+you will need to alter your local IRC CONFIGURATION FILE (typically named
+"irc.conf") so that it will accept and make connections to other \fIircd\fP
+servers.  This file contains the hostnames, Network Addresses, and sometimes
+passwords for connections to other UNIXES around the world.  Because 
+description of the actual file format of the "irc.conf" file is beyond the
+scope of this document, please refer to the file README in the IRC source
+files directory.
+.LP
+BOOTING THE SERVER:  The \fIircd\fP server can be started as part of the
+UNIX boot procedure or just by placing the server into Unix Background.
+Keep in mind that if it is *not* part of your UNIXES Boot-up procedure 
+then you will have to manually start the \fIircd\fP server each time your
+UNIX is rebooted.  This means if your UNIX is prone to crashing
+or going for for repairs a lot it would make sense to start the \fIircd\fP
+server as part of your UNIX bootup procedure.  In some cases the \fIirc(1)\fP
+will automatically attempt to boot the \fIircd\fP server if the user is
+on the SAME UNIX that the \fIircd\fP is supposed to be running on.  If the
+\fIirc(1)\fP cannot connect to the \fIircd\fP server it will try to start
+the server on it's own and will then try to reconnect to the newly booted
+\fIircd\fP server.
+.SH EXAMPLE
+.RS
+.nf
+tolsun% \fBircd\fP
+.fi
+.RE
+.LP
+Places \fIircd\fP into UNIX Background and starts up the server for use.
+Note:  You do not have to add the "&" to this command, the program will
+automatically place itself into UNIX Background after it has been executed.
+.SH COPYRIGHT
+Copyright (c) 1988 University of Oulu, Computing Center, Finland.
+All rights reserved.
+For full COPYRIGHT see COPYRIGHT file with IRC package.
+.SH FILES
+ /etc/utmp
+ "irc.conf"
+.SH "SEE ALSO"
+irc(1)
+.SH BUGS
+None... ;-) if somebody finds one, please inform author
+.SH AUTHOR
+Jarkko Oikarinen, currently jto@tolsun.oulu.fi,
+manual page written by Jeff Trim, jtrim@orion.cair.du.edu.
