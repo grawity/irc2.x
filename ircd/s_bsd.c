@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.63 1999/03/08 22:09:07 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.64 1999/03/09 18:40:33 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -2031,7 +2031,9 @@ int	ro;
 			** so no need to check for anything!
 			*/
 			if (DoingDNS(cptr) || DoingAuth(cptr) ||
-			    DoingXAuth(cptr))
+			    WaitingXAuth(cptr) ||
+			    (DoingXAuth(cptr) &&
+			     !(iauth_options & XOPT_EARLYPARSE)))
 				continue;
 #if ! USE_POLL
 			if (fd > highfd)
