@@ -20,12 +20,15 @@ extern	void	check_services_butone();
 #define	SERVICE_WANT_SERVER	0x00100	/* servers signing on */
 #define	SERVICE_WANT_WALLOP	0x00200	/* wallops */
 #define	SERVICE_WANT_SQUIT	0x00400	/* servers signing off */
+
 #define	SERVICE_WANT_MODE	0x00800	/* channel modes (not +ov) */
 #define	SERVICE_WANT_CHANNEL	0x01000 /* channel creations/destructions */
 
 #define	SERVICE_WANT_PREFIX	0x10000	/* to receive n!u@h instead of n */
 
-#define SERVICE_WANT_ALL	0x01FFF
+#define	SERVICE_WANT_GLOBAL	0x01800 /* for these, service must be global */
+
+#define	SERVICE_WANT_ALL	0x01FFF
 
 /* A couple example types of services */
 #define	SERVICE_ALL	SERVICE_WANT_ALL	/* 4095 */
