@@ -262,6 +262,7 @@ by the service:
 service and its purpose are.
 <tag/VERSION/The version of the running code.
 </descrip>
+</descrip>
 <sect1>Flood control
 <p>
 Also, since services are not affected by flood control, they
