@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: iauth.c,v 1.6 1998/12/13 00:34:18 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: iauth.c,v 1.7 1999/01/13 02:14:36 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -188,6 +188,8 @@ char	*argv[];
 	else
 #endif
 		sendto_ircd("G 0");
+	if (iauth_required)
+		sendto_ircd("O R");
 
 	while (1)
 	    {
