@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.4 1997/10/01 19:57:04 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.5 1997/11/13 02:02:07 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -28,6 +28,7 @@ static  char rcsid[] = "@(#)$Id: chkconf.c,v 1.4 1997/10/01 19:57:04 kalt Exp $"
 #undef CHKCONF_C
 
 #define MyMalloc(x)     malloc(x)
+#define MyFree(x)       free(x)
 
 static	void	new_class();
 static	char	*getfield(), confchar ();
