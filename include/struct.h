@@ -18,26 +18,17 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- Hoppie -- 30 Oct 1990
- * Added support for R lines
- */
-
-/* -- Hoppie -- 12 Oct 1990
- * Added support for Q lines
- */
-
-/* -- Jto -- 16 Jun 1990
- * String Channel modifications...
- * Gonzo's PRIVMSG enchantments
- */
-
-/* -- Jto -- 03 Jun 1990
- * Added Channel modes...
- */
-
 #include "config.h"
 
+typedef struct ConfItem aConfItem;
+typedef struct Client aClient;
+typedef struct Channel aChannel;
+typedef struct User anUser;
+
+#ifndef VMSP
+#include "class.h"
 #include "dbuf.h"	/* THIS REALLY SHOULDN'T BE HERE!!! --msa */
+#endif
 
 #define MAXUSERSPERCHANNEL 10 /* 10 is currently recommended. If this is */
                               /* zero or negative, no restrictions exist */
@@ -54,16 +45,17 @@
 				** This preserves compatibility with old
 				** servers --msa
 				*/
-#define USERLEN   10
-#define REALLEN   50
-#define HEADERLEN 200
-#define PASSWDLEN 20
+#define USERLEN   	10
+#define REALLEN   	50
+#define CHANNELLEN   	50
+#define HEADERLEN 	200
+#define PASSWDLEN 	20
 
-#define MAXRECIPIENTS 20
-#define CHANNELLEN 50
-#define BUFSIZE  256
-#define MAXBUFLEN 512
+#define MAXRECIPIENTS 	20
+#define BUFSIZE  	256
+#define MAXBUFLEN 	512
 
+#define STAT_MASTER     -5    /* Local ircd master before identification */
 #define STAT_CONNECTING -4
 #define STAT_HANDSHAKE -3
 #define STAT_ME        -2
@@ -74,6 +66,7 @@
 #define STAT_SERVICE    3      /* Services not implemented yet */
 #define STAT_OPER       4      /* Operator */
 #define STAT_CHANOP     8      /* Channel operator */
+#define STAT_LOCOP      16     /* Local operator -- SRB */
 
 /*
 ** 'offsetof' is defined in ANSI-C. The following definition
@@ -87,20 +80,21 @@
 
 #define elementsof(x) (sizeof(x)/sizeof(x[0]))
 
+#define IsLocOp(x)      (((x)->status) & (STAT_LOCOP) && ((x)->status > 0))
+#define IsAnOper(x)     ((((x)->status) & (STAT_OPER | STAT_LOCOP)) && (x)->status > 0)
 #define IsRegisteredUser(x) ((x)->status > STAT_SERVER)
 #define IsRegistered(x) ((x)->status >= STAT_SERVER)
 #define IsConnecting(x)	((x)->status == STAT_CONNECTING)
 #define	IsHandshake(x)	((x)->status == STAT_HANDSHAKE)
 #define	IsMe(x)		((x)->status == STAT_ME)
-#define	IsUnknown(x)	((x)->status == STAT_UNKNOWN)
+#define	IsUnknown(x)	((x)->status == STAT_UNKNOWN || (x)->status == STAT_MASTER)
 #define	IsServer(x)	((x)->status == STAT_SERVER)
 #define	IsClient(x)	((~STAT_CHANOP & (x)->status) == STAT_CLIENT)
 #define	IsLog(x)	((x)->status == STAT_LOG)
 #define	IsService(x)	((x)->status == STAT_SERVICE)
-#define	IsOper(x)	((~STAT_CHANOP & (x)->status) == STAT_OPER)
-#define IsPerson(x)	(IsClient(x) || IsOper(x))
+#define	IsOper(x)	(((x)->status & STAT_OPER) && (x)->status > 0)
+#define IsPerson(x)	(IsClient(x) || IsAnOper(x))
 #define IsPrivileged(x)	(IsOper(x) || IsServer(x))
-#define IsChanOp(x)     ((x)->status > 0 && (x)->status & STAT_CHANOP)
 
 #define	SetHandshake(x)	((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)	((x)->status = STAT_ME)
@@ -109,25 +103,24 @@
 #define	SetClient(x)	((x)->status = STAT_CLIENT)
 #define	SetLog(x)	((x)->status = STAT_LOG)
 #define	SetService(x)	((x)->status = STAT_SERVICE)
-#define	SetOper(x)	((x)->status = (STAT_OPER|((x)->status&STAT_CHANOP)))
-#define SetChanOp(x)    ((x)->status |= STAT_CHANOP)
+#define	SetOper(x)	((x)->status |= STAT_OPER)
+#define SetLocOp(x)     ((x)->status |= STAT_LOCOP)
 
-#define ClearChanOp(x)  ((x)->status &= ~STAT_CHANOP)
-
-#define CONF_ILLEGAL          0
-/* #define CONF_SKIPME           1 /* not used any more --msa */
-#define CONF_QUARANTINED_SERVER 1 /* reusing it now -hoppie */
-#define CONF_CLIENT           2
-#define CONF_CONNECT_SERVER   4
-#define CONF_NOCONNECT_SERVER 8
-/* #define CONF_UPHOST           16 /* not used either --msa */
+#define CONF_ILLEGAL            0
+#define CONF_QUARANTINED_SERVER 1
+#define CONF_CLIENT             2
+#define CONF_CONNECT_SERVER     4
+#define CONF_NOCONNECT_SERVER   8
+#define CONF_LOCOP              16
+#define CONF_OPERATOR           32
+#define CONF_ME                 64
+#define CONF_KILL               128
+#define CONF_ADMIN              256
 #ifdef R_LINES
-#define CONF_RESTRICT         16 /*Now it is.  -hoppie (We may need more)*/
+#define CONF_RESTRICT           512
 #endif
-#define CONF_OPERATOR         32
-#define CONF_ME               64
-#define CONF_KILL             128
-#define CONF_ADMIN            256
+#define CONF_CLASS              1024
+#define CONF_SERVICE            2048
 
 #define MATCH_SERVER  1
 #define MATCH_HOST    2
@@ -153,8 +146,7 @@
 #define CURSES_TERM    1
 #define TERMCAP_TERM   2
 
-
-typedef struct Confitem
+struct ConfItem
     {
 	int status;	/* If CONF_ILLEGAL, delete when no clients */
 	int clients;	/* Number of *LOCAL* clients using this */
@@ -163,10 +155,13 @@ typedef struct Confitem
 	char *name;
 	int port;
 	long hold;	/* Hold action until this time (calendar time) */
-	struct Confitem *next;
-    } aConfItem;
+#ifndef VMSP
+	aClass *class;  /* Class of connection */
+#endif
+	struct ConfItem *next;
+    };
 
-typedef struct User
+struct User
     {
 	char username[USERLEN+1];
 	char host[HOSTLEN+1];
@@ -178,13 +173,19 @@ typedef struct User
 				** not yet be in links while USER is
 				** introduced... --msa
 				*/
+#ifndef VMSP
 	struct Channel *channel;
+#else
+	char channel[CHANNELLEN];
+#endif
+
 	struct Channel *invited;
 	int refcnt;		/* Number of times this block is referenced */
+	long last;
 	char *away;
-    } anUser;
+    };
 
-typedef struct Client
+struct Client
     {
 	struct Client *next;
 	short status;		/* Client type */
@@ -192,6 +193,7 @@ typedef struct Client
 	char info[REALLEN+1];	/* Free form additional client information */
 	struct User *user;	/* ...defined, if this is a User */
 	long lasttime;		/* ...should be only LOCAL clients? --msa */
+	long firsttime;
 	long since;		/* When this client entry was created */
 	short flags;
 	char *history;		/* (controlled by whowas--module) */
@@ -206,20 +208,22 @@ typedef struct Client
 	*/
 	int count;		/* Amount of data in buffer */
 	char buffer[512];	/* Incoming message buffer */
+#ifndef VMSP
 	dbuf sendQ;		/* Outgoing message queue--if socket full */
+#endif
 	long sendM;		/* Statistics: protocol messages send */
 	long sendB;		/* Statistics: total bytes send */
 	long receiveM;		/* Statistics: protocol messages received */
 	long receiveB;		/* Statistics: total bytes received */
 	/*
 	*/
-	struct Confitem *conf;	/* Configuration record associated */
+	struct SLink *confs;	/* Configuration record associated */
 	char sockhost[HOSTLEN+1]; /* This is the host name from the socket
 				  ** and after which the connection was
 				  ** accepted.
 				  */
 	char passwd[PASSWDLEN+1];
-    } aClient;
+    };
 
 #define CLIENT_LOCAL_SIZE sizeof(aClient)
 #define CLIENT_REMOTE_SIZE offsetof(aClient,count)
@@ -238,7 +242,8 @@ typedef struct SMode {
 
 typedef struct SLink {
   struct SLink *next;
-  aClient *user;
+  char *value;
+  unsigned char flags;
 } Link;
 
 typedef struct SInvites {
@@ -246,7 +251,7 @@ typedef struct SInvites {
   aClient *user;
 } Invites;
 
-typedef struct Channel
+struct Channel
     {
 	struct Channel *nextch;
 	Mode mode;
@@ -255,7 +260,7 @@ typedef struct Channel
 	Link *members;
 	Invites *invites;
 	char chname[1];
-    } aChannel;
+    };
 
 extern char *version, *infotext[];
 extern char *generation, *creation;
@@ -263,10 +268,7 @@ extern aClient me;   /* ...a bit squeamish about this... --msa */
 
 /* function declarations */
 
-extern aChannel *GetChannel();
-
 extern struct Client *make_client();
-extern long getlongtime();
 
 /* String manipulation macros */
 
@@ -297,8 +299,9 @@ extern long getlongtime();
 
 #define HoldChannel(x) (!(x))
 #define ShowChannel(v,c) (PubChannel(c) ||\
-			  (v)->user && (v)->user->channel == (c))
+			  (v)->user && IsMember((v),(c)))
 
+#define IsMultiChannel(x) ((x)->chname[0] == '$' || (x)->chname[0] == '#')
 /* #define UnlimChannel(x) ((x) > 0 && (x) < 10)  /* unlim # of users */
 
 /* Misc macros */
@@ -309,10 +312,3 @@ extern long getlongtime();
 #define MyConnect(x) ((x)->fd >= 0)
 #define IsMagicLink(x) ((x)->fd == -20)
 #define SetMagicLink(x) ((x)->fd = -20)
-
-#define LOCAL static
-
-#if HPUX
-#define random rand
-#define srandom srand
-#endif

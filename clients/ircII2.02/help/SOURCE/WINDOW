@@ -1,9 +1,0 @@
-Usage: /SOURCE WINDOW				(Thanx gonzo@uniol!)
-  This script contains bindings for Window handling in an EMACS-like
-  fashion. After pressing the META2 key (either CTRL-X or TAB) you
-  can press one of these:
-
-	2	Open a new window.
-	z	Grow the current window by one line.
-	^z	Shrink the current window by one line.
-	0	Close the current window.

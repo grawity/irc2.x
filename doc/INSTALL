@@ -1,3 +1,22 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/INSTALL
+ *   Copyright (C) 1990, Jeff Trim, Mike Bolotski, Jarkko Oikarinen
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
             Installing IRC - The Internet Relay Chat Program
 
 
@@ -16,11 +35,10 @@ Overview of this document:
       replace the "0" with a "1" next to the choice you want.  All the other
       UNIX #defines should be set to "0".
 
-   b) Define DEBUGMODE if you want to see the ircd debugging information as
-      the daemon is running.  Normally this function will be undefined as
-      ircd produces a considerable amount of output. 
-
-
+   b) Define DEBUGMODE if you want to see the ircd debugging information
+      as the daemon is running. Normally this function will be undefined
+      as ircd produces a considerable amount of output.
+      
    d) Define SPATH to be the directory path to ircd.  This is usually
       /usr/local/bin/ircd, unless you don't have installation permission
       there. 
@@ -48,30 +66,29 @@ Overview of this document:
       Although these are not OFFICIALLY reserved for IRC, they are the ports
       we have unofficially claimed for the program.  
 
-   h) Define PINGFREQUENCY to be the amount of IDLE time you will allow
-      your server to WAIT before attempting to request status of your
-      neighboring servers.  After TIMESEC seconds have passed and no activity
-      has occured on IRC, IRC will enter a routine where it will send a PING
-      message to all of the servers connected to your IRCD.  It will send one
-      PING to every server and will expect the other servers to send a PONG
-      message back saying that they are "okay and functioning".  The program
-      has a built in time stamp that tells IRC the last time that something
-      was received from a curtain server.  PINGFREQUENCY refers to the amount
-      of time you will allow server connections to be IDLE.  After this IDLE
-      time has expired (IE the server has been IDLE for PINGFREQUENCY seconds)
-      the program will PING that particular server and will expect a PONG
-      message response from that server.  If no reply to a PING message is
-      received in 2 * PINGFREQUENCY seconds the connection will be closed, and
+   h) Define TIMESEC to be the amount of IDLE time you will allow your server
+      to WAIT before checking connections if no messages have occurred
+      during that time. PINGFREQUENCY refers to the amount of time
+      you will allow socket connections to be IDLE.  After this IDLE time
+      has expired (IE the connection has been IDLE for PINGFREQUENCY seconds)
+      the program will PING that particular peer and will expect a PONG
+      message response.  If no reply to a PING message is received in
+      2 * PINGFREQUENCY seconds the connection will be closed, and
       reconnection attempts can be made by your IRCD or the remote IRCD
-      depending upon which server connects to whom.
+      depending upon which server connects to whom. Note that TIMESEC
+      should be smaller than PINGFREQUENCY, as for PINGFREQUENCY to
+      execute a TIMESEC event is needed.
 
-      i) Define CONNECTFREQUENCY - will define the number of SECONDS for your
-      server to wait before it attempts reconnection at it's neighboring
-      IRC hosts.  The default value is 20 minutes (1200 seconds) and that
-      is generally pretty good for RECONNECTION time.  You should probably
-      not change this Define, unless you are a backbone server, then it is
-      suggested you cut the value in half to 600 seconds.
-
+   j) Define CONNECTFREQUENCY - will define the default number of SECONDS
+      for your server to wait before it attempts reconnection at it's
+      neighboring IRC hosts. The suggested value is 20 minutes (1200 seconds)
+      and that is generally pretty good for RECONNECTION time.  You should
+      probably not change this Define as changing this to be too short of
+      a time results in delays in your server's connections to users
+      because server does nameserver enqueries every time it attempts
+      to form a connection and it takes time, sometimes more, sometimes
+      less. For backbone servers whose connections should be reliable
+      and up as often as possible the value can be cut in half (600 seconds).
 
 3) Configure and compile the code.
 
@@ -111,26 +128,37 @@ Overview of this document:
    6.  Administrative info	(A)
    7.  Excluded accounts	(K)
    8.  Excluded machines        (Q)
+   9.  Connection Classes       (Y)
+
 
    1. SERVER CONNECTIONS:  How to connect to other servers
 			   How other servers can connect to you
 
+   WARNING:
+     The hostnames used as examples are really only examples and
+     not meant to be used (simply because they don't work) in real life.
+
    Now you must decide WHICH hosts you want to connect to and WHAT ORDER you
    want to connect to them in.  For my example let us assume I am on the
-   machine "bucsd.bu.edu" and I want to connect to irc daemons on 3 other
+   machine "rieska.oulu.fi" and I want to connect to irc daemons on 3 other
    machines:
 
-         "netserv2.its.rpi.edu"                - Tertiary Connection
-         "astsun.astro.virginia.edu"       - Secondary Connection
-         "garfield.mit.edu"            - Primary Connection
+         "garfield.mit.edu"        - Tertiary Connection
+         "irc.nada.kth.se"         - Secondary Connection
+         "nic.funet.fi"            - Primary Connection
 
    And I prefer to connect to them in that order, meaning I first want to
-   try connecting to "garfield.mit.edu", then to "astsun.astro.virginia.edu",
-   and finally to "netserv2.its.rpi.edu".  So if "garfield.mit.edu" is down or
-   unreachable, the program will try to connect to "astsun".
-   If orion is down it will try to connect to "netserv2" and so forth.
+   try connecting to "nic.funet.fi", then to "irc.nada.kth.edu", and
+   finally to "garfield.mit.edu".  So if "nic.funet.fi" is down or
+   unreachable, the program will try to connect to "irc.nada.kth.se".
+   If irc.nada.kth.se is down it will try to connect to garfield and so forth.
    PLEASE limit the number of hosts you will attempt to connect to down to 3.
-   We are trying to limit the amount of Network Traffic IRC creates.
+   This is because of two main reasons:
+     a) to save your server from causing extra load and delays
+        to users
+     b) to save internet from extra network traffic
+        (remember the old rwho program with traffic problems when
+        the number of machines increased).
 
    The format for the CONNECT entry in the "irc.conf" is:
 
@@ -139,11 +167,11 @@ Field: 1        2              3                4               5
 
    for example:
    
-    C:garfield.mit.edu:passwd:garfield.mit.edu:6667
+    C:nic.funet.fi:passwd:nic.funet.fi:6667 
 
           - or -
 
-    C:18.72.0.252:passwd:garfield.mit.edu:6667
+    C:128.214.6.100:passwd:nic.funet.fi:6667
 
     Explanation:
 
@@ -153,8 +181,7 @@ Field: 1        2              3                4               5
              "C" corresponds to a server Connect option.
 
     Field 2: Specifies the host name or IP address of the machine to connect
-	     to.  We recommend that you use the numeric IP address in 
-	     this field.
+	     to.
 
     Field 3: The password of the other host.  Some hosts require passwords
              before you can connect to them.  If no password is required
@@ -162,51 +189,51 @@ Field: 1        2              3                4               5
 
     Field 4: The full hostname of the target machine. This is the name that 
 	     the TARGET server will identify itself with when you connect 
-	     to it.  If you were connecting to garfield you would receive
-	     "garfield.mit.edu" and that is what you should place in 
+	     to it.  If you were connecting to nic.funet.fi you would receive
+	     "nic.funet.fi" and that is what you should place in 
 	     this field.
   
     Field 5: The INTERNET Port that you want to connect to on the TARGET 
 	     machine. Most of the time this will be set to "6667".  
              If this field is left blank, then no connections will 
              be attempted to the TARGET host, and your host will accept
-             connections from the TARGET host instead.
+             connections FROM the TARGET host instead.
 
    Some examples:
 
-            C:bucsd.bu.edu::bucsd.bu.edu:6667
+            C:nic.funet.fi::nic.funet.fi:6667
  
-            This reads: Connect to host "bucsd.bu.edu", with no password
-            and expect this server to identify itself to you as "bucsd.bu.edu"
-            Your machine will connect to this host at PORT 6667.
+            This reads: Connect to host "nic.funet.fi", with no password
+            and expect this server to identify itself to you as
+            "nic.funet.fi". Your machine will connect to this host at
+            PORT 6667.
 
-            C:128.42.4.37:gwydion:tavi.rice.edu:6667
+            C:18.72.0.252:Jeff:garfield.mit.edu:6667
 
-            This reads: Connect to a host at adress "128.42.4.37" with a 
-            password of "gwydion".  The TARGET server should identify
-            itself as "tavi.rice.edu".  *YOU* will connect at Internet
+            This reads: Connect to a host at address "18.72.0.252", using a
+            password of "Jeff".  The TARGET server should identify
+            itself as "garfield.mit.edu".  *YOU* will connect at Internet
             Port 6667 on this host.
 
-            C:betwixt.cs.caltech.edu::betwixt.cs.caltech.edu
-                                                                               
-            This reads: do not attempt to connect to "betwixt.cs.caltech.edu"
-			but if "betwixt.cs.caltech.edu" requests a connection,
+            C:irc.nada.kth.se::irc.nada.kth.se
+
+            This reads: do not attempt to connect to "irc.nada.kth.se",
+			but if "irc.nada.kth.se" requests a connection,
 			allow it to connect.
 
    Now back to our original problem, we wanted OUR server CONNECT to 3
-   hosts,  "garfield.mit.edu", "astsun.astro.virginia.edu" and
-   "netserv2.its.rpi.edu" in that order.  So as we enter these entries
-   into the file they must be done in REVERSE order of how we could want to
-   connect to them. Note that the reversal is a bug, and should be fixed in
-   future releases. Here's how it would look if we connected "naakka.tut.fi"
-   first:
+   hosts,  "nic.funet.fi", "irc.nada.kth.se" and "garfield.mit.edu" in
+   that order.  So as we enter these entries into the file they must be
+   done in REVERSE order of how we could want to connect to them.
 
-        C:netserv2.its.rpi.edu::netserv2.its.rpi.edu:6667
-	C:astsun.astro.virginia.edu::astsun.astro.virginia.edu:6667
-	C:garfield.mit.edu::garfield.mit.edu:6667  
+   Here's how it would look if we connected "nic.funet.fi" first:
 
-   Ircd will attempt a connection to garfield first, then to astsun, 
-   and finally to netserv2.
+	C:garfield.mit.edu::garfield.mit.edu:6667
+	C:irc.nada.kth.se::irc.nada.kth.se:6667
+	C:nic.funet.fi::nic.funet.fi:6667
+
+   Ircd will attempt to connect to nic.funet.fi first, then to irc.nada
+   and finally to garfield.
 
    Reciprocal entries:
 
@@ -216,36 +243,53 @@ Field: 1        2              3                4               5
    they can connect to you.  These entries are of the same format as
    the "C" entries.
     
-   Let us assume that "orion.cair.du.edu" connects to your server
-   and you want to place password authorization authorization on orion.
+   Let us assume that "garfield.mit.edu" connects to your server
+   and you want to place password authorization authorization on garfield.
    The "N" entry would be:
    
-   make your "N" entry for Orion to be:
-
-          N:orion.cair.du.edu:golden:orion.cair.du.edu
+          N:garfield.mit.edu:golden:garfield.mit.edu
   
-   This line says: expect a connection from host "orion.cair.du.edu",
+   This line says: expect a connection from host "garfield.mit.edu",
    and expect a login password of "golden" 
-   and expect the host to identify itself as "orion.cair.du.edu".
+   and expect the host to identify itself as "garfield.mit.edu".
      
-          N:130.253.1.15::orion.cair.du.edu
+	  N:18.72.0.252::garfield.mit.edu
 
-   This line says: expect a Connection from host "130.253.1.15", and 
+   This line says: expect a Connection from host "18.72.0.252", and 
    don't expect login password.  The connecting host should identify itself
-   as "orion.cair.du.edu". 
+   as "garfield.mit.edu". 
 
-   Note: unlike "C" entries, port numbers are not required for "N" entries.
+  
+   Wildcards domains: 
+	To reduce the great amount of servers in IRCnet wildcard
+	DOMAINS were introduced in 2.6. To explain the usage of
+	wildcard domains we take an example of such:
+		*.de  - a domain name matching all machines
+                        in Germany.
+        Wildcard domains are useful in that ALL SERVERS in Germany
+        (or any other domain area) can be shown as one to the
+	rest of the world. Imagine 100 servers in Germany, it
+	would be incredible waste of netwotk bandwidth to broadcast
+	all of them to all servers around the world.
 
-   Wildcards:  (please note that wildcards are a big security hole.
-               use them at your own risk when applying them to C and N
-	       lines. However, using them on I lines is safe)
+	So wildcard domains are a great help, but how to use them ?
+	They can be defined in the N-line for a given connection,
+	in place of port number you write a magic number called
+	wildcard count.
 
-   Note that wildcards are allowd in hostnames or IP addresses. For 
-   instance, to allow all hosts in Finland to connect to tolsun,
-   you could specify
+	Wildcard count tells you HOW MANY PARTS of your server's name
+	should be replaced by a wildcard. For example, your server's
+	name is "tolsun.oulu.fi" and you want to represent it as
+	"*.oulu.fi" to "nic.funet.fi". In this case the wildcard count
+	is 1, because only one word (tolsun) is replaced by a wildcard.
+	If the wildcard count would be 2, then the wildcard domain would
+	be "*.fi". Note that with wildcard name "*.fi" you could NOT
+	connect to "nic.funet.fi", because that would result in a server
+	name COLLISION (*.fi matches nic.funet.fi).
 
-   C:*.fi::*.fi
-   N:*.fi::*.fi
+	I advice you to not to use wildcard servers before you know
+	for sure how they are used, they are mostly beneficial for
+	backbones of countries and other large areas with common domain.
 
 
    2. MACHINE INFORMATION
@@ -287,9 +331,9 @@ Field: 1        2              3                4               5
                 M:orion.cair.du.edu::Denver Colorado, USA:6667
 
                 This line reads: My Hosts name is "orion.cair.du.edu"
-                and my site is located in "Denver
-                Colorado, USA".  I have defined Internet Port
-                number "6667" to be used as my IRCD Socket Port.
+                and my site is located in "Denver Colorado, USA".
+	        I have defined Internet Port number "6667" to be used
+                as my IRCD Socket Port.
 
 
    3. CLIENT CONNECTIONS -   How to let clients connect to your IRCD.
@@ -308,18 +352,20 @@ Field: 1        2              3                4               5
 
    The format of this entry in the conf file is:
 
-            I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Internet Port>
-      Field:1         2               3             4                5
+          I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Internet Port>
+    Field:1         2               3             4                5
 
 
       For example, if you were installing IRC on tolsun.oulu.fi and you wanted
-      to allow examples sake let us assume you were making this file for TOLSUN
-      and you wanted to let your own clients to connect to your server,
-      you would add this entry to the file:
+      to allow examples sake let us assume you were making this file for
+      tolsun and you wanted to let your own clients to connect to your
+      server, you would add this entry to the file:
 
-          I:128.214.5.6::tolsun.oulu.fi
+      I:128.214.5.6::tolsun.oulu.fi
+      or
+      I:tolsun.oulu.fi::tolsun.oulu.fi
 
-      If you wanted to let remove clients connect, you could add the
+      If you wanted to let remote clients connect, you could add the
       following lines:
 
       I:*.du.edu::*.du.edu
@@ -327,26 +373,35 @@ Field: 1        2              3                4               5
       Allow any clients from machines whose names end in "du.edu" to connect
       with no password.
 
-      I:128.193.64.132::hal.oce.orst.edu
+      I:128.214.6.100::nic.funet.fi
 
       Allow clients from a machine with that IP number and the name 
-      hal.oce.orst.edu to connect.
+      nic.funet.fi to connect.
 
-      I:naakka.tut.fi:secret:naakka.tu.fi
+      I:*.tut.fi:secret:*.tut.fi
 
-      Allow clients from naakka.tut.fi to connect with the password 'secret'.
+      Allow clients from machines matching *.tut.fi to connect
+      with the password 'secret'.
 
+      I:*::*
+
+      Allow anyone from anywhere to connect your server.
+      This is the easiest way, but it also allows people to for example
+      dump files to your server, or connect 1000 (or how many open
+      sockets per process your OS allows) clients to your machine
+      and take your network ports. Of course the same things can be
+      done by simply telnetting to your machine's SMTP port (for example).
 
    4. DEFAULT HOSTS (for local clients)
 
-      This defines the default connection for the ircd client.  If you are
+      This defines the default connection for the irc client.  If you are
       running an ircd server on the same machine, you will want to define
       this command to connect to your own host.  If your site is not running
       a server then this command should contain the TARGET host's connection
       information and password (if any).  The format for this command is:
 
-             U:<TARGET Host addr>:<Password>:<TARGET Host NAME>:<Internet Port>
-      Field: 1         2              3                4            5
+         U:<TARGET Host addr>:<Password>:<TARGET Host NAME>:<Internet Port>
+  Field: 1         2              3                4            5
    
 
       For example:
@@ -356,11 +411,8 @@ Field: 1        2              3                4               5
            U:tolsun.oulu.fi::tolsun.oulu.fi
 
       If the port number is omitted, irc will default to using 6667.
- 
 
-
-
-  5. OPERATOR Priviliges:  How to become the IRC administrator on your site
+  5. OPERATOR Privileges:  How to become the IRC administrator on your site
 
    To become an IRC Administrator, IRC must know who is authorized to become
    an operator and what their "Nickname" and "Password" is.  To add this
@@ -372,8 +424,10 @@ Field: 1        2              3                4               5
 
   Explanation:
  
-     Field 1: Speficies Operator record.
-
+     Field 1: Speficies Operator record. If you use capital letter ('O')
+              in it, it specifies a global operator. Small letter ('o')
+              specifies a local operator. Local operator has basically the
+              same rights except global operator with some restrictions.
  
      Field 2: Tells IRC which host you have the privileges FROM.  This
               means that you should be logged into this host when you
@@ -438,16 +492,16 @@ Field: 1        2              3                4               5
        Field 4: Is really an OTHER field - you can add what you want here,
                 
 
-  Examples:
+  Examples (the line is just one line in the confuration file, here it
+            is cut into two lines to make it clearer to read):
 
-A:Jeff Trim -  Denver Colorado, USA:INET jtrim@orion.cair.du.edu UUCP {hao, isi
-s}!udenva!jtrim:Terve! Hei! Heippa!  Have you said hello in Finnish today?
- ;)
+A:Jeff Trim -  Denver Colorado, USA:INET jtrim@orion.cair.du.edu UUCP {hao,
+isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
 
   Would look like this when printed out with the /admin command:
 
       Jeff Trim -  Denver Colorado, USA
-      INET jtrim@orion.cair.du.edu   UUCP {hao, isis}!udenva!jtrim
+      INET jtrim@orion.cair.du.edu   UUCP {hao,isis}!udenva!jtrim
       Terve! Hei! Heippa!  Have you said hello in Finnish today? ;)
  
  
@@ -467,8 +521,8 @@ s}!udenva!jtrim:Terve! Hei! Heippa!  Have you said hello in Finnish today?
 
   The format of this command is:
 
-         K:<Host Name>::<User>
-  Field: 1     2      3   4
+         K:<Host Name>:<time interval(s)>:<User>
+  Field: 1     2               3            4
 
   Explanation:
 
@@ -476,14 +530,19 @@ s}!udenva!jtrim:Terve! Hei! Heippa!  Have you said hello in Finnish today?
                  entry.
 
        Field 2:  In this field you specify the Hostname that the user is 
-                 connecting from.  If you user you wanted REMOVED connects
+                 connecting from.  If you wanted to REMOVE connects
                  to IRC from "orion.cair.du.edu" then you would want to enter
                  "orion.cair.du.edu".  If you want to REMOVE ALL HOSTS
                  access you can use '*' (Wild Card notation) and no matter
                  what host the USERNAME (specified in Field 4) connects from
-                 s/he will be denied access.
+                 s/he will be denied access. Removing all hosts isn't
+                 very smart thing to do though, why would you run an ircd
+                 if you allow nobody to connect to it anyways ?
 
-       Field 3:  ** NOT USED ** -- leave NULL (no spaces)
+       Field 3:  Either leave this field empty (no spaces), then then lines
+		 is active continuously for the specified user/host machine.
+		 You may also specify intervals during the line should be
+		 active, see examples above.
     
        Field 4:  The USERNAME of the user you want removed from IRC.  For
                  example 'root'.
@@ -506,18 +565,102 @@ s}!udenva!jtrim:Terve! Hei! Heippa!  Have you said hello in Finnish today?
                This line reads "I don't care WHAT HOST user 'vijay' is on,
                I will NEVER allow username 'vijay' to login to my IRCD.
 
+	           K:*.oulu.fi:0800-1200,1400-1900:*
 
+	       This disallows all users from hosts with enddomain 'oulu.fi'
+	       access to your server between 8 and 12am, 2 and 7pm.
+	       Users get kicked off if they're already signed on when the
+	       line becomes active (they'll get a warning 5 minutes ago).
+
+  7. Disallowing SERVERS in your irc net.
+
+   In some cases people run into difficulties in net administration.
+   For one reason or another you do not want a certain server to be
+   in your net (for example because of the security holes it opens
+   for every server if it's not secured carefully). In that case
+   you should use Q-lines in your server. When you specify a server
+   name in Q-line, everytime some server link tries to introduce you
+   a server (remember, all server names are broadcast around the net),
+   that name is checked if it matches the Q-lines in your server.
+   If it matches, then your server disconnects the link. Note that
+   just placing Q-lines to your server probably results in your server
+   being left alone, unless other servers have agreed to have the
+   same Q-line in their ircd configuration files as well.
+
+   Example:
+                Q::of the security holes:foo.bar.baz
+
+   This command excludes a server named "foo.bar.baz", the reason
+   is given to be security holes (you should give a reason, it is
+   polite). The first field is unused, so leave it empty.
+
+ 8. Connection Classes.
+
+   To enable more efficient use of MAXIMUM_LINKS, connection classes
+   were implemented. To give a connection a class, add another field
+   (a sixth) to the C/N lines for a particular server.
+   Each line for a server should have the same number as the sixth
+   field.  If it is absent, the server deaults it to 0, using the
+   defaults from the config.h file.  To define a connection class,
+   you need to include a Y: line in the irc.conf file.  This enables
+   you to define the ping frequency, connection frequency and maximum
+   number of links that class should have.  Currently, the Y: line MUST
+   appear in the irc.conf file BEFORE it is used in any other way.
+
+   The format for the line is:
+
+       Y:<CLASS NUMBER>:<PING FREQUENCY>:<CONNECT FREQUENCY>:<MAX LINKS>
+Field: 1       2                3                4                5
+
+   Field 2:  This is the class number which gains the following attributes
+   and should match that which is on the end of the C/N line.
+
+   Field 3:  This field defines how long the server will let the connection
+   remain "silent" before sending a PING message to make sure it is still
+   alive.  Unless you are sure of what you are doing, use the default value
+   which is in your config.h file.
+
+   Field 4:  By changing this number, you change how often your server
+   checks to see if it can connect to this server.  If you want to check
+   very occasionally, use a large value, but if it is an important
+   connection, you might want a smaller value so that you connect to it
+   as soon as possible.
+
+   Field 5:  This field defines the maximum number of links this class
+   will allow from automatic connections.  Using /CONNECT overrides this
+   feature.
+
+   NOTE: leaving any of the fields out means their value is 0 (ZERO)!!
+
+   example:
+
+   Y:23:120:300:5
+
+   define class 23 to allow 5 auto-connections, which are checked every
+   300 seconds.  The connection is allowed to remain silent for 120
+   seconds before a PING is sent.  NOTE: fields 3 & 4 are in seconds.
+
+   You may also give I lines a class (again the sixth field to define
+   which class).  This is only usefull (currently) for redefining the
+   ping frequency.  It can also be useful as a diagnostic to see how
+   much each I line is used when combined with the TRACE output.
+
+   Another feature of connection class is the ability to do automatic
+   routing by using the class as a 'priority'.  If you are connected
+   to a server which has a class lower than one of the servers that is
+   'behind' it, the server will disconnect the lower class one and
+   schedule a 'new' connection for the higher class server.
 
 
 Appendix A: Difference between IP addresses and hostnames
 
 
-   There are 2 different types of INETERNET addresses, NAME addresses and
+   There are 2 different types of INTERNET addresses, NAME addresses and
    NUMERIC addresses.  NAME addresses look like ENGLISH words (and indeed
    they are ENGLISH words that refer to a given host).  A NAME address looks
    like "tolsun.oulu.fi" - and that particular address refers to the machine 
-   named TOLSUN in Finland.  It is a UNIQUE address because no other machine in
-   the world has its NAME address the same as "tolsun.oulu.fi".  Anytime
+   named TOLSUN in Finland.  It is a UNIQUE address because no other machine
+   in the world has its NAME address the same as "tolsun.oulu.fi".  Anytime
    you say "telnet tolsun.oulu.fi" - you would always connect to TOLSUN in
    Finland.  NUMERIC addresses refer to those addresses that are made up of
    NUMBERS for example "128.214.5.6" is the NUMERIC address for TOLSUN.  This
@@ -546,7 +689,52 @@ Appendix A: Difference between IP addresses and hostnames
    "orion.cair.du.edu", "orion.du.edu", "orion".  ALL of these NAME addresses
    will return the NUMERIC address "130.253.1.15" which IRC will use to
    connect to the TARGET UNIX. (when I say TARGET UNIX I am refering to the
-   UNIX you want to connect to for IRC). Any futher questions about /etc/hosts 
-   should be directed to "man hosts".
+   UNIX you want to connect to for IRC). Any futher questions about
+   /etc/hosts should be directed to "man hosts".
 
 
+Appendix B: Enabling Summon Messages
+
+   +-----------------------------------------------------------------------+
+   |            E N A B L I N G    / S U M M O N    M E S S A G E S        |
+   +-----------------------------------------------------------------------+
+
+   *NOTE* You must have ROOT or special access to the GROUP tty ('/dev')
+   to do this. If you want to allow users around the world to summon
+   users at your site to irc, then you should make sure that summon works.
+
+   The "IRCD" program needs access to the GROUP of '/dev'.   This
+   directory is where user TTY's are stored (as UNIX treats each Terminal
+   as a FILE!)   IRCD needs GROUP ACCESS to /dev so that users can be
+   SUMMONED to the program by others users that are *in* the program.
+   This allows people from other Universities around the world to SUMMON
+   your users to IRC so that they can chat with them.  Berkeley, SUN, HP-UX
+   and most of the newer versions of UNIX check to see if a USER is
+   accepting MESSAGES via the GROUP access rights on their TTY listing
+   in the /dev directory. For example an entry in '/dev' looks like this:
+
+  (Unix Path on BSD 4.3 UNIX is:  /dev/ttyp0)
+
+        crw------- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+
+   You will note that 'jtrim' OWNS this terminal and can READ/WRITE to this
+   terminal as well (which makes sense because I am ENTERING DATA and
+   RECEIVEING DATA back from the UNIX).  I logged into this particular
+   UNIX on "April 29th" at "10:35am" and my TTY is "ttyp0".  But further
+   of *note* is that I do not have my MESSAGES ON! (mesg n)  -- This is
+   how my terminal would look with MESSAGES ON (mesg y):
+
+        crw--w---- 1 jtrim     20,     0 Apr 29 10:35 ttyp0
+
+   With my MESSAGES ON (mesg y) I can receive TALK(1) requests, use the 
+   UNIX WRITE(1) command and other commands that allow users to talk
+   to one another.  In IRC this would also allow me to get IRC /SUMMON
+   messages.  To set up the "IRCD" program to work with /SUMMON type
+   the following:  (using ROOT or an account that has access to '/dev').
+
+       % chgrp tty ircd
+       % chmod 6111 ircd 
+
+   The above commands read: "Give IRCD access to GROUP tty (which is /dev)
+   and then when ANYONE runs the IRCD allow SETUID and SETGID priviliges
+   so that they can use the /SUMMON command.

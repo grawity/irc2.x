@@ -30,38 +30,17 @@
  */
 
 /*
-** At this point includes are done so that if "SYSV" is defined,
-** it uses SYSV files, otherwise ANSI C standard include files
-** are assumed, for some systems one may have to twiddle with
-** these. The recommended action is actually to make those
-** ANSI include files, instead of cluttering this with complicated
-** ifdef's... >;)   --msa
-**
 ** For documentation of the *global* functions implemented here,
 ** see the header file (dbuf.h).
 **
 */
-#if HAS_ANSI_INCLUDES
-#	include <stdlib.h>
-#	include <string.h>
-#else
-#if HAS_SYSV_INCLUDES
-#	include <string.h>
-#	include <memory.h>
-#	include <malloc.h>
-#else
-char *malloc();
-extern void free();
-#endif
-#endif
-#include "struct.h"
+
+#include "config.h"
+#include "common.h"
+#include "dbuf.h"
 #include "sys.h"
 
-#ifndef NULL
-#	define NULL 0
-#endif
-
-#define BUFSIZ sizeof(((dbufbuf *)0)->data)
+#define DBUFSIZ sizeof(((dbufbuf *)0)->data)
 
 /*
 ** This is called when malloc fails. Scrap the whole content
@@ -94,8 +73,8 @@ long int length;
 	long int nbr, off;
 	int chunk;
 
-	off = (dyn->offset + dyn->length) % BUFSIZ;
-	nbr = (dyn->offset + dyn->length) / BUFSIZ;
+	off = (dyn->offset + dyn->length) % DBUFSIZ;
+	nbr = (dyn->offset + dyn->length) / DBUFSIZ;
 	/*
 	** Locate the last non-empty buffer. If the last buffer is
 	** full, the loop will terminate with 'd==NULL'. This loop
@@ -106,7 +85,7 @@ long int length;
 	/*
 	** Append users data to buffer, allocating buffers as needed
 	*/
-	chunk = BUFSIZ - off;
+	chunk = DBUFSIZ - off;
 	dyn->length += length;
 	for ( ;length > 0; h = &(d->next))
 	    {
@@ -123,7 +102,7 @@ long int length;
 		length -= chunk;
 		buf += chunk;
 		off = 0;
-		chunk = BUFSIZ;
+		chunk = DBUFSIZ;
 	    }
 	return 1;
     }
@@ -138,7 +117,7 @@ long int *length;
 		*length = 0;
 		return NULL;
 	    }
-	*length = BUFSIZ - dyn->offset;
+	*length = DBUFSIZ - dyn->offset;
 	if (*length > dyn->length)
 		*length = dyn->length;
 	return (dyn->head->data + dyn->offset);
@@ -153,7 +132,7 @@ long int length;
 
 	if (length > dyn->length)
 		length = dyn->length;
-	chunk = BUFSIZ - dyn->offset;
+	chunk = DBUFSIZ - dyn->offset;
 	while (length > 0)
 	    {
 		if (chunk > length)
@@ -161,14 +140,14 @@ long int length;
 		length -= chunk;
 		dyn->offset += chunk;
 		dyn->length -= chunk;
-		if (dyn->offset == BUFSIZ || dyn->length == 0)
+		if (dyn->offset == DBUFSIZ || dyn->length == 0)
 		    {
 			d = dyn->head;
 			dyn->head = d->next;
 			dyn->offset = 0;
 			free((void *)d);
 		    }
-		chunk = BUFSIZ;
+		chunk = DBUFSIZ;
 	    }
 	return 0;
     }

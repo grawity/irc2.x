@@ -17,6 +17,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Nov 26 10:37:31 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* bsd.c
+	Final fixes of inet_netof() and inet_nota()
+
+	* send.c
+	Changed some SendMessage() into sendto_one() (code duplication ;))
+
 Wed Jun 20 11:25:54 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 
 	Added gruner's patches.

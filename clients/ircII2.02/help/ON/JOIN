@@ -1,5 +1,0 @@
-Usage: ON [+|-|^]JOIN [-|^]<nicknames> [action]
-  This is activated whenever you someone joins a channel you are on.  
-  The parameters for the action are as follows:
-    $0    nickname of person who joined the channel
-    $1    the channel which was joined

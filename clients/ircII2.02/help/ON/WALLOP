@@ -1,6 +1,0 @@
-Usage: ON [+|-|^]WALL [-|^]<nicknames> [action]
-  This is activated whenever you receive a WALLOP (a message 
-  sent to all operators on irc).
-  The parameters for the action are as follows:
-    $0    nickname of person who sent the WALLOP
-    $1-   The message

@@ -17,22 +17,25 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-Tue Oct 30 14:10:00 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+Mon Dec 03 13:56:36 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* config.h
-	R_LINES
-	* struct.h
-	Added support for R lines
+	  Switches for NEED_* added.
 
-Fri Oct 12 18:12:22 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+Mon Nov 26 10:33:43 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
-	* config.h
-	WALLOPS_REMOTE and WALLOPS_QUARANTINE
-	support for user logging (logfile specification)
-	* msg.h
-	added a parameter to MSG_LIST (enable list channel)
-	* struct.h
-	Added support for Q lines
+	* sys.h[.SH]
+	  declaration of dummy() and restart() depending on configuration
+	  process.
+
+Sat Nov 10 18:00:44 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* New header file: common.h, should be included into all source
+	  files. Created sys.h.SH, Makefile.SH, config.h.SH; these files
+	  are extracted by running Configure.
+
+	* Added some function declarations
+	  Removed Makefile (do we need one here ?).
 
 Wed Jun 20 11:44:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 

@@ -17,7 +17,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "struct.h"
+#include "config.h"
+#include "common.h"
 #include "sys.h"
 
 /*
@@ -31,7 +32,8 @@
 int matches(mask, name)
 char *mask, *name;
     {
-	register char m, c;
+	Reg1 char m;
+	Reg2 char c;
 
 	for (;; mask++, name++)
 	    {

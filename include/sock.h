@@ -18,8 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-char sockh_id[] = "sock.h v2.0 (c) 1988 University of Oulu, Computing Center";
-
 #ifndef FD_ZERO
 #define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
 #define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))

@@ -1,4 +1,0 @@
-Usage: MAIL [CAT] <passwd+-FLAGS> <tonick> <toname@host> <time> <id> 
-  Displays tonick/toname/tohost sent from your nickname and username
-  including the content of the message. See HELP LS for more info.
-  See HELP MAIL FLAG for more info about flag settings.

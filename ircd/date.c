@@ -20,8 +20,9 @@
 
 char date_id[]="date.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
-#include "struct.h"
-#include <sys/time.h>
+#include "config.h"
+#include "common.h"
+#include "sys.h"
 
 static char *months[] = {
 	"January",	"February",	"March",	"April",
@@ -62,5 +63,29 @@ long clock;
   sprintf(buf, "%s %s %d 19%02d -- %02d:%02d %s",
 	  weekdays[ltbuf->tm_wday], months[ltbuf->tm_mon],ltbuf->tm_mday,
 	  ltbuf->tm_year, ltbuf->tm_hour,	ltbuf->tm_min, timezonename);
+  return buf;
+}
+
+/**
+ ** myctime()
+ **   This is like standard ctime()-function, but it zaps away
+ **   the newline from the end of that string. Also, it takes
+ **   the time valie as parameter, instead of pointer to it.
+ **   Note that it is necessary to copy the string to alternate
+ **   buffer (who knows how ctime() implements it, maybe it statically
+ **   has newline there ane never 'refreshes' it--zapping that
+ **   might break things in other places..
+ **
+ **/
+
+char *myctime(value)
+long value;
+{
+  char *p;
+  static char buf[28];
+
+  strcpy(buf, ctime(&value));
+  if ((p = index(buf, '\n')) != NULL)
+    *p = '\0';
   return buf;
 }

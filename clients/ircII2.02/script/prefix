@@ -1,5 +1,0 @@
-/on ^public * /echo $+ <$0> $1-
-/on ^public_other * /echo $1 <$0> $2-
-/on ^public_msg * /echo $1 ($0) $2-
-/on ^send_public * /echo $+ <$N> $1-
-/comment lynx90

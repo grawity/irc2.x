@@ -1,6 +1,0 @@
-Usage: MAIL [COUNT] <passwd+-FLAGS> <tonick> <toname@host> <time> <id>
-  MAIL [COUNT] <passwd+-FLAGS> <tonick> <toname@host> <time> <id>
-  Displays the number of messages sent from your nick and username. 
-  See also:
-     HELP MAIL LS      for more info. 
-     HELP MAIL FLAG    for more info about flag settings. 

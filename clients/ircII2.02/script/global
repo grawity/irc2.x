@@ -1,8 +1,0 @@
-/comment last change by lynx, 13 dec 90
-/set display off
-/alias d- /set display off
-/alias d+ /set display on
-/alias source /d-\\n/load /../lorien/usr/local/lib/irc/ircII/script/$*\\n/d+
-/source basical
-/source local
-/comment lynx90

@@ -19,22 +19,20 @@
  */
 
 /* -- Jto -- 16 Jun 1990
- * Added Gonzo's PRIVMSG patches...
+ * Added Armin's PRIVMSG patches...
  */
 
 char send_id[] = "send.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include "struct.h"
-
-#ifndef NULL
-#define NULL 0
-#endif
+#include "common.h"
 
 #define NEWLINE  "\n"
 
 static char sendbuf[1024];
 
 extern aClient *client;
+extern aChannel *channel;
 
 /*
 ** DeadLink
@@ -132,7 +130,8 @@ aClient *to;
 	    }
 	while (dbuf_length(&to->sendQ) > 0)
 	    {
-		msg = dbuf_map(&to->sendQ, &len); /* Returns always len > 0 */
+		msg = dbuf_map(&to->sendQ, (long *)&len);
+					/* Returns always len > 0 */
 		if ((rlen = DeliverIt(to->fd, msg, len)) < 0)
 		    {
 			DeadLink(to,"Write error to %s, closing link");
@@ -152,101 +151,115 @@ aClient *to;
 sendto_one(to, pattern, par1, par2, par3, par4, par5, par6, par7, par8)
 aClient *to;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
-    {
+{
 #if VMS
-	extern int goodbye;
+  extern int goodbye;
 	
-	if (StrEq("QUIT", pattern)) 
-		goodbye = 1;
+  if (StrEq("QUIT", pattern)) 
+    goodbye = 1;
 #endif
-	sprintf(sendbuf, pattern,
-		par1, par2, par3, par4, par5, par6, par7, par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
-	to = to->from;
-	if (to->fd < 0)
-		debug(DEBUG_ERROR,
-		      "Local socket %s with negative fd... AARGH!",
-		      to->name);
-	else
-		SendMessage(to, sendbuf, strlen(sendbuf));
-    }
+  sprintf(sendbuf, pattern,
+	  par1, par2, par3, par4, par5, par6, par7, par8);
+  strcat(sendbuf, NEWLINE);
+  debug(DEBUG_NOTICE,"%s", sendbuf);
+  to = to->from;
+  if (to->fd < 0)
+    debug(DEBUG_ERROR,
+	  "Local socket %s with negative fd... AARGH!",
+	  to->name);
+  else
+    SendMessage(to, sendbuf, strlen(sendbuf));
+}
 
 sendto_channel_butone(one, channel, pattern,
 		      par1, par2, par3, par4, par5, par6, par7, par8)
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 aChannel *channel;
+{
+  Link *link, *tmplink;
+  for (link = channel->members; link; link = link->next)
     {
-	aClient *cptr, *acptr;
-	sprintf(sendbuf, pattern, par1, par2, par3, par4, par5,
-		par6, par7,par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
-	for (cptr = client; cptr; cptr = cptr->next)
-	    {
-		if (cptr == one)
-			continue;	/* ...was the one I should skip */
-		if (!MyConnect(cptr))
-			continue;	/* ...no connection on this */
-		if (IsServer(cptr))
-		    {
-			/*
-			** Send message to server links only, if
-			** there is a user behind, on the same
-			** channel.
-			*/
-			for (acptr = client; acptr; acptr = acptr->next)
-				if (IsPerson(acptr) &&
-				    acptr->from == cptr &&
-				    acptr->user->channel == channel)
-					break;
-			if (acptr == NULL)
-				continue;	/* ...no users there! */
-		    }
-		else if (!IsPerson(cptr) || cptr->user->channel != channel)
-			continue;
-		SendMessage(cptr, sendbuf, strlen(sendbuf));
-	    }
+      if (((aClient *) link->value) == one)
+	continue;	/* ...was the one I should skip */
+      if (MyConnect(((aClient *)link->value)) &&
+	  IsRegisteredUser((aClient *)link->value)) {
+	sendto_one(link->value, pattern,
+		   par1, par2, par3, par4, par5, par6, par7, par8);
+      } else {  /* Now check whether a message has been sent to this
+		   remote link already */
+	for (tmplink = channel->members; tmplink != link;
+	     tmplink = tmplink->next) {
+	  if (((aClient *) tmplink->value)->from ==
+	      ((aClient *) link->value)->from) {
+	    break;
+	  }
+	}
+	if (tmplink == link) {
+	  sendto_one(link->value, pattern,
+		     par1, par2, par3, par4, par5, par6, par7, par8);
+	}
+      }
     }
+}
 
 sendto_serv_butone(one, pattern, par1, par2, par3, par4, par5, par6,
 		   par7, par8)
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
-    {
-	aClient *cptr;
-	sprintf(sendbuf, pattern,
-		par1, par2, par3, par4, par5, par6, par7, par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
-	for (cptr = client; cptr; cptr = cptr->next) 
-		if (MyConnect(cptr) && IsServer(cptr) && cptr != one)
-			SendMessage(cptr, sendbuf, strlen(sendbuf));
+{
+  aClient *cptr;
+  for (cptr = client; cptr; cptr = cptr->next) 
+    if (MyConnect(cptr) && IsServer(cptr) && cptr != one)
+      sendto_one(cptr, pattern,
+		 par1, par2, par3, par4, par5, par6, par7, par8);
+}
+
+/* sendto_common_channels()
+ * Sends a message to all people (inclusing user) on local server who are
+ * in same channel with user.
+ */
+sendto_common_channels(user, pattern,
+		       par1, par2, par3, par4, par5, par6, par7, par8)
+aClient *user;
+char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
+{
+  aClient *cptr;
+  aChannel *chptr;
+  for (cptr = client; cptr; cptr = cptr->next) {
+    if (!MyConnect(cptr) || IsServer(cptr) || user == cptr)
+      continue;
+    for (chptr = channel; chptr; chptr = chptr->nextch) {
+      if (IsMember(user, chptr) && IsMember(cptr, chptr)) {
+	sendto_one(cptr, pattern, par1, par2, par3, par4,
+		   par5, par6, par7, par8);
+	break;
+      }
     }
+  }
+  if (MyConnect(user))
+    sendto_one(user, pattern, par1, par2, par3, par4,
+	       par5, par6, par7, par8);
+}
 
 sendto_channel_butserv(channel, pattern,
 		       par1, par2, par3, par4, par5, par6, par7, par8)
 aChannel *channel;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
-    {
-	aClient *cptr;
-	sprintf(sendbuf, pattern,
-		par1, par2, par3, par4, par5, par6, par7, par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
-	for (cptr = client; cptr; cptr = cptr->next) 
-		if (IsPerson(cptr) && MyConnect(cptr) &&
-		    (cptr->user->channel == channel ||
-		     channel == (aChannel *) 0))
-			SendMessage(cptr, sendbuf, strlen(sendbuf));
-    }
+{
+  Link *link;
+  for (link = channel->members; link; link = link->next) {
+    if (MyConnect(((aClient *) link->value)))
+      sendto_one(link->value, pattern,
+		 par1, par2, par3, par4, par5, par6, par7, par8);
+  }
+}
 
 /*
 ** send a msg to all ppl on servers/hosts that match a specified mask
 ** (used for enhanced PRIVMSGs)
 **
-** addition -- Gonzo, 8jun90 (gruner@informatik.tu-muenchen.de)
+** addition -- Armin, 8jun90 (gruner@informatik.tu-muenchen.de)
 */
 
 static int match_it(one, mask, what)
@@ -273,10 +286,6 @@ sendto_match_butone(one, mask, what, pattern, par1, par2, par3, par4, par5,
 {
   aClient *cptr, *acptr;
   
-  sprintf(sendbuf, pattern, par1, par2, par3, par4, par5, par6, par7,
-	  par8);
-  strcat(sendbuf, NEWLINE);
-  debug(DEBUG_NOTICE,"%s", sendbuf);
   for (cptr = client; cptr; cptr = cptr->next)
     {
       if (cptr == one)        /* must skip the origin !! */
@@ -286,7 +295,7 @@ sendto_match_butone(one, mask, what, pattern, par1, par2, par3, par4, par5,
       if (IsServer(cptr))
 	{
 	  for (acptr=client; acptr; acptr=acptr->next)
-	    if (IsPerson(acptr)
+	    if (IsRegisteredUser(acptr)
 		&& match_it(acptr, mask, what)
 		&& acptr->from == cptr)
 	      break;
@@ -303,9 +312,10 @@ sendto_match_butone(one, mask, what, pattern, par1, par2, par3, par4, par5,
 	   */
 	}
       /* my client, does he match ? */
-      else if (!(IsPerson(cptr) && match_it(cptr, mask, what)))
+      else if (!(IsRegisteredUser(cptr) && match_it(cptr, mask, what)))
 	continue;
-      SendMessage(cptr, sendbuf, strlen(sendbuf));
+      sendto_one(cptr, pattern,
+			   par1, par2, par3, par4, par5, par6, par7, par8);
     }
 }
 
@@ -313,16 +323,13 @@ sendto_all_butone(one, pattern, par1, par2, par3, par4, par5,
                   par6, par7, par8)
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
-    {
-	aClient *cptr;
-	sprintf(sendbuf, pattern, par1, par2, par3, par4, par5, par6, par7,
-		par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
-	for (cptr = client; cptr; cptr = cptr->next) 
-		if (MyConnect(cptr) && !IsMe(cptr) && one != cptr)
-			SendMessage(cptr, sendbuf, strlen(sendbuf));
-    }
+{
+  aClient *cptr;
+  for (cptr = client; cptr; cptr = cptr->next) 
+    if (MyConnect(cptr) && !IsMe(cptr) && one != cptr)
+      sendto_one(cptr, pattern,
+		 par1, par2, par3, par4, par5, par6, par7, par8);
+}
 
 /*
 ** sendto_ops
@@ -330,22 +337,19 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 */
 sendto_ops(pattern, par1, par2, par3, par4, par5, par6, par7, par8)
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
-    {
-	char buf[1024];
-	aClient *cptr;
+{
+  aClient *cptr;
+  char buf[512];
 
-	sprintf(sendbuf, pattern,
-		par1, par2, par3, par4, par5, par6, par7, par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE, "%s", sendbuf);
-	for (cptr = client; cptr; cptr = cptr->next) 
-		if (MyConnect(cptr) && IsOper(cptr))
-		    {
-			sprintf(buf, "NOTICE %s :*** Notice: %s",
-				cptr->name, sendbuf);
-			SendMessage(cptr, buf, strlen(buf));
-		    }
-    }
+  for (cptr = client; cptr; cptr = cptr->next) 
+    if (MyConnect(cptr) && IsAnOper(cptr))
+      {
+	sprintf(buf, "NOTICE %s :*** Notice -- ", cptr->name);
+	strncat(buf, pattern, sizeof(buf) - strlen(buf));
+	sendto_one(cptr, buf,
+		   par1, par2, par3, par4, par5, par6, par7, par8);
+      }
+}
 
 /*
 ** sendto_ops_butone
@@ -357,10 +361,6 @@ aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
     {
 	aClient *cptr, *acptr;
-	sprintf(sendbuf, pattern, par1, par2, par3, par4, par5,
-		par6, par7,par8);
-	strcat(sendbuf, NEWLINE);
-	debug(DEBUG_NOTICE,"%s", sendbuf);
 	for (cptr = client; cptr; cptr = cptr->next)
 	    {
 		if (cptr == one)
@@ -368,20 +368,12 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 		if (!MyConnect(cptr))
 			continue;	/* ...no connection on this */
 		if (IsServer(cptr))
-		    {
-			/*
-			** Send message to server links only, if
-			** there are opers behind that link.
-			*/
-			for (acptr = client; acptr; acptr = acptr->next)
-				if (IsOper(acptr) && acptr->from == cptr)
-					break;
-			if (acptr == NULL)
-				continue;	/* ...no opers there! */
+		    {  /* Now wallops get sent to all servers... -SRB */
 		    }
 		else if (!IsOper(cptr))
 			continue;
-		SendMessage(cptr, sendbuf, strlen(sendbuf));
+      		sendto_one(cptr, pattern,
+			   par1, par2, par3, par4, par5, par6, par7, par8);
 	    }
     }
 

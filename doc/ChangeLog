@@ -1,32 +1,27 @@
-Wed Oct 31 15:34:44 1990  Tom Hopkins  (hoppie@buengf.bu.edu)
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/ChangeLog
+ *   Copyright (C) 1990, Mike Bolotski
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
-	* example.conf
-	  added an example of a restrict line, along with some brief
-	  explanation of how to use it.
+Wed Oct 31 18:05:12 1990  Jarkko Oikarinen
 
-Sat Oct 20 17:12:53 1990  Helen Trillian Rose  (hrose at bucsd)
-
-	* Operator Etiquette 
-
-	New file.
-
-	* All files
-
-	Renamed several files.
-
-	* NETWORKING
-
-	Completely reworked it to include the net split, the new backbone,
-	and the new coordinators, as well as rewriting previously
-	confusing or misleading portions.
-
-	* MANUAL
-
-	Reworked slightly for IRC II/2.5.1 compatibility.
-
-	* INSTALL
-
-	Reworked to add 2.5.1.bu.7 functionality.
+	* Added hrose@cs.bu.edu's patches to irc2.6
+	  - Documentation rewrites...
+	  - patches
 
 Fri Jun 29 18:54:40 1990  Armin Gruner (gruner@informatik.tu-muenchen.de)
 

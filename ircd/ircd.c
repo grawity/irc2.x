@@ -18,75 +18,55 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- Hoppie -- 5 Nov 1990
- * rewrote main loop to make it (hopefully) eat less CPU under bad conditions
- * and not do too much under good ones.
- * made check_pings and TryConnections exportable to help keep behavior
- * consistent.  check_pings now returns a nexttime, like TryConnections.
- */
-
-/* -- Hoppie -- 31 Oct 1990
- * added support for R lines
- */
-
-/* -- Jto -- 14 Jul 1990
- * Added Wumpus's MAXIMUM_LINKS fix...
- */
-
-/* -- Jto -- 07 Jul 1990
- * Added jlp@hamblin.byu.edu's debugtty fixes
- * Added init_messages() -call (for mail.c)
- */
-
-/* -- Jto -- 03 Jun 1990
- * Added Kill fixes from gruner@lan.informatik.tu-muenchen.de
- * Changed some subroutine call order to get error messages...
- */
-
-/* -- Jto -- 13 May 1990
- * Added fixes from msa:
- *   Fixed some messages to readable ones
- *   Added initial configuration file read success checking.
- */
-
 char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include <sys/types.h>
 #include <sys/file.h>
 #include <stdio.h>
 #include <signal.h>
-#include "config.h"  /* pick up CMDLINE_CONFIG define */
 #include "struct.h"
+#include "common.h"
+#include "sys.h"
 #include "numeric.h"
 
-#define TRUE 1
-#define FALSE 0
-
-extern int dummy();
 aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
 extern aConfItem *conf;
 extern aConfItem *find_me();
 extern char *GetClientName();
+extern aClient *find_server();
+extern aClient *AddConnection();
 
 char **myargv;
-int portnum;			/* Server port number, listening this */
-char *configfile;		/* Server configuration file */
+int portnum = -1;               /* Server port number, listening this */
+char *configfile = CONFIGFILE;	/* Server configuration file */
 int debuglevel = -1;		/* Server debug level */
 int debugtty = 0;
+int autodie = 0;
 char *debugmode = "";		/*  -"-    -"-   -"-  */
 
 int maxusersperchannel = MAXUSERSPERCHANNEL;
 
-static long lasttime;		/* ...actually kind of current event time */
+long nextconnect = -1;		/* time for next TryConnections call */
+long nextping = -1;		/* same as above for check_pings() */
 
-#ifndef TTYON
-#define START_FD 0
-#else
-#define START_FD 3
+VOIDSIG terminate()
+{
+#ifdef MSG_MAIL
+  save_messages();
 #endif
+  exit(-1);
+}
 
-restart()
+/* Not working yet...
+ * static VOIDSIG catch_hup()
+ * {
+ *   sendto_ops("Got signal SIGHUP, rehashing ircd configuration file.");
+ *   rehash();
+ * }
+ */
+
+VOIDSIG restart()
     {
 	static int restarting = 0;
 	int i;
@@ -103,8 +83,8 @@ restart()
 	    }
 	debug(DEBUG_NOTICE,"Restarting server...");
 	
-	for (i=START_FD; i<MAXFD; i++) 
-		close(i);
+	for (i = debugtty ? 3 : 0; i < MAXFD; i++) 
+		shutdown(i, 2);
 	execv(MYNAME, myargv);
 	debug(DEBUG_FATAL,"Couldn't restart server !!!!!!!!");
 	exit(-1);
@@ -119,158 +99,178 @@ restart()
 **	function should be made latest. (No harm done if this
 **	is called earlier or later...)
 */
-long TryConnections(currenttime)
+static long TryConnections(currenttime)
 long currenttime;
-    {
-	aConfItem *aconf;
-	aClient *cptr;
-	int connected = FALSE;
-	long nexttime = currenttime + HANGONRETRYDELAY;
-	int connections = 0;
-
-#ifdef MAXIMUM_LINKS
-	/*
-	 * Count the places we can connect out to
-	 */
-	for (aconf = conf; aconf; aconf = aconf->next )
-	  {
-	    if (aconf->status != CONF_CONNECT_SERVER || aconf->port <= 0)
-	      continue;
-	    /*
-	     * now we have a possible one, see if we're already connected
-	     */
-	    for (cptr = client; cptr; cptr = cptr->next)
-	      if (!IsPerson(cptr) &&
-		  mycmp(cptr->name, aconf->name) == 0) {
-		connections++;
-		break;
-	      }
-	  }
-	if ( connections >= MAXIMUM_LINKS ) {
-/*	  sendto_ops( "Punting because we have enough connections." ); */
-	  return nexttime;
-	}
-#endif
-
-	for (aconf = conf; aconf; aconf = aconf->next )
-	    {
-		if (aconf->status != CONF_CONNECT_SERVER || aconf->port <= 0)
-			continue;
-		/*
-		** Skip this entry if the use of it is still on hold until
-		** future. Otherwise handle this entry (and set it on hold
-		** until next time). Will reset only hold times, if already
-		** made one successfull connection... [this algorithm is
-		** a bit fuzzy... -- msa >;) ]
-		*/
-		if (lasttime < aconf->hold)
-		    {
-			if (aconf->hold < nexttime)
-				nexttime = aconf->hold;
-			continue;
-		    }
-		aconf->hold = lasttime + CONNECTFREQUENCY;
-		if (connected)
-			continue;
-		/*
-		** Found a CONNECT config with port specified,
-		** scan clients and see if this server is already
-		** connected?
-		*/
-		for (cptr = client; cptr; cptr = cptr->next) 
-			if (!IsPerson(cptr) &&
-			    mycmp(cptr->name, aconf->name) == 0)
-				break;
-		
-		if (cptr == NULL && connect_server(aconf) == 0)
-		    {
-			sendto_ops("Connecting to %s activated.",
-				   aconf->name);
-			connected = TRUE; /* We connect only one at time... */
-		    }
-	    }
-	return nexttime;
-    }
-
-long check_pings(currenttime)
-long currenttime;
-    {		
-      register aClient *cptr;
-      register int flag,rflag;
-      extern int find_kill();
-#if defined(R_LINES) && defined(R_LINES_OFTEN)
-      extern int find_restrict();
-#endif
-      char reply[128];
+{
+  Reg1 aConfItem *aconf;
+  Reg2 aClient *cptr;
+  aClient *acptr;
+  aConfItem *bconf, **pconf;
+  int connecting, confrq;
+  long next = 0;
+  aClass *cltmp;
+  aConfItem *con_conf;
+  int con_class;
+  
+  connecting = FALSE;
+  debug(DEBUG_DEBUG,"Connection check at   : %s", myctime(currenttime));
+  for (aconf = conf; aconf; aconf = aconf->next )
+    { /* Also when already connecting! (update holdtimes) --SRB */
+      if (!(aconf->status & CONF_CONNECT_SERVER) || aconf->port <= 0)
+	continue;
+      cltmp = Class(aconf);
+      /*
+       ** Skip this entry if the use of it is still on hold until
+       ** future. Otherwise handle this entry (and set it on hold
+       ** until next time). Will reset only hold times, if already
+       ** made one successfull connection... [this algorithm is
+       ** a bit fuzzy... -- msa >;) ]
+       */
       
-      for (cptr = client; cptr; )
-	{
-	  if (cptr->flags & FLAGS_DEADSOCKET)
-	    {
-	      /*
-	       ** Note: No need to notify opers here. It's
-	       ** already done when "FLAGS_DEADSOCKET" is set.
-	       */
-	      ExitClient((aClient *)NULL, cptr);
-	      cptr = client; /* NOTICE THIS! */
-	      continue;
-	    }
+      if ((aconf->hold > currenttime)) {
+	if ((next > aconf->hold) || (next == 0))
+	  next = aconf->hold;
+	continue;
+      }
 
-	  if (!IsMe(cptr) && cptr->fd >= 0 &&
-	      ((flag = IsPerson(cptr) ? find_kill(cptr->user->host,
-						  cptr->user->username, 
-						  reply) : 0) > 0
-	       || (lasttime - cptr->lasttime) > PINGFREQUENCY
-#if defined(R_LINES) && defined(R_LINES_OFTEN)
-	       || (rflag = IsPerson(cptr) ? 
-		    find_restrict(cptr->user->host,
-				  cptr->user->username,reply) : 0) > 0
-#endif
-	       ))
-	    {
-	      if ((lasttime - cptr->lasttime) > 2 * PINGFREQUENCY ||
-		  flag > 0 
-#if defined(R_LINES) && defined(R_LINES_OFTEN)
-		  || rflag > 0
-#endif
-		  )
-		{
-		  if (IsServer(cptr))
-		    sendto_ops("No response from %s, closing link",
-			       GetClientName(cptr,FALSE));
-		  if (flag && IsPerson(cptr))
-		    {
-		      sendto_ops("Kill line active for %s, closing link",
-				 GetClientName(cptr, FALSE));
-		      sendto_one(cptr, reply, me.name,
-				 ERR_YOUREBANNEDCREEP, cptr->name);
-		    }
-#if defined(R_LINES) && defined(R_LINES_OFTEN)
-			if (IsPerson(cptr) && rflag)
-			  {
-			    sendto_ops("Restricting %s (%s), closing link.",
-				       GetClientName(cptr,FALSE),reply);
-			    sendto_one(cptr,"%s %d :*** %s",me.name,
-				       ERR_YOUREBANNEDCREEP,reply);
-			  }
-#endif
-		  ExitClient((aClient *)NULL, cptr);
-		  cptr = client; /* NOTICE THIS! */
-		  continue;
-		}
-	      else if ((cptr->flags & FLAGS_PINGSENT) == 0)
-		{
-		  cptr->flags |= FLAGS_PINGSENT;
-		  sendto_one(cptr, "PING %s", me.name);
-		}
-	      if ((flag == -1) && IsPerson(cptr))
-		sendto_one(cptr, reply, me.name,
-			   ERR_YOUWILLBEBANNED, cptr->name);
-	    }
-	  cptr = cptr->next; /* This must be here, see "NOTICE THIS!" */
+      confrq = GetConFreq(cltmp);
+      aconf->hold = currenttime + confrq;
+      /*
+       ** Found a CONNECT config with port specified,
+       ** scan clients and see if this server is already
+       ** connected?
+       */
+      cptr = find_server(aconf->name, (void *) 0);
+      
+      if ((cptr == NULL) && 
+	  (!(connecting) || (Class(cltmp) > con_class)) &&
+	  (Links(cltmp) < MaxLinks(cltmp)))
+	{
+	  con_class = Class(cltmp);
+	  con_conf = aconf;
+	  connecting = TRUE; /* We connect only one at time... */
 	}
-      return(currenttime + 0.5*PINGFREQUENCY);
+      if ((next > aconf->hold) || (next == 0))
+	next = aconf->hold;
     }
+  if (connecting) {
+    if (connect_server(con_conf) == 0) {
+      if (con_conf->next) {  /* are we already last? */
+	for (pconf = &conf; aconf = *pconf; pconf = &(aconf->next))
+	  if (aconf == con_conf) /* put the current one at the end */
+	    *pconf = aconf->next; /* makes sure we try all connections */
+	(*pconf = con_conf)->next = 0;
+      }
+      sendto_ops("Connection to %s[%s] activated.",
+		 con_conf->name, con_conf->host);
+    }
+    if (next == 0)
+      next = currenttime; /* this for when we do routing */
+  }
+  debug(DEBUG_DEBUG,"Next connection check : %s", myctime(next));
+  return (next);
+}
+
+static long check_pings(currenttime)
+long currenttime;
+{		
+  Reg1 aClient *cptr;
+  Reg2 int killflag;
+  extern int find_kill();
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+  int rflag;
+  extern int find_restrict();
+#endif
+  char reply[128];
+  int ping;
+  aClient *ncptr;
+  long oldest = currenttime;
+
+  for (cptr = client; cptr; )
+    {
+      ncptr = cptr->next;
+      if (!MyConnect(cptr) || IsMe(cptr)) {
+	cptr = ncptr;
+	continue;
+      }
+      if (cptr->flags & FLAGS_DEADSOCKET) {
+	/*
+	 ** Note: No need to notify opers here. It's
+	 ** already done when "FLAGS_DEADSOCKET" is set.
+	 */
+	ExitClient((aClient *)NULL, cptr);
+	cptr = ncptr; /* NOTICE THIS! */
+	continue;
+      }
+      
+      killflag = IsPerson(cptr) ?
+	find_kill(cptr->user->host,
+		  cptr->user->username, reply) : 0;
+#ifdef R_LINES_OFTEN
+      rflag = IsPerson(cptr) ?
+	find_restrict(cptr->user->host,
+		      cptr->user->username, reply) : 0;
+#endif
+      ping = GetClientPing(cptr);
+      if (killflag || ((currenttime - cptr->since) > ping)
+#ifdef R_LINES_OFTEN
+	  || rflag
+#endif
+	  ) {
+	/*
+	 * If the server hasnt talked to us in 2*ping seconds
+	 * and it has a ping time, then close its connection.
+	 * If the client is a user and a KILL line was found
+	 * to be active, close this connection too.
+	 */
+	if (((currenttime - cptr->lasttime) >
+	     (2 * ping)) || killflag == ERR_YOUREBANNEDCREEP) {
+	  if (IsServer(cptr))
+	    sendto_ops("No response from %s, closing link",
+		       GetClientName(cptr,FALSE));
+	  /*
+	   * this is used for KILL lines with time
+	   * restrictions on them - send a messgae to the
+	   * user being killed first.
+	   */
+	  if (killflag == ERR_YOUREBANNEDCREEP && IsPerson(cptr)) {
+	    sendto_ops("Kill line active for %s, closing link",
+		       GetClientName(cptr, FALSE));
+	    sendto_one(cptr, reply, me.name,
+		       killflag, cptr->name);
+	  }
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+	  if (IsPerson(cptr) && rflag)
+	    {
+	      sendto_ops("Restricting %s (%s), closing link.",
+			 GetClientName(cptr,FALSE),reply);
+	      sendto_one(cptr,":%s %d :*** %s",me.name,
+			 ERR_YOUREBANNEDCREEP,reply);
+	    }
+#endif
+	  ExitClient((aClient *)NULL, cptr);
+	  cptr = ncptr; /* NOTICE THIS! */
+	  continue;
+	} else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
+	  /*
+	   * if we havent PINGed the connection and we havent
+	   * heard from it in a while, PING it to make sure
+	   * it is still alive.
+	   */
+	  cptr->flags |= FLAGS_PINGSENT;
+	  sendto_one(cptr, "PING %s", me.name);
+	}
+      }
+      if (oldest > cptr->since)
+	oldest = cptr->since;
+      if (killflag == ERR_YOUWILLBEBANNED && IsPerson(cptr))
+	sendto_one(cptr, reply, me.name, killflag, cptr->name);
+      cptr = ncptr; /* This must be here, see "NOTICE THIS!" */
+    }
+  debug(DEBUG_DEBUG,"Next check_ping() call at: %s",
+	myctime(oldest + PINGFREQUENCY));
+  return (oldest + PINGFREQUENCY);
+}
 
 /*
 ** BadCommand
@@ -278,31 +278,40 @@ long currenttime;
 **	Give error message and exit without starting anything.
 */
 static int BadCommand()
-    {
+{
+  printf(
+	 "Usage: ircd %s[-h servername] [-p portnumber] [-x loglevel] [-t]\n",
 #ifdef CMDLINE_CONFIG
-	printf(
-"Usage: ircd [-f config] [-h servername] [-p portnumber] [-x loglevel] [-t]\n");
-	printf("Server not started\n\n");
+	 "[-f config] "
 #else
-	fputs("Usage: ircd [-h servername] [-p portnumber] [-x loglevel] [-t]\n\
-Server not started\n\n", stdout);
+	 ""
 #endif
-	exit(-1);
-    }
+	 );
+  printf("Server not started\n\n");
+  exit(-1);
+  return -1;
+}
 
 main(argc, argv)
 int argc;
 char *argv[];
-    {
+{
 	aClient *cptr;
 	aConfItem *aconf;
 	int length;		/* Length of message received from client */
-	long nexttry,nextcheck;
 	char buffer[BUFSIZE];
-	myargv = argv;
+	long delay, now;
+	static int OpenLog();
+
+	myargv = argv; umask(077); /* better safe than sorry --SRB */
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, restart);
-	signal(SIGALRM, dummy);
+	signal(SIGALRM, dummy);   
+	signal(SIGTERM, restart); 
+	signal(SIGINT, terminate);
+#if !DEBUGMODE
+	signal(SIGQUIT, SIG_IGN);
+#endif
 #if RESTARTING_SYSTEMCALLS
 	/*
 	** At least on Apollo sr10.1 it seems continuing system calls
@@ -311,12 +320,6 @@ char *argv[];
 	*/
 	siginterrupt(SIGALRM, 1);
 #endif
-	setuid(geteuid());
-	if (getuid() == 0)
-	    {
-		setgid(-2);
-		setuid(-2);
-	    } 
 	getmyname(me.sockhost,sizeof(me.sockhost)-1);
 	/*
 	** All command line parameters have the syntax "-fstring"
@@ -340,11 +343,20 @@ char *argv[];
 
 		switch (flag)
 		    {
+		    case 'd': /* Per user local daemon... */
+                        setuid(getuid());
+			autodie = 1;
+                        debugtty = -1;  /* mark fd 0 to be oper connection */
+		        break;
 #ifdef CMDLINE_CONFIG
 		    case 'f':
+                        setuid(getuid());
 			configfile = p;
 			break;
 #endif
+                    case 'a':
+			autodie = 1;
+			break;
 		    case 'h':
 			strncpyzt(me.name, p, sizeof(me.name));
 			break;
@@ -353,30 +365,38 @@ char *argv[];
 				portnum = length;
 			break;
 		    case 'x':
+                        setuid(getuid());
 			debuglevel = atoi(p);
 			debugmode = *p ? p : "0";
 			break;
 		    case 't':
+                        setuid(getuid());
 			debugtty = 1;
 			break;
-	    /*      case 'c':
-			maxusersperchannel = atoi(p));
-			break; */
+		    case 'i':
+                        debugtty = -2;
+		        break;
 		    default:
 			BadCommand();
 			break;
 		    }
 	    }
 
+	setuid(geteuid());
+	if (getuid() == 0)
+	    {
+		setgid(-2);
+		setuid(-2);
+	    } 
+
 	if (debuglevel == -1)  /* didn't set debuglevel */
-           if (debugtty)       /* but asked for debugging output to tty */
+           if (debugtty > 0)   /* but asked for debugging output to tty */
                debugtty = 0;   /* turn it off */
 
-
 	if (argc > 0)
-		BadCommand(); /* Should never return from here... */
-	if (BadPtr(configfile))
-		configfile = CONFIGFILE;
+	  BadCommand(); /* Should never return from here... */
+
+	initclass();
 	if (initconf() == -1)
 	  {
 	    debug(DEBUG_FATAL,
@@ -384,7 +404,7 @@ char *argv[];
 	    printf("Couldn't open configuration file %s\n", configfile);
 	    exit(-1);
 	  }
-	init_sys(); 
+	init_sys();   
 	OpenLog();
 	/*
 	** If neither command line nor configuration defined any, use
@@ -392,48 +412,67 @@ char *argv[];
 	*/
 	if (me.name[0] == '\0')
 		strncpyzt(me.name,me.sockhost,sizeof(me.name));
-	if (portnum <= 0)
-		portnum = PORTNUM;
+	if (portnum < 0)
+	  portnum = PORTNUM;
 	me.next = NULL;
 	me.from = &me;
 	me.user = NULL;
-	me.fd = open_port(portnum);
+	me.confs = NULL;
+	me.fd = (debugtty == -2) ? 0 : open_port(portnum);
 	me.status = STAT_ME;
-	me.lasttime = me.since = getlongtime();
+	me.lasttime = me.since = me.firsttime = time(NULL);
 
 #ifdef MSG_MAIL
 	init_messages();
 #endif
-	
+	check_class();
+	if (debugtty == -1) {
+	  aClient *tmp = AddConnection(0);
+	  if (tmp)
+	    tmp->status = STAT_MASTER;
+	  else
+	    exit(1);
+	}
 	debug(DEBUG_DEBUG,"Server ready...");
 	for (;;)
 	    {
-		long delay;
-		if (nexttry < getlongtime())
-		  nexttry = TryConnections(getlongtime());
+		now = time(NULL);
+		/*
+		** We only want to connect if a connection is due,
+		** not every time through.  Note, if there are no
+		** active C lines, this call to Tryconnections is
+		** made once only; it will return 0. - avalon
+		*/
+		if (nextconnect && now >= nextconnect)
+			nextconnect = TryConnections(now);
 
+		/*
+		** take the smaller of the two 'timed' event times as
+		** the time of next event (stops us being late :) - avalon
+		*/
+		delay = MIN(nextping, nextconnect) - now;
 		/*
 		** Adjust delay to something reasonable [ad hoc values]
 		** (one might think something more clever here... --msa)
+		** We don't really need to check that often and as long
+		** as we don't delay too long, everything should be ok.
+		** waiting too long can cause things to timeout...
+		** i.e. PINGS -> a disconnection :(
+		** - avalon
 		*/
-		/* Okay, here's my try.  delay is adjusted to stop the next 
-		   time something could happen in either TryConnections or
-		   check_pings.  -Hoppie
-		*/
-
-		delay = ((nexttry < nextcheck) ? nexttry : nextcheck)
-		  - getlongtime();
-		if (delay <= 0)	
-		  delay = 1;
+		if (delay < 1)
+			delay = 1;
+		else delay = MIN(delay, TIMESEC);
 		if ((length = ReadMessage(buffer, BUFSIZE, &cptr, delay)) > 0)
-		  {
-		    cptr->lasttime = getlongtime();
-		    cptr->flags &= ~FLAGS_PINGSENT;
-		    debug(DEBUG_DEBUG,"Got message");
-		    dopacket(cptr, buffer, length);
-		  } 
+		    {
+			cptr->lasttime = time(NULL);
+			cptr->flags &= ~FLAGS_PINGSENT;
+			dopacket(cptr, buffer, length);
+		    } 
 		
-		lasttime = getlongtime();
+		debug(DEBUG_DEBUG,"Got message");
+		
+		now = time(NULL);
 		/*
 		** ...perhaps should not do these loops every time,
 		** but only if there is some chance of something
@@ -442,38 +481,14 @@ char *argv[];
 		** time might be too far away... (similarly with
 		** ping times) --msa
 		*/
-		/* A different tack:  Run these here only when there
-		** is a chance of something normal happening.  
-		** A few comments:  First, you might notice that nextcheck 
-		** will not be right the first time through the loop.  
-		** I figure if it's too small, it's not a problem since
-		** it will set itself right after one loop.  If it's too
-		** big, this is also not a problem since all that will 
-		** happen is a possible delay in checking pings before 
-		** receiving the first message which shouldn't need to be
-		** done anyway.
-		** Second, there will be a problem if conf->hold changes 
-		** outside of TryConnect.  I found two places where this 
-		** can happen, in rehash and in ReadMessage.  The rehash
-		** one is easy to take care of, simply add a call inside 
-		** of m_rehash to TryConnections (and maybe check_pings,
-		** I'm not sure.)  The one for ReadMessage is a little 
-		** more tricky.  I think the best thing is to simply 
-		** declare that delay should never be more than the 
-		** value of HANGONGOODLINK.  This won't incur a great deal
-		** of extra overhead while still keeping things connecting
-		** as fast as they ought to. --Hoppie
-		*/
-		   
-		if (nextcheck < getlongtime())
-		  nextcheck = check_pings(getlongtime());
+		if (now >= nextping)
+			nextping = check_pings(now);
 	    }
     }
 
 static int OpenLog()
     {
 	int fd;
-#ifndef TTYON
 	if (debuglevel >= 0)
 	    {
 	      if (!debugtty) /* leave debugging output on stderr */
@@ -498,6 +513,6 @@ static int OpenLog()
 			close(fd);
 		    }
 	    }
-#endif
+	return 0;
     }
 

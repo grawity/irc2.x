@@ -1,4 +1,0 @@
-Usage: SUMMON <userid>[@server]
-  Summons a user to irc.  The user currently must be logged into
-  the server machine for this to function.
-

@@ -26,15 +26,12 @@ char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center an
 
 #include <ctype.h>
 #include "struct.h"
+#include "common.h"
 #define MSGTAB
 #include "msg.h"
 #undef MSGTAB
 #include "sys.h"
 #include "numeric.h"
-
-#ifndef NULL
-#define NULL 0
-#endif
 
 extern aClient *client;
 
@@ -61,7 +58,8 @@ int n;
 **		1, if not equal
 */
 int mycmp(str1, str2)
-register char *str1, *str2;
+Reg1 char *str1;
+Reg2 char *str2;
     {
 	while ((islower(*str1) ? toupper(*str1) : *str1) ==
 	       (islower(*str2) ? toupper(*str2) : *str2))
@@ -86,13 +84,44 @@ aClient *find_client(name, cptr)
 char *name;
 aClient *cptr;
     {
-	register aClient *c2ptr;
+	Reg1 aClient *c2ptr;
 
 	if (name)
 		for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
 			if (mycmp(name, c2ptr->name) == 0)
 				return c2ptr;
 	return cptr;
+    }
+
+/*
+**  Find a user@host (server or user).
+**
+**  *Note*
+**	Semantics of this function has been changed from
+**	the old. 'name' is now assumed to be a null terminated
+**	string and the search is the for server and user.
+*/
+aClient *find_userhost(user, host, cptr, count)
+char *user, *host;
+aClient *cptr;
+int *count;
+    {
+	Reg1 aClient *c2ptr;
+	Reg2 aClient *res = (aClient *) 0;
+
+	*count = 0;
+	if (user && host)
+	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
+	    if (c2ptr->user)
+	      if (matches(host, c2ptr->user->host) == 0 &&
+		  mycmp(user, c2ptr->user->username) == 0) {
+		(*count)++;
+		res = c2ptr;
+	      }
+	if (res)
+	  return res;
+	else
+	  return cptr;
     }
 
 /*
@@ -111,27 +140,20 @@ aClient *cptr;
 aClient *find_server(name, cptr)
 char *name;
 aClient *cptr;
-    {
-	register aClient *c2ptr = (aClient *) 0;
+{
+  Reg1 aClient *c2ptr = (aClient *) 0;
 
-	if (name)
-	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
-	    if (matches(c2ptr->name, name) == 0)
-	      break;
-
-	if (c2ptr != NULL && (IsServer(c2ptr) || IsMe(c2ptr)))
-		return c2ptr;
-
-	if (name)
-	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
-	    if (matches(name, c2ptr->name) == 0)
-	      break;
-
-	if (c2ptr != NULL && (IsServer(c2ptr) || IsMe(c2ptr)))
-		return c2ptr;
-	else
-		return cptr;
+  if (name) {
+    for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) {
+      if (!IsServer(c2ptr) && !IsMe(c2ptr))
+	continue;
+      if (matches(c2ptr->name, name) == 0 ||
+	  matches(name, c2ptr->name) == 0)
+	break;
     }
+  }
+  return c2ptr;
+}
 
 /*
 **  Find person by (nick)name.
@@ -155,13 +177,14 @@ int length;
 struct Message *mptr;
     {
 	aClient *from = cptr;
-	register char *ch;
+	Reg2 char *ch;
 	char *ch2, *para[MAXPARA+1];
 	int len, i, numeric, paramcount;
 
 	debug(DEBUG_DEBUG,"Parsing: %s",buffer);
 	*sender = '\0';
 	for (ch = buffer; *ch == ' '; ch++);
+	para[0] = cptr->name;
 	if (*ch == ':')
 	    {
 		/*
@@ -185,28 +208,33 @@ struct Message *mptr;
 		*/
 		if (sender[0] != '\0' && IsServer(cptr))
 		    {
+		      from = find_server(sender, (aClient *) NULL);
+		      if (!from || matches(from->name, sender)) {
 			from = find_client(sender, (aClient *)NULL);
+			para[0] = from->name;
+		      } else
+			para[0] = sender;
 
-			/* Hmm! If the client corresponding to the
-			   prefix is not found--what is the correct
-			   action??? Now, I will ignore the message
-			   (old IRC just let it through as if the
-			   prefix just wasn't there...) --msa
-			*/
-			if (from == NULL)
-			    {
-				debug(DEBUG_NOTICE,
-				      "Unknown prefix (%s) from (%s)",
-				      buffer, cptr->name);
-				return (-1);
-			    }
-			if (from->from != cptr)
-			    {
-				debug(DEBUG_FATAL,
-				      "Message (%s) coming from (%s)",
-				      buffer, cptr->name);
-				return (-1);
-			    }
+		      /* Hmm! If the client corresponding to the
+			 prefix is not found--what is the correct
+			 action??? Now, I will ignore the message
+			 (old IRC just let it through as if the
+			 prefix just wasn't there...) --msa
+			 */
+		      if (from == NULL)
+			{
+			  debug(DEBUG_NOTICE,
+				"Unknown prefix (%s) from (%s)",
+				buffer, cptr->name);
+			  return (-1);
+			}
+		      if (from->from != cptr)
+			{
+			  debug(DEBUG_FATAL,
+				"Message (%s) coming from (%s)",
+				buffer, cptr->name);
+			  return (-1);
+			}
 		    }
 		while (*ch == ' ')
 			ch++;
@@ -248,7 +276,7 @@ struct Message *mptr;
 			** seems to be well behaving. Perhaps this message
 			** should never be generated, though...  --msa
 			** Hm, when is the buffer empty -- if a command
-			** code has been found ?? --Gonzo
+			** code has been found ?? -Armin
 			*/
 			if (buffer[0] != '\0') {
 			  if (IsPerson(from))
@@ -257,9 +285,9 @@ struct Message *mptr;
 				       me.name, ERR_UNKNOWNCOMMAND,
 				       from->name, ch);
 			  /*
-                          ** This concerns only client ... --Gonzo
+                          ** This concerns only client ... --Armin
 			  */
-			  if (!IsServer(&me))
+			  if (me.user)
 			    debug(DEBUG_ERROR,
 				  "*** Error: %s %s from server",
 				  "Unknown command", ch);
@@ -267,6 +295,12 @@ struct Message *mptr;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
+		if (mptr->flags & 1 && !IsServer(cptr) && !IsService(cptr))
+		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
+				      * (on average) to prevent dumping.
+				      * to keep the response rate up,
+				      * bursts of up to 5 msgs are allowed--SRB
+				      */
 	    }
 	/*
 	** Must the following loop really be so devious? On
@@ -279,7 +313,8 @@ struct Message *mptr;
 
 	/* Note initially true: ch2==NULL || *ch2 == ' ' !! */
 
-	para[0] = sender;
+	if (me.user)
+		para[0] = sender;
 	i = 0;
 	if (ch2 != NULL)
 	    {
@@ -316,6 +351,9 @@ struct Message *mptr;
 	else
 	    {
 		mptr->count++;
+		if (IsRegisteredUser(cptr) &&
+		    mptr->func != m_ping && mptr->func != m_pong)
+		  from->user->last = time(NULL);
 		return (*mptr->func)(cptr, from, i, para);
 	    }
     }

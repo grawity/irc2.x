@@ -1,4 +1,0 @@
-Usage: ON [+|-|^]CONNECT [-|^]<nicknames> [action]
-  This is activated whenever you receive a connect to a server.
-  The parameters for the action are as follows:
-    $0    The name of the server you connected to.

@@ -1,4 +1,0 @@
-/alias format /echo $[11]0 $1-
-/on ^public * /format <$0> $2-
-/on ^send_public * /format <$N> $1-
-/com Cheese90

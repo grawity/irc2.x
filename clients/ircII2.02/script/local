@@ -1,6 +1,0 @@
-/alias countrywho /who -s *.de
-/alias localwho /who -s uni-oldenburg.de
-/alias ld /links *.de
-/bind ^\ quote
-/comment /on -connect * /join #OL
-/comment lynx90

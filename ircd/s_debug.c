@@ -24,12 +24,14 @@ char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include <sys/file.h>
 #include <stdio.h>
 #include "struct.h"
+#include "common.h"
 #if HPUX
 #include <fcntl.h>
 #endif
 
 extern int debuglevel;
 
+#ifndef debug
 debug(level, form, para1, para2, para3, para4, para5, para6)
 int level;
 char *form, *para1, *para2, *para3, *para4, *para5, *para6;
@@ -37,6 +39,7 @@ char *form, *para1, *para2, *para3, *para4, *para5, *para6;
   if (debuglevel >= 0)
     if (level <= debuglevel) {
       fprintf(stderr, form, para1, para2, para3, para4, para5, para6);
-      fprintf(stderr, "\n");
+      fputc('\n', stderr);
     }
 }
+#endif

@@ -1,9 +1,0 @@
-Usage: SET SEND_MULTI_NICKS <ON|OFF|TOGGLE>
-  When ON, this will cause messages sent to more than one person
-  to include all of the names of the recipients in the message.
-  For example, if You send this message with SEND_MULTI_NICKS ON:
-    /MSG BigCheese,CheeseGuy,CheeseDog Howdy.
-  It will appear to the recipients as:
-    *You* BigCheese,CheeseGuy,CheeseDog:Howdy
-  If SEND_MULTI_NICKS is OFF, these messages appear as normal to
-  their recipients.

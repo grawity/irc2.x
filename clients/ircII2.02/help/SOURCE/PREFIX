@@ -1,7 +1,0 @@
-Usage: /SOURCE PREFIX
-  For those who use multiple channels without opening windows
-  for each of them. The channel name talk is coming from or going
-  to is displayed as prefix to each line.
-  Due to weird things happening between 2.5.1 and 2.6 some things
-  might look a bit confused, hopefully this will be fixed with
-  newer releases of IRCII.

@@ -22,7 +22,7 @@
  * Added jlp@hamblin.byu.edu's debugtty fix
  */
 
-/* -- Gonzo -- Jun 18 1990
+/* -- Armin -- Jun 18 1990
  * Added setdtablesize() for more socket connections
  * (sequent OS Dynix only) -- maybe select()-call must be changed ...
  */
@@ -37,11 +37,6 @@
 char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include "struct.h"
-#if HPUX
-#include <time.h>
-#else
-#include <sys/time.h>
-#endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
@@ -56,35 +51,57 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include <fcntl.h>
 #include <utmp.h>
 #include <sys/errno.h>
-#if BSD42 || ULTRIX || HPUX
-#include "sock.h"
-#endif
+#include "common.h"
 #include "sys.h"
+#include "numeric.h"
 #ifdef NeXT
 #include <arpa/nameser.h>
 #include <resolv.h>
 #endif
-
-#ifndef NULL
-#define NULL 0
-#endif
+#include "sock.h"	/* If FD_ZERO isn't define up to this point,  */
+			/* define it (BSD4.2 needs this) */
 
 #ifndef IN_LOOPBACKNET
 #define IN_LOOPBACKNET 127
 #endif
 
-#define TRUE 1
-#define FALSE 0
-
 /*  ...should really start using *.h -files instead of these :-( --msa */
 extern aClient me;
 extern aClient *client;
-extern aConfItem *find_conf();
-extern attach_conf();
+extern aConfItem *FindConf(), *attach_confs(), *FindConfName();
 extern char *GetClientName();
+extern char *MyNameForLink();
 extern int portnum;
-extern int dummy();
 extern int debugtty;
+extern long nextconnect;
+
+extern int errno;
+
+/*
+** AddLocalDomain()
+** Add the domain to hostname, if it is missing
+** (as suggested by eps@TOASTER.SFSU.EDU)
+*/
+
+static char *AddLocalDomain(hname, size)
+char *hname;
+int size;
+{
+#ifdef RES_INIT
+  /* try to fix up unqualified names */
+  if (!index(hname, '.'))
+    {
+      if (!(_res.options & RES_INIT))
+	res_init();
+      if (_res.defdname[0])
+	{
+	  strncat(hname, ".", size);
+	  strncat(hname, _res.defdname, size-2);
+	}
+    }
+#endif
+  return(hname);
+}
 
 /*
 ** AcceptNewConnections
@@ -103,11 +120,6 @@ static int AcceptNewConnections = TRUE;
 ** been reassigned to a normal connection...
 */
 
-/* These definitions would probably be in <stdio.h>? --msa */
-
-extern char *sys_errlist[]; /* Hopefull this exists on all systems --msa */
-extern int errno;
-
 /*
 ** ReportError
 **	This a replacement for perror(). Record error to log and
@@ -125,11 +137,12 @@ static int ReportError(text,cptr)
 char *text;
 aClient *cptr;
     {
-	register int errtmp = errno; /* debug may change 'errno' */
-	register char *host = cptr == NULL ? "" : GetClientName(cptr,FALSE);
+	Reg1 int errtmp = errno; /* debug may change 'errno' */
+	Reg2 char *host = cptr == NULL ? "" : GetClientName(cptr,FALSE);
+	extern char *strerror();
 
-	debug(DEBUG_ERROR,text,host,sys_errlist[errtmp]);
-	sendto_ops(text,host,sys_errlist[errtmp]);
+	debug(DEBUG_ERROR,text,host,strerror(errtmp));
+	sendto_ops(text,host,strerror(errtmp));
 	return 0;
     }
 
@@ -163,7 +176,7 @@ int portnum;
 	server.sin_port = htons(portnum);
 	for (length = 0; length < 10; length++)
 	    {
-		if (bind(sock, (struct sockaddr *)&server, sizeof(server)))
+		if (bind(sock, (struct sockaddr *) &server, sizeof(server)))
 		    {
 			ReportError("binding stream socket %s:%s",
 				    (aClient *)NULL);
@@ -174,6 +187,16 @@ int portnum;
 		else
 			break;
 	    }
+	{ /* KLUDGE to get it work... */
+	  char buf[1024];
+	  int len = sizeof(server);
+	  if (getsockname(sock, &server, &len)) {
+	    exit(1);
+	  }
+	  sprintf(buf, ":%s %d %d :Port to local server is\n",
+		  me.name, RPL_MYPORTIS, server.sin_port);
+	  write(0, buf, strlen(buf));
+	}
 	listen(sock, 3);
 	return(sock);
     }
@@ -184,19 +207,23 @@ init_sys()
 #ifdef sequent
 	setdtablesize(SEQ_NOFILE);
 #endif
-#ifndef TTYON
 #if !HPUX
 	setlinebuf(stdout);
 	setlinebuf(stderr);
 #endif
 
-        if (debugtty)           /* don't close anything or fork if */
-           return;             /* debugging is going to a tty */
+        if (debugtty > 0)           /* don't close anything or fork if */
+           return 0;                /* debugging is going to a tty */
 
+
+	close(1); close(2);
+
+	if (debugtty < 0)
+	  return 0;
 
 	if (isatty(0))
 	    {
-		close (0); close(1); close(2);
+		close(0);
 		if (fork())
 			exit(0);
 #ifdef TIOCNOTTY
@@ -209,11 +236,7 @@ init_sys()
 		setpgrp(0,getpid());
 #endif
 	    }
-	else
-	    {
-		close (0); close(1); close(2);
-	    }
-#endif
+	else close (0);
     }
 
 /*
@@ -225,30 +248,25 @@ static int check_name(cptr,hname,flags) /* Local for "check_access" */
 aClient *cptr;
 char *hname;
 int flags;
-    {
-	aConfItem *aconf;
+{
+  aConfItem *aconf;
 
-	debug(DEBUG_DEBUG,"Checking access for (%s) host", hname);
-	if (aconf = find_conf(hname, NULL, NULL, flags))
-	    {
-		/*
-		** This leaves the name that was actually used in
-		** accepting the connection into 'sockhost'
-		*/
-		strncpyzt(cptr->sockhost, hname, elementsof(cptr->sockhost));
-		debug(DEBUG_DEBUG,"Access ok, host (%s)", hname);
-		return 1;
-	    }
-	/*
-	** Copy some name (first) to 'sockhost' just in case this will
-	** not be accepted. Then we have some valid name to put into the
-	** error message...
-	*/
-	if (cptr->sockhost[0] == '\0')
-		strncpyzt(cptr->sockhost, hname, sizeof(cptr->sockhost));
-	debug(DEBUG_DEBUG,"Access checked");
-	return 0;
+  debug(DEBUG_DEBUG,"Checking access for (%s) host", hname);
+  if (aconf = attach_confs(cptr, hname, flags))
+    {
+      /*
+       ** This leaves the name that was actually used in
+       ** accepting the connection into 'sockhost'
+       */
+      if (cptr->sockhost[0] == '\0' ||
+	  index(hname, '.') && !index(cptr->sockhost, '.'))
+	strncpyzt(cptr->sockhost, hname, elementsof(cptr->sockhost));
+      debug(DEBUG_DEBUG,"Access ok, host (%s)", hname);
+      return 1;
     }
+  debug(DEBUG_DEBUG,"Access checked");
+  return 0;
+}
 
 /**
  ** check_access()
@@ -263,71 +281,72 @@ int flags;
 static int check_access(cptr, flags)
 aClient *cptr;
 int flags;
+{
+  struct sockaddr_in name;
+  struct hostent *host;
+  char *hname;
+  int len = sizeof(name);
+  
+  if (isatty(cptr->fd)) /* If descriptor is a tty, special checking... */
     {
-	struct sockaddr_in name;
-	struct hostent *host;
-	char *hname;
-	int len = sizeof(name);
-
-	if (getpeername(cptr->fd, (struct sockaddr *)&name, &len) == -1)
-	    {
-	      ReportError("Failed in connecting to %s :%s", cptr);
-	      return -2;
-	    }
-	/*
-	** If IP-address is localhost, try with the servers sockhost
-	** (as requested by EPS).
-	**
-	** ...if ULTRIX doesn't have inet_netof(), then just make
-	** that function or #if this out for ULTRIX..  --msa
-	*/
-#ifdef IN_LOOPBACKNET
-	if (inet_netof(name.sin_addr) == IN_LOOPBACKNET &&
-	    check_name(cptr,me.sockhost,flags))
-		return 0;
-#endif
-	host = gethostbyaddr((char *)&(name.sin_addr),
-			     sizeof(struct in_addr),AF_INET);
-	if (host != NULL)
-	    {
-		int i = 0;
-
-		for (hname = host->h_name; hname;
-		    hname = host->h_aliases[i++]) {
-#ifdef RES_INIT
-		    /* try to fix up unqualified names */
-		    if (!index(hname, '.')) {
-			if (!(_res.options&RES_INIT)) res_init();
-			if (_res.defdname[0]) {
-#ifndef MAXDNAME
-#define MAXDNAME 256
-#endif
-			    char fqname[MAXDNAME];
-			    sprintf(fqname, "%s.%s", hname, _res.defdname);
-			    if (check_name(cptr,fqname,flags)) return 0;
-		    	}
-		    }
-#endif
-		    if (check_name(cptr,hname,flags))
-				return 0;
-		}
-
-	    }
-#if !ULTRIX
-	/*
-	** This funny ULTRIX side step here could be removed, if
-	** someone finds 'inet_ntoa' for ULTRIX--I hear it's not
-	** present there...  --msa
-	*/
-
-	/*
-	** Last ditch attempt: try with numeric IP-address
-	*/
-	if (check_name(cptr,inet_ntoa(name.sin_addr),flags))
-		return 0;
-#endif
+      char hostbuf[HOSTLEN + 1];
+      getmyname(hostbuf, HOSTLEN);
+      hostbuf[HOSTLEN] = '\0';
+      check_name(cptr, hostbuf, flags);
+      if (cptr->confs)
+	return 0;
+      else
 	return -1;
     }
+  if (getpeername(cptr->fd, (struct sockaddr *) &name, &len) == -1)
+    {
+      ReportError("Failed in connecting to %s :%s", cptr);
+      return -2;
+    }
+  /*
+   ** If IP-address is localhost, try with the servers sockhost
+   ** (as requested by EPS).
+   **
+   ** ...if ULTRIX doesn't have inet_netof(), then just make
+   ** that function or #if this out for ULTRIX..  --msa
+   */
+
+  if (inet_netof(name.sin_addr) == IN_LOOPBACKNET)
+    check_name(cptr,me.sockhost,flags);
+
+  host = gethostbyaddr((char *)&(name.sin_addr),
+		       sizeof(struct in_addr),AF_INET);
+  if (host != NULL)
+    {
+      char tmp[HOSTLEN];
+      int i = 0;
+      
+      for (hname = host->h_name; hname; hname = host->h_aliases[i++])
+	{
+	  strncpy(tmp, hname, sizeof(tmp));
+	  AddLocalDomain(tmp, sizeof(tmp) - strlen(tmp));
+	  check_name(cptr, tmp, flags);
+	}
+    }
+
+  /*
+   ** Last ditch attempt: try with numeric IP-address
+   */
+
+  check_name(cptr,inet_ntoa(name.sin_addr),flags);
+
+  /*
+   ** Copy some name (first) to 'sockhost' just in case this will
+   ** not be accepted. Then we have some valid name to put into the
+   ** error message...
+   */
+  if (cptr->sockhost[0] == '\0')
+    strncpyzt(cptr->sockhost, inet_ntoa(name.sin_addr),
+	      sizeof(cptr->sockhost));
+  if (cptr->confs)
+    return 0;
+  return -1;
+}
 
 /*
 ** CompletedConnection
@@ -339,23 +358,31 @@ int flags;
 */
 static int CompletedConnection(cptr)
 aClient *cptr;
+{
+  aConfItem *aconf;
+  cptr->status = STAT_HANDSHAKE;
+	
+  switch (check_access(cptr, CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER))
     {
-	cptr->status = STAT_HANDSHAKE;
-	switch (check_access(cptr, CONF_NOCONNECT_SERVER))
-	    {
-	    case -1:
-	      sendto_ops("Host %s is not enabled for connecting (N-line)",
-			 GetClientName(cptr,FALSE));
-	      return FALSE;
-	    case 0:
-	      if (cptr->conf && !BadPtr(cptr->conf->passwd))
-		sendto_one(cptr, "PASS %s", cptr->conf->passwd);
-	      sendto_one(cptr, "SERVER %s %s", me.name, me.info);
-	      return (cptr->flags & FLAGS_DEADSOCKET) == 0;
-	    default:
-	      return FALSE;
-	    }
+    case -1:
+      sendto_ops("NOTICE * :Host %s is not enabled for connecting (N-line)",
+		 GetClientName(cptr,FALSE));
+      return FALSE;
+    case 0:
+      aconf = FindConf(cptr->confs, (char *) 0, CONF_CONNECT_SERVER);
+      if (!BadPtr(aconf->passwd))
+	sendto_one(cptr, "PASS %s", aconf->passwd);
+
+      if (!(aconf = FindConf(cptr->confs, (char *) 0, CONF_NOCONNECT_SERVER)))
+	return FALSE;
+
+      sendto_one(cptr, "SERVER %s %s",
+		 MyNameForLink(me.name, aconf), me.info);
+      return (cptr->flags & FLAGS_DEADSOCKET) == 0;
+    default:
+      return FALSE;
     }
+}
 
 /*
 ** CloseConnection
@@ -365,10 +392,21 @@ aClient *cptr;
 CloseConnection(cptr)
 aClient *cptr;
     {
+        Reg1 aConfItem *aconf;
+
+        if (IsServer(cptr))
+		{
+                if (aconf = FindConfName(GetClientName(cptr,FALSE),
+                                     CONF_CONNECT_SERVER))
+               		aconf->hold = MIN(aconf->hold,
+					  time(NULL) + ConfConFreq(aconf));
+                }
+
 	close(cptr->fd);
 	cptr->fd = -1;
 	dbuf_clear(&cptr->sendQ);
-	detach_conf(cptr);
+	while (cptr->confs)
+	  detach_conf(cptr, cptr->confs->value);
 	cptr->from = NULL; /* ...this should catch them! >:) --msa */
 	AcceptNewConnections = TRUE; /* ...perhaps new ones now succeed? */
     }
@@ -394,165 +432,199 @@ aClient *cptr;
 		ReportError("fcntl(fd,F_GETFL) failed for %s:%s",cptr);
 	else if (fcntl(cptr->fd, F_SETFL, res | FNDELAY) == -1)
 		ReportError("fcntl(fd,F_SETL,FNDELAY) failed for %s:%s",cptr);
+	return 0;
     }
 
+aClient *AddConnection(fd)
+int fd;
+{
+  aClient *cptr;
+  cptr = make_client((aClient *)NULL);
+  cptr->fd = fd;
+  if (check_access(cptr, CONF_CLIENT | CONF_NOCONNECT_SERVER | CONF_LOCOP
+		   | CONF_OPERATOR | CONF_CONNECT_SERVER) < 0) {
+    free(cptr);
+    return (aClient *) 0;
+  }
+  cptr->next = client;
+  client = cptr;
+  SetNonBlocking(cptr);
+  return cptr;
+}
+
 ReadMessage(buffer, buflen, from, delay)
-char *buffer;
-int buflen;
-aClient **from;
-long delay; /* Don't ever use ZERO here, unless you mean to poll and then
-	       you have to have sleep/wait somewhere else in the code. --msa */
+     char *buffer;
+     int buflen;
+     aClient **from;
+     long delay; /* Don't ever use ZERO here, unless you mean to poll and then
+		    you have to have sleep/wait somewhere else in the code. --msa */
+{
+  Reg1 aClient *cptr;
+  Reg2 int nfds;
+  int res, length, fd;
+  struct timeval wait;
+  fd_set read_set, write_set;
+  aConfItem *aconf;
+  long tval;
+  
+  for (res = 0;;)
     {
-	struct timeval wait;
-	int nfds, res, length, fd;
-	fd_set read_set, write_set;
-	aClient *cptr;
-	aConfItem *aconf;
+      tval = time (NULL) + 10; /* Allow bursts of 5 msgs (2 * 5 = 10) -SRB */
+      FD_ZERO(&read_set);
+      FD_ZERO(&write_set);
+      if (AcceptNewConnections)
+	FD_SET(me.fd, &read_set);
+      for (cptr = client; cptr; cptr = cptr->next) 
+	if (cptr->fd >= 0)
+	  {
+	    if (!IsMe(cptr))
+	      if (cptr->since > tval) /* To allow blocking an fd this 
+					 is a shorter delay than usually */
+		delay = 1;
+	      else
+		FD_SET(cptr->fd, &read_set);
+	    if (dbuf_length(&cptr->sendQ) > 0 ||
+		IsConnecting(cptr))
+	      FD_SET(cptr->fd, &write_set);
+	  }
+      wait.tv_sec = delay;
+      wait.tv_usec = 0;
+      nfds = select(FD_SETSIZE, &read_set, &write_set,
+		    (fd_set *) 0, &wait);
+      if (nfds == 0)
+	return 0;
+      else if (nfds > 0)
+	break;
+      /*
+       ** ...it comes here also, when SIGNAL's have
+       ** occurred. Perhaps should actually check the
+       ** error code...? ---msa
+       */
+      ReportError("select %s:%s",(aClient *)NULL);
+      res++;
+      if (res > 5)
+	restart();
+      sleep(10);
+    }
+  
+  /* This actually "if ()..", but now I can use "break" within
+     the body. Not happy with this, but... --msa */
+  
+  while (FD_ISSET(me.fd, &read_set))
+    {
+      nfds--;
+      if ((fd = accept(me.fd, (struct sockaddr *)0, (int *)0)) < 0)
+	{
+	  /*
+	   ** There may be many reasons for error return, but
+	   ** in otherwise correctly working environment the
+	   ** probable cause is running out of file descriptors
+	   ** (EMFILE, ENFILE or others?). The man pages for
+	   ** accept don't seem to list these as possible,
+	   ** although it's obvious that it may happen here.
+	   ** Thus no specific errors are tested at this
+	   ** point, just assume that connections cannot
+	   ** be accepted until some old is closed first.
+	   */
+	  ReportError("Cannot accept new connections %s:%s",
+		      (aClient *)NULL);
+	  AcceptNewConnections = FALSE;
+	  exit(-2);
+	}
+      cptr = make_client((aClient *)NULL); /* Local client */
+      cptr->fd = fd;
+      if (check_access(cptr, CONF_CLIENT | CONF_NOCONNECT_SERVER | CONF_LOCOP
+		       | CONF_OPERATOR | CONF_CONNECT_SERVER) >= 0)
+	{
+	  cptr->next = client;
+	  client = cptr;
+	  SetNonBlocking(cptr);
+	  break;
+	}
+      /* ... if socket was closed (-2 from check_access), then
+	 this message is also misleading, but it shouldn't
+	 really happen... --msa */
+      sendto_ops("NOTICE * :Received unauthorized connection from %s.",
+		 GetClientName(cptr,FALSE));
+      close(fd);
+      free(cptr);
+      break; /* Really! This was not a loop, just faked "if" --msa */
+    }	/* WARNING IS NORMAL HERE! */
 
-	for (res = 0;;)
+  tval = time(NULL);
+
+  for (cptr = client; cptr && nfds; cptr = cptr->next)
+    {
+      if (cptr->fd<0 || IsMe(cptr))
+	continue;
+      if (FD_ISSET(cptr->fd, &write_set))
+	{
+	  if (IsConnecting(cptr) && !CompletedConnection(cptr))
 	    {
-		wait.tv_sec = delay;
-		wait.tv_usec = 0;
-		FD_ZERO(&read_set);
-		FD_ZERO(&write_set);
-		for (cptr = client; cptr; cptr = cptr->next) 
-			if (cptr->fd >= 0)
-			    {
-				if (!IsMe(cptr) || AcceptNewConnections)
-					FD_SET(cptr->fd, &read_set);
-				if (dbuf_length(&cptr->sendQ) > 0 ||
-				    IsConnecting(cptr))
-					FD_SET(cptr->fd, &write_set);
-			    }
-		nfds = select(FD_SETSIZE, &read_set, &write_set,
-			      (fd_set *) 0, &wait);
-		if (nfds == 0)
-			return 0;
-		else if (nfds > 0)
-			break;
-		/*
-		** ...it comes here also, when SIGNAL's have
-		** occurred. Perhaps should actually check the
-		** error code...? ---msa
-		*/
-		ReportError("select %s:%s",(aClient *)NULL);
-		res++;
-		if (res > 5)
-			restart();
-		sleep(10);
+	      ExitClient(cptr,cptr);
+	      return 0; /* Cannot continue loop after exit */
 	    }
-
-	/* This actually "if ()..", but now I can use "break" within
-	   the body. Not happy with this, but... --msa */
-
-	while (FD_ISSET(me.fd, &read_set))
-	    {
-		nfds--;
-		if ((fd = accept(me.fd, (struct sockaddr *)0, (int *)0)) < 0)
-		    {
-			/*
-			** There may be many reasons for error return, but
-			** in otherwise correctly working environment the
-			** probable cause is running out of file descriptors
-			** (EMFILE, ENFILE or others?). The man pages for
-			** accept don't seem to list these as possible,
-			** although it's obvious that it may happen here.
-			** Thus no specific errors are tested at this
-			** point, just assume that connections cannot
-			** be accepted until some old is closed first.
-			*/
-			ReportError("Cannot accept new connections %s:%s",
-				    (aClient *)NULL);
-			AcceptNewConnections = FALSE;
-			break;
-		    }
-		cptr = make_client((aClient *)NULL); /* Local client */
-		cptr->fd = fd;
-		if (check_access(cptr,
-				 CONF_CLIENT | CONF_NOCONNECT_SERVER) >= 0)
-		    {
-			cptr->next = client;
-			client = cptr;
-			SetNonBlocking(cptr);
-			break;
-		    }
-		/* ... if socket was closed (-2 from check_access), then
-		   this message is also misleading, but it shouldn't
-		   really happen... --msa */
-		sendto_ops("Received unauthorized connection from %s.",
-			   GetClientName(cptr,FALSE));
-		close(fd);
-		free(cptr);
-		break; /* Really! This was not a loop, just faked "if" --msa */
-	    }
-
-	for (cptr = client; cptr && nfds; cptr = cptr->next)
-	    {
-		if (cptr->fd<0 || IsMe(cptr))
-			continue;
-		if (FD_ISSET(cptr->fd, &write_set))
-		    {
-			if (IsConnecting(cptr) && !CompletedConnection(cptr))
-			    {
-				ExitClient(cptr,cptr);
-				return 0; /* Cannot continue loop after exit */
-			    }
-			/*
-			** ...room for writing, empty some queue then...
-			*/
-			SendQueued(cptr);
-			nfds--;
-		    }
-		if (!FD_ISSET(cptr->fd, &read_set))
-			continue;
-		nfds--;
-		if ((length = read(cptr->fd, buffer, buflen)) > 0)
-		    {
-			*from = cptr;
-			return (length);
-		    }
-		/*
-		** ...hmm, with non-blocking sockets we might get
-		** here from quite valid reasons, although.. why
-		** would select report "data available" when there
-		** wasn't... so, this must be an error anyway...  --msa
-		*/
-		if (IsServer(cptr) || IsHandshake(cptr))
-		    {
-			if (length == 0)
-				sendto_ops("Server %s closed the connection",
-					   GetClientName(cptr,FALSE));
-			else
-				ReportError("Lost server connection to %s:%s",
-					    cptr);
-		    }
-		else
-			debug(DEBUG_DEBUG,"READ ERROR: fd = %d", cptr->fd);
-
-		/*
-		** Reschedule a faster reconnect, if this was a automaticly
-		** connected configuration entry. (Note that if we have had
-		** a rehash in between, the status has been changed to
-		** CONF_ILLEGAL). But only do this if it was a "good" link.
-		*/
-		if ((aconf = cptr->conf) != NULL &&
-		    aconf->status == CONF_CONNECT_SERVER)
-		    {
-			aconf->hold = getlongtime();
-			aconf->hold +=
-				(aconf->hold - cptr->since > HANGONGOODLINK) ?
-					HANGONRETRYDELAY : CONNECTFREQUENCY;
-		    }
-		ExitClient(cptr, cptr);
-		return 0; /* ...cannot continue loop, blocks freed! --msa */
-		/*
-		** Another solution would be to restart the loop from the
-		** beginning. Then we would have to issue FD_CLR for sockets
-		** which have been already read... --msa
-		*/
-	    }
-	return -1;
-    }    
+	  /*
+	   ** ...room for writing, empty some queue then...
+	   */
+	  SendQueued(cptr);
+	  nfds--;
+	}
+      if (!FD_ISSET(cptr->fd, &read_set))
+	continue;
+      nfds--;
+      if ((length = read(cptr->fd, buffer, buflen)) > 0) {
+	*from = cptr;
+	if (cptr->since < tval)
+	  cptr->since = tval;
+	return (length);
+      }
+      
+      /*
+       ** ...hmm, with non-blocking sockets we might get
+       ** here from quite valid reasons, although.. why
+       ** would select report "data available" when there
+       ** wasn't... so, this must be an error anyway...  --msa
+       */
+      if (IsServer(cptr) || IsHandshake(cptr))
+	{
+	  if (length == 0)
+	    sendto_ops("Server %s closed the connection",
+		       GetClientName(cptr,FALSE));
+	  else
+	    ReportError("Lost server connection to %s:%s",
+			cptr);
+	}
+      else
+	debug(DEBUG_DEBUG,"READ ERROR: fd = %d", cptr->fd);
+      
+      /*
+       ** Reschedule a faster reconnect, if this was a automaticly
+       ** connected configuration entry. (Note that if we have had
+       ** a rehash in between, the status has been changed to
+       ** CONF_ILLEGAL). But only do this if it was a "good" link.
+       */
+      if (cptr->confs &&
+	  (aconf = (aConfItem *) cptr->confs->value) != NULL &&
+	  aconf->status & CONF_CONNECT_SERVER)
+	{
+	  aconf->hold = time(NULL);
+	  aconf->hold +=
+	    (aconf->hold - cptr->since > HANGONGOODLINK) ?
+	      HANGONRETRYDELAY : ConfConFreq(aconf);
+	  if (nextconnect > aconf->hold)
+	    nextconnect = aconf->hold;
+	}
+      ExitClient(cptr, cptr);
+      return 0; /* ...cannot continue loop, blocks freed! --msa */
+      /*
+       ** Another solution would be to restart the loop from the
+       ** beginning. Then we would have to issue FD_CLR for sockets
+       ** which have been already read... --msa
+       */
+    }
+  return -1;
+}    
 
 
 connect_server(aconf)
@@ -563,7 +635,6 @@ aConfItem *aconf;
 	aClient *cptr = make_client((aClient *)NULL);
 	int errtmp;
 	char *tmp;
-	extern int errno;
 
 	strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
 	strncpyzt(cptr->name, aconf->name, sizeof(cptr->name));
@@ -578,12 +649,11 @@ aConfItem *aconf;
 	server.sin_family = AF_INET;
 	
 	/* MY FIX -- jtrim@duorion.cair.du.edu  (2/10/89) */
-#if !ULTRIX
+
 	if (isdigit(*(aconf->host))) 
 		server.sin_addr.s_addr = inet_addr(aconf->host);
 	else 
 	    {
-#endif
 		tmp = aconf->host;
 		hp = gethostbyname(tmp);
 		if (hp == 0)
@@ -594,9 +664,7 @@ aConfItem *aconf;
 			return(-2);
 		    }
 		bcopy(hp->h_addr, &server.sin_addr, hp->h_length);
-#if !ULTRIX
 	    }
-#endif
 	server.sin_port = htons((aconf->port > 0) ? aconf->port : portnum);
 	
 	/* End FIX */
@@ -623,7 +691,6 @@ aConfItem *aconf;
 	cptr->status = STAT_CONNECTING;
 	cptr->next = client;
 	client = cptr;
-	attach_conf(aconf,cptr);
 	return 0;
     }
 
@@ -700,8 +767,7 @@ char *namebuf, *linebuf;
 		      who->name, who->info);
 		return -1;
 	    }
-	strcpy(line,"/dev/");
-	strcat(line,linebuf);
+	sprintf(line,"/dev/%s", linebuf);
 	alarm(5);
 	if ((fd = open(line, O_WRONLY | O_NDELAY)) == -1)
 	    {
@@ -754,38 +820,22 @@ char *namebuf, *linebuf;
 getmyname(name, len)
 char *name;
 int len;
+{
+  struct hostent *hp;
+	
+  if (gethostname(name,len) < 0)
+    return -1;
+  name[len] = '\0';
+  
+  /* assume that a name containing '.' is a fully qualified domain name */
+  if (!index(name, '.'))
     {
-	struct hostent *hp;
-	
-	if (gethostname(name,len) < 0)
-		return -1;
-	name[len] = '\0';
-	
-	/* assume that a name containing '.' is a fully qualified domain name */
-	if (!index(name, '.'))
-	    {
-		if (hp = gethostbyname(name)) {
-		    strncpy(name, hp->h_name, len);
-#ifdef RES_INIT
-		    /* if we still don't have a FQDN, ask resolver */
-		    if (!index(name, '.')) {
-			if (!(_res.options&RES_INIT)) res_init();
-			if (_res.defdname[0]) {
-			    char mydname[2+sizeof _res.defdname];
-			    mydname[0]='.';
-			    strcpy(&mydname[1], _res.defdname);
-			    strncat(name, mydname, len-strlen(name));
-			}
-		    }
-#endif
-		}
-
-	    }
-	
-	return (0);
+      if (hp = gethostbyname(name))
+	{
+	strncpy(name, hp->h_name, len);
+	AddLocalDomain(name, len - strlen(name));
+      	}
     }
-
-long getlongtime()
-    {
-	return(time(0));
-    }
+  
+  return (0);
+}

@@ -1,5 +1,0 @@
-Usage: ON [+|-|^]NOTIFY_SIGNON [-|^]<nicknames> [action]
-  This is activated when someone on your notify list (see
-  NOTIFY) signs onto irc.  The parameters to the action are:
-    $0  Nickname of person who signed on
-    $1  Channel they signed on to

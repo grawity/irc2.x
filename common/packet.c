@@ -19,10 +19,12 @@
  */
  
 char packet_id[]="packet.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
-
+ 
 #include "struct.h"
+#include "common.h"
 #include "msg.h"
-
+extern aClient me;
+ 
 /*
 ** Note:
 **	It is implicitly assumed that dopacket is called only
@@ -34,8 +36,9 @@ aClient *cptr;
 char *buffer;
 int length;
     {
-	register char *ch1, *ch2;
-
+	Reg1 char *ch1;
+	Reg2 char *ch2;
+ 
 	me.receiveB += length; /* Update bytes received */
 	cptr->receiveB += length;
 	ch1 = cptr->buffer + cptr->count;
@@ -70,4 +73,4 @@ int length;
 	    }
 	cptr->count = ch1 - cptr->buffer;
     }
-
+ 

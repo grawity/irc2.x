@@ -17,45 +17,12 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* 
- * -- Hoppie -- 5 Dec 1990
- * Added support for local summon (ENABLE_SUMMON)
- *
- * -- Hoppie -- 30 Oct 1990 
- * Added support for restrict lines. (R_LINES)
- * 
- * -- Hoppie -- 12 Oct 1990
- * Added WALLOPS_REMOTE and WALLOPS_QUARANTINE, and stealth's user logging.
- *
- * -- Jto -- 14 Jul 1990
- * Added Wumpus's MAXIMUM_LINKS fix
- *
- * -- Jto -- 16 Jun 1990
- * Added new MSG_BASE (now MAIL) fixes from Wizible...
- *
- * -- Jto -- 03 Jun 1990
- * Added MSG_BASE defines to irc code
- *
- * -- Jto -- 10 May 1990
- * Added UPHOST back into config.h (Who removed it ?)
- *
- * Revision 2.4  90/05/04  23:48:36  chelsea
- * New macros, new options, a bit more tidy and more comments.
- * 
- * Revision 1.2  90/01/04  22:27:02  poohbear
- * Cleaned up to make configurations easier, fixed a few typos.
- * 
- * Revision 1.1  90/01/01  17:03:17  poohbear
- * Initial revision
- */
-
-
 /* Type of host... currently only BSD and similar are supported */
 
-#define BSD42		0	/* 4.2 BSD, SunOS 3.x */
-#define BSD43		1	/* 4.3 BSD, SunOS 4.x, Apollo */
+#define BSD		1	/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
 #define HPUX		0	/* HP-UX */
 #define ULTRIX		0	/* Vax Ultrix. */
+#define AIX             0       /* IBM ugly so-called Unix, AIX */
 #define SYSV		0	/* Does not work yet. Under construction */
 #define VMS		0	/* Should work for IRC client, not server */
 #define MAIL50		0	/* If you're running VMS 5.0 */
@@ -63,22 +30,34 @@
 
 /*
  * The following are additional symbols to define. If you are not
- * sure about them, leave them all defined as 0.
+ * sure about them, leave them all defined as they are.
  */
-#define HAVE_ANSI_INCLUDES	0 /* You have ANSI standard include files */
-#define HAVE_SYSV_INCLUDES	0 /* You have SYSV style include files */
+
+/*
+ * If you get loader errors about unreferenced function calls, you must
+ * define the following accordingly:
+ */
+#if NEXT
+#define NEED_STRERROR   0
+#else
+#define NEED_STRERROR	1	/* Your libc.a is no ANSI-library and has */
+				/* no strerror() */
+#endif
+#define NEED_STRTOK	0	/* Your libc.a hasn't strtok(3) */
+#define NEED_INET_ADDR  0	/* You need inet_addr(3)	*/
+#define NEED_INET_NTOA  0	/* You need inet_ntoa(3)	*/
+#define NEED_INET_NETOF 0	/* You need inet_netof(3)	*/
+
 
 #define HAVE_RELIABLE_SIGNALS	0
-#define	RESTARTING_SYSTEMCALLS	0 /* read/write are restarted after signals
+
+#ifdef APOLLO
+#define	RESTARTING_SYSTEMCALLS	1 
+#endif 				  /* read/write are restarted after signals
 				     defining this 1, gets siginterrupt call
 				     compiled, which attempts to remove this
 				     behaviour (apollo sr10.1/bsd4.3 needs
 				     this) */
-/*
- * Logfile is not in use unless you specifically say so when starting ircd. It
- * will use a lot of diskspace at higher debugging levels ie: above 4, so it's
- * recommended to use logging only for debugging purposes.
- */
 
 #define DEBUGMODE	1	/* define DEBUGMODE to enable debugging mode. */
 
@@ -104,7 +83,7 @@
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
- * these are only the reccommened names and paths. Change as needed.
+ * these are only the recommened names and paths. Change as needed.
  */
 
 #define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
@@ -116,19 +95,19 @@
 #define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
 #endif
 
-#define UPHOST "garfield.mit.edu"              /* Default UPHOST for irc */
+#define UPHOST "tolsun.oulu.fi"              /* Default UPHOST for irc */
                                              /* standard client        */
 
 /* ENABLE_SUMMON
- * 
+ *
  * The SUMMON command requires the ircd to be run as group tty in order
- * to work properly in many cases.  If you are on a machine where it 
+ * to work properly in many cases.  If you are on a machine where it
  * won't work, or simply don't want local users to be summoned, undefine
  * this.
- */ 
+ */
 
 /* #define ENABLE_SUMMON /* local summon */
-
+ 
 /* MAXIMUM LINKS
  *
  * This define is useful for leaf nodes and gateways. It keeps you from
@@ -152,24 +131,27 @@
  * C:blah::blah lines. Have the Americans put you in with C:blah::blah
  * lines. Then you will only connect to one of the Americans.
  *
- * If you don't want this feature, leave MAXIMUM_LINKS undefined. Setting
- * it to zero just wastes CPU time.
+ * This value is only used if you don't have server classes defined, and
+ * a server is in class 0 (the default class if none is set)
+ *
  */
 
-#define MAXIMUM_LINKS 1 /* Maximum links attempted */
+#define MAXIMUM_LINKS 10   /* Maximum links accepted */
 
-#define WALLOPS_REMOTES /* Notify all opers of remote SQUITS/CONNECTS */
+#define WALLOPS_REMOTES    /* Notify all opers of remote SQUITS/CONNECTS */
 
-#define WALLOPS_QUARANTINE /* Notify all opers of closing */
-                              /* undesirable links */
+#define WALLOPS_QUARANTINE /* Notify all opers of closing undesirable links */
 
-/* R_LINES:  The conf file now allows the existence of R lines, or 
-   restrict lines.  These allow more freedom in the ability to restrict 
-   who is to sign on and when.  What the R line does is call an outside 
-   program which returns a reply indicating whether to let the person on.
-   Because there is another program involved, Delays and overhead could result.
-   It is for this reason that there is a line in config.h to decide whether 
-   it is something you want or need. -Hoppie */
+/* R_LINES:  The conf file now allows the existence of R lines, or
+ * restrict lines.  These allow more freedom in the ability to restrict
+ * who is to sign on and when.  What the R line does is call an outside
+ * program which returns a reply indicating whether to let the person on.
+ * Because there is another program involved, Delays and overhead could
+ * result. It is for this reason that there is a line in config.h to
+ * decide whether it is something you want or need. -Hoppie
+ *
+ * The default is no R_LINES as most people probably don't need it. --Jto
+ */
 
 /* #define R_LINES /* */
 
@@ -182,17 +164,18 @@
    a resource drain, use at your own risk.  R_LINES_REHASH shouldn't be too
    bad, assuming the programs are fairly short. */
 #define R_LINES_REHASH /* */
-/* #define R_LINES_OFTEN  /* */
+#define R_LINES_OFTEN  /* */
 #endif
 
-/* #define CMDLINE_CONFIG /* allow conf file to be specified on command line */
+#define CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
  * Define this filename to maintain a list of persons who log
- * into this server.  Logging will stop when the file does not exist.
+ * into this server. Logging will stop when the file does not exist.
+ * Logging will be disable also if you do not define this.
  */
 
-#define FNAME_USERLOG "/usr/local/lib/irc/userlog" /* */
+/* #define FNAME_USERLOG "/usr/local/lib/irc/userlog" /* */
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
@@ -223,7 +206,7 @@
  * (PINGFREQUENCY * 2) seconds, then the connection will be closed.
  */
 
-#define PINGFREQUENCY    90	/* Recommended value: 90 */
+#define PINGFREQUENCY    120	/* Recommended value: 120 */
 
 
 /*
@@ -231,7 +214,7 @@
  * CONNECTFREQUENCY  seconds.
  */
 
-#define CONNECTFREQUENCY 1200	/* Recommended value: 1200 */
+#define CONNECTFREQUENCY 600	/* Recommended value: 600 */
 
 /*
  * Often net breaks for a short time and it's useful to try to
@@ -262,15 +245,14 @@
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
 
-#define MAXSENDQLENGTH 24000 /* Recommended value: 24000 for leaves */
-                             /* 32000 (or more) for backbone sites */
+#define MAXSENDQLENGTH 100000    /* Recommended value: 50000 for leaves */
+                                 /*                    100000 for backbones */
 
 
-#if LOG
-# define TTYON
-#else
-# undef TTYON
-#endif
+/*
+ * Max number of channels a user is allowed to join.
+ */
+#define MAXCHANNELSPERUSER  10
 
 #if HAVECURSES
 # define DOCURSES
@@ -291,6 +273,7 @@
 #if DEBUGMODE
 # define LOGFILE LPATH
 #else
+# define debug          (void)          /* anybody have a better idea? --SRB */
 # if VMS
 #	define LOGFILE "NLA0:"
 # else
@@ -306,5 +289,19 @@
 #define SEQ_NOFILE    128        /* set to your current kernel impl, */
 #endif                           /* max number of socket connections */
 
-#undef GETPASS                  /* Whether password non-echoing query */
-                                /* should work or not..               */
+#define Reg1 register
+#define Reg2 register
+#define Reg3 register
+#define Reg4 register
+#define Reg5 register
+#define Reg6 register
+#define Reg7 register
+#define Reg8 register
+#define Reg9 register
+#define Reg10 register
+#define Reg11 
+#define Reg12 
+#define Reg13 
+#define Reg14 
+#define Reg15 
+#define Reg16 

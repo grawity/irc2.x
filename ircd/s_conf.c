@@ -18,15 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- Hoppie 31 Oct 1990
- * added support for R lines in initconf()
- * added function find_restrict()
- */
-
-/* -- Hoppie 12 Oct 1990
- * Added support for Q lines in initconf()
- */
-
 /* -- Jto -- 20 Jun 1990
  * Added gruner's overnight fix..
  */
@@ -54,21 +45,17 @@ char conf_id[] = "conf.c v2.0 (c) 1988 University of Oulu, Computing Center and 
 
 #include <stdio.h>
 #include "struct.h"
+#include "common.h"
 #include "sys.h"
 #include "numeric.h"
 
 aConfItem *conf = NULL;
+
 extern int portnum;
 extern char *configfile;
+extern long nextconnect;
 
-static MyFree(x)
-char *x;
-    {
-	if (x != NULL)
-		free(x);
-    }
-
-static char *MyMalloc(x)
+char *MyMalloc(x)
 int x;
     {
 	char *ret = (char *) malloc(x);
@@ -81,11 +68,22 @@ int x;
 	return ret;
     }
 
-#define DupString(x,y) do { x = MyMalloc(strlen(y)+1); strcpy(x, y);}while (0)
+char *MyRealloc(p,x)
+char *p; int x;
+{
+  char *ret=(char*)realloc(p,x);
+ 
+  if (!ret)
+    {    
+      debug(DEBUG_FATAL, "Out of memory: restarting server...");
+      restart();
+    }
+  return ret;
+}  
 
 static aConfItem *make_conf()
     {
-	aConfItem *cptr =(struct Confitem *) MyMalloc(sizeof(struct Confitem));
+	aConfItem *cptr =(struct ConfItem *) MyMalloc(sizeof(struct ConfItem));
 	
 	cptr->next = NULL;
 	cptr->host = cptr->passwd = cptr->name = NULL;
@@ -93,6 +91,7 @@ static aConfItem *make_conf()
 	cptr->clients = 0;
 	cptr->port = 0;
 	cptr->hold = 0;
+	Class(cptr) = NULL;
 	return (cptr);
     }
 
@@ -103,22 +102,91 @@ aConfItem *aconf;
 	MyFree(aconf->passwd);
 	MyFree(aconf->name);
 	free(aconf);
+	return 0;
     }
 
 /*
+ * det_confs_butone
+ *   Removes all configuration fields except one from the client
+ *
+ */
+det_confs_butone(cptr, aconf)
+aClient *cptr;
+aConfItem *aconf;
+{
+  Link *tmp;
+  tmp = cptr->confs;
+  while (tmp && tmp->value == (char *) aconf)
+    tmp = tmp->next;
+  while (tmp) {
+    detach_conf(cptr, tmp->value);
+    tmp = cptr->confs;
+    while (tmp && tmp->value == (char *) aconf)
+      tmp = tmp->next;
+  }
+}
+
+/*
+ * remove all conf entries from the client except those which match
+ * the status field mask.
+ */
+det_confs_butmask(cptr, mask)
+aClient *cptr;
+int mask;
+{
+  Link *tmp, *tmp2;
+  tmp = cptr->confs;
+  while (tmp && tmp->value) {
+    tmp2 = tmp->next;
+    if ( ( ((aConfItem *)tmp->value)->status & mask) == 0)
+      detach_conf(cptr, tmp->value);
+    tmp = tmp2;
+  }
+}
+/*
 ** detach_conf
 **	Disassociate configuration from the client.
+**      Also removes a class from the list if marked for deleting.
 */
-detach_conf(cptr)
+detach_conf(cptr, aconf)
 aClient *cptr;
-    {
-	aConfItem *aconf = cptr->conf;
+aConfItem *aconf;
+{
+  Link **link, *tmp;
 
-	if (aconf != NULL &&
-	    --aconf->clients == 0 &&
-	    aconf->status == CONF_ILLEGAL)
-		free_conf(aconf);
-    }
+  link = &(cptr->confs);
+
+  while (*link) {
+    if ((*link)->value == (char *) aconf) {
+      if ((aconf) && (Class(aconf)) && --ConfLinks(aconf) == 0 &&
+	  ConfMaxLinks(aconf) == -1)
+	free(Class(aconf));
+
+      if (aconf != NULL &&
+	  --aconf->clients == 0 &&
+	  aconf->status == CONF_ILLEGAL)
+	free_conf(aconf);
+      tmp = *link;
+      *link = (*link)->next;
+      free(tmp);
+    } else
+      link = &((*link)->next);
+  }
+}
+
+static int
+IsAttached(aconf, cptr)
+aConfItem *aconf;
+aClient *cptr;
+{
+  Link *link = cptr->confs;
+  while (link) {
+    if (link->value == (char *) aconf)
+      break;
+    link = link->next;
+  }
+  return (link) ? 1 : 0;
+}
 
 /*
 ** attach_conf
@@ -130,13 +198,20 @@ aClient *cptr;
 attach_conf(aconf,cptr)
 aConfItem *aconf;
 aClient *cptr;
-    {
-	if (cptr->conf == aconf)
-		return;
-	detach_conf(cptr);
-	aconf->clients += 1;
-	cptr->conf = aconf;
-    }
+{
+  Link *link;
+  if (IsAttached(aconf, cptr))
+    return;
+  link = (Link *) MyMalloc(sizeof(Link));
+  link->next = cptr->confs;
+  link->value = (char *) aconf;
+  cptr->confs = link;
+  aconf->clients += 1;
+  if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
+      CONF_NOCONNECT_SERVER))
+    ConfLinks(aconf)++;
+  return 0;
+}
 
 
 aConfItem *find_admin()
@@ -160,57 +235,111 @@ aConfItem *find_me()
 	return (aconf);
     }
 
-aConfItem *find_conf(host, aconf, name, statmask)
-char *host, *name;
-aConfItem *aconf;
+aConfItem *attach_confs(cptr, host, statmask)
+aClient *cptr;
+char *host;
 int statmask;
-    {
-	aConfItem *tmp;
-	int len = strlen(host);
-	int namelen = name ? strlen(name) : 0;
+{
+  aConfItem *tmp, *first = (aConfItem *) 0;
+  int len = strlen(host);
+  
+  if (len > HOSTLEN)
+    return (aConfItem *) 0;
 
-	if (len > HOSTLEN || namelen > HOSTLEN)
-		return aconf;
-	for (tmp = conf; tmp; tmp = tmp->next)
-		/*
-		** Accept if the *real* hostname (usually sockecthost)
-		** matches *either* host or name field of the configuration.
-		*/
-		if ((tmp->status & statmask) &&
-		    (matches(tmp->host, host) == 0 ||
-		     matches(tmp->name, host) == 0))
-			/*
-			** In addition, if 'name' is defined,
-			** require it matches the configuration
-			** name field...
-			*/
-			if (name == NULL || matches(tmp->name, name) == 0)
-				break;
-	return((tmp) ? tmp : aconf);
+  for (tmp = conf; tmp; tmp = tmp->next) {
+    if ((tmp->status & statmask) &&
+	(tmp->status & CONF_CONNECT_SERVER) == 0 &&
+	(tmp->status & CONF_NOCONNECT_SERVER) == 0 &&
+	(matches(tmp->host, host) == 0)) {
+      if (!first)
+	first = tmp;
+      attach_conf(tmp, cptr);
+    } else if ((tmp->status & statmask) &&
+	       ((tmp->status & CONF_CONNECT_SERVER) ||
+		(tmp->status & CONF_NOCONNECT_SERVER)) &&
+	       (mycmp(tmp->host, host) == 0)) {
+      if (!first)
+	first = tmp;
+      attach_conf(tmp, cptr);
     }
+  }
+  return(first);
+}
+
+aConfItem *FindConfName(name, statmask)
+char *name;
+int statmask;
+{
+  aConfItem *tmp;
+  
+  for (tmp = conf; tmp; tmp = tmp->next) {
+    /*
+     ** Accept if the *real* hostname (usually sockecthost)
+     ** matches *either* host or name field of the configuration.
+     */
+    if ((tmp->status & statmask) &&
+	(matches(tmp->name, name) == 0)) {
+      break;
+    }
+  }
+  return(tmp);
+}
+
+aConfItem *FindConf(link, name, statmask)
+char *name;
+Link *link;
+int statmask;
+{
+  aConfItem *tmp;
+  int namelen = name ? strlen(name) : 0;
+  
+  if (namelen > HOSTLEN)
+    return (aConfItem *) 0;
+
+  for (; link; link = link->next) {
+    tmp = (aConfItem *) link->value;
+    if ((tmp->status & statmask) &&
+	(((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)) == 0
+	 && (!name || matches(tmp->name, name) == 0)) ||
+	((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)
+	 && (!name || mycmp(tmp->name, name) == 0)))))
+      break;
+  }
+  return(link ? tmp : (aConfItem *) 0);
+}
 
 rehash()
     {
 	aConfItem *tmp = conf, *tmp2;
+	aClass *cltmp, *cltmp2;
+
 	while (tmp)
-	    {
-		tmp2 = tmp->next;
-		if (tmp->clients)
-		    {
-			/*
-			** Configuration entry is still in use by some
-			** local clients, cannot delete it--mark it so
-			** that it will be deleted when the last client
-			** exits...
-			*/
-			tmp->status = CONF_ILLEGAL;
-			tmp->next = NULL;
-		    }
-		else
-			free_conf(tmp);
-		
-		tmp = tmp2;
-	    }
+	  {
+	    tmp2 = tmp->next;
+	    if (tmp->clients)
+	      {
+		/*
+		 ** Configuration entry is still in use by some
+		 ** local clients, cannot delete it--mark it so
+		 ** that it will be deleted when the last client
+		 ** exits...
+		 */
+		tmp->status = CONF_ILLEGAL;
+		tmp->next = NULL;
+	      }
+	    else
+	      free_conf(tmp);
+	    
+	    tmp = tmp2;
+	  }
+
+	/*
+	 * We don't delete the class table, rather mark all entries
+	 * for deletion. The table is cleaned up by check_class. - avalon
+	 */
+	for (cltmp = NextClass(FirstClass()); cltmp; cltmp = NextClass(cltmp))
+	  MaxLinks(cltmp) = -1;
+
 	conf = (aConfItem *) 0;
 	initconf();
     }
@@ -224,10 +353,14 @@ extern char *getfield();
  **    returns -1, if file cannot be opened
  **             0, if file opened
  **/
+
+#define MAXCONFLINKS 150
+
 initconf()
     {
 	FILE *fd;
-	char line[256], *tmp;
+	char line[256], *tmp, type, c[80];
+	int ccount = 0, ncount = 0, illegal;
 	aConfItem *aconf;
 	if (!(fd = fopen(configfile,"r")))
 		return(-1);
@@ -237,51 +370,67 @@ initconf()
 		    line[0] == ' ' || line[0] == '\t')
 			continue;
 		aconf = make_conf();
+		illegal = 0;
+
 		switch (*getfield(line))
 		    {
 		    case 'C':   /* Server where I should try to connect */
 		    case 'c':   /* in case of link failures             */
-			aconf->status = CONF_CONNECT_SERVER;
-			break;
+		      ccount++;
+		      aconf->status = CONF_CONNECT_SERVER;
+		      break;
 		    case 'I':   /* Just plain normal irc client trying  */
 		    case 'i':   /* to connect me */
-			aconf->status = CONF_CLIENT;
-			break;
+		      aconf->status = CONF_CLIENT;
+		      Class(aconf) = find_class(0);
+		      break;
 		    case 'K':   /* Kill user line on irc.conf           */
 		    case 'k':
-			aconf->status = CONF_KILL;
-			break;
+		      aconf->status = CONF_KILL;
+		      break;
 		    case 'N':   /* Server where I should NOT try to     */
 		    case 'n':   /* connect in case of link failures     */
-			/* but which tries to connect ME        */
-			aconf->status = CONF_NOCONNECT_SERVER;
-			break;
+			        /* but which tries to connect ME        */
+		      ++ncount;
+		      aconf->status = CONF_NOCONNECT_SERVER;
+		      break;
 		    case 'U':   /* Uphost, ie. host where client reading */
 		    case 'u':   /* this should connect.                  */
-			/* This is for client only, I must ignore this */
-			/* ...U-line should be removed... --msa */
-			break;    
+		      /* This is for client only, I must ignore this */
+		      /* ...U-line should be removed... --msa */
+		      break;    
 		    case 'O':   /* Operator. Line should contain at least */
-		    case 'o':   /* password and host where connection is  */
-			aconf->status = CONF_OPERATOR;      /* allowed from */
-			break;
-		    case 'M':   /* Me. Host field is name used for this host */
-		    case 'm':   /* and port number is the number of the port */
+		                /* password and host where connection is  */
+		      aconf->status = CONF_OPERATOR;      /* allowed from */
+		      break;
+		    case 'o':   /* Local Operator, operator but with */
+		      aconf->status = CONF_LOCOP; /* limited privs --SRB */
+		      break;
+		    case 'S':   /* Service. Same semantics as   */
+		    case 's':   /* CONF_OPERATOR                */
+		      aconf->status = CONF_SERVICE;
+		      break;
+		    case 'M':  /* Me. Host field is name used for this host */
+		    case 'm':  /* and port number is the number of the port */
 			aconf->status = CONF_ME;
 			break;
 		    case 'A':   /* Name, e-mail address of administrator */
 		    case 'a':   /* of this server. */
 			aconf->status = CONF_ADMIN;
 			break;
-		      case 'Q': /* a server that you don't want in your */
-		      case 'q': /* network.  USE WITH CAUTION! */
-			aconf->status = CONF_QUARANTINED_SERVER;
-			break;
+		    case 'Y':
+		    case 'y':
+		        aconf->status = CONF_CLASS;
+		        break;
+		    case 'Q':   /* a server that you don't want in your */
+		    case 'q':   /* network. USE WITH CAUTION! */
+		        aconf->status = CONF_QUARANTINED_SERVER;
+  		        break;
 #ifdef R_LINES
-		      case 'R': /* extended K line */
-		      case 'r': /* Offers more options of how to restrict */
-			aconf->status = CONF_RESTRICT;
-			break;
+		    case 'R': /* extended K line */
+		    case 'r': /* Offers more options of how to restrict */
+		      aconf->status = CONF_RESTRICT;
+		      break;
 #endif
 		    default:
 			debug(DEBUG_ERROR, "Error in config file: %s", line);
@@ -297,21 +446,58 @@ initconf()
 		for (;;) /* Fake loop, that I can use break here --msa */
 		    {
 			if ((tmp = getfield(NULL)) == NULL)
-				break;
+			  break;
 			DupString(aconf->host,tmp);
 			if ((tmp = getfield(NULL)) == NULL)
-				break;
+			  break;
 			DupString(aconf->passwd,tmp);
 			if ((tmp = getfield(NULL)) == NULL)
-				break;
+			  break;
 			DupString(aconf->name,tmp);
 			if ((tmp = getfield(NULL)) == NULL)
-				break;
-			if ((aconf->port = atoi(tmp)) == 0)
-				debug(DEBUG_ERROR,
-				  "Error in config file, illegal port field");
+			  break;
+			aconf->port = atoi(tmp);
+			if ((tmp = getfield(NULL)) == NULL)
+			  break;
+			Class(aconf) = find_class(atoi(tmp));
 			break;
 		    }
+
+		/*
+                ** If conf line is a class definition, create a class entry
+                ** for it and make the conf_line illegal and delete it.
+                */
+		if (aconf->status == CONF_CLASS) {
+		  AddClass(atoi(aconf->host), atoi(aconf->passwd),
+			   atoi(aconf->name), aconf->port);
+		}
+
+		if (aconf->status == CONF_CONNECT_SERVER ||
+		    aconf->status == CONF_NOCONNECT_SERVER ||
+		    aconf->status == CONF_CLASS) {
+		  if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
+		      aconf->host && index(aconf->host, '*')) {
+		    if (aconf->host)
+		      free(aconf->host);
+		    if (aconf->passwd)
+		      free(aconf->passwd);
+		    if (aconf->name)
+		      free(aconf->name);
+		    conf = aconf->next;
+		    free(aconf);
+		    continue;
+		  }
+		}
+
+		/*
+                ** associate each conf line with a class by using a pointer
+                ** to the correct class record. -avalon
+                */
+		if ((aconf->status == CONF_NOCONNECT_SERVER ||
+		     aconf->status == CONF_CONNECT_SERVER) &&
+		    Class(aconf) == 0)
+		  Class(aconf) = find_class(0);
+
 		/*
 		** Own port and name cannot be changed after the startup.
 		** (or could be allowed, but only if all links are closed
@@ -326,14 +512,18 @@ initconf()
 			if (me.name[0] == '\0' && aconf->host[0])
 				strncpyzt(me.name, aconf->host,
 					  sizeof(me.name));
-			if (portnum <= 0 && aconf->port > 0)
+			if (portnum < 0 && aconf->port >= 0)
 				portnum = aconf->port;
 		    }
-		debug(DEBUG_NOTICE, "Read Init: (%d) (%s) (%s) (%s) (%d)",
+		debug(DEBUG_NOTICE,
+		      "Read Init: (%d) (%s) (%s) (%s) (%d) (%d)",
 		      aconf->status, aconf->host, aconf->passwd,
-		      aconf->name, aconf->port);
+		      aconf->name, aconf->port,
+		      Class(aconf) ? ConfClass(aconf) : 0);
 	    }
 	fclose(fd);
+	check_class();
+	nextconnect = time(NULL);
 	return (0);
     }
 
@@ -341,19 +531,18 @@ int find_kill(host, name, reply)
 char *host, *name, *reply;
     {
 	aConfItem *tmp;
-	int check_time_interval();
-	int rc = 1;
+	static int check_time_interval();
+	int rc = ERR_YOUREBANNEDCREEP;
 
 	if (strlen(host)  > HOSTLEN || (name ? strlen(name) : 0) > HOSTLEN)
-		return (NULL);
+		return (0);
 	strcpy(reply, ":%s %d %s :*** Ghosts are not allowed on IRC.");
 	for (tmp = conf; tmp; tmp = tmp->next)
  		if ((matches(tmp->host, host) == 0) &&
 		    tmp->status == CONF_KILL &&
  		    (name == NULL || matches(tmp->name, name) == 0))
  			if (BadPtr(tmp->passwd) ||
- 			   (rc = check_time_interval(tmp->passwd,
- 							reply)))
+ 			   (rc = check_time_interval(tmp->passwd, reply)))
  			break;
  		return (tmp ? rc : 0);
      }
@@ -367,12 +556,12 @@ char *host, *name, *reply;
    "Yes Let them in" or "No don't let them in."  If the first word 
    begins with neither 'Y' or 'N' the default is to let the person on.
    It returns a value of 0 if the user is to be let through -Hoppie  */
-
+  
 int find_restrict(host, name, reply)
 char *host, *name, *reply;
     {
 	aConfItem *tmp;
-	char *cmdline[132],*temprpl[80],rplchar='Y';
+	char *cmdline[132],*rplhold=reply,*temprpl[80],rplchar='Y';
 	FILE *fp;
 	int rc = 0;
 
@@ -381,7 +570,7 @@ char *host, *name, *reply;
 	      (host == NULL || (matches(tmp->host, host) == 0)) &&
 	      (name == NULL || matches(tmp->name, name) == 0))
 	    {
-	      bzero(reply,5);
+	      bzero(rplhold,5);
 	      if (BadPtr(tmp->passwd))
 		sendto_ops("Program missing on R-line %s/%s, ignoring.",
 			   name,host);
@@ -394,12 +583,16 @@ char *host, *name, *reply;
 		  else
 		    while (fscanf(fp,"%[^\n]\n",temprpl)!=EOF)
 		      if (strlen(temprpl)+strlen(reply) < 131)
-			sprintf(reply,"%s %s",reply,temprpl);
+			sprintf(rplhold,"%s %s",rplhold,temprpl);
 		      else
 			sendto_ops("R-line %s/%s: reply too long, truncating",
 				   name,host);
 		  pclose(fp);
-		  sscanf(reply,"%*[ ]%c%*[^ ]%*[ ]%[^\n]",&rplchar,reply);
+		  while (*rplhold == ' ') rplhold++;
+		  rplchar = *rplhold; /* Pull out the yes or no */
+		  while (*rplhold != ' ') rplhold++;
+		  while (*rplhold == ' ') rplhold++;
+		  strcpy(reply,rplhold);
 		}
 	      if (rc=(rplchar == 'n' || rplchar == 'N'))
 		break;
@@ -408,24 +601,24 @@ char *host, *name, *reply;
       }
 #endif
 
+
 /*
 ** check against a set of time intervals
 */
 
-int check_time_interval(interval, reply)
+static int check_time_interval(interval, reply)
 char	*interval, *reply;
 {
+	struct tm *tptr;
  	long	tick;
  	char	*p, *oldp;
- 	int	now_hours, now_minutes;
  	int	perm_min_hours, perm_min_minutes,
  		perm_max_hours, perm_max_minutes;
  	int	now, perm_min, perm_max;
 
  	tick = time(NULL);
-
- 	sscanf(ctime(&tick), "%*11c%2d:%2d", &now_hours, &now_minutes);
- 	now = now_hours * 60 + now_minutes;
+	tptr = localtime(&tick);
+ 	now = tptr->tm_hour * 60 + tptr->tm_min;
 
 	while (interval)
 	  {
@@ -457,16 +650,16 @@ char	*interval, *reply;
 			"You are not allowed to connect from",
                         perm_min_hours, perm_min_minutes,
                         perm_max_hours, perm_max_minutes);
-                return(1);
+                return(ERR_YOUREBANNEDCREEP);
               }
 	    if ((perm_min < perm_max)
                 ? (perm_min <= now + 5 && now + 5 <= perm_max)
                 : (perm_min <= now + 5 || now + 5 <= perm_max))
               {
-		sprintf(reply, ":%%s %%d %%s :%d minutes %s",
-                        perm_min - now,
+		sprintf(reply, ":%%s %%d %%s :%d minute%s%s",
+                        perm_min - now, (perm_min - now) > 1 ? "s " : " ",
                         "and you will be denied for further access");
-                return(-1);
+                return(ERR_YOUWILLBEBANNED);
 	      }
 	    interval = p;
 	  }

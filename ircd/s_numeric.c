@@ -22,11 +22,10 @@
 char numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 
 #include "config.h"
+#include "common.h"
 #include "sys.h" 
 #include "struct.h"
 #include "numeric.h"
-
-#define NULL 0
 
 extern aClient *find_client();
 extern aChannel *find_channel();
@@ -59,7 +58,7 @@ char *parv[];
 	char *nick, *tmp;
 	int i;
 
-	if (parc < 1 || sptr->status < 0)
+	if (parc < 1 || !IsServer(sptr))
 		return 0;
 	/*
 	** Prepare the parameter portion of the message into 'buffer'.

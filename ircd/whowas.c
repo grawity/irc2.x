@@ -39,28 +39,12 @@
 ** This module contains utilites for keeping the
 ** history/database of recent users.
 */
-#include <time.h>
 #include "struct.h"
+#include "common.h"
 #include "sys.h"
-#if HAS_ANSI_INCLUDES
-#	include <stddef.h>
-#	include <stdlib.h>
-#else
-#if HAS_SYSV_INCLUDES
-#	include <malloc.h>
-#else
-extern char *malloc();
-extern void free();
-#endif
-#endif
-#ifndef NULL
-#	define NULL 0
-#endif
 
 #include "numeric.h"
 #include "whowas.h"
-
-extern char *myctime();
 
 typedef struct Home
     {
@@ -92,7 +76,7 @@ static int MaxHistoryLength = 200;
 AddHistory(cptr)
 aClient *cptr;
     {
-	register aName *new;
+	Reg1 aName *new;
 
 	if (cptr->name[0] == '\0')
 		return 0; /* No old name defined, no history to save */
@@ -122,7 +106,7 @@ aClient *cptr;
 		*/
 		new->home->refcnt += 1;
 	strncpyzt(new->name,cptr->name,sizeof(new->name));
-	new->time = getlongtime();
+	new->time = time(NULL);
 	new->prev = NULL;
 	new->next = NameHistory;
 	if (NameHistory != NULL)
@@ -158,9 +142,6 @@ aClient *cptr;
 ** OffHistory
 **	This is called when client signs off the system.
 */
-#ifdef __GNUC__
-void
-#endif
 OffHistory(cptr)
 aClient *cptr;
     {
@@ -179,9 +160,9 @@ aClient *GetHistory(nick,timelimit)
 char *nick;
 long timelimit;
     {
-	register aName *next;
+	Reg1 aName *next;
 
-	timelimit = getlongtime() - timelimit;
+	timelimit = time(NULL) - timelimit;
 	/*
 	** Note: history chain is in ordered by time
 	*/
@@ -234,5 +215,7 @@ char *parv[];
 					   next->home->user->away);
 			return 0;
 		    }
+	sendto_one(sptr, ":%s %d %s %s :There was no such nickname",
+		   me.name, ERR_WASNOSUCHNICK, sptr->name, parv[1]);
     }
 

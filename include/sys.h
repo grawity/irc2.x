@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, include/bsd.h
+ *   IRC - Internet Relay Chat, include/sys.h
  *   Copyright (C) 1990 University of Oulu, Computing Center
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -19,14 +19,34 @@
 
 #if HPUX | VMS | AIX
 #include <string.h>
-#define index         strchr
-#define rindex        strrchr
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
 extern char *strchr(), *strrchr();
 extern char *inet_ntoa();
+#define index strchr
+#define rindex strrchr
 #else 
 #include <strings.h>
 #endif
 #include <ctype.h>
 #include <pwd.h>
+
+#if AIX
+#include <sys/select.h>
+#endif
+#if HPUX | AIX
+#include <time.h>
+#if AIX
+#include <sys/time.h>
+#endif
+#else
+#include <sys/time.h>
+#endif
+
+#if NEXT
+#define VOIDSIG int	/* whether signal() returns int of void */
+#else
+#define VOIDSIG void	/* whether signal() returns int of void */
+#endif
+
+extern VOIDSIG dummy(), restart();

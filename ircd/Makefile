@@ -17,19 +17,34 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
+# IRCDMODE given in top level Makefile, but added here to make sure
+# compilation works if started in ircd subdirectory
+
+CC=cc
+RM=/bin/rm
+SHELL=/bin/sh
+
+IRCDMODE=4711
+INCLUDE=../include
+
+# For MIPS, use the following:
+# CFLAGS=-g -systype bsd43 -I${INCLUDE}
+CFLAGS=-g -I${INCLUDE}
+
+# For SunOS without nameserver libraries in libc, use:
+# IRCDLIBS=-lresolv
+# otherwise:
+IRCDLIBS=
+
 OBJS=channel.o date.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o mail.o
+     whowas.o s_debug.o mail.o class.o
 
 SRC=channel.c date.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c mail.c
+     whowas.c s_debug.c mail.c class.c
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
-           ../common/packet.o ../common/parse.o ../common/send.o\
-           ../common/match.o
-
-INCLUDE = ../include
-
-CFLAGS = -g -I${INCLUDE}
+           ../common/packet.o ../common/send.o\
+           ../common/match.o ../common/parse.o
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
@@ -38,10 +53,13 @@ all: build
 build: ircd
 
 ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
-	sh mkversion.sh
+	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
 	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
 	chmod $(IRCDMODE) ircd
+
+../common/parse.o:
+	(cd ../common; ${MAKE} build);
 
 ../common/bsd.o:
 	(cd ../common; ${MAKE} build);
@@ -52,9 +70,6 @@ ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 ../common/packet.o:
 	(cd ../common; ${MAKE} build);
 
-../common/parse.o:
-	(cd ../common; ${MAKE} build);
-
 ../common/send.o:
 	(cd ../common; ${MAKE} build);
 
@@ -62,7 +77,7 @@ ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 	(cd ../common; ${MAKE} build);
 
 clean:
-	rm -f *.o *~ core ircd version.c #* *.bak
+	${RM} -f *.o *~ core ircd version.c #* *.bak
 
 depend:
 	makedepend -I${INCLUDE} ${SRC}
@@ -71,17 +86,18 @@ depend:
 
 mail.o: ../include/struct.h ../include/numeric.h
 channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h
-channel.o: ../include/numeric.h
+channel.o: ../include/numeric.h channel.h
 date.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 ircd.o: ../include/struct.h ../include/config.h
 ircd.o: ../include/dbuf.h ../include/numeric.h
 list.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 list.o: ../include/sys.h
 s_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+s_bsd.o: ../include/sys.h
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h
 s_msg.o: ../include/struct.h ../include/config.h
-s_msg.o: ../include/dbuf.h ../include/sys.h
+s_msg.o: ../include/dbuf.h ../include/sys.h channel.h
 s_msg.o: ../include/msg.h ../include/numeric.h ../include/whowas.h
 s_numeric.o: ../include/config.h ../include/sys.h
 s_numeric.o: ../include/struct.h
@@ -91,3 +107,4 @@ whowas.o: ../include/dbuf.h ../include/sys.h
 whowas.o: ../include/numeric.h
 whowas.o: ../include/whowas.h
 s_debug.o: ../include/struct.h
+class.o: ../include/struct.h ../include/class.h

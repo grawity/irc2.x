@@ -1,64 +1,116 @@
-Sun Jan  6 06:30:49 1991  Helen Trillian Rose  (hrose at bucsd)
+/************************************************************************
+ *   IRC - Internet Relay Chat, ircd/ChangeLog
+ *   Copyright (C) 1990 Mike Bolotski
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+Mon Feb 25 16:08:51 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* s_msg.c
-	  added msa's rehash fix and Hoppie's typo fixes.
-
-	  Added Hoppie's fix for the summon bug.
-
-Mon Nov  5 19:32:09 1990  Tom Hopkins  (hoppie at buengf)
-
-	* s_msg.c
-	  changed m_rehash to make a call to TryConnections and
-	  check_pings immediately after rehash
-
-	  Fixed NOTICE to respect the +n mode on channels  
+	  'Fixed' K:-line behaviour of m_user(). Now, the connection
+	  is not closed; USER-msg is distributed with K:-line remark, and
+	  user isn't introduced locally, so user gets 'You have not registered
+	  as a user'.
 
 	* ircd.c
-	  rewrote main loop to make it (hopefully) eat less CPU under bad
-	  conditions and not do too much under good ones.  made check_pings
-	  and TryConnectctions exportable to help keep behavior consistent.
-	  check_pings now returns a nexttime, like TryConnections.
+	  SIGHUP generates rehash() now.
 
-Fri Nov  2 15:43:37 1990  Tom Hopkins  (hoppie at buengf)
+Mon Feb 11 18:57:56 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+ 	* s_msg.c
+	  Fixed m_server(). The domain matching was done against the
+	  return value of GetClientName(), but this never matches
+	  if the servername differs from the host name, because
+	  [real socketname] is added to 'inpath'.
+
+Fri Jan 12 12:34:21 1991  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+
+        * more ircd options at startup...
+
+Mon Dec 03 13:54:25 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* class.c, s_msg.c, s_bsd.c
+	  Fixes from Avalon. Sigh.
+
+Wed Nov 28 14:07:11 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* class.c, s_bsd.c (CloseConnection)
+	  Fixes from avalon (DEBUG stuff)
+
+Tue Nov 27 11:24:56 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_msg.c, s_bsd.c, ircd.c, class.c
+	  Isolated the implementation of 'classes' to class.c (by using
+	  macros for accessing the structure members) -- we should start
+	  using this everywhere -- especially with this linear list of
+	  clients!!
+
+	* channel.h (new file)
+	  prototyping, 'channel'-misc, try to isolate channel implemen-
+	  tation to channel.h and channel.c
+
+Sun Nov 25 16:13:42 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* class.c, class.h
+	  New files for class-handling. Applied Avalon's patches.
+	  Change some code into more readable one (MIN).
+
+Tue Nov 13 11:44:28 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_msg.c
+	  Fixed Invite bug.
+
+	* s_bsd.c
+	  Fixed overhead of check_access.
+	  New function to get qualified (local) domain name: AddLocalDomain()
+
+Mon Nov 12 20:42:44 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* channel.c
-	  fixed that nagging MODE bug
+	  Fixed 2.6 MODE_NOPRIVMSG bug
 
-Wed Oct 31 14:21:04 1990  Tom Hopkins  (hoppie at buengf)
+	* Added mkversion.sh into self configuration extraction,
+	  now version.c.SH
+
+Sat Nov 10 19:10:33 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* Removed getlongtime() everywhere.
+
+	* s_bsd.c
+	  Removed some ULTRIX sidesteps.
 
 	* s_conf.c
-	  added support for R lines in initconf()
-	  added function find_restrict()
-	* s_msg.c
-	  added support for R lines in m_user, m_rehash
+	  Changed the return values of find_kill().
+
 	* ircd.c
-	  added support for R lines in check_pings()
+	  Avalon's cleanup's.
+	  Change close() to shutdown() (restart()). 
 
-Sun Oct 21 18:53:02 1990  Christopher Davis  (ckd at bucsd)
+Wed Oct 31 18:20:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 
-	* Makefile
-	  Added IRCDLIBS and IRCDMODE variables
+	* 2.6:
+	  - multichannels
+	  - wildcard servers
+	  - more fun stuff I don't remember anymore but which should
+	    be in documentation...
 
-Tue Oct 16 23:25:00 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
-	* s_msg.c
-	  Bug fix
+Sun Oct 21 18:53:02 1990  Christopher Davis (ckd at bucsd)
 
-Fri Oct 12 22:30:35 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
-
-	* channel.c
-	  Made error returns for MODE and KICK consistent with others
-	  Fixed KICK to give the right error message at the right time
-	* s_conf.c
-	  Added support for Q lines in initconf()
-	* s_msg.c
-	  added stealth's userlog patch and appropriate headers
-	  made error returns consistent and corrected a little spelling 
-	  added msa's patch to correctly annotate server kills
-	  fixed m_list to make LIST work for specific channels
-	  fixed m_invite to allow invite to other channels
-	  added support for WALLOPS_REMOTES
-	  added support for WALLOPS_QUARANTINE
-	  added the patch for stats c
+        * Makefile
+          - Added IRCDLIBS and IRCDMODE variables
 
 Wed Jun 20 11:53:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 

@@ -1,4 +1,0 @@
-Usage: NAMES [channel]
-  Shows this nicknames of all users on all visible channels in a
-  nice terse format.  You can specify a channel as well, causing it 
-  to only show the names on that channel.

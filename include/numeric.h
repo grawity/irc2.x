@@ -31,6 +31,8 @@
 #define ERR_NOSUCHSERVER     402
 #define ERR_NOSUCHCHANNEL    403
 #define ERR_CANNOTSENDTOCHAN 404
+#define ERR_TOOMANYCHANNELS  405
+#define ERR_WASNOSUCHNICK    406
 
 #define ERR_NORECIPIENT      411
 #define ERR_NOTEXTTOSEND     412
@@ -60,6 +62,7 @@
 #define ERR_NOPRIVILEGES     481
 
 #define ERR_NOOPERHOST       491
+#define ERR_NOSERVICEHOST    492
 
 #define RPL_AWAY             301
 
@@ -67,6 +70,7 @@
 #define RPL_WHOISSERVER      312
 #define RPL_WHOISOPERATOR    313
 #define RPL_WHOISCHANOP      316
+#define RPL_WHOISIDLE        317
 
 #define RPL_WHOWASUSER       314
 
@@ -94,6 +98,8 @@
 
 #define RPL_YOUREOPER        381
 #define RPL_REHASHING        382
+#define RPL_YOURESERVICE     383
+#define RPL_MYPORTIS         384
 
 #define RPL_TIME             391
 
@@ -134,4 +140,3 @@
 		   me.name, ERR_NOTREGISTERED); \
 	return -1;\
     }
-

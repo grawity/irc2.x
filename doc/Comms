@@ -1,0 +1,818 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, doc/Comms
+ *   Copyright (C) 1990, Jarkko Oikarinen
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+					 	   Author: Jarkko Oikarinen
+						     Date: 3 Sep 1988
+					Last modification: 20 Feb 91
+
+		     Internet Relay Chat Protocol
+
+1. Introduction
+
+This document defines the protocol how IRC messages are transmitted
+over Internet. IRC is a teleconferencing system which can run on
+many different hosts.
+
+1.1. Servers
+
+IRC consists of several servers, of which there should be only one
+on each host (It is not recommended to use several servers, it is
+possible anyway). Servers are connected with each other so that they
+form a tree-like net. [See Fig. 1]. This protocol defines no limit
+how many servers (or clients) one server can handle, it is machine
+and server dependent. The name of the server should the same as the
+name of the host where server is running (including domainname).
+
+			     [ Server 1 ]
+			      /        \
+			     /          \
+                  [ Server 2 ]           [ Server 3 ]
+                    /       \                      \
+                   /         \                      \
+           [ Server 4 ]    [ Server 5 ]         [ Server 6 ]
+            /    |    \                           /      \
+           /     |     \                         /        \
+          /      |      \____                   /          \
+         /       |           \                 /            \
+[ Server 7 ] [ Server 8 ] [ Server 9 ]   [ Server 10 ] [ Server 11 ]
+                                 
+				  :
+			       [ etc. ]
+				  :
+			
+                 [ Fig. 1. Format of IRC Server net ]
+
+1.2. Clients
+
+In this paper every conference attendant is referred to as client.
+Each client is distinguished from others with a nickname having
+maximum length of eight (8) characters. The following characters
+may be used in a nickname: all digits ('0' - '9'), lowercase letters
+('a' - 'z'), uppercase letters ('A' - 'Z'). In addition to nickname
+servers should have following information on clients: Real name,
+name of the host client is logged on, client's username on that host
+and name of the server to which client is connected.
+
+
+1.3. Channels
+
+Channels are the way several (more that two) clients can communicate
+with each other. Every channel has a name with which it can be
+unambiguously distinguished from other channels.
+
+Channels can be numbers or strings (beginning with a '+' character or
+'#'-character). Channels beginning with '#' character are special in the
+way that a client may join several such channels simultaneusly.
+
+By default channels are divided into three groups which represents
+the default status for a channel in the beginning:
+Channels with negative name are secret channels, and users on those
+channels are not shown to other users unless they are on same channel.
+Channels with string name and numeric name in between 1-999 are public
+channels, and users and their channel names are shown to everyone.
+Channels 1000 - are private channels, and users on these channels may
+be seen, but not the number of the channel. 
+
+The first person to join a channel creates it and can therefore
+allow/disallow people to join it, limit the number of people on it,
+etc... See command MODE (3.36) for documentation on different channel
+modes.
+
+1.4. Services
+
+Services are not yet implemented.
+
+2. The IRC Specification
+
+2.1. Overview
+
+This protocol is only an interface between server and client programs.
+It does not perform any user interaction, messages may have quite cryptic
+format. Client and service programs should perform all 'user-friendly'
+functions.
+
+2.2. Character codes
+
+Commands are composed of characters from the 8-bit ISO-ASCII character set.
+
+2.3. Messages
+
+Daemons and Clients send each other messages which may or may not
+generate a reply. Daemons normally should generate a reply for each message,
+but clients should not trust on it and await forever.
+
+Messages consist of prefix, a command, and parameters. Prefix
+and parameters may be optional. Parameters are separated from
+each other with one space character. Prefix is separated from
+command with space. Prefix is only used messages from servers to
+identify the original sender of the message. Client programs should
+never use prefixes. Command lines must be complete with all required
+parameters, and may not contain more than one command. Commands,
+prefixes and parameters are not case sensitive. The prefix is preceded
+by a colon. 
+
+IRC Messages are always lines of characters terminated with CR-LF
+(Carriage Return - Line Feed) pair, and these messages shall not
+exceed 512 characters in length, counting all characters, including
+the trailing CR-LF (thus there are 510 characters maximum allowed
+for the command and its parameters). There is no provision for
+continuation message lines.
+
+2.4. Numeric replies
+
+Most messages sent to daemon generate normally a reply. Reply consists
+of one line consisting of sender prefix, three digits, space and
+any number of additional parameters. Line ends with CR-LF combination.
+So numeric replies are just like normal messages, except instead of
+string keyword the keyword is a 3-digit number.
+List of different replies will be on chapter 6.
+
+3. Message details
+
+On the following pages are descriptions of each message recognized
+by the IRC server and client. All commands not explicitly marked as
+optional must be implemented by all IRC servers. The concept of
+current channel is used there several times and it is the channel
+message sender is currently joined.
+
+3.1. User message
+
+   Command: USER
+Parameters: <username> <hostname> <servername> <realname>
+
+User message is used in the beginning of connection to specify username,
+hostname, servername and realname of new user. It also used in
+communication between servers to indicate new user arriving IRC.
+Between servers USER has to be prefixed with user's NICKname.
+Note that hostname and servername are normally ignored by irc server
+due to security reasons, but they're used in server-server communication.
+
+It must be noted that Realname parameter must be the last parameter,
+because it may contain space characters.
+
+Examples:
+
+Message to identify client (note that hostname parameter is not needed,
+because server always knows where user is from):
+ USER guest tolmoon tolsun Ronnie Reagan
+ 
+3.2. Server message
+
+   Command: SERVER
+Parameters: <hostname> [<server> | <password>]
+
+Server message is used to tell server that on the other end of connection
+resides a server. This message is also used to pass server data over
+whole net. Always when a new server is connected to net, info about
+it should go through whole network.
+
+Example:
+  SERVER testhost                ; tells server I am testhost
+  SERVER tolmoon tolsun          ; tells server that behind me
+                                 ; resides a server tolmoon who is
+                                 ; connected to server at tolsun
+
+3.3. Oper message
+
+   Command: OPER
+Parameters: <user> <password>
+
+Oper message is used by normal user to obtain operator privileges.
+
+3.4. Password message
+
+   Command: PASS
+Parameters: <password>
+
+Password message is used to give password if secure version of irc is used.
+
+3.5. Nick message
+
+   Command: NICK
+Parameters: <nickname>
+
+NICK message is used to give user a nickname or change the previous one.
+For example:
+:WiZ NICK Kilroy
+means that user WiZ changed his nickname to be Kilroy.
+
+3.6. Quit message
+
+   Command: QUIT
+Parameters: none
+
+The session is finished with a quit message. The server should close
+the connection to a client which sends QUIT message.
+
+3.7. Squit message
+
+   Command: SQUIT
+Parameters: <server>
+
+Squit message is needed to tell about quitting or dead servers.
+
+3.8. Text message (OBSOLETE, will be removed from later versions of IRC !)
+
+   Command: MSG
+Parameters: <text to be sent to channel>
+
+Text message is needed to send message to all users on current channel.
+
+Examples:
+ :Wiz MSG This is text message to the channel Wiz is logged on.
+ MSG Another message to be sent to current channel !
+
+3.9. Private message
+
+   Command: PRIVMSG
+Parameters: <receiver> <text to be sent>
+
+Private message is used to send private messages between users.
+<receiver> is the nickname of the receiver of the message.
+<receiver> can also be a list of names or channels separated with
+commas.
+
+Examples:
+ :Angel PRIVMSG Wiz Hello, are you receiving this message ?
+ PRIVMSG Angel yes, I'm receiving !
+ PRIVMSG jto@tolsun.oulu.fi Hello!
+
+3.10. Who message
+
+   Command: WHO
+Parameters: [<channel>]
+
+Who message is used to query all users on IRC net. Server will answer
+this message with series of WHOREPLY messages. However it must be noted
+that the response may not come at once, and client must be able to accept
+other messages before receiving user message. Channel is the number of
+the channel or an asterisk '*' to specify current channel. If <channel>
+is omitted, all users (not the ones on secret channels) are shown.
+
+Examples:
+ WHO
+
+3.11. Whois message
+
+   Command: WHOIS
+Parameters: <nickname>
+or
+Parameters: <server> <nickname>
+
+This message is used to query information about particular user. Server
+will answer this message with several numeric messages indicating different
+statuses of user. Nickname can also be a list of nicknames.
+
+The latter version sends the query to a specific server. It is useful
+if you want to know how long the user in question has been idle, as only
+local server (ie. the server the user is directly connected to) knows that
+information.
+
+Examples:
+ WHOIS wiz
+ WHOIS jto@tolsun.oulu.fi
+
+3.12. List message
+
+   Command: LIST
+Parameters: [<channel>]
+
+List message is used to list channels and their topics. If <channel>
+parameter is used, only status of that channel is displayed. Negative
+channels do not have topics, so negative channel is not allowed here.
+
+Examples:
+ LIST                              ; List all channels
+ LIST 7                            ; List channel 7
+ LIST *                            ; List current channel
+
+3.13. Topic message
+
+   Command: TOPIC
+Parameters: <topic>
+
+Topic message is used to change topic of current channel.
+
+Examples:
+ :Wiz TOPIC New topic
+ TOPIC Another topic
+
+3.14. Invite message
+        
+   Command: INVITE
+Parameters: <nickname> [<channel>]
+
+Invite message is used to invite users on channel. Parameter
+<nickname> is the nickname of the person to be invited, or his/hers
+UserID. E.g. jto@tolsun.oulu.fi is a syntactically valid UserID. Channel
+parameter is optional in messages from clients, but necessary
+in messages from servers.
+
+Examples:
+ :Angel INVITE Wiz 7
+ INVITE Wiz -13
+
+3.15. Channel message (obsoleted by JOIN and PART messages)
+
+   Command: CHANNEL
+Parameters: <channel> [<flag>]
+
+Channel message is used to describe default channel for user. If user
+already hasn't joined that channel, he will be automatically joined
+the channel as well. There are three types of channels: Channel numbers
+from 1 to 999 are public channels, ie: everyone sees who are in there.
+Channel numbers > 1000 are secret channels, so if somebody is on
+channel > 1000, you can see that he is in there, but you cannot see
+the channel number. Channels < 0 are hidden channels, you cannot
+see users in there (and of course channel number either).
+
+Since 2.5 version of irc channels can be also strings, starting with a
+plus (+) sign. String channels will be first OWNED by the person who
+created the channel and since that he/she can change channel modes
+by MODE command and kick people off channel with KICK command.
+
+Examples:
+ :Wiz CHANNEL -13
+ CHANNEL 7
+ CHANNEL +Finnish
+
+3.16. Version message
+
+   Command: VERSION
+Parameters: [<server>]
+
+Version message is used to query version of the server program.
+Optional parameter <server> is used to query version of the server
+program on another host.
+
+3.17. Kill message
+
+   Command: KILL
+Parameters: <nickname>
+
+Only Operators may kill other users with kill message. 
+
+3.18. Stats message
+
+   Command: STATS
+Paramaters: [<server>]
+
+Stats message is used to query statistics of certain server. If <server>
+parameter is omitted, current server processes this message.
+
+3.19. Service message
+
+   Command: SERVICE
+Paramaters: <name>
+
+Service command is used by a service to identify himself to server.
+Name is the name of the service. Service which knows about IRCnet
+topology and connections between servers is called 'IRC' and servers
+should query their data from that service from time to time.
+
+3.20. Query message
+
+   Command: QUERY
+Paramaters: <server> <service> <parameters>
+
+Query message is used to send messages to services. Service responds
+to queries by REPLY command. IRC service should be specifically noted
+as that service which spreads access lists to each server in IRCnet.
+<server> parameter specifies the name of that server who sent that query,
+<service> is the name of the service and <parameters> may have a different
+syntax depending on which service the query is directed to.
+
+3.21. Links message
+
+   Command: LINKS
+Paramaters: none
+
+With links message user can list all servers and their connections on
+IRC net. LINKS message is replied by LINREPLY message by the server.
+
+3.22. Summon message
+
+   Command: SUMMON
+Parameters: <user>
+
+Summon command is used to invite users not in IRC. <user> parameter
+consists of username and host separated with '@' sign, eg. jto@tolsun
+
+3.23. Users message
+
+   Command: USERS
+Parameters: <host>
+
+With USERS command it is possible to query users on another host.
+
+3.24. Notice message
+
+   Command: NOTICE
+Parameters: <nickname> <text>
+
+NOTICE message is used similarly to PRIVMSG. The difference between NOTICE
+and PRIVMSG is that automatic replies, etc. may NEVER reply to notice
+message. Notice messages are generally used only by servers, but may
+also be used by client.
+
+3.25. Connect message
+
+   Command: CONNECT
+Parameters: <host> <port>
+
+CONNECT message can be used to force a server to try to establish a new
+connection to another server immediately. CONNECT message is privileged
+message and should be available only to ircd administrator(s).
+
+3.26. Ping message
+
+   Command: PING
+Parameters: <daemon1> [<daemon2>]
+
+PING message must be always replied with PONG message as fast as possible.
+If parameter <daemon2> is specified, ping gets forwarded there. <daemon1>
+parameter specifies the querying daemon.
+
+3.27. Pong message
+
+   Command: PONG
+Parameters: <daemon> [<daemon2>]
+
+PONG message is a reply to ping message. If paramater <daemon2> is given,
+this message must be forwarded to given daemon. <daemon> parameter is
+the name of the daemon who has responded to PING message and generated this
+message.
+
+3.28. Reply message
+
+   Command: REPLY
+Parameters: <service> <recipient> <parameters>
+
+3.29. Wall message
+
+   Command: WALL
+Parameters: <msg>
+
+WALL message is used to send a broadcast message to everyone
+connected to IRCnet.
+
+3.30. Trace command
+
+   Command: TRACE
+Parameters: [<server>]
+
+TRACE command is used to find out the route to specific server.
+Each server should process this message, tell the sender about it
+and then send it to next server until given server is reached.
+If <server> parameter is omitted, it is recommended that TRACE command
+could send a message to user telling to which servers current server
+has direct connection (and maybe the delay time to that server, too).
+
+3.31. Route command
+
+   Command: ROUTE
+Parameters: <server1> <server2> <distance>
+
+ROUTE message is sent to irc network when a connection between some
+servers has been set up correctly. Distance tells the time delay between
+servers so that other servers could optimize IRC network to be as fast
+as possible and possibly alter the topology of IRC network.
+
+3.32. Linreply command
+
+   Command: LINREPLY
+Parameters: <server> <location>
+
+LINKS command is replied by series of LINREPLY commands. Each LINSERVER
+reply describes one server entry in IRC network.
+
+3.33. Join command
+
+   Command: JOIN
+Parameters: <channel>
+
+Join command is used by client to start listening a specific channel.
+The difference to CHANNEL command is that in Join message user does not
+PART from previous channel. Join message doesn't change default channel
+either. Since irc 2.6 is has been possible to be on several channels
+simultaneusly. To maintain compatibility with previous versions a new
+channel type had to be created. This channel type is recognized by
+#-prefix. These are the only types of channels a user can simultaneusly
+be on several of them.
+
+3.34. Part command
+
+   Command: PART
+Parameters: [<channel>]
+
+Part message parts you from discussion on given channel. If channel
+paremeter is omitted, user is parted from default discussion. When
+default discussion is parted, no new default discussion is set up.
+
+3.35. Kick command
+
+   Command: KICK
+Parameters: <channel> <user>
+
+Kicks a person away from given channel. Command is available only to
+channel operators.
+
+3.36. Mode command
+
+   Command: MODE
+Parameters: <channel> {[+|-]|o|p|s|i|t|n]} [<limit>] [<user>]
+
+Mode command is used by channel operators to change mode of a channel.
+Modes available:
+ o  - give/take channel operator privileges
+ p  - private channel flag
+ s  - secret channel flag
+ i  - invite-only channel flag
+ t  - topic settable by chanel operator only flag
+ n  - no private messages to channel flag
+ l  - set the user limit to channel
+
+More modes may be available later on.
+
+Example:
+  MODE +Finnish +i        ; Makes +Finnish channel invite-only
+  MODE +Finnish +o Kilroy ; Gives operator privileges to Kilroy
+  MODE +Finnish -s        ; Removes 'secret' flag from +Finnish channel
+  MODE +Finnish +l 10     ; Set the limit for the number of users on
+                            channel to 10
+
+4. Optional messages
+
+Optional messages are described next. This means that valid and
+working server does not need to understand there messages. 
+
+4.1. Debug message
+
+   Command: DEBUG
+
+Debug command is reserved for testing purposes. Parameters and replies
+are implementation specific and they are not listed here.
+
+4.2. Hide message
+
+   Command: HIDE 
+Parameters: [nickname|id@host [<type>]]
+
+Toggles hiding mode from specific nickname/id.
+Hide without parameters lists all people in HIDE list.
+
+4.5. Away message
+
+   Command: AWAY
+Parameters: [message]
+
+With away message you can set an automatic reply for messages.
+Away with parameter sets this mode on, and without parameter
+resets modes. If away is on and somebody sends you a message,
+response message is sent out automatically. Note that you cannot send
+any messages while in away mode.
+
+4.6. Alias message
+
+   Command: ALIAS
+Parameters: [nick [nick|id@host]]
+
+Alias message is used to set up aliases for some user. If you g.e.
+specify alias 'ALIAS Wiz jto@tolsun', all messages you send to
+nickname Wiz are redirected to user jto@tolsun. If there already
+exists nickname Wiz, then you cannot send messages to him/her
+without first turning alias off (ALIAS Wiz). Alias without parameters
+displays all current aliases.
+
+4.7. Expand message
+
+   Command: EXPAND
+Parameters: [1|0]
+
+Expand message is used to switch on/off expand mode, ie. if expand mode
+is on, then ids and hosts of message senders are given instead of bare
+nickname. Expand mode is switched on with parameter 1 and off with
+parameter 0. Expand called without parameters sets expand off.
+
+4.8. Die message
+
+   Command: DIE
+Parameters: None
+
+Die message can be used to kill a certain server. That might be needed
+in certain error conditions, hopefully never. Die should not be available
+to normal users, only to ones with special privileges.
+
+4.9. Zkey message
+
+   Command: ZKEY
+Parameters: <public encryption key>
+
+Zkey message is used by the clients to give away their public encryption
+key which can then be used to encrypt private messages sent to the clients.
+The encryption method is yet to be defined. See also ZMSG command.
+
+4.10. Zmsg message
+
+   Command: ZMSG
+Parameters: <receiver> <encrypted text to be sent>
+
+Zmsg message is used to send encrypted messages to users. Encryption key
+is given with ZKEY command. Server knows that clients which have sent
+their public key do accept encrypted messages, clients which have not
+told specifically with ZKEY that they want to have encrypted messages
+should never be sent them, because they probably wouldn't understand
+them.
+
+4.11. Time message
+
+   Command: TIME
+Parameters: [<daemon>]
+
+Time message is used to query local time from given daemon. Default
+daemon is current daemon. Daemon should reply to this message with
+PRIVMSG or NOTICE command. (PRIVMSG as long as NOTICE is not
+implemented on current ircd's).
+
+4.12. Rehash message
+
+   Command: REHASH
+Parameters: None
+
+Rehash message can be used by the operator to force server reread
+its irc.conf file.
+
+4.13. Names message
+
+   Command: NAMES
+Parameters: [<channel>]
+
+With names parameter you can list all nicknames on specified channel or,
+if <channel> parameter is omitted, on all channels. If '*' is used
+instead of channel name, nicknames on current channel are listed.
+NAMES command is always replied by one or more NAMREPLY commands
+containing channel types, names and users on channels.
+
+4.14. Namreply message
+
+   Command: NAMREPLY
+Parameters: <type> <channel> {<nickname>}
+
+NAMREPLY command is a reply to NAMES command. <type> parameter is
+'*' for private channels, '=' for public channels and '?' for secret
+channels. <channel> is channels name. Usually NAMES query will be
+responded with several NAMREPLY commands, one for each public channel,
+one for private/secret channel querying user is possibly a member and
+then all users on other private channels are marked as being on one
+private channel, who's name is '*'.
+
+Example:
+
+NAMREPLY = 7 Angel Kilroy
+NAMREPLY * 1234 Jeff WiZ
+NAMREPLY * * Lars Karl Jim
+
+Last line indicates that Lars, Karl and Jim are on some private channel
+or on NULL channel, they are not necessarily on same channel with each
+other.
+
+4.15. Admin command
+
+   Command: ADMIN
+Parameters: [<server>]
+
+Admin message is used to tell the name of the administrator of given
+server (current server if <server> parameter is omitted). Each server
+should have the ability to forward ADMIN messages to other servers.
+
+4.16. Grph message
+
+   Command: GRPH
+Parameters: <receiver> <text to be sent>
+
+Grph message is used to send graphics messages between users.
+<receiver> is the nickname of the receiver of the message.
+<receiver> can also be a list of names or channels separated with
+commas.
+
+Examples:
+ :Angel GRPH Wiz Hello, are you receiving this message ?
+ GRPH Angel yes, I'm receiving !
+ GRPH jto@tolsun.oulu.fi Hello!
+
+4.17. Voice message
+
+   Command: VOICE
+Parameters: <receiver> <text to be sent>
+
+Voice message is used to send voice messages between users.
+<receiver> is the nickname of the receiver of the message.
+<receiver> can also be a list of names or channels separated with
+commas.
+
+Examples:
+ :Angel VOICE Wiz Hello, are you receiving this message ?
+ VOICE Angel yes, I'm receiving !
+ VOICE jto@tolsun.oulu.fi Hello!
+
+4.18. Xtra message
+
+   Command: XTRA
+Parameters: <receiver> <text to be sent>
+
+Xtra message sends given message to recipient(s). This can be used for
+program specific purposes on sending implementation specific messages
+to each other.
+
+Examples:
+ :Angel XTRA Wiz test message
+ XTRA Angel,7 Another test message
+
+4.19. Whowas message
+
+   Command: WHOWAS
+Parameters: <nickname>
+
+Whowas message asks the information about a user who has already
+logged off irc or changed his/her nickname. Replies are numeric.
+
+4.20 Operwall message
+
+   Command: WALLOPS
+Parameters: Text to be sent to all operators currently online
+
+Sends a message to all operators currently online.
+
+5.0. Messages implemented in clients
+
+Following is a recommendation of messages that should be implemented in
+clients. These messages do not actually belong to Internet Relay Chat
+Protocol, and should be used as guidelines and advices.
+
+5.1. Send message
+
+   Command: SEND
+Parameters: filename
+	
+Send specified filenames contents to irc as normal messages.
+Send should not be implemented in server, but only on client.
+
+5.2. Beep message
+
+   Command: BEEP
+Parameters: [2|1|0]
+
+Beep command is used to tell client that it should beep after
+each received line. BEEP can be set off by using '1' as a parameter
+of calling BEEP without any parameters at all. Calling BEEP with
+parameter 2 disables the use of BELL ('\007') completely, even
+messages containing BELLs are stripped from BELLs.
+Beep should not be implemented in server, but only on client.
+
+5.3. Cmdchar message
+
+   Command: CMDCH
+Parameters: [char]
+
+With this command you can set/reset the command character that
+tells client this line is a command and not a simple message.
+CMD without parameter resets command character to '/'.
+Cmd should as well be implemented only in clients.
+
+5.4. Query message
+  
+   Command: QUERY
+Parameters: [user|id@host]
+
+Query message is used specify that all folowing lines should be
+sent to specific user as private messages. Query should be
+implemented in client, but may be used on servers as well.
+Query without parameters stops sending messages as private ones
+to some user, and sends them to current channel. QRY is only an
+alias for QUERY.
+
+6. Replies
+
+See file /include/numeric.h for explanation to these messages.
+Because new numerics get added relatively often, it is better that
+the current status of these messages can be found in one place.
+
+7. User and server authentication
+
+Passwords and host names. See the documentation for irc.conf.

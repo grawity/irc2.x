@@ -1,0 +1,15 @@
+******************************************************************** 
+* Copyright (C) 1991 Armin Gruner
+* All rights reserved
+*     Origin filename and filetype :  IRC      PFKEYS
+*  Generated  INFSOD01 at DM0TUI1S on Wed,  6 Mar 1991 17:04:00 CET
+* Version 1.0 INFSOD01 at DM0TUI1S on Wed,  6 Mar 1991 17:04:00 CET
+*
+* PF-Key 1,2 and 13,14 are reserved for HISTORY and SCROLLING.
+
+3 IMMED /quit
+4 IMMED /names 
+5 IMMED /list
+6 DELAY /away
+8 DELAY /whois
+12 IMMED /quit

@@ -17,5 +17,5 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
-#define PATCHLEVEL "2.5.1.bu.10"
+/* $Header: /usr/stud/gruner/src/irc2.6/include/RCS/patchlevel.h,v 2.6 90/11/01 01:45:54 gruner Exp $ */
+#define PATCHLEVEL "2.6pre19"

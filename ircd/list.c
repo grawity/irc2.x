@@ -38,33 +38,18 @@
 
 char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
-#if HAS_ANSI_INCLUDES
-#	include <stdlib.h>
-#	include <string.h>
-#else
-#if HAS_SYSV_INCLUDES
-#	include <memory.h>
-#	include <malloc.h>
-#else
-char *malloc();
-extern void free();
-#endif
-#endif
 #include "struct.h"
+#include "common.h"
 #include "sys.h"
-
-#ifndef NULL
-#define NULL 0
-#endif
 
 extern aClient *client;
 extern aConfItem *conf;
 
 static outofmemory()
     {
-	perror("malloc");
 	debug(DEBUG_FATAL, "Out of memory: restarting server...");
 	restart();
+	return -1;
     }
 
 	
@@ -84,22 +69,21 @@ aClient *from;
 	aClient *cptr;
 	int size = (from == NULL) ? CLIENT_LOCAL_SIZE : CLIENT_REMOTE_SIZE;
 
-	if ((cptr = (aClient *) malloc(size)) == NULL)
+	if ((cptr = (aClient *) calloc(1, size)) == NULL)
 		outofmemory();
-	/*
-	** Zero out the block and fill in the non-zero fields
-	**
-	** (hmm, perhaps this is not the most efficient way,
-	**  if Client has long fields like buffer... --msa)
-	*/
-	bzero((char *)cptr,size);
+
+	/* Note:  structure is zero (calloc) */
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
 	cptr->next = NULL; /* For machines with NON-ZERO NULL pointers >;) */
 	cptr->user = NULL;
 	cptr->history = NULL;
 	cptr->status = STAT_UNKNOWN;
 	cptr->fd = -1;
-	cptr->since = cptr->lasttime = getlongtime();
+	cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
+	if (size == CLIENT_LOCAL_SIZE) {
+	  cptr->confs = (Link *) 0;
+	  cptr->sockhost[0] = '\0';
+	}
 	return (cptr);
     }
 
@@ -111,13 +95,14 @@ make_user(sptr)
 aClient *sptr;
     {
 	if (sptr->user != NULL)
-		return;
+		return -1;
 	if ((sptr->user = (anUser *)malloc(sizeof(anUser))) == NULL)
 		outofmemory();
 	bzero((char *)sptr->user,sizeof(anUser));
 	sptr->user->away = NULL;
 	sptr->user->refcnt = 1;
 	sptr->user->channel = (aChannel *) 0;
+	return 0;
     }
 
 /*

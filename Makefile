@@ -17,24 +17,34 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-CC = cc
-INCLUDE = ../include
-# use the next line if using MIPS:
-# CFLAGS = -O -systype bsd43 -I${INCLUDE}
-# and on all other systems:
-CFLAGS = -I${INCLUDE}
-# uncomment the following if you are using SunOS and NIS or YP
-# IRCDLIBS = -lresolv
-IRCDLIBS =
-# we use 4750 (best for group irc & CMDLINE_CONFIG), most people use 4711
-# IRCDMODE = 4750
+CC=cc 
+RM=/bin/rm
+INCLUDEDIR=../include
+
+# use the following on MIPS:
+# CFLAGS=-systype bsd43 -I$(INCLUDEDIR)
+# on NEXT use:
+# CFLAGS=-bsd -I$(INCLUDEDIR)
+#otherwise this:
+CFLAGS=-I$(INCLUDEDIR)
+
+#use the following on SUN OS without nameserver libraries inside libc
+# IRCDLIBS=-lresolv
+#on NeXT other than 2.0:
+# IRCDLIBS=-lsys_s
+#and otherwise:
+IRCDLIBS=
+# IRCDMODE is the mode you want the binary to be.
+# the 4 at the front is important (allows for setuidness)
 IRCDMODE = 4711
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' 'IRCDMODE = ${IRCDMODE}'
-SUBDIRS=include common ircd
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}'
 SHELL=/bin/sh
+SUBDIRS=common ircd irc
+# use this if you don't want the default client compiled
+# SUBDIRS=common ircd
 
-all: build
+all:	build
 
 build:
 	@for i in $(SUBDIRS); do \
@@ -44,20 +54,12 @@ build:
 	done
 
 clean:
-	rm -f *~ #* core
+	${RM} -f *~ #* core
 	@for i in $(SUBDIRS); do \
 		echo "Cleaning $$i";\
 		cd $$i;\
 		${MAKE} clean; cd ..;\
 	done
-
-irc:
-	(cd clients/irc; make)
-			
-irc2:	ircii
-ircII:	ircii
-ircii:
-	(cd clients/ircII2.02; make)
 
 depend:
 	@for i in $(SUBDIRS); do \

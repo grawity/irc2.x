@@ -1,4 +1,0 @@
-Usage: SET STATUS_USER <text of status line user information>
-  The value of STATUS_USER is replaced in the STATUS_FORMAT
-  variable for any occurence of %U. If STATUS_USER is set to 
-  <EMPTY>, nothing will be replaced for %U.

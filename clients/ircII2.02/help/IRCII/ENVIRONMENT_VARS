@@ -1,8 +1,0 @@
-The following environment variables are recognized by IRCII.
-
-IRCNICK   -  Specifies your default irc nickname
-IRCNAME   -  Specifies any lunacy you want instead of your real name
-IRCSERVER -  Specifies a default server list for IRCII
-IRCRC     -  Specifies a file to use instead of your $HOME/.ircrc.
-TERM      -  Specifies your terminal type
-HOME      -  Tells IRCII where your home directory is

@@ -17,20 +17,26 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-OBJS=bsd.o dbuf.o packet.o parse.o send.o match.o
-
-SRC=bsd.c dbuf.c packet.c parse.c send.c match.c
-
+CC=cc
+RM=/bin/rm
 INCLUDE=../include
 
+# For MIPS, use:
+# CFLAGS=-O -systype bsd43 -I${INCLUDE}
+# and otherwise:
 CFLAGS=-O -I${INCLUDE}
+
+
+OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o
+
+SRC=bsd.c dbuf.c packet.c parse.c send.c match.c
 
 all: build
 
 build: $(OBJS)
 
 clean:
-	rm -f *.o *~ core #* *.bak
+	${RM} -f *.o *~ core #* *.bak
 
 depend:
 	makedepend -I${INCLUDE} ${SRC}

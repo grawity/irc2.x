@@ -17,6 +17,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef PROTO
+#if __STDC__
+#	define PROTO(x)	x
+#else
+#	define PROTO(x) ()
+#endif /* __STDC__ */
+#endif /* ! PROTO */
+
 /*
 ** AddHistory
 **	Add the currently defined name of the client to history.
@@ -24,14 +32,8 @@
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
-#ifdef __GNUC__
 int
-#endif
-AddHistory(
-#ifdef ANSI_PROTO
-	   aClient *
-#endif
-	   );
+AddHistory PROTO((aClient *));
 
 /*
 ** OffHistory
@@ -40,14 +42,8 @@ AddHistory(
 **	structures and it must know when they cease to exist. This
 **	also implicitly calls AddHistory.
 */
-#ifdef __GNUC__
-void
-#endif
-OffHistory(
-#ifdef ANSI_PROTO
-	   aClient *
-#endif
-	   );
+int
+OffHistory PROTO((aClient *));
 
 /*
 ** GetHistory
@@ -55,18 +51,8 @@ OffHistory(
 **	nickname within the timelimit. Returns NULL, if no
 **	one found...
 */
-aClient *GetHistory(
-#ifdef ANSI_PROTO
-		    char *,	/* Nick name */
-		    long	/* Time limit in seconds */
-#endif
-		    );
+aClient *GetHistory PROTO((char *, long));
+					/* Nick name */
+					/* Time limit in seconds */
 
-int m_whowas(
-#ifdef ANSI_PROTO
-	     aClient *,
-	     aClient *,
-	     int,
-	     char *[]
-#endif
-	     );
+int m_whowas PROTO((aClient *, aClient *, int, char *[]));

@@ -17,6 +17,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef PROTO
+#ifdef __STDC__
+#	define PROTO(x)	x
+#else
+#	define PROTO(x)	()
+#endif /* __STDC__ */
+#endif /* ! PROTO */
+
 /*
 ** dbuf is a collection of functions which can be used to
 ** maintain a dynamic buffering of a byte stream.
@@ -59,13 +67,10 @@ typedef struct dbufbuf
 **	returns	> 0, if operation successfull
 **		< 0, if failed (due memory allocation problem)
 */
-int dbuf_put(
-#ifdef ANSI_PROTO
-	     dbuf *,	/* Dynamic buffer header */
-	     char *,	/* Pointer to data to be stored */
-	     long int	/* Number of bytes to store */
-#endif
-	     );
+int dbuf_put PROTO((dbuf *, char *, long int));
+					/* Dynamic buffer header */
+	     				/* Pointer to data to be stored */
+	     				/* Number of bytes to store */
 
 /*
 ** dbuf_get
@@ -82,14 +87,10 @@ int dbuf_put(
 **		Negative return values indicate some unspecified
 **		error condition, rather fatal...
 */
-long int dbuf_get(
-#ifdef ANSI_PROTO
-	     dbuf *,	/* Dynamic buffer header */
-	     char *,	/* Pointer to buffer to receive the data */
-	     long int	/* Max amount of bytes that can be received */
-#endif
-		  );
-
+long int dbuf_get PROTO(( dbuf *, char *, long int));
+				/* Dynamic buffer header */
+	     			/* Pointer to buffer to receive the data */
+	     			/* Max amount of bytes that can be received */
 
 /*
 ** dbuf_map, dbuf_delete
@@ -115,19 +116,13 @@ long int dbuf_get(
 **	Note: 	delete can be used alone, there is no real binding
 **		between map and delete functions...
 */
-char *dbuf_map(
-#ifdef ANSI_PROTO
-	       dbuf *,		/* Dynamic buffer header */
-	       long int *	/* Return number of bytes accessible */
-#endif
-	      );
+char *dbuf_map PROTO((dbuf *, long int *));
+	       				/* Dynamic buffer header */
+	       				/* Return number of bytes accessible */
 
-int dbuf_delete(
-#ifdef ANSI_PROTO
-		dbuf *,		/* Dynamic buffer header */
-		long int	/* Number of bytes to delete */
-#endif
-		);
+int dbuf_delete PROTO((dbuf *, long int));
+					/* Dynamic buffer header */
+					/* Number of bytes to delete */
 
 /*
 ** dbuf_length

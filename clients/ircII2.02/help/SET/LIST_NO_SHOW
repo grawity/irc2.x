@@ -1,6 +1,0 @@
-Usage: SET LIST_NO_SHOW [number of users]
-  Setting this to a positive value will prevent the LIST command
-  from showing private channels with no topic with less than
-  LIST_NO_SHOW users from being displayed.  Thus, if LIST_NO_SHOW
-  is 3, no private channels with 3 or less users will be
-  displayed unless they have a topic set.
