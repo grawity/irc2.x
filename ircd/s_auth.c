@@ -208,7 +208,7 @@ read_iauth()
 			    ** about it! -kalt
 			    */
 			    sendto_flag(SCH_AUTH,
-			"last='%u' start=%x end=%x buf=%x olen=%d i=%d",
+				"last=%u start=%x end=%x buf=%x olen=%d i=%d",
 					last, start, end, buf, olen, i);
 			    sendto_iauth(
 			 "-1 E last=%u start=%x end=%x buf=%x olen=%d i=%d",
