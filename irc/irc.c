@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 20 Jun 1990
+ * Changed debuglevel to have a default value
+ */
+
+/* -- Jto -- 03 Jun 1990
+ * Channel string changes...
+ */
+
+/* -- Jto -- 24 May 1990
+ * VMS version changes from LadyBug (viljanen@cs.helsinki.fi)
+ */
+
 char irc_id[]="irc.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #define DEPTH 10
@@ -74,10 +86,10 @@ aClient me;
 aClient *client = &me;
 anUser meUser; /* User block for 'me' --msa */
 int portnum, termtype = CURSES_TERM;
-int debuglevel;
+int debuglevel = DEBUG_ERROR;
 FILE *logfile = (FILE *)0;
 int intr();
-int unkill_flag = 0;
+int unkill_flag = 0, cchannel = 0;
 static int apu = 0;  /* Line number we're currently on screen */
 static int sock;     /* Server socket fd */
 int QuitFlag = 0;
@@ -114,7 +126,7 @@ int ucontext = 0, perslength;
 char persname[81];
 
 struct itmlst
-  null_lst[] = {{0,0,0,0}},
+  null_list[] = {{0,0,0,0}},
   gplist[] = {{80, MAIL$_USER_PERSONAL_NAME,
 	       &persname, &perslength}};
 #endif
@@ -124,7 +136,8 @@ main(argc, argv)
      int argc;
      char *argv[];
 {
-  int length, channel = 0;
+  int channel = 0;
+  int length;
   struct passwd *userdata;
   char *cp, *argv0=argv[0], *nickptr, *servptr, *getenv(), ch;
 #if !VMS
@@ -159,7 +172,7 @@ main(argc, argv)
 	  printf(usage, argv0);
 	  exit(1);
 	}
-	meUser.channel = length;
+	cchannel = length;
       } else {
 	if (length == 0) {
 	  printf(usage, argv0);
@@ -188,10 +201,10 @@ main(argc, argv)
       unkill_flag += 2;
 #ifdef UPHOST
     sock = client_init(((currserver[0]) ? currserver : UPHOST),
-		       (meUser.channel > 0) ? meUser.channel : portnum);
+		       (cchannel > 0) ? (int) cchannel : portnum);
 #else
     sock = client_init(((currserver[0]) ? currserver : me.sockhost),
-		       (meUser.channel > 0) ? meUser.channel : portnum);
+		       (cchannel > 0) ? (int) cchannel : portnum);
 #endif
     if (sock < 0) {
       printf("sock < 0\n");
@@ -487,6 +500,21 @@ char *buf, *tmp;
 {
   unkill_flag = 0;
   sendto_one(&me,"QUIT");
+#if VMS
+#ifdef DOCURSES
+  if (termtype == CURSES_TERM) {
+    echo();
+    nocrmode();
+    endwin();
+  } 
+#endif
+#ifdef DOTERMCAP
+  if (termtype == TERMCAP_TERM) {
+    io_off();
+  }
+#endif
+  exit(0);
+#endif
   return (0);
 }
 
@@ -622,6 +650,9 @@ char *line;
 /* move cursor to correct position and place line */
 
       move(apu,0);
+#if VMS
+      clrtoeol();
+#endif
       addstr(ptr);
       if (logfile)
 	fprintf(logfile, "%s\n", ptr);
@@ -632,7 +663,12 @@ char *line;
 
 /* clear one line. */
 
+#if VMS
+      addstr("\n");
+      clrtoeol();
+#else
       addstr("\n\n");
+#endif
 
       if (++apu > LINES - 4) {
 	apu = 0;

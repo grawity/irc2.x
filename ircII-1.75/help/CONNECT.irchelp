@@ -1,5 +1,0 @@
-Usage: CONNECT <server> <port>
-  Attempts to connect your server to the specified server on the
-  given port.
-
-

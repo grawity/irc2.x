@@ -17,6 +17,10 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+/* -- Jto -- 03 Jun 1990
+ * Fixes to allow channels to be strings
+ */
  
 char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
@@ -41,16 +45,22 @@ m_restart() {
   exit(0);
 }
 
+#ifdef MSG_MAIL
+m_mail() {
+  putline("*** Received base message..!");
+}
+#endif
+
 m_time() {
   putline("*** Received time message..!");
 }
 
 m_motd() {
-  putline("*** Received time message..!");
+  putline("*** Received motd message..!");
 }
 
 m_admin() {
-  putline("*** Received time message..!");
+  putline("*** Received admin message..!");
 }
 
 m_trace() {
@@ -79,6 +89,20 @@ m_names() {
 
 m_lusers() {
   putline("*** Received Lusers message !");
+}
+
+m_mode(sptr, cptr, parc, parv)
+aClient *sptr, *cptr;
+int parc;
+char *parv[];
+{
+  strcpy(abuf1, "*** Mode change ");
+  while (parc--) {
+    strcat(abuf1, parv[0]);
+    strcat(abuf1, " ");
+    parv++;
+  }
+  putline(abuf1);
 }
 
 m_wall(sptr, cptr, parc, parv)
@@ -189,14 +213,15 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
 {
-  if (parv[1] == 0 || *parv[1] == '\0' || atoi(parv[1]) == 0) {
+  if (parv[1] == 0 || *parv[1] == '\0' ||
+      (atoi(parv[1]) == 0 && *parv[1] != '+')) {
     sprintf(mybuf,"*** Change: %s has left this Channel", parv[0]);
 #ifdef AUTOMATON
     a_leave(parv[0]);
 #endif
   } else
-    sprintf(mybuf,"*** Change: %s has joined this Channel (%d)", 
-	    parv[0], atoi(parv[1]));
+    sprintf(mybuf,"*** Change: %s has joined this Channel (%s)", 
+	    parv[0], parv[1]);
   putline(mybuf);
 }
 
@@ -294,11 +319,9 @@ char *parv[];
        *away = parv[6],
        *realname = parv[7];
 
-  int i = atoi(channel);
-
-  if (i != 0)
-    sprintf(mybuf, "%3d:  %-10s %s %s@%s (%s)", i, nickname, away, username,
-	    host, realname);
+  if (channel[0] != '*')
+    sprintf(mybuf, "%3s:  %-10s %s %s@%s (%s)", channel, nickname, away,
+	    username, host, realname);
   else if (*away == 'S')
     sprintf(mybuf, "Chn:  Nickname   S  User@Host, Name");
   else 
@@ -389,6 +412,19 @@ char *parv[];
   }
   else
     putline(parv[2]);
+}
+
+
+m_kick(sptr, cptr, parc, parv)
+aClient *sptr, *cptr;
+int parc;
+char *parv[];
+{
+  sprintf(mybuf,"*** %s Kicked %s off channel %s",
+	  (parv[0]) ? parv[0] : "*Unknown*",
+	  (parv[2]) ? parv[2] : "*Unknown*",
+	  (parv[1]) ? parv[1] : "*Unknown*");
+  putline(mybuf);
 }
 
 m_voice(sptr, cptr, parc, parv)

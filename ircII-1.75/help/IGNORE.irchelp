@@ -1,8 +1,0 @@
-Usage: IGNORE [nickname] [ALL|PRIVATE|PUBLIC|NONE]
-  Ignores all messages from the specified user.  If ALL is specified
-  then all messages are ignore.  If PRIVATE, then private messages
-  are ignored.  If PUBLIC is specifed, public messages are ignore.
-  If NONE is specified, the user is no longer ignored.  If a nickname
-  is given with no ignorance designation, the current status of
-  ignorance for that nickname is displayed.   If no nickname is
-  specified, the list of ignored nicknames is displayed.

@@ -25,7 +25,8 @@
 #    unused, a text name, and the port number for it to operate on. The port
 #    number should, except in extraordinary circumstances, be 6667
 #
-M:choshi.kaba.or.jp:*:Kyoto Artificial Brain Associates, Kyoto, Japan:6667
+#M:choshi.kaba.or.jp:*:Kyoto Artificial Brain Associates, Kyoto, Japan:6667
+M:choshi.kaba.or.jp:*:KABA, Kyoto, Japan <2.5>:6667
 #
 # A: administrative information. This line should have three fields, which
 #    may contain any arbitrary text. It is printed by the /ADMIN command.
@@ -42,6 +43,7 @@ A:Kyoto Artificial Brain Associates, Kyoto, Japan:Takahiro Kikuchi <kick@kaba.or
 I:192.51.37.*::*.kaba.or.jp
 I:133.18.*.*::*.astem.or.jp
 I:130.54.*.*::*.kyoto-u.ac.jp
+I:*::*.jp
 #
 # O: authorize operators. Fields are, in order, host name the operator must
 #    be logged in from (wildcards allowed), operator's password, operator's

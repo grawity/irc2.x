@@ -18,6 +18,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 16 Jun 1990
+ * String Channel modifications...
+ * Gonzo's PRIVMSG enchantments
+ */
+
+/* -- Jto -- 03 Jun 1990
+ * Added Channel modes...
+ */
 
 #include "config.h"
 
@@ -57,6 +65,7 @@
 #define STAT_LOG        2
 #define STAT_SERVICE    3      /* Services not implemented yet */
 #define STAT_OPER       4      /* Operator */
+#define STAT_CHANOP     8      /* Channel operator */
 
 /*
 ** 'offsetof' is defined in ANSI-C. The following definition
@@ -77,12 +86,13 @@
 #define	IsMe(x)		((x)->status == STAT_ME)
 #define	IsUnknown(x)	((x)->status == STAT_UNKNOWN)
 #define	IsServer(x)	((x)->status == STAT_SERVER)
-#define	IsClient(x)	((x)->status == STAT_CLIENT)
+#define	IsClient(x)	((~STAT_CHANOP & (x)->status) == STAT_CLIENT)
 #define	IsLog(x)	((x)->status == STAT_LOG)
 #define	IsService(x)	((x)->status == STAT_SERVICE)
-#define	IsOper(x)	((x)->status == STAT_OPER)
+#define	IsOper(x)	((~STAT_CHANOP & (x)->status) == STAT_OPER)
 #define IsPerson(x)	(IsClient(x) || IsOper(x))
 #define IsPrivileged(x)	(IsOper(x) || IsServer(x))
+#define IsChanOp(x)     ((x)->status & STAT_CHANOP)
 
 #define	SetHandshake(x)	((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)	((x)->status = STAT_ME)
@@ -91,8 +101,10 @@
 #define	SetClient(x)	((x)->status = STAT_CLIENT)
 #define	SetLog(x)	((x)->status = STAT_LOG)
 #define	SetService(x)	((x)->status = STAT_SERVICE)
-#define	SetOper(x)	((x)->status = STAT_OPER)
+#define	SetOper(x)	((x)->status = (STAT_OPER|((x)->status&STAT_CHANOP)))
+#define SetChanOp(x)    ((x)->status |= STAT_CHANOP)
 
+#define ClearChanOp(x)  ((x)->status &= ~STAT_CHANOP)
 
 #define CONF_ILLEGAL          0
 /* #define CONF_SKIPME           1 /* not used any more --msa */
@@ -104,6 +116,9 @@
 #define CONF_ME               64
 #define CONF_KILL             128
 #define CONF_ADMIN            256
+
+#define MATCH_SERVER  1
+#define MATCH_HOST    2
 
 #define DEBUG_FATAL  0
 #define DEBUG_ERROR  1
@@ -151,7 +166,8 @@ typedef struct User
 				** not yet be in links while USER is
 				** introduced... --msa
 				*/
-	int channel;
+	struct Channel *channel;
+	struct Channel *invited;
 	int refcnt;		/* Number of times this block is referenced */
 	char *away;
     } anUser;
@@ -203,12 +219,30 @@ typedef struct Ignore
 	struct Ignore *next;
     } anIgnore;
 
+typedef struct SMode {
+  unsigned char mode;
+  int limit;
+} Mode;
+
+typedef struct SLink {
+  struct SLink *next;
+  aClient *user;
+} Link;
+
+typedef struct SInvites {
+  struct SInvites *next;
+  aClient *user;
+} Invites;
+
 typedef struct Channel
     {
 	struct Channel *nextch;
-	int channo;
-	char name[CHANNELLEN+1];
+	Mode mode;
+	char topic[CHANNELLEN+1];
 	int users;
+	Link *members;
+	Invites *invites;
+	char chname[1];
     } aChannel;
 
 extern char *version, *infotext[];
@@ -226,19 +260,34 @@ extern long getlongtime();
 
 /* strncopynt --> strncpyzt to avoid confusion, sematics changed
    N must be now the number of bytes in the array --msa */
-
 #define	strncpyzt(x, y, N) do { strncpy(x, y, N); x[N-1] = '\0'; } while (0)
 #define StrEq(x,y) (!strcmp((x),(y)))
 
 /* Channel Visibility macros */
 
-#define PubChannel(x) ((x) > 0 && (x) < 1000)   /* chan number visible */
-#define SecretChannel(x) ((x) < 0)		/* name invisible */
-#define HiddenChannel(x) ((x) >= 1000 || (x) == 0)	/* chan num invis */
-#define HoldChannel(x) ((x) == 0)
-#define ShowChannel(v,c) (PubChannel(c) || \
-			  ((v->user->channel == c) && ( c != 0)))
-#define UnlimChannel(x) ((x) > 0 && (x) < 10)  /* unlim # of users */
+#define MODE_PRIVATE    0x1
+#define MODE_SECRET     0x2
+#define MODE_ANONYMOUS  0x4
+#define MODE_MODERATED  0x8
+#define MODE_TOPICLIMIT 0x10
+#define MODE_INVITEONLY 0x20
+#define MODE_NOPRIVMSGS 0x40
+
+   /* channel visible */
+#define PubChannel(x) ((!x) || ((x)->mode.mode &\
+			       (MODE_PRIVATE | MODE_SECRET)) == 0)
+
+  /* name invisible */
+#define SecretChannel(x) ((x) && ((x)->mode.mode & MODE_SECRET))
+
+  /* chan num invis */
+#define HiddenChannel(x) ((x) && ((x)->mode.mode & MODE_PRIVATE))
+
+#define HoldChannel(x) (!(x))
+#define ShowChannel(v,c) (PubChannel(c) ||\
+			  (v)->user && (v)->user->channel == (c))
+
+/* #define UnlimChannel(x) ((x) > 0 && (x) < 10)  /* unlim # of users */
 
 /* Misc macros */
 

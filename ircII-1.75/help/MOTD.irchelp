@@ -1,3 +1,0 @@
-Usage: MOTD [server]
-  Gives the message-of-the-day for the named server.  If no server
-  is given, your server is used.

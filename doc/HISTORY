@@ -43,6 +43,9 @@ Version 2.4 contains *very* many bug fixes, enhancements, and "hooks" for
 use in future releases. The source tree has been restructured, and the
 Makefiles rewritten to be recursive and follow the new source tree layout.
 
+Version 2.5 contains string channels and channel modes (as well as
+channel operators). Also Wizible's MAIL system was included as an option.
+
 Hopefully, whoever provides a fix will also update the respective
 ChangeLogs to summarize the changes, as well as adding a description of
 the bug to the BugList file.

@@ -18,6 +18,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 07 Jul 1990
+ * Added jlp@hamblin.byu.edu's debugtty fix
+ */
+
+/* -- Gonzo -- Jun 18 1990
+ * Added setdtablesize() for more socket connections
+ * (sequent OS Dynix only) -- maybe select()-call must be changed ...
+ */
+
+/* -- Jto -- 13 May 1990
+ * Added several fixes from msa:
+ *   Better error messages
+ *   Changes in check_access
+ * Added SO_REUSEADDR fix from zessel@informatik.uni-kl.de
+ */
 
 char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
@@ -65,6 +80,7 @@ extern attach_conf();
 extern char *GetClientName();
 extern int portnum;
 extern int dummy();
+extern int debugtty;
 
 /*
 ** AcceptNewConnections
@@ -117,6 +133,7 @@ int open_port(portnum)
 int portnum;
     {
 	int sock, length;
+	int opt = 1;
 	static struct sockaddr_in server;
 
 	/* At first, open a new socket */
@@ -126,7 +143,15 @@ int portnum;
 		ReportError("opening stream socket %s:%s",(aClient *)NULL);
 		exit(-1);
 	    }
-	
+
+#ifdef SO_REUSEADDR
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+	  {
+	    ReportError("setsockopt %s:%s", (aClient *) 0);
+	    exit(-1);
+	  }
+#endif
+
 	/* Bind a port to listen for new connections */
 	
 	server.sin_family = AF_INET;
@@ -152,11 +177,19 @@ int portnum;
 init_sys()
     {
 	int fd;
+#ifdef sequent
+	setdtablesize(SEQ_NOFILE);
+#endif
 #ifndef TTYON
 #if !HPUX
 	setlinebuf(stdout);
 	setlinebuf(stderr);
 #endif
+
+        if (debugtty)           /* don't close anything or fork if */
+           return;             /* debugging is going to a tty */
+
+
 	if (isatty(0))
 	    {
 		close (0); close(1); close(2);
@@ -213,6 +246,16 @@ int flags;
 	return 0;
     }
 
+/**
+ ** check_access()
+ ** Check if the other end of the connection is allowed to connect to
+ ** this server.
+ **
+ ** returns -2, if no connection is open (closed before access check)
+ **         -1, if no access allowed
+ **          0, if access OK
+ **/
+
 static int check_access(cptr, flags)
 aClient *cptr;
 int flags;
@@ -224,8 +267,8 @@ int flags;
 
 	if (getpeername(cptr->fd, &name, &len) == -1)
 	    {
-		ReportError("check_access (getpeername) %s:%s",cptr);
-		return -1;
+	      ReportError("Failed in connecting to %s :%s", cptr);
+	      return -2;
 	    }
 	/*
 	** If IP-address is localhost, try with the servers sockhost
@@ -277,16 +320,20 @@ static int CompletedConnection(cptr)
 aClient *cptr;
     {
 	cptr->status = STAT_HANDSHAKE;
-	if (check_access(cptr, CONF_NOCONNECT_SERVER) < 0)
+	switch (check_access(cptr, CONF_NOCONNECT_SERVER))
 	    {
-		sendto_ops("Host %s is not enabled for connecting (N-line)",
-			   GetClientName(cptr,FALSE));
-		return FALSE;
+	    case -1:
+	      sendto_ops("Host %s is not enabled for connecting (N-line)",
+			 GetClientName(cptr,FALSE));
+	      return FALSE;
+	    case 0:
+	      if (cptr->conf && !BadPtr(cptr->conf->passwd))
+		sendto_one(cptr, "PASS %s", cptr->conf->passwd);
+	      sendto_one(cptr, "SERVER %s %s", me.name, me.info);
+	      return (cptr->flags & FLAGS_DEADSOCKET) == 0;
+	    default:
+	      return FALSE;
 	    }
-	if (cptr->conf && !BadPtr(cptr->conf->passwd))
-		sendto_one(cptr, "PASS %s",cptr->conf->passwd);
-	sendto_one(cptr, "SERVER %s %s", me.name, me.info);
-	return TRUE;
     }
 
 /*
@@ -408,6 +455,9 @@ long delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			SetNonBlocking(cptr);
 			break;
 		    }
+		/* ... if socket was closed (-2 from check_access), then
+		   this message is also misleading, but it shouldn't
+		   really happen... --msa */
 		sendto_ops("Received unauthorized connection from %s.",
 			   GetClientName(cptr,FALSE));
 		close(fd);
@@ -652,8 +702,8 @@ char *namebuf, *linebuf;
 		return -1;
 	    }
 	alarm(0);
-	sprintf(line, "ircd: Channel %d: %s@%s (%s) %s\n\r",
-		who->user->channel,
+	sprintf(line, "ircd: Channel %s: %s@%s (%s) %s\n\r",
+		(who->user->channel) ? who->user->channel->chname : "0",
 		who->user->username, who->user->host, who->name, who->info);
 	alarm(5);
 	if (write(fd, line, strlen(line)) != strlen(line))

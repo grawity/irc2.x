@@ -1,5 +1,5 @@
 #************************************************************************
-#*   IRC - Internet Relay Chat, include/Makefile
+#*   IRC - Internet Relay Chat, common/Makefile
 #*   Copyright (C) 1990 Jarkko Oikarinen
 #*
 #*   This program is free software; you can redistribute it and/or modify
@@ -17,13 +17,34 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-HDRS = sys.h config.h msg.h dbuf.h numeric.h struct.h sock.h whowas.h
+OBJS=bsd.o dbuf.o packet.o parse.o send.o match.o
+
+SRC=bsd.c dbuf.c packet.c parse.c send.c match.c
+
+INCLUDE=../include
+
+CFLAGS=-O -I${INCLUDE}
 
 all: build
 
-build:
+build: $(OBJS)
 
 clean:
 	rm -f *.o *~ core #* *.bak
 
 depend:
+	makedepend -I${INCLUDE} ${SRC}
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+match.o: ../include/struct.h ../include/sys.h
+bsd.o: ../include/struct.h ../include/config.h
+bsd.o: ../include/dbuf.h
+dbuf.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+dbuf.o: ../include/sys.h
+packet.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+packet.o: ../include/msg.h
+parse.o: ../include/msg.h ../include/struct.h
+parse.o: ../include/config.h ../include/dbuf.h ../include/sys.h
+parse.o: ../include/numeric.h
+send.o: ../include/struct.h ../include/config.h ../include/dbuf.h

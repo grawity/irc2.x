@@ -1,7 +1,6 @@
-#!/usr/bin/make -f
 #************************************************************************
 #*   IRC - Internet Relay Chat, ircd/Makefile
-#*   Copyright (C) 1989,1990 Casie Ashley Dyerman
+#*   Copyright (C) 1990 Jarkko Oikarinen
 #*
 #*   This program is free software; you can redistribute it and/or modify
 #*   it under the terms of the GNU General Public License as published by
@@ -17,142 +16,78 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-# $Header: Makefile,v 2.3 90/04/06 00:25:53 casie Exp $
-# Makefile for the server-level of the IRC source tree
-#
-# Revision 2.4  90/05/10  01:39:00  Jto
-#  Some fixes to dependencies
-#
-# Revision 2.3  90/04/06  00:25:53  casie
-#  alpha release
-# 
-# Revision 1.1  90/03/11  20:03:33  casie
-# Initial revision
-# 
- 
-INCL=../include
-LSRV=../lib/ircd
-LMSC=../lib
-UBIN=/usr/bin
- 
-GET=co
-CLEAN=rcsclean
 
-LINT=lint
-LFLAGS=-I${I}
+OBJS=channel.o date.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
+     whowas.o s_debug.o mail.o
 
-MK=make -${MAKEFLAGS}
-CC=cc 
+SRC=channel.c date.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
+     whowas.c s_debug.c mail.c
 
-SYS=bsd
-CFLAGS= -g
- 
-MSRC=Makefile ./mkversion.sh
-FSRC=copyright.c
-HSRC=${INCL}/config.h ${INCL}/msg.h ${INCL}/numeric.h ${INCL}/patchlevel.h \
-	 ${INCL}/sock.h ${INCL}/struct.h ${INCL}/sys.h
-ISRC=channel.c date.c ircd.c list.c s_conf.c s_msg.c s_numeric.c whowas.c
-LSRC=version.c
+COMMONOBJS=../common/bsd.o ../common/dbuf.o \
+           ../common/packet.o ../common/parse.o ../common/send.o\
+           ../common/match.o
 
-FOBJ=copyright.o
-LOBJ=version.o
-IOBJ=channel.o date.o ircd.o list.o s_conf.o s_msg.o s_numeric.o s_sys.o\
-	whowas.o
+INCLUDE = ../include
 
-TOBJ=${FOBJ} ${IOBJ} ${LOBJ}
+CFLAGS = -g -I${INCLUDE}
 
-SDEP=s_sys.c
-SSRC=s_bsd.c s_sysv.c
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
-SRC=${MSRC} ${SSRC} ${ISRC} ${FSRC}
-TSRC=${MSRC} ${SSRC} ${ISRC} ${FSRC} ${LSRC}
+all: build
 
-IRCLIBS=${LSRV}/libIrcd.a 
+build: ircd
 
-RMFILES= *~ #*# core 
-
-# Standard targets
- 
-all:	${HSRC} ${SDEP} ircd
-
-ircd:	${FOBJ} ${IOBJ} ${IRCLIBS} ${LOBJ} ./mkversion.sh
-	@echo "Generating version.c";
-	sh ./mkversion.sh; echo -n "     "
-	${CC} ${CFLAGS} -I${INCL} -c version.c
-	@echo -n "     "
-	${CC} ${CFLAGS} -o ircd \
-		${FOBJ} ${IOBJ} ${LOBJ} ${IRCLIBS} ${LIBS} 
-	@echo -n "     "
+ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
+	sh mkversion.sh
+	$(CC) $(CFLAGS) -c version.c
+	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd
 	chmod 4711 ircd
 
-lint:
-	${LINT} ${LINTFLAGS} ${ISRC}
- 
-sources: ${SRC}
- 
-${SRC}:
-	${GET} $@
- 
-names:
-	@for i in ${TSRC}; do echo ${SRC_PREFIX}$$i; done
+../common/bsd.o:
+	(cd ../common; ${MAKE} build);
+
+../common/dbuf.o:
+	(cd ../common; ${MAKE} build);
+
+../common/packet.o:
+	(cd ../common; ${MAKE} build);
+
+../common/parse.o:
+	(cd ../common; ${MAKE} build);
+
+../common/send.o:
+	(cd ../common; ${MAKE} build);
+
+../common/match.o:
+	(cd ../common; ${MAKE} build);
 
 clean:
-	rm -f ${TOBJ}
- 
-clobber:
-	rm -f ${TOBJ}
-	rm -f s_sys.c
-	rm -f version.c
-	rm -f ircd
- 
-nuke:
-	rm -f ${TOBJ} ${RMFILES}
-	rm -f s_sys.c
-	rm -f version.c
-	rm -f ircd
-	-${CLEAN} ${SRC}
-	-${GET} Makefile
+	rm -f *.o *~ core ircd version.c #* *.bak
 
+depend:
+	makedepend -I${INCLUDE} ${SRC}
 
-#	Dependencies and rules for compiling objects
+# DO NOT DELETE THIS LINE -- make depend depends on it.
 
-.c.o:
-	@echo -n "     "
-	${CC} ${CFLAGS} -I${INCL} -c $<
-
-${SDEP}: s_${SYS}.c
-	@echo "Generating dependency s_sys.c from s_${SYS}.c"
-	@ln s_${SYS}.c s_sys.c
-
-${LSRC}: mkversion.sh
-	@echo "     Generating dependency version.c"
-	@mkversion.sh 
-
-${IRCLIBS}:
-	@echo "Building server library under ${SRC_PREFIX}${LSRV} ..."
-	@(cd ${LSRV}; ${MAKE} SRC_PREFIX=${SRC_PREFIX}${LSRV}/ $${IRCLIBS})
- 
-${HSRC}:
-	@echo "Building missing headers under ${SRC_PREFIX}${INCL} ..."
-	@(cd ${INCL}; ${MAKE} SRC_PREFIX=${SRC_PREFIX}${INCL}/ $${SDEP})
- 
-
-#	Dependencies for object files
-
-channel.o:   ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h channel.c 
-date.o:      ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h date.c 
-ircd.o:      ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h ircd.c 
-list.o:      ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h list.c 
-s_conf.o:    ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h  
-s_conf.o:    ${INCL}/sys.h s_conf.c 
-s_msg.o	:    ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h
-s_msg.o	:    ${INCL}/numeric.h ${INCL}/sys.h ${INCL}/msg.h
-s_msg.o	:    ${INCL}/whowas.h s_msg.c 
-s_numeric.o: ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h
-s_numeric.o: ${INCL}/sys.h ${INCL}/numeric.h s_numeric.c 
-s_rsummon.o: ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h rsummon.c
-s_sys.o	:    ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h 
-s_sys.o	:    ${INCL}/sys.h s_sys.c
-whowas.o:    ${INCL}/struct.h ${INCL}/config.h ${INCL}/dbuf.h
-whowas.o:    ${INCL}/numeric.h ${INCL}/whowas.h whowas.c
-version.o:   ${INCL}/patchlevel.h version.c
+mail.o: ../include/struct.h ../include/numeric.h
+channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+channel.o: ../include/numeric.h
+date.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+ircd.o: ../include/struct.h ../include/config.h
+ircd.o: ../include/dbuf.h ../include/numeric.h
+list.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+list.o: ../include/sys.h
+s_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
+s_conf.o: ../include/dbuf.h ../include/sys.h
+s_msg.o: ../include/struct.h ../include/config.h
+s_msg.o: ../include/dbuf.h ../include/sys.h
+s_msg.o: ../include/msg.h ../include/numeric.h ../include/whowas.h
+s_numeric.o: ../include/config.h ../include/sys.h
+s_numeric.o: ../include/struct.h
+s_numeric.o: ../include/dbuf.h ../include/numeric.h
+whowas.o: ../include/struct.h ../include/config.h
+whowas.o: ../include/dbuf.h ../include/sys.h
+whowas.o: ../include/numeric.h
+whowas.o: ../include/whowas.h
+s_debug.o: ../include/struct.h

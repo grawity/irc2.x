@@ -17,12 +17,31 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 20 Jun 1990
+ * extern void free() fixed as suggested by
+ * gruner@informatik.tu-muenchen.de
+ */
+
+/* hpiirai 17 May 1990
+ * Fixed m_whowas() to produce the correct time.
+ */
+
+/* -- Jto -- 12 May 1990
+ * Added newline removal at the end of ctime().
+ */
+
+/* -- Jto -- 10 May 1990
+ * Changed memcpy into bcopy
+ * Added sys.h include to get bcopy work.
+ */
+
 /*
 ** This module contains utilites for keeping the
 ** history/database of recent users.
 */
 #include <time.h>
 #include "struct.h"
+#include "sys.h"
 #if HAS_ANSI_INCLUDES
 #	include <stddef.h>
 #	include <stdlib.h>
@@ -31,7 +50,7 @@
 #	include <malloc.h>
 #else
 extern char *malloc();
-extern free();
+extern void free();
 #endif
 #endif
 #ifndef NULL
@@ -40,6 +59,8 @@ extern free();
 
 #include "numeric.h"
 #include "whowas.h"
+
+extern char *myctime();
 
 typedef struct Home
     {
@@ -92,7 +113,7 @@ aClient *cptr;
 		new->home->online = cptr;
 		new->home->user = cptr->user;
 		cptr->user->refcnt += 1;
-		memcpy(new->home->info,cptr->info,sizeof(new->home->info));
+		bcopy(cptr->info,new->home->info,sizeof(new->home->info));
 		new->home->refcnt = 1;
 	    }
 	else
@@ -202,7 +223,7 @@ char *parv[];
 				   RPL_WHOISSERVER,
 				   sptr->name,
 				   next->home->user->server,
-				   ctime((long *)&next->time));
+				   myctime(next->time));
 			if (next->home->user->away)
 				sendto_one(sptr,":%s %d %s %s :%s",
 					   me.name, RPL_AWAY,

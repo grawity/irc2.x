@@ -25,6 +25,9 @@
 
 IRC was conceived of and written by Jarkko Oikarinen <jto@tolsun.oulu.fi>.
 IRC was originally written in University of Oulu, Computing Center.
+Jun 1990 - IRC 2.5 brought by jto@tolsun.oulu.fi
+  - String channels, moderated channels, invite-only channels, etc...
+
 Contributions were made by a cast of dozens, including the following:
 
 Markku Jarvinen <mta@tut.fi>: Emacs-like editing facility for the client
@@ -65,7 +68,19 @@ the Makefile macros, numerous reformatting of server text messages, and
 added mkversion.sh to keep track of compilation statistics. Numerous
 bug fixes and enhancements, and co-coordinator of the 2.4 release.
 
+jarlek@ifi.uio.no added mail functions to irc.
 
+Armin Gruner <gruner@informatik.tu-muenchen.de> / May, June 1990:
+* Patched KILL-line feature for ircd.conf, works now.
+  Enhancement:  Time intervals can be specified in passwd-field.
+  Result: KILL-Line is only active during these intervals
+* Patched PRIVMSG handling, now OPER can specify masks for sending
+  private messages, advantage: msg to all at a specified server or host.
+* Little tests on irc 2.5 alpha, fixed some little typos in client code.
+  Change: common/debug.c has been moved to ircd/s_debug.c, and a
+  irc/c_debug.c has been created, for the benefit that wrong server msg
+  are displayed if client does not recognize them. (strange, if a server
+  sends an 'unknown command', isn't it?)
 
 Thanks go to those persons not mentioned here who have added their advice,
 opinions, and code to IRC.

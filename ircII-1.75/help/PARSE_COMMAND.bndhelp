@@ -1,6 +1,0 @@
-Usage: BIND <key> PARSE_COMMAND <string>
-  The PARSE_COMMAND function cause the supplied string to be executed
-  as though it were typed in.  Anything may be given as the executed
-  string:  commands, text, aliases, etc.  This function does not
-  disturb the contents of the input buffer and is not added to the
-  command history.

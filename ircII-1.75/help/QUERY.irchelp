@@ -1,5 +1,0 @@
-Usage: QUERY [nicknames]
-  Starts a private conversation with [nicknames].  All text you type
-  that would normally be sent to your channel now goes to [nicknames]
-  in the form of MSGs.  To cancel a private conversation, use QUERY
-  with no arguments.

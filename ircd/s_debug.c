@@ -1,6 +1,7 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, include/patchlevel.h
- *   Copyright (C) 1990 Chelsea Dyerman
+ *   IRC - Internet Relay Chat, ircd/s_debug.c
+ *   Copyright (C) 1990 Jarkko Oikarinen and
+ *                      University of Oulu, Computing Center
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,5 +18,25 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
-#define PATCHLEVEL "2.5"
+char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+
+#include <sys/types.h>
+#include <sys/file.h>
+#include <stdio.h>
+#include "struct.h"
+#if HPUX
+#include <fcntl.h>
+#endif
+
+extern int debuglevel;
+
+debug(level, form, para1, para2, para3, para4, para5, para6)
+int level;
+char *form, *para1, *para2, *para3, *para4, *para5, *para6;
+{
+  if (debuglevel >= 0)
+    if (level <= debuglevel) {
+      fprintf(stderr, form, para1, para2, para3, para4, para5, para6);
+      fprintf(stderr, "\n");
+    }
+}

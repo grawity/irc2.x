@@ -17,6 +17,45 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Wed Jun 20 11:53:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+
+	numerous files changed and functions moved around to make
+	string channels work...
+
+Sun Jun 17 16:52:39 1990  Armin Gruner (gruner@informatik.tu-muenchen.de)
+
+      * s_debug.c
+        New created file, common/debug.c has been moved to it because
+        now we handle also debug outputs in client code
+
+      * s_conf.c
+        Added the prefix character into all reply-strings.
+        MSGs never appeared on client site because parse() didn't
+        recognize it as a prefix (numeric) message
+        Changed the test of time-interval, now a specified interval
+        that begins before midnight and ends after should also work
+
+      * s_bsd.c
+        Added setdtablesize() for sequents OS Dynix,
+        default was 20; allows more socket connections.
+
+Sat May 12 22:50:13 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+
+	* s_msg.c
+	  Added newline removal from the end of string ctime()
+	  returns (m_info() and m_stats())
+	* s_whowas.c
+	  Added newline removal from the end of string ctime()
+	  returns (m_whowas())
+	* s_conf.f
+	  Added close() into init_conf()
+	  Was obviously forgotten from there
+
+Thu May 10 17:17:13 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+
+        * whowas.c
+          Fixed memcpy and bcopy problems
+ 
 Sat Jan  6 17:36:28 1990  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
 
 	* date.c

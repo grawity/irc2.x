@@ -1,4 +1,0 @@
-Usage: TIME [server]
-  Shows the current time of day and date.  If a server is specified,
-  the time of day and date are reported from that server.
-  DATE and TIME are identical.

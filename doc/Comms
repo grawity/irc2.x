@@ -19,7 +19,7 @@
 
 					 	   Author: Jarkko Oikarinen
 						     Date: 3 Sep 1988
-					Last modification: 09 May 90
+					Last modification: 7 Jul 90
 
 		     Internet Relay Chat Protocol
 
@@ -322,9 +322,15 @@ channel > 1000, you can see that he is in there, but you cannot see
 the channel number. Channels < 0 are hidden channels, you cannot
 see users in there (and of course channel number either).
 
+Since 2.5 version of irc channels can be also strings, starting with a
+plus (+) sign. String channels will be first OWNED by the person who
+created the channel and since that he/she can change channel modes
+by MODE command and kick people off channel with KICK command.
+
 Examples:
  :Wiz CHANNEL -13
  CHANNEL 7
+ CHANNEL +Finnish
 
 3.16. Version message
 
@@ -494,6 +500,37 @@ Parameters: [<channel>]
 Part message parts you from discussion on given channel. If channel
 paremeter is omitted, user is parted from default discussion. When
 default discussion is parted, no new default discussion is set up.
+
+3.35. Kick command
+
+   Command: KICK
+Parameters: <channel> <user>
+
+Kicks a person away from given channel. Command is available only to
+channel operators.
+
+3.36. Mode command
+
+   Command: MODE
+Parameters: <channel> {[+|-]|o|p|s|i|t|n]} [<limit>] [<user>]
+
+Mode command is used by channel operators to change mode of a channel.
+Modes available:
+ o  - give/take channel operator privileges
+ p  - private channel flag
+ s  - secret channel flag
+ i  - invite-only channel flag
+ t  - topic settable by chanel operator only flag
+ n  - no private messages to channel flag
+
+More modes may be available later on.
+
+Example:
+  MODE +Finnish +i        ; Makes +Finnish channel invite-only
+  MODE +Finnish +o Kilroy ; Gives operator privileges to Kilroy
+  MODE +Finnish -s        ; Removes 'secret' flag from +Finnish channel
+  MODE +Finnish +l 10     ; Set the limit for the number of users on
+                            channel to 10
 
 4. Optional messages
 

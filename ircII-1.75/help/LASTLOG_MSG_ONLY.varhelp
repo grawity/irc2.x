@@ -1,6 +1,0 @@
-Usage: SET LASTLOG_MSG_ONLY [ON|OFF|TOGGLE]
-  If LASTLOG_CONVERSATION is ON, and LASTLOG_MSG_ONLY is set to ON,
-  then only private messages (/MSG) will be saved in the lastlog.
-  If LASTLOG_MSG_ONLY is OFF, all messages are recorded.  If the
-  LASTLOG_CONVERSATION variable is set to OFF, then the value of
-  LASTLOG_MSG_ONLY is ignored.

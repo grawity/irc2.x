@@ -67,6 +67,8 @@
 #define MSG_GRPH     "GRPH"
 #define MSG_XTRA     "XTRA"
 #define MSG_MOTD     "MOTD"
+#define MSG_MODE     "MODE"
+#define MSG_KICK     "KICK"
 
 #define MAXPARA    15 
 
@@ -78,7 +80,10 @@ extern int m_squit(), m_restart(), m_away(), m_die(), m_connect();
 extern int m_ping(), m_pong(), m_oper(), m_pass(), m_wall(), m_trace();
 extern int m_time(), m_rehash(), m_names(), m_namreply(), m_admin();
 extern int m_linreply(), m_notice(), m_lusers(), m_voice(), m_grph();
-extern int m_xtra(), m_motd(), m_whowas(), m_wallops();
+extern int m_xtra(), m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
+#ifdef MSG_MAIL
+extern int m_mail();
+#endif
 
 struct Message {
   char *cmd;
@@ -100,7 +105,7 @@ struct Message msgtab[] = {
   { MSG_LIST,    m_list,     0, 1 },
   { MSG_TOPIC,   m_topic,    0, 1 },
   { MSG_INVITE,  m_invite,   0, 2 },
-  { MSG_CHANNEL, m_channel,  0, 1 },
+  { MSG_CHANNEL, m_channel,  0, 2 },
   { MSG_VERSION, m_version,  0, 1 },
   { MSG_QUIT,    m_quit,     0, 2 },
   { MSG_SQUIT,   m_squit,    0, 2 },
@@ -136,6 +141,11 @@ struct Message msgtab[] = {
   { MSG_GRPH,    m_grph,     0, 2 },
   { MSG_XTRA,    m_xtra,     0, 2 },
   { MSG_MOTD,    m_motd,     0, 2 },
+#ifdef MSG_MAIL
+  { MSG_MAIL,    m_mail,     0, 6 },
+#endif
+  { MSG_MODE,    m_mode,     0, 6 },
+  { MSG_KICK,    m_kick,     0, 3 },
   { (char *) 0, (int (*)()) 0 }  
 };
 #else

@@ -18,6 +18,24 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 20 Jun 1990
+ * extern void free() fixed as suggested by
+ * gruner@informatik.tu-muenchen.de
+ */
+
+/* -- Jto -- 03 Jun 1990
+ * Added chname initialization...
+ */
+
+/* -- Jto -- 24 May 1990
+ * Moved is_full() to channel.c
+ */
+
+/* -- Jto -- 10 May 1990
+ * Added #include <sys.h>
+ * Changed memset(xx,0,yy) into bzero(xx,yy)
+ */
+
 char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #if HAS_ANSI_INCLUDES
@@ -29,11 +47,11 @@ char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center and 
 #	include <malloc.h>
 #else
 char *malloc();
-free();
-char *memset();
+extern void free();
 #endif
 #endif
 #include "struct.h"
+#include "sys.h"
 
 #ifndef NULL
 #define NULL 0
@@ -41,7 +59,6 @@ char *memset();
 
 extern aClient *client;
 extern aConfItem *conf;
-extern int maxusersperchannel;
 
 static outofmemory()
     {
@@ -75,7 +92,7 @@ aClient *from;
 	** (hmm, perhaps this is not the most efficient way,
 	**  if Client has long fields like buffer... --msa)
 	*/
-	memset((char *)cptr,0,size);
+	bzero((char *)cptr,size);
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
 	cptr->next = NULL; /* For machines with NON-ZERO NULL pointers >;) */
 	cptr->user = NULL;
@@ -97,9 +114,10 @@ aClient *sptr;
 		return;
 	if ((sptr->user = (anUser *)malloc(sizeof(anUser))) == NULL)
 		outofmemory();
-	memset((char *)sptr->user,0,sizeof(anUser));
+	bzero((char *)sptr->user,sizeof(anUser));
 	sptr->user->away = NULL;
 	sptr->user->refcnt = 1;
+	sptr->user->channel = (aChannel *) 0;
     }
 
 /*
@@ -116,15 +134,5 @@ anUser *user;
 			free(user->away);
 		free(user);
 	    }
-    }
-
-int is_full(channel, users)
-int channel, users;
-    {
-	if (channel > 0 && channel < 10)
-		return(0);
-	if (users >= maxusersperchannel)
-		return(1);
-	return(0);
     }
 

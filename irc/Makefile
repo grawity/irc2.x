@@ -1,9 +1,6 @@
-# Makefile for IRC 2.0.1v6
 #************************************************************************
 #*   IRC - Internet Relay Chat, irc/Makefile
-#*   Copyright (C) 1990
-#*
-#*   Author list and credits in doc/AUTHORS
+#*   Copyright (C) 1990 Jarkko Oikarinen
 #*
 #*   This program is free software; you can redistribute it and/or modify
 #*   it under the terms of the GNU General Public License as published by
@@ -19,57 +16,90 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
-# 
 
-SYS=bsd
+# 17 Jun 1990 - Gonzo
+# Now, common/debug.c has changed to irc/c_debug.c, for the benefit of
+# displaying wrong server stuff
 
-# The library and include file directory
-L=../lib/ircd
+# 30 May 1990 - Jto
+# swear.o isn't needed when compiling irc.
+# Removed it (as suggested by Kim).
 
-# The include directory
-INC =../include
+# Check the curses libraries if your systems wants them differently...
+CLIBS = -lcurses -ltermcap
 
-# Object files shared with the server
-LIBOBJS= $L/send.o $L/debug.o $L/sys.o $L/packet.o $L/dbuf.o $L/parse.o
+OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
+     irc.o screen.o str.o c_debug.o
 
-# Client specific files
-COBJS= irc.o c_msg.o str.o edit.o screen.o c_conf.o c_numeric.o \
-       c_sys.o help.o ignore.o swear.o c_version.o
-      
-CFLAGS   = -g -I$(INC)
-CC = cc
+SRC=c_bsd.c c_conf.c c_msg.c c_numeric.c c_version.c edit.c help.c ignore.c\
+     irc.c screen.c str.c c_debug.c
 
-# At least HPUX needs only curses library, not termcap...
-#TLIBS = -lcurses
+COMMONOBJS=../common/bsd.o ../common/dbuf.o\
+           ../common/packet.o ../common/parse.o ../common/send.o\
+	   ../common/match.o
 
-TLIBS = -lcurses -ltermcap
+INCLUDE = ../include
 
+CFLAGS = -O -I${INCLUDE}
 
-irc: $(COBJS) $(LIBOBJS)
-	$(CC) $(CFLAGS) $(COBJS) -o $@ $(TLIBS) $(LIBOBJS)
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
-$(LIBOBJS):
-	(cd $L; make)
+all: build
+
+build: irc
+
+irc: $(OBJS) $(COMMONOBJS)
+	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(CLIBS)
+
+../common/bsd.o: ../common/bsd.c
+	(cd ../common; ${MAKE} build);
+
+../common/dbuf.o: ../common/dbuf.c
+	(cd ../common; ${MAKE} build);
+
+../common/packet.o: ../common/packet.c
+	(cd ../common; ${MAKE} build);
+
+../common/parse.o: ../common/parse.c
+	(cd ../common; ${MAKE} build);
+
+../common/send.o: ../common/send.c
+	(cd ../common; ${MAKE} build);
+
+../common/match.o: ../common/match.c
+	(cd ../common; ${MAKE} build);
 
 clean:
-	-@rm *.o *~ irc
+	rm -f *.o *~ core #* irc *.bak irc
 
+depend:
+	makedepend -I${INCLUDE} ${SRC}
 
-### Dependencies
+# DO NOT DELETE THIS LINE -- make depend depends on it.
 
-c_sys.c		: c_$(SYS).c
-		cp c_$(SYS).c c_sys.c
-
-irc.o       : irc.c $(INC)/struct.h $(INC)/config.h $(INC)/msg.h \
-              $(INC)/sys.h irc.h 
-c_msg.o     : c_msg.c $(INC)/struct.h $(INC)/config.h $(INC)/msg.h 
-str.o       : str.c $(INC)/struct.h $(INC)/config.h $(INC)/sys.h 
-edit.o      : edit.c $(INC)/struct.h $(INC)/config.h 
-screen.o    : screen.c $(INC)/struct.h $(INC)/config.h 
-c_conf.o    : c_conf.c $(INC)/struct.h $(INC)/sys.h $(INC)/config.h 
-c_numeric.o : c_numeric.c $(INC)/sys.h $(INC)/struct.h $(INC)/numeric.h \
-              $(INC)/config.h 
-c_sys.o     : c_sys.c $(INC)/struct.h $(INC)/sys.h $(INC)/config.h 
-help.o      : help.c $(INC)/struct.h $(INC)/sys.h help.h $(INC)/config.h 
-ignore.o    : ignore.c $(INC)/struct.h $(INC)/sys.h $(INC)/config.h 
-swear.o     : swear.c $(INC)/struct.h $(INC)/config.h 
+c_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+c_conf.o: ../include/struct.h ../include/config.h
+c_conf.o: ../include/dbuf.h ../include/sys.h
+c_msg.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+c_msg.o: ../include/msg.h
+c_numeric.o: ../include/config.h ../include/sys.h
+c_numeric.o: ../include/struct.h
+c_numeric.o: ../include/dbuf.h ../include/numeric.h
+c_version.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+edit.o: ../include/struct.h
+edit.o: ../include/config.h ../include/dbuf.h
+help.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+help.o: ../include/sys.h
+help.o: /usr/include/pwd.h help.h
+ignore.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+ignore.o: ../include/sys.h
+ignore.o: /usr/include/pwd.h
+irc.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+irc.o: ../include/msg.h ../include/sys.h
+irc.o: irc.h
+screen.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+str.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+str.o: ../include/sys.h
+swear.o: ../include/struct.h ../include/config.h
+swear.o: ../include/dbuf.h ../include/sys.h /usr/include/pwd.h
+c_debug.o: ../include/struct.h

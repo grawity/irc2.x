@@ -17,6 +17,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 07 Jul 1990
+ * Added mail command
+ */
+
 struct Command {
   int (*func)();
   char *name;
@@ -76,6 +80,9 @@ struct Command commands[] = {
   { (int (*)()) 0, "MOTD",    SERVER_CMD, "\0\0", "MOTD" },
   { do_unkill,     "UNKILL",  LOCAL_FUNC, "\0\0", "UNKILL" },
   { do_server,     "SERVER",  LOCAL_FUNC, "\0\0", "SERVER" },
+  { (int (*)()) 0, "MODE",    SERVER_CMD, "\0\0", "MODE" },
+  { (int (*)()) 0, "MAIL",    SERVER_CMD, "\0\0", "MAIL" },
+  { (int (*)()) 0, "KICK",    SERVER_CMD, "\0\0", "KICK" },
   { (int (*)()) 0, (char *) 0, 0,         "\0\0", (char *) 0 }
 };
 

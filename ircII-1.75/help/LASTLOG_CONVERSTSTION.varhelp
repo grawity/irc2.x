@@ -1,5 +1,0 @@
-Usage: SET LASTLOG_CONVERSATION [ON|OFF|TOGGLE]
-  Turns ON or OFF the logging of only conversational messages in the
-  lastlog.  When ON, only user messages are recorded (normal channel
-  conversations, private messages, etc), not output from things like
-  LIST and WHO.  When OFF, everything is recorded.

@@ -1,7 +1,6 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, irc/c_version.c
- *   Copyright (C) 1990 Jarkko Oikarinen and
- *                      University of Oulu, Finland
+ *   IRC - Internet Relay Chat, ircd/match.c
+ *   Copyright (C) 1990 Jarkko Oikarinen
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -19,18 +18,38 @@
  */
 
 #include "struct.h"
+#include "sys.h"
 
-char *intro = "Internet Relay Chat v%s";
-char *version = "2.5";
-char *infotext[] =
+/*
+**  Compare if a given string (name) matches the given
+**  mask (which can contain wild cards: '*' match any
+**  number of chars, '?'=match any single character.
+**
+**	return	1, if match
+**		0, if no match
+*/
+int matches(mask, name)
+char *mask, *name;
     {
-	"Original code written by Jarkko Oikarinen <jto@tolsun.oulu.fi>",
-	"Copyright 1988,1989,1990 University of Oulu, Computing Center",
-        "                         and Jarkko Oikarinen",
-	0,
-    };
+	register char m, c;
 
-char *HEADER = 
-" *** Internet Relay Chat *** Type /help to get help *** Client v%s ***      ";
-
-
+	for (;; mask++, name++)
+	    {
+		m = isupper(*mask) ? tolower(*mask) : *mask;
+		c = isupper(*name) ? tolower(*name) : *name;
+		if (c == '\0')
+			break;
+		if (m != '?' && m != c || c == '*')
+			break;
+	    }
+	if (m == '*')
+	    {
+		for ( ; *mask == '*'; mask++);
+		if (*mask == '\0')
+			return(0);
+		for (; *name && matches(mask, name); name++);
+		return(*name ? 0 : 1);
+	    }
+	else
+		return ((m == '\0' && c == '\0') ? 0 : 1);
+    }

@@ -35,9 +35,9 @@ static char *weekdays[] = {
 };
 
 
-char *date() 
+char *date(clock) 
+long clock;
 {
-  long clock;
   struct tm *ltbuf;
   static char buf[80];
   struct timeval tp;
@@ -47,7 +47,8 @@ char *date()
   extern char *timezone();
 #endif
 
-  time(&clock);
+  if (!clock) 
+    time(&clock);
   ltbuf = localtime(&clock);
   gettimeofday(&tp, &tzp);
 

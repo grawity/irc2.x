@@ -19,15 +19,6 @@
 
 /* 
  * $Log:	config.h,v $
- * -- Jto -- 16 Jun 1990
- * Added new MSG_BASE (now MAIL) fixes from Wizible...
- *
- * -- Jto -- 03 Jun 1990
- * Added MSG_BASE defines to irc code
- *
- * -- Jto -- 10 May 1990
- * Added UPHOST back into config.h (Who removed it ?)
- *
  * Revision 2.4  90/05/04  23:48:36  chelsea
  * New macros, new options, a bit more tidy and more comments.
  * 
@@ -85,28 +76,17 @@
 #define HAVECURSES	1	/* If you have curses, and want to use it.  */
 #define HAVETERMCAP	0	/* If you have termcap, and want to use it. */
 
-  /* Define this if you want to use MSGBASE system                */
-  /* MSGBASE is a system which allows you to leave messages       */
-  /* for users and make them be sent to recipient when he/she     */
-  /* signs on IRC. This does not work on all systems !            */
-/* #define MSG_MAIL     "MAIL" */
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
  * these are only the reccommened names and paths. Change as needed.
  */
 
-#define SPATH "/home/kick/etc/irc2.5/ircd/ircd" /* Where the server lives.  */
-#define CPATH "/home/kick/etc/irc2.5/ircd/ircd.cf"	 /* IRC Configuration file.  */
-#define MPATH "/home/kick/etc/irc2.5/ircd/ircd.motd"     /* Message Of The Day file. */
-#define LPATH "/home/kick/etc/irc2.5/ircd/ircd.log"      /* Where the Logfile lives. */
-#ifdef MSG_MAIL
-/* Where MSGBASE saves its messages from time to time... */
-#define MAIL_SAVE_FILENAME "/home/kick/etc/irc2.5/ircd/.ircdmail"
-#endif
+#define SPATH "/home/kick/etc/irc2.4/ircd/ircd" /* Where the server lives.  */
+#define CPATH "/home/kick/etc/irc2.4/ircd/ircd.cf"	 /* IRC Configuration file.  */
+#define MPATH "/home/kick/etc/irc2.4/ircd/ircd.motd"     /* Message Of The Day file. */
+#define LPATH "/home/kick/etc/irc2.4/ircd/ircd.log"      /* Where the Logfile lives. */
 
-#define UPHOST "jerry.tom.astem.or.jp"       /* Default UPHOST for irc */
-                                             /* Standard client        */
 
 #define AUTOTOPIC 1	/* Automatic topic notify upon joining a channel  */ 
 
@@ -138,7 +118,7 @@
  * (PINGFREQUENCY * 2) seconds, then the connection will be closed.
  */
 
-#define PINGFREQUENCY    90	/* Recommended value: 120 */
+#define PINGFREQUENCY    120	/* Recommended value: 120 */
 
 
 /*
@@ -177,7 +157,7 @@
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
 
-#define MAXSENDQLENGTH 24000
+#define MAXSENDQLENGTH 16000
 
 
 #if LOG
@@ -215,7 +195,3 @@
 #ifdef mips
 #undef SYSV
 #endif
-
-#ifdef sequent                   /* Dynix (sequent OS) */
-#define SEQ_NOFILE    128        /* set to your current kernel impl, */
-#endif                           /* max number of socket connections */

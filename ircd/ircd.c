@@ -18,6 +18,22 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 07 Jul 1990
+ * Added jlp@hamblin.byu.edu's debugtty fixes
+ * Added init_messages() -call (for mail.c)
+ */
+
+/* -- Jto -- 03 Jun 1990
+ * Added Kill fixes from gruner@lan.informatik.tu-muenchen.de
+ * Changed some subroutine call order to get error messages...
+ */
+
+/* -- Jto -- 13 May 1990
+ * Added fixes from msa:
+ *   Fixed some messages to readable ones
+ *   Added initial configuration file read success checking.
+ */
+
 char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include <sys/types.h>
@@ -25,6 +41,7 @@ char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and 
 #include <stdio.h>
 #include <signal.h>
 #include "struct.h"
+#include "numeric.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -40,6 +57,7 @@ char **myargv;
 int portnum;			/* Server port number, listening this */
 char *configfile;		/* Server configuration file */
 int debuglevel = -1;		/* Server debug level */
+int debugtty = 0;
 char *debugmode = "";		/*  -"-    -"-   -"-  */
 
 int maxusersperchannel = MAXUSERSPERCHANNEL;
@@ -63,6 +81,9 @@ restart()
 
 		restarting = 1;
 		sendto_ops("Aieeeee!!!  Restarting server...");
+#ifdef MSG_MAIL
+		save_messages();
+#endif
 	    }
 	debug(DEBUG_NOTICE,"Restarting server...");
 	
@@ -122,7 +143,7 @@ long currenttime;
 		
 		if (cptr == NULL && connect_server(aconf) == 0)
 		    {
-			sendto_ops("Connection to %s established.",
+			sendto_ops("Connecting to %s activated.",
 				   aconf->name);
 			connected = TRUE; /* We connect only one at time... */
 		    }
@@ -133,6 +154,9 @@ long currenttime;
 static int check_pings()
     {		
 	register aClient *cptr;
+	register int flag;
+	extern int find_kill();
+	char reply[128];
 
 	for (cptr = client; cptr; )
 	    {
@@ -146,25 +170,38 @@ static int check_pings()
 			cptr = client; /* NOTICE THIS! */
 			continue;
 		    }
+
+
 		if (!IsMe(cptr) && cptr->fd >= 0 &&
-		    (lasttime - cptr->lasttime) > PINGFREQUENCY)
-		    {
-			if ((lasttime - cptr->lasttime) > 2 * PINGFREQUENCY)
-			    {
-				if (IsServer(cptr))
-					sendto_ops(
-					 "No responce from %s, closing link",
-						   GetClientName(cptr,FALSE));
-				ExitClient((aClient *)NULL, cptr);
-				cptr = client; /* NOTICE THIS! */
-				continue;
-			    }
-			else if ((cptr->flags & FLAGS_PINGSENT) == 0)
-			    {
-				cptr->flags |= FLAGS_PINGSENT;
-				sendto_one(cptr, "PING %s", me.name);
-			    }
-		    }
+		    ((flag = IsPerson(cptr) ? find_kill(cptr->user->host,
+					cptr->user->username, reply) : 0) > 0
+		     ||  (lasttime - cptr->lasttime) > PINGFREQUENCY))
+		  {
+		    if ((lasttime - cptr->lasttime) > 2 * PINGFREQUENCY ||
+			flag > 0)
+		      {
+			if (IsServer(cptr))
+			  sendto_ops("No response from %s, closing link",
+				     GetClientName(cptr,FALSE));
+			if (flag && IsPerson(cptr))
+			  sendto_ops("Kill line active for %s, closing link",
+				     GetClientName(cptr, FALSE));
+			if (flag && IsPerson(cptr))
+			  sendto_one(cptr, reply, me.name,
+				     ERR_YOUREBANNEDCREEP, cptr->name);
+			ExitClient((aClient *)NULL, cptr);
+			cptr = client; /* NOTICE THIS! */
+			continue;
+		      }
+		    else if ((cptr->flags & FLAGS_PINGSENT) == 0)
+		      {
+			cptr->flags |= FLAGS_PINGSENT;
+			sendto_one(cptr, "PING %s", me.name);
+		      }
+		    if ((flag == -1) && IsPerson(cptr))
+		      sendto_one(cptr, reply, me.name,
+				 ERR_YOUWILLBEBANNED, cptr->name);
+		  }
 		cptr = cptr->next; /* This must be here, see "NOTICE THIS!" */
 	    }
     }
@@ -177,7 +214,7 @@ static int check_pings()
 static int BadCommand()
     {
 	printf(
-"Usage: ircd[ -f config][ -h servername][ -p portnumber][ -x loglevel]\n");
+"Usage: ircd [-f config] [-h servername] [-p portnumber] [-x loglevel] [-t]\n");
 	printf("Server not started\n\n");
 	exit(-1);
     }
@@ -245,6 +282,9 @@ char *argv[];
 			debuglevel = atoi(p);
 			debugmode = *p ? p : "0";
 			break;
+		    case 't':
+			debugtty = 1;
+			break;
 	    /*      case 'c':
 			maxusersperchannel = atoi(p));
 			break; */
@@ -253,13 +293,25 @@ char *argv[];
 			break;
 		    }
 	    }
+
+	if (debuglevel == -1)  /* didn't set debuglevel */
+           if (debugtty)       /* but asked for debugging output to tty */
+               debugtty = 0;   /* turn it off */
+
+
 	if (argc > 0)
 		BadCommand(); /* Should never return from here... */
 	if (BadPtr(configfile))
 		configfile = CONFIGFILE;
-	init_sys();
+	if (initconf() == -1)
+	  {
+	    debug(DEBUG_FATAL,
+		  "Failed in reading configuration file %s", configfile);
+	    printf("Couldn't open configurayion file %s\n", configfile);
+	    exit(-1);
+	  }
+	init_sys(); 
 	OpenLog();
-	initconf();
 	/*
 	** If neither command line nor configuration defined any, use
 	** compiled default port and sockect hostname.
@@ -274,6 +326,10 @@ char *argv[];
 	me.fd = open_port(portnum);
 	me.status = STAT_ME;
 	me.lasttime = me.since = getlongtime();
+
+#ifdef MSG_MAIL
+	init_messages();
+#endif
 	
 	debug(DEBUG_DEBUG,"Server ready...");
 	for (;;)
@@ -317,14 +373,17 @@ static int OpenLog()
 #ifndef TTYON
 	if (debuglevel >= 0)
 	    {
-		if ((fd = open(LOGFILE, O_WRONLY | O_CREAT, 0600)) < 0) 
-			if ((fd = open("/dev/null", O_WRONLY)) < 0)
-				exit(-1);
-		if (fd != 2)
+	      if (!debugtty) /* leave debugging output on stderr */
+		{
+		  if ((fd = open(LOGFILE, O_WRONLY | O_CREAT, 0600)) < 0) 
+		    if ((fd = open("/dev/null", O_WRONLY)) < 0)
+		      exit(-1);
+		  if (fd != 2)
 		    {
-			dup2(fd, 2);
-			close(fd); 
+		      dup2(fd, 2);
+		      close(fd); 
 		    }
+		}
 	    }
 	else
 	    {

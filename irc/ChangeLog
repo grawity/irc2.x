@@ -17,6 +17,25 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Wed Jun 20 11:45:30 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
+
+	String channel fixes to files, added some numerics.
+
+Sun Jun 17 17:12:14 1990  Armin Gruner (gruner@informatik.tu-muenchen.de)
+
+      * c_debug.c
+        New created file, for the benefit of wrong server stuff output
+        if client does not recognize it. common/debug.c has been removed.
+
+      * c_numeric.c
+        Changed output of YOUWILLBEBANNED and YOUREBANNEDCREEP, now only
+        the first digits (== minutes) of the msg will be inserted.
+
+      * irc.c
+        Defined debuglevel to DEBUG_ERROR, now more error
+        conditions are displayed.
+
+
 Sat Jan  6 14:48:34 1990  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
 
 	* screen.c

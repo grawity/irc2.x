@@ -1,0 +1,328 @@
+\input texinfo @c -*-texinfo-*-
+@comment %**start of header
+@setfilename irchat
+@settitle irchat.el, an IRC interface for GNU Emacs
+@setchapternewpage odd
+@comment %**end of header
+
+@ifinfo
+This file documents use of irchat.el, a GNU Emacs interface for Internet
+Relay Chat.
+
+Copyright @copyright{} 1990 Free Software Foundation, Inc.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+@ignore
+Permission is granted to process this file through TeX and print the
+results, provided the printed document carries a copying permission
+notice identical to this one except for the removal of this paragraph
+(this paragraph not being relevant to the printed manual).
+
+@end ignore
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided also that the
+sections entitled "Distribution" and "General Public License" are
+included exactly as in the original, and provided that the entire
+resulting derived work is distributed under the terms of a permission
+notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that the sections entitled "Distribution" and "General Public
+License" may be included in a translation approved by the author instead
+of in the original English.
+
+@end ifinfo
+
+@titlepage
+@sp 10
+@center @titlefont {irchat.el}
+@sp 2
+@center IRC interface for GNU Emacs
+@sp 2
+@center Tor Lillqvist
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 1990 Free Software Foundation, Inc.
+
+Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided also that the
+sections entitled "Distribution" and "General Public License" are
+included exactly as in the original, and provided that the entire
+resulting derived work is distributed under the terms of a permission
+notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions,
+except that the sections entitled "Distribution" and "General Public
+License" may be included in a translation approved by the author instead
+of in the original English.
+
+@end titlepage
+
+@node Top, Overview, (dir), (dir)    
+@comment  node-name,  next,  previous,  up
+
+Welcome to the documentation of irchat.el, the GNU Emacs interface to
+Internet Relay Chat. irchat.el provides all the necessary IRC features,
+combined with the easy extensibility of GNU Emacs.
+
+@menu
+* Introduction::What is irchat.el?
+* Overview::	Why use IRC in GNU Emacs?
+* Installing::	How to get irchat.el up and running?
+* Using:: 	Using irchat.el
+* Commands::	IRC Commands in irchat.el
+* Customizing::	Customizing irchat.el
+* Authors::	Reporting bugs etc.
+@end menu
+
+@node Introduction, Basic, Top, Top
+@comment  node-name,  next,  previous,  up
+@chapter Introduction
+
+What is irchat.el?
+
+Irchat.el is a GNU Emacs client for the Internet Relay Chat protocol.
+Study the documentation accompanying the server. Make sure to read the
+etiquette file.
+
+@node Overview, Installing, Introduction, Top
+@comment  node-name,  next,  previous,  up
+@chapter Overview
+
+Why IRC in Emacs?
+
+@enumerate
+@item
+You can have other Emacs buffers visible and have irchat either in a
+small buffer or not visible at all. For example, you can read USENET
+news with GNUS without leaving irc, and be noticed if someone is trying
+to reach you.
+
+@item
+You get all the GNU Emacs features such as a calculator, all usable
+while in IRC.
+
+@item
+You can edit other files while talking about their contents on IRC.
+
+@item
+The commands for editing your text are those familiar from GNU Emacs and
+if you have customized them, the customized editing keys are
+automatically available.
+
+@item
+You may easily add features if you find something missing (assuming you
+know elips, of course, but this is a good reason to learn. ;))
+
+@item
+GNU Emacs has been ported on many different UNIX machines, so you will
+not have to do the porting yourself, which might be the case with the
+traditional clients.
+
+@item
+If you use IRC on several machines, You don't need to compile an IRC
+client for all of them. You can just take the small elisp code with you
+and use it.
+
+@item
+GNU Emacs tries to handle most terminals, which might not be the case
+with the traditional clients.
+
+@end enumerate
+
+@node Installing, Using, Overview, Top
+@comment  node-name,  next,  previous,  up
+@chapter Installing irchat.el
+
+Try to convince your local emacs administrator to put irchat.el to a
+globally accessible elisp directory and to add this info to the info
+tree. No modifications are needed in irchat.el itself, as long as the
+irc port is 6667 as it usually is.
+
+If you are not happy with the way irchat.el is when shipped, you need to
+have a small piece of code for yourself for setting some variables that
+control irchat the way you want them to be. You may place them in your
+.emacs or in an other file to be loaded before starting irchat itself.
+See the section called "Customizing irchat.el" for info on the
+customization possibilities.
+
+@node Using, Commands, Installing, Top    
+@comment  node-name,  next,  previous,  up
+@chapter Using irchat.el
+
+In irc-mode you will have two buffers, the command buffer and the
+dialogue buffer. You will be typing in the command buffer, and the
+dialogue will appear in the dialogue buffer. The command buffer roughly
+corresponds to the one-line area in the bottom in the traditional
+clients.
+
+In the command buffer, the lines you type will be sent to the channel you
+are on when you press the return or the linefeed key. You may freely edit
+them or do any regular editing tricks that you may want to do. If the line
+exceeds the right margin, it will be wrapped around, so you can finish the
+line and send it when you're ready.
+
+The cursor keys move you around in the buffer. If you want to say
+something again, just find it in the command buffer, move the cursor on
+it, and press the return key.
+
+You can use the regular GNU Emacs commands in the command buffer for
+inserting text from elsewhere, like insert-file (C-x i) for adding other
+files, C-u M-! for inserting output of shell commands and so forth.
+Notice that these will NOT be sent to the channel before you go on each
+line and press return.
+
+The commands for controlling IRC are available in the command buffer.
+See section "IRC Commands" for info.
+
+The other buffer is the dialogue buffer. The conversation you have had in
+IRC will be stored there. Notice that this buffer is not saved anywhere
+unless you explicitly tell emacs to do so. This feature lets you see what
+has been spoken about on the channel while you have been away, for
+example. There is a number of commands for the dialogue buffer. There are
+also a couple of commands for controlling the dialogue buffer from the
+command buffer, namely C-c C-f, C-c DEL and C-c C-l. C-c C-f (or C-c F)
+will freeze the dialogue buffer so that you can read the text there and
+scroll the buffer. C-c DEL will scroll dialogue buffer one windowful
+back and C-c C-l will refresh the irchat buffers. Of course, you can use
+M-C-v for scrolling the dialogue buffer on from the command buffer if
+you only have two buffers visible.
+
+Notice that there will be a capital F on the modeline of the dialogue
+buffer if the dialogue buffer is frozen. Press C-c C-f again to unfreeze
+it. A capital A signifies that you've marked yourself as being AWAY.
+
+In the dialogue buffer there is a special keymap, which doesn't allow
+for typing. The only commands there are t for tagging the line, o for
+switching buffers, f for freeze, DEL for scrolling up and space for
+scrolling forward.
+
+There is also a mode for debugging irchat, which you can use if you want
+to familiarize yourself with the server-client traffic or think that
+irchat is handling something wrong. You invoke it with C-c C-d and end
+with another C-c C-d.
+
+@node Commands, Customizing, Using, Top
+@comment  node-name,  next,  previous,  up
+@chapter IRC Commands
+
+There are two kinds of commands in IRC, namely client and server commands.
+For using irchat.el it is useful to understand the difference.  For
+example, the client command /CLEAR for clearing the screen is used in the
+traditional clients. This command has no effect outside your screen, and
+the other IRC-users need not be notified. On the other hand, the server
+command /NICK changes your nickname. This command is sent to everyone on
+the same channel with you.
+
+In irchat.el, all the server commands are available simply by typing a
+slash (/) at the beginning of a line and then typing the server command
+with the parameters. This line will be sent directly to the server (no
+/QUOTE needed (or even allowed)). Notice, however, that you need to type
+the commands in full, for example, /NAMES instead of /N. Also notice
+that the /M command is really called /PRIVMSG.
+
+For most commands, however, there is a better way. We have written emacs
+commands for sending the line and bound them to keys. For example, for
+/LIST you just say C-c l, C-c n for /NICK, C-c C-n for /NAMES and so on.
+
+Some of there commands require parameters and they'll prompt you for
+them. For example, the C-c n command will ask you for the new nickname
+you with to use. If you at this point decide that you didn't really want
+to change your nickname, press C-g (control-g) to cancel.
+
+For some commands you may give an argument but you don't have to. For
+example, to see the users on channel 42, you type C-u 42 C-c w when just
+C-c w would show you all users. You may omit the channel number if you
+mean the current channel, that is C-u C-c w for users on the same channel
+with you. C-c n works in a similar fashion.
+
+There exists a special /QUERY-like mode, in which every line you type
+will be sent to one person via a private message. You begin it with C-c
+2 and answering the question for person to chat with, and end with another
+C-c 2 with blank spaces as the name of the person.
+
+There are two other ways for sending private messages, C-c p and C-c m.
+With C-c m you'll be asked for the name of the person and then for the
+text. You'll be typing the text in the minibuffer. The other way is to
+type the text in the command buffer, and to press C-c p to send it.
+irchat.el prompts you for the name of the person to send it to, the
+default being the name of the person you sent your last private message
+to. You can easily chat privately with two persons at a time by being in
+a C-c 2 with one and C-c p:ing with the other.
+
+C-c b invokes a very special broadcasting mode, in which everything that
+is said on the channel is transmitted to the person (or channel) given
+as a parameter. For example, if you and your friend are on irc on
+different channels, and want to see what's going on in each others'
+channels without looking at each other's terminals all the time, you can
+C-c b him on your channel and he can C-c b you. You end it with an empty
+C-c b.
+
+New feature in 1.25: When you join a channel, completion is also
+available. C-c j +mTAB takes you to the channel
++My_very_long_channel_name, if there happens to be such a channel. 
+
+Notice that for C-c m, C-c p, C-c 2, C-c b, C-c f (/WHOIS), and C-c k
+(/IGNORE) nickname completion is available. What this means is that you
+only need to type a few first letters of the nick, and you can use TAB
+or SPC to fill in the rest. This feature is also available in the
+command buffer, bound to M-C-i (ESC TAB), where it completes the word
+you typed last assuming it is a nickname. This is handy for typing long
+nicks so that you get the CaSe correctly. For example, to say
+"BigCheese: ..." you just need to say "biESC TAB:", assuming nobody
+else's (on IRC at the time) nick starts with bi-.
+
+If you find ESC TAB too difficult to type, see the file own-irc.el for
+customizing hints.
+
+@node Customizing, Authors, Using, Top    
+@comment  node-name,  next,  previous,  up
+@chapter Customizing irchat.el
+
+The simplest way to customize is through the defvars, that is, variables.
+You can place these either in your .emacs or in a special file. The most
+important defvars for getting irchat work the way you want it to are
+irchat-beep-on-bells and irchat-command-window-on-top, but there are many
+others.
+
+See the file called irchat.defvars in the distribution for info on the most
+important defvars.
+
+If you're not happy with the way the keys are set up, you may wish to
+modify the key bindings. This is most conveniently done by defining them
+in your irchat-Command-mode-hook.
+
+There are lost of other hooks, one for each server reply and so forth.
+With these, an auto-greeter, for example, would be trivial to write.
+
+@node Authors,,Customizing, Top
+@comment  node-name,  next,  previous,  up
+@chapter irchat.history, reporting bugs etc.
+
+The original irchat.el was written by Tor Lillqvist
+<tml@@hemuli.tik.vtt.fi>, but the irchat.el from those days is much
+different from what it is now. irchat.el is highly ... eh ...  dynamic
+right now, lots of new features have been added and old bugs have been
+removed. Thanks for most of this is to nam <kny@@niksula.hut.fi> and
+cletus <jtp@@niksula.hut.fi> for listening to mine <kk102087@@tut.fi>
+and luru's <so-luru@@tolsun.oulu.fi> ideas and implementing them. Some
+of the nicest hacks come from mta <mta@@tut.fi>, thanks to him.
+
+There is, undoubtedly, lots of bugs and unintended features left in both
+the code and the documentation. We welcome any suggestions and really
+appreciate nice hacks and bug fixes.
+
+This documentation was Kaizzu's first attempt ever to write emacs-info
+-like text, and I probably failed miserably. Sorry.
+
+@bye

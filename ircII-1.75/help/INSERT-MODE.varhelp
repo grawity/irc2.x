@@ -1,4 +1,0 @@
-Usage: SET INSERT_MODE [ON|OFF|TOGGLE]
-  Turns ON or OFF insert mode.  While on, characters typed are inserted
-  into already existing text.  When off, new characters overwrite existing
-  ones.  The TAB key toggles this variable

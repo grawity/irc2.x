@@ -20,9 +20,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-This is the offical 2.4 release of irc. There has been one irc loose
-claiming to be version 2.4, but this is the real one.
-
 To install the new server, there is just a few changes to be made.
 Edit the Makefile in the root of the source tree *only* if you need
 to change the system type. It defaults to BSD as is. Edit the
@@ -32,6 +29,26 @@ If you happen to not take heed to this warning, you may end up with
 a server that will not function properly and annoy not only you,
 but users all around the world.
 
-To install the new client, cd to appropriate directory (whichever
-client you happen to prefer). Read INSTALL is installing ircII, or
-check include/config.h if installing old irc client.
+Old irc client can be found in this package and if you want to use it,
+check Makefile in directory irc before compiling. There are other,
+better irc clients in distribution and the client distributed with
+this version is simply something to begin with if you don't happen
+to have other clients available.
+
+This version was brought to you by jto@tolsun.oulu.fi and send any
+bug fixes and suggestions to me.
+
+NOTE: This server does *NOT* have MAIL system installed by default.
+      The reason is that it doesn't work with many systems.
+
+This version introduces you string channels, starting with
+a plus (+) sign. The first person joining a string channel
+claims it's ownership and after that is entitiled to use /mode
+command. Ownerships can be given and taken away with
+/mode <channel> +o <nickname>  and /mode <channel> -o <nickname>
+Other flags are: s - secret, p - private, l - limited, i - inviteonly.
+                 m - moderated, n - no private messages to channel,
+                 t - topic settable by operator only
+New command /KICK <channel> <user> kicks a user off channel.
+
+--Jarkko (jto@oulu.fi)

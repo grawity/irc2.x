@@ -17,6 +17,10 @@
 #*   along with this program; if not, write to the Free Software
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
+# 30 May 1990 - Jto
+# Changed Kimmo Suominen's mail address.
+# Added Heikki Piirainen's fix to creation
+#
 # $Header$
 # $Log$
 
@@ -28,7 +32,7 @@ else
 fi
 
 generation=`expr $generation + 1`
-creation=`date | awk '{ print $1 " "  $2 " " $3 " "  $6 " at " $4 " " $5 }'`
+creation=`date | awk '{if ($NF == 6) { print $1 " "  $2 " " $3 " "  $6 " at " $4 " " $5 } else { print $1 " "  $2 " " $3 " " $7 " at " $4 " " $5 " " $6 }}'`
 cat > version.c <<EOF
 /*
  *   IRC - Internet Relay Chat, ircd/version.c
@@ -82,7 +86,7 @@ char *infotext[] =
 	"Those who helped in prior versions and continue to be helpful:",
 	"",
 	"             Markku Jarvinen          mta@tut.fi",
-	"             Kimmo Suominen           kim@kannel.lut.fi",
+	"Kim          Kimmo Suominen           kim@lut.fi",
 	"             Jeff Trim                jtrim@orion.cair.du.edu",
 	"Vijay        Vijay Subramaniam        vijay@lll-winken.llnl.gov",
 	"             Karl Kleinpaste          karl@cis.ohio-state.edu",

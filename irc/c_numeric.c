@@ -17,6 +17,19 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 16 Jun 1990
+ * Added a couple of other numerics...
+ */
+
+/* -- Jto -- 03 Jun 1990
+ * Added ERR_YOUWILLBEBANNED
+ */
+
+/* -- Jto -- 12 May 1990
+ * Made RPL_LISTEND, RPL_ENDOFWHO, RPL_ENDOFNAMES and RPL_ENDOFLINKS
+ * to simply ignore the message and print out nothing
+ */
+
 char c_numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 
 #include "config.h"
@@ -58,7 +71,6 @@ char *parv[];
 	
 	/* ...make sure undefined parameters point to empty string */
 	for (i = parc; i < MAXPARAMS; parv[i++] = "");
-	
 	
 	switch (numeric)
 	    {
@@ -104,6 +116,13 @@ char *parv[];
 			(parv[2][0]) ? parv[2] :
 			"You have not joined any channel");
 		break;
+            case ERR_NOTONCHANNEL:
+		sprintf(mybuf, "*** Error: %s: %s", parv[0], parv[2]);
+		break;
+            case ERR_INVITEONLYCHAN:
+		sprintf(mybuf, "*** Error: %s: %s", parv[0],
+			"Magic locks open only with an invitation key");
+		break;
 	    case ERR_NOTREGISTERED:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
 			(parv[2][0]) ? parv[2] :
@@ -127,12 +146,21 @@ char *parv[];
 			(parv[2][0]) ? parv[2] : "Incorrect password");
 		break;
 	    case ERR_YOUREBANNEDCREEP:
-		sprintf(mybuf, "*** Error: %s: %s", parv[0], 
-			(parv[2][0]) ? parv[2] : "You're banned from irc...");
+		sprintf(mybuf, "*** %s: %s", parv[0], 
+			(parv[2][0]) ? parv[2] :
+			"You're banned from irc...");
+		break;
+            case ERR_YOUWILLBEBANNED:
+		sprintf(mybuf, "*** Warning: You will be banned in %d minutes",
+			atoi(parv[2]));
 		break;
 	    case ERR_CHANNELISFULL:
 		sprintf(mybuf, "*** Error: %s: Channel %s is full",
 			parv[0], parv[2]);
+		break;
+            case ERR_CANNOTSENDTOCHAN:
+		sprintf(mybuf, "*** Error: Sending to channel is %s",
+			"forbidden from heathens");
 		break;
 	    case ERR_NOPRIVILEGES:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
@@ -166,6 +194,10 @@ char *parv[];
 		sprintf(mybuf, "*** %s has a connection to the twilight zone",
 			parv[2]);
 		break;
+	    case RPL_WHOISCHANOP:
+		sprintf(mybuf, "*** %s has been touched by magic forces",
+			parv[2]);
+		break;
 	    case RPL_LISTSTART:
 		sprintf(mybuf, "*** Chn Users  Name");
 		break;
@@ -175,7 +207,7 @@ char *parv[];
 			parv[3], parv[4]);
 		break;
 	    case RPL_LISTEND:
-		sprintf(mybuf, "*** End of channel listing");
+		mybuf[0] = '\0';
 		break;
 	    case RPL_NOTOPIC:
 		sprintf(mybuf, "*** %s: No Topic is set", parv[0]);
@@ -214,14 +246,14 @@ char *parv[];
 		sprintf(mybuf, "*** Time on host %s is %s",
 			parv[2], parv[3]);
 		break;
+            case RPL_CHANNELMODEIS:
+		sprintf(mybuf, "*** Mode is %s %s %s",
+			parv[2],parv[3],parv[4]);
+		break;
 	    case RPL_ENDOFWHO:
-		sprintf(mybuf, "*** End of who listing");
-		break;
 	    case RPL_ENDOFLINKS:
-		sprintf(mybuf, "*** End of links listing");
-		break;
 	    case RPL_ENDOFNAMES:
-		sprintf(mybuf, "*** End of names listing");
+		mybuf[0] = '\0';
 		break;
 	    default:
 		sprintf(mybuf, "*** %s: Numeric message %d: %s %s %s %s %s %s",
@@ -229,6 +261,7 @@ char *parv[];
 			parv[3], parv[4], parv[5], parv[6]);
 		break;
 	    }
-	putline(mybuf);
+	if (mybuf[0])
+	  putline(mybuf);
     }
 

@@ -95,9 +95,9 @@ char *parv[];
 				   numeric, nick, buffer);
 		    }
 		else if (chptr = find_channel(nick, (aClient *)NULL))
-			sendto_channel_butone(cptr,chptr->channo,":%s %d %d%s",
+			sendto_channel_butone(cptr,chptr,":%s %d %s%s",
 					      sptr->name,
-					      numeric, chptr->channo, buffer);
+					      numeric, chptr->chname, buffer);
 	    }
 	return 0;
 }
