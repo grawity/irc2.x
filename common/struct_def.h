@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.118 2004/07/03 16:22:08 chopin Exp $
+ *   $Id: struct_def.h,v 1.119 2004/08/31 08:39:48 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -42,7 +42,7 @@ typedef struct        LineItem aExtData;
 #define	HOSTLEN		63	/* Length of hostname.  Updated to         */
 				/* comply with RFC1123                     */
 
-#define	NICKLEN		12
+#define	NICKLEN		15
 #define ONICKLEN	9	/* this is compatibility NICKLEN, allowed
 				** from local clients; we are prepared for
 				** longer nicks (longer NICKLEN), but do not
