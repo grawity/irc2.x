@@ -424,9 +424,10 @@ start_iauth()
 	if (adfd >= 0)
 	    {
 		sendto_flag(SCH_AUTH,
-			    "Attempted to start iauth a second time!");
+			    "iauth is already running, restart aborted");
 		return;
 	    }
+	read_iauth(); /* to reset olen */
 	sendto_flag(SCH_AUTH, "Starting iauth...");
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sp) < 0)
 	    {
