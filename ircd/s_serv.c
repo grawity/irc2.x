@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.175 2004/03/20 21:14:33 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.176 2004/03/21 20:26:20 jv Exp $";
 #endif
 
 #include "os.h"
@@ -3784,6 +3784,6 @@ static void report_listeners(aClient *sptr, char *to)
 			acptr->receiveM, acptr->receiveB,
 			timeofday - acptr->firsttime,
 			acptr->confs->value.aconf->clients,
-			IsListeningInactive(acptr) ? "inactive" : "active" );
+			IsListenerInactive(acptr) ? "inactive" : "active" );
 	}
 }
