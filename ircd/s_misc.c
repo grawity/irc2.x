@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.66 2004/02/08 04:01:44 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.67 2004/02/09 03:26:59 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1131,3 +1131,13 @@ void	check_split(void)
 	}
 }
 
+/* Some day play with better random functions (configure) etc. --B. */
+int	myrand(void)
+{
+	return rand();
+}
+
+void	mysrand(unsigned int seed)
+{
+	srand(seed);
+}
