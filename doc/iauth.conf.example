@@ -1,8 +1,11 @@
 #
 # Default iauth configuration file
 #
-# $Id: iauth.conf,v 1.1 1999/03/11 17:31:36 kalt Exp $
+# $Id: iauth.conf,v 1.2 1999/07/04 22:15:43 kalt Exp $
 #
+
+# Important note: there must be one tab only before modules options.
+# Otherwise iauth will be dieing continously.
 
 # If iauth timeouts, then reject user
 notimeout
