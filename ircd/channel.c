@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.40 1998/05/25 19:28:55 kalt Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.41 1998/05/25 20:44:20 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1884,7 +1884,7 @@ char	*parv[];
 							   parv[0]), name);
 					continue;
 				    }
-				sprintf(buf, "-%.*s%s", CHIDLEN, get_chid(),
+				sprintf(buf, "!%.*s%s", CHIDLEN, get_chid(),
 					name+2);
 				name = buf;
 			    }
