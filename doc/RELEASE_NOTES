@@ -35,6 +35,9 @@ Important changes in 2.11.0 (since 2.10.3p5):
 	* irc client is no longer included.
 	* rehash q was changed to rehash d (dns flush).
 	* ircd is capable of including files to config file without need of m4.
+	* new commands: TKLINE and UNTKLINE.
+	* stats K returns list of klines, stats k list of tklines.
+	* rehash t removes all tklines.
 
 This is version 2.10.3 of the IRC software.
 ===============================================================================
