@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.55 1998/09/23 12:56:13 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.56 1998/09/27 19:12:37 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -334,7 +334,7 @@ char	*nick, *username;
 	short	oldstatus = sptr->status;
 	char	*parv[3];
 #ifndef NO_PREFIX
-	char	*prefix;
+	char	prefix;
 #endif
 	int	i;
 
