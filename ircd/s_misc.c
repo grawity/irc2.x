@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.19 1998/05/05 23:30:23 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.20 1998/05/12 16:55:48 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -801,7 +801,7 @@ char	*comment;
 				** it makes MyConnect == False - krys
 				*/
 				if (sptr != cptr)
-					if (*lp->value.chptr->chname == '-')
+					if (*lp->value.chptr->chname == '!')
 					    {
 						if (!(sptr->flags &FLAGS_QUIT))
 							lp->value.chptr->history = timeofday + LDELAYCHASETIMELIMIT;
