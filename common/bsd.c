@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: bsd.c,v 1.5 2002/04/06 23:37:31 jv Exp $";
+static  char rcsid[] = "@(#)$Id: bsd.c,v 1.6 2002/06/01 22:11:00 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -102,9 +102,6 @@ char	*str;
 #ifdef	DEBUGMODE
 	writecalls++;
 #endif
-#ifndef	NOWRITEALARM
-	(void)alarm(WRITEWAITDELAY);
-#endif
 	retval = send(cptr->fd, str, len, 0);
 	/*
 	** Convert WOULDBLOCK to a return of "0 bytes moved". This
@@ -126,9 +123,6 @@ char	*str;
 	else if (retval > 0)
 		cptr->flags &= ~FLAGS_BLOCKED;
 
-#ifndef	NOWRITEALARM
-	(void )alarm(0);
-#endif
 #ifdef DEBUGMODE
 	if (retval < 0) {
 		writeb[0]++;
