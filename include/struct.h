@@ -18,6 +18,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie -- 30 Oct 1990
+ * Added support for R lines
+ */
+
+/* -- Hoppie -- 12 Oct 1990
+ * Added support for Q lines
+ */
+
 /* -- Jto -- 16 Jun 1990
  * String Channel modifications...
  * Gonzo's PRIVMSG enchantments
@@ -113,6 +121,9 @@
 #define CONF_CONNECT_SERVER   4
 #define CONF_NOCONNECT_SERVER 8
 /* #define CONF_UPHOST           16 /* not used either --msa */
+#ifdef R_LINES
+#define CONF_RESTRICT         16 /*Now it is.  -hoppie (We may need more)*/
+#endif
 #define CONF_OPERATOR         32
 #define CONF_ME               64
 #define CONF_KILL             128

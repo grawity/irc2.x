@@ -18,6 +18,11 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * --Hoppie -- 12 Oct 1990
+ * Fixed MSG_LIST to allow another parameter
+ */
+
 #define MSG_TEXT     "MSG"
 #define MSG_PRIVATE  "PRIVMSG"
 #define MSG_WHO      "WHO"

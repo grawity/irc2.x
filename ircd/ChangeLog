@@ -1,7 +1,54 @@
+Mon Nov  5 19:32:09 1990  Tom Hopkins  (hoppie at buengf)
+
+	* s_msg.c
+	  changed m_rehash to make a call to TryConnections and
+	  check_pings immediately after rehash
+	* ircd.c
+	  rewrote main loop to make it (hopefully) eat less CPU under bad
+	  conditions and not do too much under good ones.  made check_pings
+	  and TryConnectctions exportable to help keep behavior consistent.
+	  check_pings now returns a nexttime, like TryConnections.
+
+Fri Nov  2 15:43:37 1990  Tom Hopkins  (hoppie at buengf)
+
+	* channel.c
+	  fixed that nagging MODE bug
+
+Wed Oct 31 14:21:04 1990  Tom Hopkins  (hoppie at buengf)
+
+	* s_conf.c
+	  added support for R lines in initconf()
+	  added function find_restrict()
+	* s_msg.c
+	  added support for R lines in m_user, m_rehash
+	* ircd.c
+	  added support for R lines in check_pings()
+
 Sun Oct 21 18:53:02 1990  Christopher Davis  (ckd at bucsd)
 
 	* Makefile
 	  Added IRCDLIBS and IRCDMODE variables
+
+Tue Oct 16 23:25:00 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+	* s_msg.c
+	  Bug fix
+
+Fri Oct 12 22:30:35 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+
+	* channel.c
+	  Made error returns for MODE and KICK consistent with others
+	  Fixed KICK to give the right error message at the right time
+	* s_conf.c
+	  Added support for Q lines in initconf()
+	* s_msg.c
+	  added stealth's userlog patch and appropriate headers
+	  made error returns consistent and corrected a little spelling 
+	  added msa's patch to correctly annotate server kills
+	  fixed m_list to make LIST work for specific channels
+	  fixed m_invite to allow invite to other channels
+	  added support for WALLOPS_REMOTES
+	  added support for WALLOPS_QUARANTINE
+	  added the patch for stats c
 
 Wed Jun 20 11:53:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 

@@ -18,6 +18,17 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie -- 5 Nov 1990
+ * rewrote main loop to make it (hopefully) eat less CPU under bad conditions
+ * and not do too much under good ones.
+ * made check_pings and TryConnections exportable to help keep behavior
+ * consistent.  check_pings now returns a nexttime, like TryConnections.
+ */
+
+/* -- Hoppie -- 31 Oct 1990
+ * added support for R lines
+ */
+
 /* -- Jto -- 14 Jul 1990
  * Added Wumpus's MAXIMUM_LINKS fix...
  */
@@ -108,13 +119,13 @@ restart()
 **	function should be made latest. (No harm done if this
 **	is called earlier or later...)
 */
-static long TryConnections(currenttime)
+long TryConnections(currenttime)
 long currenttime;
     {
 	aConfItem *aconf;
 	aClient *cptr;
 	int connected = FALSE;
-	long nexttime = currenttime + CONNECTFREQUENCY;
+	long nexttime = currenttime + HANGONRETRYDELAY;
 	int connections = 0;
 
 #ifdef MAXIMUM_LINKS
@@ -181,59 +192,84 @@ long currenttime;
 	return nexttime;
     }
 
-static int check_pings()
+long check_pings(currenttime)
+long currenttime;
     {		
-	register aClient *cptr;
-	register int flag;
-	extern int find_kill();
-	char reply[128];
-
-	for (cptr = client; cptr; )
+      register aClient *cptr;
+      register int flag,rflag;
+      extern int find_kill();
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+      extern int find_restrict();
+#endif
+      char reply[128];
+      
+      for (cptr = client; cptr; )
+	{
+	  if (cptr->flags & FLAGS_DEADSOCKET)
 	    {
-		if (cptr->flags & FLAGS_DEADSOCKET)
-		    {
-			/*
-			** Note: No need to notify opers here. It's
-			** already done when "FLAGS_DEADSOCKET" is set.
-			*/
-			ExitClient((aClient *)NULL, cptr);
-			cptr = client; /* NOTICE THIS! */
-			continue;
-		    }
-
-
-		if (!IsMe(cptr) && cptr->fd >= 0 &&
-		    ((flag = IsPerson(cptr) ? find_kill(cptr->user->host,
-					cptr->user->username, reply) : 0) > 0
-		     ||  (lasttime - cptr->lasttime) > PINGFREQUENCY))
-		  {
-		    if ((lasttime - cptr->lasttime) > 2 * PINGFREQUENCY ||
-			flag > 0)
-		      {
-			if (IsServer(cptr))
-			  sendto_ops("No response from %s, closing link",
-				     GetClientName(cptr,FALSE));
-			if (flag && IsPerson(cptr))
-			  sendto_ops("Kill line active for %s, closing link",
-				     GetClientName(cptr, FALSE));
-			if (flag && IsPerson(cptr))
-			  sendto_one(cptr, reply, me.name,
-				     ERR_YOUREBANNEDCREEP, cptr->name);
-			ExitClient((aClient *)NULL, cptr);
-			cptr = client; /* NOTICE THIS! */
-			continue;
-		      }
-		    else if ((cptr->flags & FLAGS_PINGSENT) == 0)
-		      {
-			cptr->flags |= FLAGS_PINGSENT;
-			sendto_one(cptr, "PING %s", me.name);
-		      }
-		    if ((flag == -1) && IsPerson(cptr))
-		      sendto_one(cptr, reply, me.name,
-				 ERR_YOUWILLBEBANNED, cptr->name);
-		  }
-		cptr = cptr->next; /* This must be here, see "NOTICE THIS!" */
+	      /*
+	       ** Note: No need to notify opers here. It's
+	       ** already done when "FLAGS_DEADSOCKET" is set.
+	       */
+	      ExitClient((aClient *)NULL, cptr);
+	      cptr = client; /* NOTICE THIS! */
+	      continue;
 	    }
+
+	  if (!IsMe(cptr) && cptr->fd >= 0 &&
+	      ((flag = IsPerson(cptr) ? find_kill(cptr->user->host,
+						  cptr->user->username, 
+						  reply) : 0) > 0
+	       || (lasttime - cptr->lasttime) > PINGFREQUENCY
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+	       || (rflag = IsPerson(cptr) ? 
+		    find_restrict(cptr->user->host,
+				  cptr->user->username,reply) : 0) > 0
+#endif
+	       ))
+	    {
+	      if ((lasttime - cptr->lasttime) > 2 * PINGFREQUENCY ||
+		  flag > 0 
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+		  || rflag > 0
+#endif
+		  )
+		{
+		  if (IsServer(cptr))
+		    sendto_ops("No response from %s, closing link",
+			       GetClientName(cptr,FALSE));
+		  if (flag && IsPerson(cptr))
+		    {
+		      sendto_ops("Kill line active for %s, closing link",
+				 GetClientName(cptr, FALSE));
+		      sendto_one(cptr, reply, me.name,
+				 ERR_YOUREBANNEDCREEP, cptr->name);
+		    }
+#if defined(R_LINES) && defined(R_LINES_OFTEN)
+			if (IsPerson(cptr) && rflag)
+			  {
+			    sendto_ops("Restricting %s (%s), closing link.",
+				       GetClientName(cptr,FALSE),reply);
+			    sendto_one(cptr,"%s %d :*** %s",me.name,
+				       ERR_YOUREBANNEDCREEP,reply);
+			  }
+#endif
+		  ExitClient((aClient *)NULL, cptr);
+		  cptr = client; /* NOTICE THIS! */
+		  continue;
+		}
+	      else if ((cptr->flags & FLAGS_PINGSENT) == 0)
+		{
+		  cptr->flags |= FLAGS_PINGSENT;
+		  sendto_one(cptr, "PING %s", me.name);
+		}
+	      if ((flag == -1) && IsPerson(cptr))
+		sendto_one(cptr, reply, me.name,
+			   ERR_YOUWILLBEBANNED, cptr->name);
+	    }
+	  cptr = cptr->next; /* This must be here, see "NOTICE THIS!" */
+	}
+      return(currenttime + 0.5*PINGFREQUENCY);
     }
 
 /*
@@ -261,6 +297,7 @@ char *argv[];
 	aClient *cptr;
 	aConfItem *aconf;
 	int length;		/* Length of message received from client */
+	long nexttry,nextcheck;
 	char buffer[BUFSIZE];
 	myargv = argv;
 	signal(SIGPIPE, SIG_IGN);
@@ -344,7 +381,7 @@ char *argv[];
 	  {
 	    debug(DEBUG_FATAL,
 		  "Failed in reading configuration file %s", configfile);
-	    printf("Couldn't open configurayion file %s\n", configfile);
+	    printf("Couldn't open configuration file %s\n", configfile);
 	    exit(-1);
 	  }
 	init_sys(); 
@@ -371,25 +408,30 @@ char *argv[];
 	debug(DEBUG_DEBUG,"Server ready...");
 	for (;;)
 	    {
-		long delay = TryConnections(getlongtime());
+		long delay;
+		if (nexttry < getlongtime())
+		  nexttry = TryConnections(getlongtime());
 
-		delay -= getlongtime();
 		/*
 		** Adjust delay to something reasonable [ad hoc values]
 		** (one might think something more clever here... --msa)
 		*/
-		if (delay <= 0)
-			delay = 1;
-		else if (delay > TIMESEC)
-			delay = TIMESEC;
+		/* Okay, here's my try.  delay is adjusted to stop the next 
+		   time something could happen in either TryConnections or
+		   check_pings.  -Hoppie
+		*/
+
+		delay = ((nexttry < nextcheck) ? nexttry : nextcheck)
+		  - getlongtime();
+		if (delay <= 0)	
+		  delay = 1;
 		if ((length = ReadMessage(buffer, BUFSIZE, &cptr, delay)) > 0)
-		    {
-			cptr->lasttime = getlongtime();
-			cptr->flags &= ~FLAGS_PINGSENT;
-			dopacket(cptr, buffer, length);
-		    } 
-		
-		debug(DEBUG_DEBUG,"Got message");
+		  {
+		    cptr->lasttime = getlongtime();
+		    cptr->flags &= ~FLAGS_PINGSENT;
+		    debug(DEBUG_DEBUG,"Got message");
+		    dopacket(cptr, buffer, length);
+		  } 
 		
 		lasttime = getlongtime();
 		/*
@@ -400,7 +442,31 @@ char *argv[];
 		** time might be too far away... (similarly with
 		** ping times) --msa
 		*/
-		check_pings();
+		/* A different tack:  Run these here only when there
+		** is a chance of something normal happening.  
+		** A few comments:  First, you might notice that nextcheck 
+		** will not be right the first time through the loop.  
+		** I figure if it's too small, it's not a problem since
+		** it will set itself right after one loop.  If it's too
+		** big, this is also not a problem since all that will 
+		** happen is a possible delay in checking pings before 
+		** receiving the first message which shouldn't need to be
+		** done anyway.
+		** Second, there will be a problem if conf->hold changes 
+		** outside of TryConnect.  I found two places where this 
+		** can happen, in rehash and in ReadMessage.  The rehash
+		** one is easy to take care of, simply add a call inside 
+		** of m_rehash to TryConnections (and maybe check_pings,
+		** I'm not sure.)  The one for ReadMessage is a little 
+		** more tricky.  I think the best thing is to simply 
+		** declare that delay should never be more than the 
+		** value of HANGONGOODLINK.  This won't incur a great deal
+		** of extra overhead while still keeping things connecting
+		** as fast as they ought to. --Hoppie
+		*/
+		   
+		if (nextcheck < getlongtime())
+		  nextcheck = check_pings(getlongtime());
 	    }
     }
 

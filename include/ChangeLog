@@ -17,6 +17,23 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Tue Oct 30 14:10:00 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+
+	* config.h
+	R_LINES
+	* struct.h
+	Added support for R lines
+
+Fri Oct 12 18:12:22 1990  Thomas Hopkins (hoppie@buengf.bu.edu)
+
+	* config.h
+	WALLOPS_REMOTE and WALLOPS_QUARANTINE
+	support for user logging (logfile specification)
+	* msg.h
+	added a parameter to MSG_LIST (enable list channel)
+	* struct.h
+	Added support for Q lines
+
 Wed Jun 20 11:44:00 1990  Jarkko Oikarinen (jto@tolsun.oulu.fi)
 
 	* config.h

@@ -18,6 +18,12 @@
  */
 
 /* 
+ * --Hoppie -- 30 Oct 1990 
+ * Added support for restrict lines. (R_LINES)
+ * 
+ * --Hoppie -- 12 Oct 1990
+ * Added WALLOPS_REMOTE and WALLOPS_QUARANTINE, and stealth's user logging.
+ *
  * -- Jto -- 14 Jul 1990
  * Added Wumpus's MAXIMUM_LINKS fix
  *
@@ -144,6 +150,28 @@
 #define WALLOPS_QUARANTINE /* Notify all opers of closing */
                               /* undesirable links */
 
+/* R_LINES:  The conf file now allows the existence of R lines, or 
+   restrict lines.  These allow more freedom in the ability to restrict 
+   who is to sign on and when.  What the R line does is call an outside 
+   program which returns a reply indicating whether to let the person on.
+   Because there is another program involved, Delays and overhead could result.
+   It is for this reason that there is a line in config.h to decide whether 
+   it is something you want or need. -Hoppie */
+
+/* #define R_LINES /* */
+
+#ifdef R_LINES
+/* Also, even if you have R lines defined, you might not want them to be 
+   checked everywhere, since it could cost lots of time and delay.  Therefore, 
+   The following two options are also offered:  R_LINES_REHASH rechecks for 
+   R lines after a rehash, and R_LINES_OFTEN, which rechecks it as often
+   as it does K lines.  Note that R_LINES_OFTEN is *very* likely to cause 
+   a resource drain, use at your own risk.  R_LINES_REHASH shouldn't be too
+   bad, assuming the programs are fairly short. */
+#define R_LINES_REHASH /* */
+/* #define R_LINES_OFTEN  /* */
+#endif
+
 /* #define CMDLINE_CONFIG /* allow conf file to be specified on command line */
 
 /*
@@ -182,7 +210,7 @@
  * (PINGFREQUENCY * 2) seconds, then the connection will be closed.
  */
 
-#define PINGFREQUENCY    90	/* Recommended value: 120 */
+#define PINGFREQUENCY    90	/* Recommended value: 90 */
 
 
 /*

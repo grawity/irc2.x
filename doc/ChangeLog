@@ -1,3 +1,9 @@
+Wed Oct 31 15:34:44 1990  Tom Hopkins  (hoppie@buengf.bu.edu)
+
+	* example.conf
+	  added an example of a restrict line, along with some brief
+	  explanation of how to use it.
+
 Sat Oct 20 17:12:53 1990  Helen Trillian Rose  (hrose at bucsd)
 
 	* Operator Etiquette 

@@ -21,6 +21,30 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie -- 5 Nov 1990
+ * changed m_rehash to make immediate call to TryConnections 
+ * and check_pings following it.
+ */
+
+/* -- Hoppie -- 31 Oct 1990
+ * added support for R lines in m_user, m_rehash
+ */
+
+/* -- Hoppie -- 12 Oct 1990
+ * Bug fix
+ */
+
+/* -- Hoppie -- 12 Oct 1990
+ * added stealth's userlog patch and appropriate headers
+ * made error returns consistent and corrected a little spelling 
+ * added msa's patch to correctly annotate server kills
+ * fixed m_list to make LIST work for specific channels
+ * fixed m_invite to allow invite to other channels
+ * added support for WALLOPS_REMOTES
+ * added support for WALLOPS_QUARANTINE
+ * added the patch for stats c
+ */
+
 /* -- Jto -- 14 Jul 1990
  * channel operator kill bug fixed
  */
@@ -124,6 +148,7 @@ extern int maxusersperchannel;
 extern char *debugmode;
 extern char *configfile;
 extern int maxusersperchannel;
+extern long check_pings(),TryConnections();
 
 #define BIGBUFFERSIZE 2000
 
@@ -1046,7 +1071,10 @@ char *parv[];
 		int rc;
 		char reply[128];
 		extern int find_kill();
-		
+#ifdef R_LINES
+		extern int find_restrict();
+#endif		
+
 		if (rc = find_kill(host, username, reply))
 		  {
 		    sendto_one(sptr, reply, me.name,
@@ -1054,6 +1082,14 @@ char *parv[];
 		    if (rc > 0)
 		      return ExitClient(sptr, sptr);
 		  }
+#ifdef R_LINES
+	        if (find_restrict(host,username,reply))
+		  {
+		    sendto_one(sptr,"%s %d :*** %s",me.name,
+			       ERR_YOUREBANNEDCREEP,reply);
+		    return ExitClient(sptr, sptr);
+		  }
+#endif
 	      }
 	    }
 	make_user(sptr);
@@ -2770,7 +2806,29 @@ char *parv[];
 	sendto_one(sptr,":%s %d %s :Rehashing %s",
 		   me.name, RPL_REHASHING, sptr->name, configfile);
 	rehash();
-    }
+
+	check_pings(getlongtime());
+	TryConnections(getlongtime()); /* to make behavior consistent -Hop */
+#if defined(R_LINES_REHASH) && !defined(R_LINES_OFTEN)
+	{
+	  register aClient *cptr;
+	  extern int find_restrict();
+	  char reply[128];
+	  
+	  for (cptr=client;cptr;cptr=cptr->next)
+	    
+	    if (MyConnect(cptr) && !IsMe(cptr) && IsPerson(cptr) &&
+		find_restrict(cptr->user->host,cptr->user->username,reply))
+	      {
+		sendto_ops("Restricting %s (%s), closing link",
+			   GetClientName(cptr,FALSE),reply);
+		sendto_one(cptr,"%s %d :*** %s",me.name,
+			   ERR_YOUREBANNEDCREEP,reply);
+		return ExitClient((aClient *)NULL, cptr);
+	      }
+	}
+#endif
+      }
 
 /************************************************************************
  * m_names() - Added by Jto 27 Apr 1989

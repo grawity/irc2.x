@@ -18,6 +18,15 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie 31 Oct 1990
+ * added support for R lines in initconf()
+ * added function find_restrict()
+ */
+
+/* -- Hoppie 12 Oct 1990
+ * Added support for Q lines in initconf()
+ */
+
 /* -- Jto -- 20 Jun 1990
  * Added gruner's overnight fix..
  */
@@ -268,6 +277,12 @@ initconf()
 		      case 'q': /* network.  USE WITH CAUTION! */
 			aconf->status = CONF_QUARANTINED_SERVER;
 			break;
+#ifdef R_LINES
+		      case 'R': /* extended K line */
+		      case 'r': /* Offers more options of how to restrict */
+			aconf->status = CONF_RESTRICT;
+			break;
+#endif
 		    default:
 			debug(DEBUG_ERROR, "Error in config file: %s", line);
 			break;
@@ -343,7 +358,55 @@ char *host, *name, *reply;
  		return (tmp ? rc : 0);
      }
 
+#ifdef R_LINES
+/* find_restrict works against host/name and calls an outside program 
+   to determine whether a client is allowed to connect.  This allows 
+   more freedom to determine who is legal and who isn't, for example
+   machine load considerations.  The outside program is expected to 
+   return a reply line where the first word is either 'Y' or 'N' meaning 
+   "Yes Let them in" or "No don't let them in."  If the first word 
+   begins with neither 'Y' or 'N' the default is to let the person on.
+   It returns a value of 0 if the user is to be let through -Hoppie  */
 
+int find_restrict(host, name, reply)
+char *host, *name, *reply;
+    {
+	aConfItem *tmp;
+	char *cmdline[132],*temprpl[80],rplchar='Y';
+	FILE *fp;
+	int rc = 0;
+
+	for (tmp = conf; tmp; tmp = tmp->next)
+	  if (tmp->status == CONF_RESTRICT &&
+	      (host == NULL || (matches(tmp->host, host) == 0)) &&
+	      (name == NULL || matches(tmp->name, name) == 0))
+	    {
+	      bzero(reply,5);
+	      if (BadPtr(tmp->passwd))
+		sendto_ops("Program missing on R-line %s/%s, ignoring.",
+			   name,host);
+	      else
+		{
+		  sprintf(cmdline,"%s %s %s",tmp->passwd,name,host);
+		  if ((fp=popen(cmdline,"r"))==NULL)
+		    sendto_ops("Couldn't run '%s' for R-line %s/%s, ignoring.",
+			       tmp->passwd,name,host);
+		  else
+		    while (fscanf(fp,"%[^\n]\n",temprpl)!=EOF)
+		      if (strlen(temprpl)+strlen(reply) < 131)
+			sprintf(reply,"%s %s",reply,temprpl);
+		      else
+			sendto_ops("R-line %s/%s: reply too long, truncating",
+				   name,host);
+		  pclose(fp);
+		  sscanf(reply,"%*[ ]%c%*[^ ]%*[ ]%[^\n]",&rplchar,reply);
+		}
+	      if (rc=(rplchar == 'n' || rplchar == 'N'))
+		break;
+	    }
+	return (rc);
+      }
+#endif
 
 /*
 ** check against a set of time intervals

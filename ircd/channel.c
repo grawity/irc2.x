@@ -18,6 +18,15 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie 2 Nov 1990
+ * Fixed that nagging MODE bug
+ */
+
+/* -- Hoppie 12 Oct 1990
+ * Made error returns for MODE and KICK consistent with others
+ * Fixed KICK to give the right error message at the right time
+ */
+
 /* -- Jto -- 09 Jul 1990
  * Bug fix
  */
@@ -125,7 +134,7 @@ char *parv[];
   aChannel *chptr;
 
   CheckRegistered(sptr);
-  /* Now, try to find the channel in question */
+ /* Now, try to find the channel in question */
   if (parc > 1)
     chptr = find_channel(parv[1], (aChannel *) 0);
   else {
@@ -175,11 +184,14 @@ char *parv[];
 char *modebuf;
 char *parabuf;
 {
+#define LIMIT_UNSET    0
+#define LIMIT_SET      1
 #define MODE_ADD       1
 #define MODE_DEL       2
   char *curr = parv[0];
-  int whatt = MODE_ADD;
-  int nusers, count = 0, i = 0;
+  unsigned char maddflags = '\0', mdelflags = '\0';
+  int whatt = MODE_ADD, limitflag = LIMIT_UNSET;
+  int nusers, count = 0, i = 0, limit = 0;
   aClient *who;
   Mode *mode = &(chptr->mode);
   if (parc < 1) {
@@ -190,67 +202,93 @@ char *parabuf;
     switch (*curr) {
     case '+':
       whatt = MODE_ADD;
-      modebuf[i++] = '+';
       break;
     case '-':
       whatt = MODE_DEL;
-      modebuf[i++] = '-';
       break;
     case 'p':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_PRIVATE;
+	{
+	  maddflags |= MODE_PRIVATE; 
+	  mdelflags &= ~MODE_PRIVATE;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_PRIVATE;
-      modebuf[i++] = 'p';
-      count++;
+	{
+	  mdelflags |= MODE_PRIVATE; 
+	  maddflags &= ~MODE_PRIVATE;
+	} 
       break;
     case 's':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_SECRET;
+	{
+	  maddflags |= MODE_SECRET; 
+	  mdelflags &= ~MODE_SECRET;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_SECRET;
-      modebuf[i++] = 's';
-      count++;
+	{
+	  mdelflags |= MODE_SECRET; 
+	  maddflags &= ~MODE_SECRET;
+	}
       break;
     case 'm':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_MODERATED;
+	{
+	  maddflags |= MODE_MODERATED; 
+	  mdelflags &= ~MODE_MODERATED;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_MODERATED;
-      modebuf[i++] = 'm';
-      count++;
+	{
+	  mdelflags |= MODE_MODERATED; 
+	  maddflags &= ~MODE_MODERATED;
+	}
       break;
     case 'a':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_ANONYMOUS;
+	{
+	  maddflags |= MODE_ANONYMOUS;
+	  mdelflags &= ~MODE_ANONYMOUS;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_ANONYMOUS;
-      modebuf[i++] = 'a';
-      count++;
+	{
+	  mdelflags |= MODE_ANONYMOUS;
+	  maddflags &= ~MODE_ANONYMOUS;
+	}
       break;
     case 't':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_TOPICLIMIT;
+	{
+	  maddflags |= MODE_TOPICLIMIT;
+	  mdelflags &= ~MODE_TOPICLIMIT;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_TOPICLIMIT;
-      modebuf[i++] = 't';
-      count++;
+	{
+	  mdelflags |= MODE_TOPICLIMIT;
+	  maddflags &= ~MODE_TOPICLIMIT;
+	}
       break;
     case 'i':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_INVITEONLY;
+	{
+	  maddflags |= MODE_INVITEONLY;
+	  mdelflags &= ~MODE_INVITEONLY;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_INVITEONLY;
-      modebuf[i++] = 'i';
-      count++;
+	{
+	  mdelflags |= MODE_INVITEONLY;
+	  maddflags &= ~MODE_INVITEONLY;
+	}
       break;
     case 'n':
       if (whatt == MODE_ADD)
-	mode->mode |= MODE_NOPRIVMSGS;
+	{
+	  maddflags |= MODE_NOPRIVMSGS;
+	  mdelflags &= ~MODE_NOPRIVMSGS;
+	}
       if (whatt == MODE_DEL)
-	mode->mode &= ~MODE_NOPRIVMSGS;
-      modebuf[i++] = 'n';
-      count++;
+	{
+	  mdelflags |= MODE_NOPRIVMSGS;
+	  maddflags &= ~MODE_NOPRIVMSGS;
+	}
       break;
     case 'o':
       parc--;
@@ -261,12 +299,13 @@ char *parabuf;
 	  if (IsServer(cptr) || ChanSame(cptr, who)) {
 	    if (whatt == MODE_ADD) {
 	      who->status |= STAT_CHANOP;
+	      modebuf[i++] = '+';
 	      modebuf[i++] = 'o';
 	      strcat(parabuf, who->name);
 	      strcat(parabuf, " ");
-	      count++;
 	    } else if (whatt == MODE_DEL) {
 	      who->status &= ~STAT_CHANOP;
+	      modebuf[i++] = '-';
 	      modebuf[i++] = 'o';
 	      strcat(parabuf, who->name);
 	      strcat(parabuf, " ");
@@ -291,9 +330,9 @@ char *parabuf;
 	  parv++;
 	  nusers = atoi(parv[0]);
 	  if (nusers > 0) {
-	    modebuf[i++] = 'l';
+	    limitflag = LIMIT_SET;
 	    sprintf(&(parabuf[strlen(parabuf)]), "%d ", nusers);
-	    mode->limit = nusers;
+	    limit = nusers;
 	  }
 	  break;
 	}
@@ -302,8 +341,8 @@ char *parabuf;
 		     "not given...");
       } else
 	if (whatt == MODE_DEL) {
-	  modebuf[i++] = 'l';
-	  mode->limit = 0;
+	  limitflag = LIMIT_SET;
+	  limit = 0;
 	}
       count++;
       break;
@@ -316,6 +355,51 @@ char *parabuf;
     }
     curr++;
   }
+  mode->mode |= maddflags;
+  mode->mode &= ~mdelflags;
+  modebuf[i++] = '+';
+  if (maddflags & MODE_PRIVATE)
+    modebuf[i++] = 'p';
+  if (maddflags & MODE_SECRET)
+    modebuf[i++] = 's';
+  if (maddflags & MODE_ANONYMOUS)
+    modebuf[i++] = 'a';
+  if (maddflags & MODE_MODERATED)
+    modebuf[i++] = 'm';
+  if (maddflags & MODE_TOPICLIMIT)
+    modebuf[i++] = 't';
+  if (maddflags & MODE_INVITEONLY)
+    modebuf[i++] = 'i';
+  if (maddflags & MODE_NOPRIVMSGS)
+    modebuf[i++] = 'n';
+  modebuf[i++] = '-';
+  if (mdelflags & MODE_PRIVATE)
+    modebuf[i++] = 'p';
+  if (mdelflags & MODE_SECRET)
+    modebuf[i++] = 's';
+  if (mdelflags & MODE_ANONYMOUS)
+    modebuf[i++] = 'a';
+  if (mdelflags & MODE_MODERATED)
+    modebuf[i++] = 'm';
+  if (mdelflags & MODE_TOPICLIMIT)
+    modebuf[i++] = 't';
+  if (mdelflags & MODE_INVITEONLY)
+    modebuf[i++] = 'i';
+  if (mdelflags & MODE_NOPRIVMSGS)
+    modebuf[i++] = 'n';
+  if (limitflag && limit >= 0)
+    {
+      if (limit > 0)
+	{
+	  modebuf[i++] = '+';
+	} 
+      else if (limit == 0)
+	{
+	  modebuf[i++] = '-'; 
+	}
+	modebuf[i++] = 'l';
+      mode->limit = limit;
+    }
   modebuf[i] = '\0';
 }
 
