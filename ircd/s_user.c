@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.159 2003/10/02 22:42:58 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.160 2003/10/13 21:48:54 q Exp $";
 #endif
 
 #include "os.h"
@@ -812,11 +812,15 @@ badparamcountkills:
 		}
 		else if (parc == 8)
 		{
+			/* :server NICK new hop user name srv flags :info */
 			user = parv[3];
 			host = parv[4];
 		}
-		else
-			user = host = "";
+		else /* :old NICK new */
+		{
+			user = sptr->user->username;
+			host = sptr->user->host;
+		}
 	}
 	else
 	{
@@ -1064,6 +1068,11 @@ badparamcountkills:
 	** must be killed from the incoming connection, and "old" must
 	** be purged from all outgoing connections.
 	*/
+	if (parc != 2)
+	{
+		/* NICK change *must* have proper param count */
+		goto badparamcountkills;
+	}
 	sendto_one(acptr, replies[ERR_NICKCOLLISION], ME, acptr->name,
 		acptr->name, user, host);
 	sendto_one(cptr, replies[ERR_NICKCOLLISION], ME, acptr->name,
