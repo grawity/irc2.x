@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# $Id$
+# $Id:$
 #
 # install - install a program, script, or datafile
 # This comes from X11R5 (mit/util/scripts/install.sh).
@@ -120,6 +120,7 @@ if [ x"$dir_arg" != x ]; then
 	
 	if [ -d $dst ]; then
 		instcmd=:
+		chmodcmd=""
 	else
 		instcmd=mkdir
 	fi
