@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.98 2004/11/04 21:04:53 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.99 2005/01/30 13:42:31 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -908,7 +908,7 @@ static	void	exit_one_client(aClient *cptr, aClient *sptr, aClient *from,
 			}
 
 			/* remove from uid hash table */
-			if (HasUID(sptr))
+			if (sptr->user)
 			{
 				del_from_uid_hash_table(sptr->user->uid, sptr);
 			}
