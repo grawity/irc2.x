@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.28 1998/03/21 19:22:22 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.29 1998/04/15 18:51:55 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -169,8 +169,6 @@ char	*sockhost;
 			add_local_domain(uhost, sizeof(uhost) - strlen(uhost));
 		    }
 attach_iline:
-		if (index(uhost, '@'))
-			cptr->flags |= FLAGS_DOID;
 		if (aconf->status & CONF_RCLIENT)
 			SetRestricted(cptr);
 		get_sockhost(cptr, uhost);
