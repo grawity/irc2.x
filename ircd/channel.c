@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.16 1997/10/06 15:00:35 kalt Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.17 1997/10/13 17:39:58 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -516,7 +516,7 @@ aClient	*mp;
 	chptr = get_channel(mp, "&DEBUG", CREATE);
 	strcpy(chptr->topic, "SERVER MESSAGES: debug messages [you shouldn't be here! ;)]");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
-	chptr->mode.mode = smode|MODE_PRIVATE;
+	chptr->mode.mode = smode|MODE_SECRET;
 
 	setup_svchans();
 }
