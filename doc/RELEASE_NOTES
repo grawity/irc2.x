@@ -1,4 +1,4 @@
-# @(#)$Id: RELEASE_NOTES,v 1.12 1997/09/12 17:47:24 kalt Exp $
+# @(#)$Id: RELEASE_NOTES,v 1.13 1997/09/26 17:56:47 kalt Exp $
 
 This is a development version of the package,
 
@@ -15,7 +15,8 @@ on the same IRC network.
 Configuration changes between 2.9.3 and 2.9.4:
 
 	* The format for B lines has slightly changed.
-	* The format for Y lines has changed ([user@]host limits)
+	* The format for Y lines has changed ([user@]host limits).
+	* K lines on IP addresses now match resolving hosts by default.
 
 ------
 
