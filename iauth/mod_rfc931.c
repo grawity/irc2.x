@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: mod_rfc931.c,v 1.7 1999/01/05 19:59:33 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: mod_rfc931.c,v 1.8 1999/01/13 02:14:36 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -49,6 +49,7 @@ rfc931_init(self)
 AnInstance *self;
 {
 	self->data = (void *) malloc(sizeof(struct _stats));
+	bzero((char *) self->data, sizeof(struct _stats));
 	return NULL;
 }
 
