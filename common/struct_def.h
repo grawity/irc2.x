@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.78 2003/08/08 21:55:25 chopin Exp $
+ *   $Id: struct_def.h,v 1.79 2003/10/02 22:42:58 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -622,15 +622,9 @@ struct	SLink	{
 
 struct	invSLink	{
 	struct	invSLink	*next;
-	union {
-		aClient	*cptr;
-		aChannel *chptr;
-		aConfItem *aconf;
-		char	*cp;
-		int	i;
-	} value;
-	char	*who;
-	int	flags;
+	aChannel		*chptr;
+	char			*who;
+	int			flags;
 };
 
 /* channel structure */
