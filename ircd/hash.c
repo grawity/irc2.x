@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: hash.c,v 1.47 2004/11/03 13:57:49 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: hash.c,v 1.48 2004/11/19 15:10:08 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -317,7 +317,7 @@ static	void	clear_hostname_hash_table(int size)
 		_HOSTNAMEHASHSIZE, size));
 }
 
-void	inithashtables()
+void	inithashtables(void)
 {
 	Reg int i;
 
