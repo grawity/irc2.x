@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.101 2004/06/12 12:36:18 chopin Exp $
+ *   $Id: struct_def.h,v 1.102 2004/06/12 22:06:55 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -335,6 +335,10 @@ struct	ListItem	{
 #define	CONF_BOUNCE		0x040000
 #define	CONF_OTHERKILL		0x080000
 #define	CONF_DENY		0x100000
+#ifdef TKLINE
+#define	CONF_TKILL		0x200000
+#define	CONF_TOTHERKILL		0x400000
+#endif
 
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER |\
@@ -969,5 +973,9 @@ typedef enum ACL {
 	ACL_RESTART,
 	ACL_DIE,
 	ACL_SET,
+#ifdef TKLINE
+	ACL_TKLINE,
+	ACL_UNTKLINE,
+#endif
 	ACL_MAX
 } ACL; 
