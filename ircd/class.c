@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: class.c,v 1.7 1999/09/20 22:39:56 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: class.c,v 1.8 2002/06/02 00:21:53 q Exp $";
 #endif
 
 #include "os.h"
@@ -151,7 +151,7 @@ int	class, ping, confreq, maxli, sendq, hlocal, uhlocal, hglobal, uhglobal;
 	else
 		p = t;
 	Debug((DEBUG_DEBUG,
-"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d sq: %l ml: %d.%d mg: %d.%d",
+"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d sq: %d ml: %d.%d mg: %d.%d",
 		class, p, t, confreq, ping, maxli, QUEUELEN, hlocal, uhlocal,
 	       hglobal, uhglobal));
 	Class(p) = class;
