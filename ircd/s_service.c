@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.36 2002/04/04 20:32:03 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.37 2002/07/29 21:36:07 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -265,11 +265,11 @@ int	type;
 	 	if ((hp = cptr->hostp))
 			for (s = hp->h_name, i = 0; s; s = hp->h_aliases[i++])
 			    {
-				SPRINTF(uhost, "%s@%s", cptr->username, s);
+				sprintf(uhost, "%s@%s", cptr->username, s);
 				if (match(tmp->host, uhost) == 0)
 					return tmp;
 			    }
-		SPRINTF(uhost, "%s@%s", cptr->username, cptr->sockhost);
+		sprintf(uhost, "%s@%s", cptr->username, cptr->sockhost);
 		if (match(tmp->host, uhost) == 0)
 			return tmp;
 	    }
