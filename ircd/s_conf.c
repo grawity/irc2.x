@@ -103,6 +103,10 @@ long	iline_flags_parse(char *string)
 	{
 		tmp |= CFLAG_NORESOLVE;
 	}
+	if (index(string,'M'))
+	{
+		tmp |= CFLAG_NORESOLVEMATCH;
+	}
 	if (index(string,'F'))
 	{
 		tmp |= CFLAG_FALL;
@@ -136,6 +140,10 @@ char	*iline_flags_to_string(long flags)
 	if (flags & CFLAG_NORESOLVE)
 	{
 		*s++ = 'N';
+	}
+	if (flags & CFLAG_NORESOLVEMATCH)
+	{
+		*s++ = 'M';
 	}
 	if (flags & CFLAG_FALL)
 	{
