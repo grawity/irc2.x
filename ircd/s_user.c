@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.56 1998/09/27 19:12:37 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.57 1998/10/10 10:20:08 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -1295,7 +1295,7 @@ Link *lp;
 		lp = find_user_link(repchan->members, acptr);
 	if (lp != NULL)
 	    {
-		if (lp->flags & (CHFL_UNIQOP|CHFL_CHANOP))
+		if (lp->flags & CHFL_CHANOP)
 			status[i++] = '@';
 		else if (lp->flags & CHFL_VOICE)
 			status[i++] = '+';
