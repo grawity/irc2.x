@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.19 1997/10/13 17:37:12 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.20 1997/10/17 17:45:15 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -2603,6 +2603,8 @@ aConfItem *aconf;
 	aCPing	*cp = aconf->ping;
 
 	if (!aconf->ipnum.s_addr || aconf->ipnum.s_addr == -1 || !cp->port)
+		return;
+	if (aconf->class->conFreq == 0) /* avoid flooding */
 		return;
 	pi.pi_cp = aconf;
 	pi.pi_id = htonl(PING_CPING);
