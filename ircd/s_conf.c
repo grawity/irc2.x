@@ -533,6 +533,12 @@ int	attach_Iline(aClient *cptr, struct hostent *hp, char *sockhost)
 		{
 			SetKlineExempt(cptr);
 		}
+#ifdef XLINE
+		if (IsConfXlineExempt(aconf))
+		{
+			ClearXlined(cptr);
+		}
+#endif
 
 		/* Copy uhost (hostname) over sockhost, if conf flag permits. */
 		if (hp && !IsConfNoResolve(aconf))
