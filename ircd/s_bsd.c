@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.88 2002/07/30 00:14:59 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_bsd.c,v 1.89 2002/09/12 23:36:49 jv Exp $";
 #endif
 
 #include "os.h"
@@ -1401,7 +1401,7 @@ aClient *cptr;
 		    {
 			blptr= *blscn;
 			*blscn=blptr->next;
-			MyFree((char *)blptr);
+			MyFree(blptr);
 		    }
 		else
 			blscn = &(*blscn)->next;

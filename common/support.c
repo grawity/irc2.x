@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: support.c,v 1.24 2002/07/29 21:36:06 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: support.c,v 1.25 2002/07/30 00:14:57 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -583,11 +583,10 @@ size_t	y;
 	return ret + SZ_CHST;
     }
 
-void	MyFree(x)
-char	*x;
+void	MyFree(void *p)
 {
 	size_t	i;
-	char	*j;
+	char	*j, *x = p;
 	u_char	k[4];
 	register int	l;
 	register char	**s;
