@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.61 2002/07/29 22:38:49 chopin Exp $
+ *   $Id: struct_def.h,v 1.62 2002/08/01 01:56:52 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -495,6 +495,7 @@ struct Client	{
 				  */
 	char	passwd[PASSWDLEN+1];
 	char	exitc;
+	char	*reason;	/* additional exit message */
 };
 
 #define	CLIENT_LOCAL_SIZE sizeof(aClient)
