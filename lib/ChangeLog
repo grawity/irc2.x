@@ -1,0 +1,17 @@
+Sat Dec 16 16:06:17 1989  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
+
+	* config.h
+
+	Changed NOTTY to TTYON, and reversed the logic everywhere.
+	Now TTYON has to be explicitly defined in order to produce
+	tty output.
+
+
+Thu Dec 14 12:50:36 1989  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
+
+	* version.c
+	Added a version.c file to contain the version numbers and
+	prompt strings.  Removed the old #ifdef MAIN style definition
+
+
+

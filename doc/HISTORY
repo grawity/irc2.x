@@ -1,0 +1,29 @@
+
+HISTORY of Recent IRC Versions.
+
+
+Previous version numbering schemes have caused some confusion, which this
+document attempts to resolve.
+
+The original test versions released by WiZ were numbered 2.01?6 where
+the ? refers to a letter.  The last known stable version was U6.
+Version 2.1.0/1 was rewritten by Mike Bolotski from the U6 sources but 
+several bugs were introduced during the rewrite.  After several weeks, 
+almost all servers backed up to U6.  Version v6 contained comparatively 
+minor modifications from U6.  
+
+Version 2.2 consists of the v6 source repackaged into multiple directories, 
+and with modified documentation.  From now on, the version number will
+stay relatively constant.  As minor changes and bug fixes are added, they
+will be distributed in the form of context diffs, to be applied with the
+'patch' command.  Each bugfix will bump the patchlevel (PL) of the release
+by 1.  The PL is documented in the version.c file in the lib directory.
+
+Hopefully, whoever provides a fix will also update the respective
+ChangeLogs to summarize the changes, as well as adding a description of
+the bug to the BugList file.
+
+
+
+
+

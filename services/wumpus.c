@@ -1,6 +1,8 @@
-/* wumpus.c
+/* wumpus.c  - version 2.1
+ *
  *
  * Copyright 1989 Greg Lindahl
+ *
  *
  * Redistribution of this program is governed by the GNU General Public
  * License, as published by the Free Software Foundation. If you
@@ -13,14 +15,73 @@
  *
  */
 
+#ifdef __STDC__
+
+void change( char *, char * );
+void cresign( char * );
+void resign( char * );
+void signup( char * );
+void a_sendu( char *, char * );
+void a_senda( char * );
+void cmove( char *, int );
+void move( char *, int );
+void shoot( char *, int );
+void help( char * );
+void rules( char * );
+void look( char * );
+void who( char * );
+void stats( char * );
+void total( char * );
+void init( char *, int );
+void underway();
+int  lookup( char * );
+int  get_empty();
+void sorry( char * );
+void move_wumpus( int );
+int  irand( int );
+void get_stats( char *, char *, char * );
+
+#else
+
+void change();
+void cresign();
+void resign();
+void signup();
+void a_sendu();
+void a_senda();
+void cmove();
+void move();
+void shoot();
+void help();
+void rules();
+void look();
+void who();
+void stats();
+void total();
+void init();
+void underway();
+int  lookup();
+int  get_empty();
+void sorry();
+void move_wumpus();
+int  irand();
+void get_stats();
+
+#endif
+
 #include <stdio.h>
 #include "struct.h"
 #include <assert.h>
+#include <string.h>
+#include <ctype.h>
 
 #define WUMPUS 1
 #define PIT 2
 #define BATS 3
 #define MAXPLAYER 100
+
+#define A_MYNAME "gm"     /* the /nick */
+#define A_MYUSER "gl8f"   /* the alleged username */
 
 struct room {
   int doors;
@@ -36,49 +97,53 @@ static int ammo[ MAXPLAYER ];
 static char names[ MAXPLAYER ][ NICKLEN+1 ];
 static int nogame = 1;
 
-static int w_kill, p_kill, h_kill;
+static int w_kill, p_kill, h_kill, a_kill;
+static int tot_games = 0;
+static int tot_w = 0;
+static int tot_p = 0;
+static int tot_h = 0;
+static int tot_a = 0;
 static int num_players = 0;
 static int channel = 0;
 
-extern aClient *client;
+extern struct Client *client;
 
 /*---------------------------------------------------------*/
 /* interface functions to irc */
 
-a_init()
+void a_init()
 {
 }
 
-a_nick( sender, nickname )
+void a_nick( sender, nickname )
 char *sender, *nickname;
 {
   change( sender, nickname );
 }
 
-a_leave( sender )
+void a_leave( sender )
 char *sender;
 {
   resign( sender );
 }
 
-a_quit( sender )
+void a_quit( sender )
 char *sender;
 {
   resign( sender );
 }
 
-a_msg( buf )
+void a_msg( buf )
 char *buf;
 {
 }
 
-#include <ctype.h>
 extern char *mycncmp();
 
-a_privmsg( sender, buf2 )
+void a_privmsg( sender, buf2 )
 char *sender, *buf2;
 {
-  char *ptr, buf[255];
+  char *ptr;
   
   if (ptr = mycncmp(buf2,"JOIN", 1)) {
     signup(sender);
@@ -104,23 +169,25 @@ char *sender, *buf2;
     who( sender );
   } else if (ptr = mycncmp(buf2,"STATS", 1)) {
     stats( sender );
-  } else if (ptr = mycncmp(buf2,"WUMI", 1)) {
+  } else if (ptr = mycncmp(buf2,"TOTAL", 1)) {
+    total( sender );
+  } else if (ptr = mycncmp(buf2,"GREI", 1)) {
     init(sender, atoi(ptr));
-  } else if (ptr = mycncmp(buf2,"WUMC", 1)) {
+  } else if (ptr = mycncmp(buf2,"GREC", 1)) {
     sendto_one( client, "MSG :%s ordered me away, Byebye...", sender);
     sendto_one( client, "CHANNEL %s", ptr);
     sscanf( ptr, "%d", &channel );
     sendto_one( client, "MSG :Hillou, all!" );
-  } else if (ptr = mycncmp(buf2,"WUMD", 1)) {
+  } else if (ptr = mycncmp(buf2,"GRED", 1)) {
     a_sendu( "Bartender", "serve" );
-  } else if (ptr = mycncmp(buf2,"WUMS", 1)) {
+  } else if (ptr = mycncmp(buf2,"GRES", 1)) {
     a_senda( ptr );
-  } else if (ptr = mycncmp(buf2,"WUMA", 1)) {
+  } else if (ptr = mycncmp(buf2,"GREA", 1)) {
     underway();
   }
 }
 
-a_invite( sender, chan )
+void a_invite( sender, chan )
 char *sender, *chan;
 {
   int new;
@@ -140,7 +207,7 @@ char *sender, *chan;
   }
 }
 
-a_nosuch( ptr )
+void a_nosuch( ptr )
 char *ptr;
 {
   int length = strlen(ptr);
@@ -156,24 +223,24 @@ char *a_myreal()
 
 char *a_myname()
 {
-  return( "tgm" );
+  return( A_MYNAME );
 }
 
 char *a_myuser()
 {
-  return( "jto" );
+  return( A_MYUSER );
 }
 
 /*-------------------------------------------------------------*/
 /* my utility functions */
 
-a_sendu( name, msg )
+void a_sendu( name, msg )
 char *name, *msg;
 {
   sendto_one(client,"PRIVMSG %s :%s", name, msg );
 }
 
-a_senda( msg )
+void a_senda( msg )
 char *msg;
 {
   sendto_one(client, "MSG :%s", msg );
@@ -182,7 +249,7 @@ char *msg;
 /*-------------------------------------------------------------------*/
 /* and now the game */
 
-signup( name )
+void signup( name )
 char *name;
 {
   int i, player = -1;
@@ -212,7 +279,7 @@ char *name;
     a_sendu( name, "Sorry, the Wumpus game is full." );
 }
 
-change( name, new )
+void change( name, new )
 char *name, *new;
 {
   int player = lookup( name );
@@ -222,7 +289,7 @@ char *name, *new;
   }
 }
 
-who( name )
+void who( name )
 char *name;
 {
   int i, num;
@@ -247,7 +314,7 @@ char *name;
   a_sendu( name, buf );
 }  
 
-cresign( name )
+void cresign( name )
 char *name;
 {
   int player = lookup( name );
@@ -265,7 +332,7 @@ char *name;
   a_sendu( name, "OK, you're out of the game." );
 }
 
-resign( name )
+void resign( name )
 char *name;
 {
   int player = lookup( name );
@@ -293,7 +360,7 @@ char *name;
   return( -1 );
 }
 
-look( name )
+void look( name )
 char *name;
 {
   int player = lookup(name);
@@ -311,7 +378,7 @@ char *name;
   move( name, -1 );
 }
 
-cmove( name, room )
+void cmove( name, room )
 char *name;
 int room;
 {
@@ -334,7 +401,7 @@ int room;
   move( name, room );
 }
 
-move( name, room )
+void move( name, room )
 char *name;
 int room;
 {
@@ -380,6 +447,7 @@ int room;
     a_sendu( name, "You have been eaten by the Wumpus. Sorry." );
     a_senda( "You hear a blood-curdling scream." );
     w_kill++;
+    tot_w++;
     resign( name );
     move_wumpus( room );
     return;
@@ -389,6 +457,7 @@ int room;
     a_sendu( name, "You have fallen into a bottomless pit. Sorry. " );
     a_senda( "You hear a faint wail, which gets fainter and fainter." );
     p_kill++;
+    tot_p++;
     resign( name );
     return;
   }
@@ -460,7 +529,7 @@ int room;
   a_sendu( name, buf );
 }
 
-move_wumpus( start )
+void move_wumpus( start )
 int start;
 {
   /* of course this function wants get_empty() and ignore players. */
@@ -484,6 +553,7 @@ int start;
 	if( loc[i] == room ) {
 	  a_sendu( names[i], "The Wumpus walks into your room and eats you." );
 	  w_kill++;
+	  tot_w++;
 	  resign( names[i] );
 	  eaten++;
 	}
@@ -493,13 +563,13 @@ int start;
   }
 }
  
-shoot( name, room )
+void shoot( name, room )
 char *name;
 int room;
 {
   int i,j;
   int player = lookup( name );
-  char buf[80];
+  char buf[256];
 
 /*  if( nogame ) {
     sorry( name );
@@ -521,12 +591,13 @@ int room;
       if( maze[room].contents == WUMPUS ) {
 	sprintf( buf, "%s killed the Wumpus. The game is over.", name );
 	a_senda( buf );
-	sprintf( buf, "The Wumpus ate %d human%s, %d fell into pits, and %d were shot by other humans.", w_kill, w_kill != 1 ? "s" : "", p_kill, h_kill );
+	get_stats( "T", "ate", buf );
 	a_senda( buf );
 	nogame = 1;
 	for( j = 0 ; j < MAXPLAYER ; j++ )
 	  *names[j] = '\0';
 	num_players = 0;
+	tot_games++;
 	return;
       } else if( maze[room].players > 0 ) {
 	for( j = 0 ; j < MAXPLAYER ; j++ ) {
@@ -534,6 +605,7 @@ int room;
 	    if( loc[j] == room ) {
 	      a_sendu( names[j], "You are shot in the back by an arrow! You're dead!" );
 	      h_kill++;
+	      tot_h++;
 	      sprintf( buf, "%s shoots %s in the back. Ouch!", name, names[j] );
 	      resign( names[j] );
 	      a_senda( buf );
@@ -556,12 +628,13 @@ int room;
     a_sendu( name, "You are out of ammo! You die of heartbreak!" );
     a_senda( "You hear heartbroken wailing..." );
     resign( name );
+    a_kill++;
   }
   if( *names[player] )
     move( name, -1 ); /* this will report ammo... */
 }
 
-init( name, size )
+void init( name, size )
 char *name;
 int size;
 {
@@ -661,7 +734,7 @@ int size;
   for( i = 0 ; i < MAXPLAYER ; i++ )
     *names[i] = '\0';
   nogame = 0;
-  w_kill = p_kill = h_kill = 0;
+  w_kill = p_kill = h_kill = a_kill = 0;
   num_players = 0;
 
   a_senda( "A new game of Wumpus has started. Use /m GM help for help," );
@@ -683,14 +756,15 @@ int get_empty()
   return( (int) spot );	
 }
 
-help( name )
+void help( name )
 char *name;
 {
-  a_sendu( name, "Commands available are:" );
-  a_sendu( name, "JOIN MOVE SHOOT QUIT LOOK WHO RULES STATS" );
+  a_sendu( name, "You can send me these commands in a private message:" );
+  a_sendu( name, "JOIN MOVE SHOOT QUIT LOOK WHO RULES STATS TOTAL" );
+  a_sendu( name, "For example, send /m gm rules to see the rules." );
 }
 
-rules( name )
+void rules( name )
 char *name;
 {
   a_sendu( name, "Welcome to Hunt the Wumpus. The object of this game is to kill the Wumpus, before you get killed yourself. The Wumpus is a fearsome creature, and you have a bow and 5 arrows with which to kill it." );
@@ -699,27 +773,44 @@ char *name;
 }
 
 int irand( size )
-unsigned short size;
+int size;
 {
   return( (int) random() % (int) size );
 }
 
-sorry( name )
+void sorry( name )
 char *name;
 {
   a_sendu( name, "I'm sorry, there is no game in progress at the moment." );
 }
 
-underway()
+void underway()
 {
   a_senda( "A game of Wumpus is underway. Use /m GM help for help," );
   a_senda( "or /ignore GM to not see any game messages." );
-  stats();
+  stats( "1234567890" );
 }
 
-static int lasttime = 0;
+static int total_lasttime = 0;
 
-stats(name)
+void total(name)
+char *name;
+{
+  char buf[256];
+  int sum = tot_h + tot_p + tot_a + tot_w;
+
+  sprintf( buf, "There have been %d game%s, and %d human%s ha%s died.", tot_games, tot_games != 1 ? "s" : "", sum, sum != 1 ? "s" : "", sum != 1 ? "ve" : "s" );
+
+  if( time(0) > total_lasttime + 60 ) {
+    a_senda( buf );
+    total_lasttime = time(0);
+  } else
+    a_sendu( name, buf );
+}
+
+static int stat_lasttime = 0;
+
+void stats(name)
 char *name;
 {
   char buf[256];
@@ -728,13 +819,18 @@ char *name;
     sorry( name );
     return;
   }
-    
-  sprintf( buf, "So far, the Wumpus has eaten %d human%s, pits have claimed %d li%s, and other humans have shot %d.", w_kill, w_kill != 1 ? "s" : "", p_kill, p_kill != 1 ? "ves" : "fe", h_kill );
 
-  if( time(0) > lasttime + 60 ) {
+  get_stats( "So far, t", "has eaten", buf );
+
+  if( time(0) > stat_lasttime + 60 ) {
     a_senda( buf );
-    lasttime = time(0);
+    stat_lasttime = time(0);
   } else
     a_sendu( name, buf );
 }
 
+void get_stats( header, header2, buf )
+char *header, *header2, *buf;
+{
+  sprintf( buf, "%she Wumpus %s %d human%s, %d fell into pits, %d were shot in the back, and %d died of heartbreak.", header, header2, w_kill, w_kill != 1 ? "s" : "", p_kill, h_kill, a_kill );
+}

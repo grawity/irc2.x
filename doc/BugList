@@ -1,0 +1,12 @@
+
+
+This document specifies the notation for bug numbers, and lists the currently
+outstanding bugs.
+
+Notation:    FB  Fatal Bug		(causes core dumps)
+	     NB  Non-Fatal Bug		(does not cause core dumps)
+	     CB	 Configuration bug	(problem in configuration files)
+	     DB	 Documentation bug	(incorrect/missing documentation)
+	     EB	 Extention request	(not a bug, really)
+
+

@@ -47,7 +47,7 @@ static int nreset = 0;
 static int gameon = 0;
 extern struct Client *client;
 
-aPlayer *lookup();
+static aPlayer *lookup();
 
 /*---------------------------------------------------------*/
 /* interface functions to irc */
@@ -93,7 +93,7 @@ char *sender, *buf;
 
 extern char *mycncmp();
 
-void signup(), move(), freeze(), help(), list(), quit(), 
+static void signup(), move(), freeze(), help(), list(), quit(), 
      death(), query(), reset(), stats(), gamestart(), clear();
 
 a_privmsg(sender, buf2)

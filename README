@@ -1,24 +1,36 @@
-This file documents Release 2.1 (beta) of IRC
+IRC Distribution  2.2 PL0
 
 
-The release consists of the source code in the top level directory.
-Other directories are:
+The full installation document is in doc/INSTALL.  The site-specific
+parameters are in lib/config.h.
+
+There is a file called HISTORY in the doc directory that documents the
+recent versions of the IRC release and the new numbering/source code control
+system. 
+
+Summary of installation procedure:
+
+1.  Modify the lib/config.h file as appropriate.
+
+2.  Choose the operating system type.  Currently only BSD is supported,
+    so this step isn't necessary.  When SysV support is added, you may
+    have to change the SYS variable in the Makefile.
+
+3.  Type "make config".  This will install the OS dependent files.
+
+4.  Type "make".  This will create the 'ircd' daemon and the 'irc' client
+    in the server and client directories.    
+  
+5.  Modify the irc.conf file appropriately.  There is an example file
+    in the doc directory. 
+
+6.  Install the daemon, the client and the conf file.  A common location is
+    in /usr/local/bin for the binaries, and /usr/local/lib for the conf file.
 
 
-doc        documentation and installation guide
-contrib    various contributed programs
-services   various IRC services (currently wumpus and diplomacy)
+If you are installing IRC for the first time, it is recommended that
+you send e-mail to irclist@tolsun.oulu.fi to get on the IRC mailing list.
+That address is also useful if you experience any problems during installation.
 
 
 
-Installation Note:
-
-     Change the SYS variable in the Makefile as appropriate and
-     do 'make config'.  The default setup is for bsd, which is
-     correct for most machines.
- 
-Note:  This release does not support simple VMS configuration.
-
-Note:  The conf.setup script in contrib is an alternative method
-       of setting up the configuration file.
- 

@@ -1,0 +1,285 @@
+.\" @(#)irctools.1 (beta version) Sept 15 89
+.TH IRCTOOLS 1 "15 September 1989"
+.SH NAME
+.sp1
+.nf
+\fBirctools\fP
+	\fBircw\fP \- IRC Watch Program
+	\fBircwho\fP \- IRC Who lister
+.fi
+.SH SYNOPSIS
+.sp1
+.nf
+\fBircw\fP  [ OPTIONS ] [ \fBnickname\fP ] [ -w \fB<string>\fP ] 
+\fBircwho\fP [ -s | [ \fBnickname\fP ]
+.fi
+.SH OPTIONS
+.sp 1
+\fBircw\fP options are
+.nf
+	-c			run in continous mode
+	+c			turn off continous mode
+	-t {24hr|12hr|none}	Kind of timestamp you prefer
+	-h			print this help menu
+	<nick(s)>		track given nick(s)
+	-w <string>		track a given generic string
+.fi
+.sp1
+\fBircwho\fP options are
+.nf
+	-s		Optional, to show list of users in short form
+	<nick(s)>	Optional, to only look for the given nicknames
+.fi
+.sp1
+\fbnickname\fP is one or more possible nicknames to look for.
+.SH DESCRIPTION
+.sB1
+Simplistically, \fBircw\fP is an \fBirc\fP client that just queries the
+\fBircd\fP periodically to check if specific users have got on, or
+otherwise had
+been on and got off.  \fBircw\fP does a '/whois nickname' for every nickname
+specified on the command line, and a '/who | egrep <string>'
+
+\fBircw\fP automatically goes into the background, and thereafter stays up
+until it detects all its arguments, if it is running in non-continous
+mode, or the parent shell has exited.  A useful method is starting up
+\fBircw\fP in the continous mode of operation in the login shell, from a
+.login, or .profile shell script.
+
+\fBircwho\fP has three modes of operation.  In the simplest mode, i.e. without
+any arguments, \fBircwho\fP does a '/who' formats the output and displays it.
+With a \fB-s\fP, \fBircwho\fP puts out a short form of the list of users on
+open channels.
+With \fB<nicknames>\fP, \fBircwho\fP queries the \fBircd\fP
+for the specific list of
+users.
+
+.sp1
+.SH ARGUMENTS
+.sp1
+The options for \fBircw\fP are...
+.nf
+	-c	Run \fBircw\fP in a continous mode, i.e. track given nicknames
+		strings forever, or until the parent shell exits.  
+
+	+c	The reverse notion of the above.  In this mode, \fBircw\fP
+		will run until all the command line arguments have been
+		found, or the parent shell exits, whichever comes
+		first.
+
+	-t	The kind of timestamp that \fBircw\fP will prefix to most of
+		its messages.  There are one of three possible options
+
+		12hr	Use a 12hr am/pm style clock scheme.
+		24hr	Use a 24 hour clock
+		none	do not prefix any timestamps.
+
+		If an invalid options is specified, or this options is
+		not given, then the system-wide default that is set by
+		your irc-administrator will be used.
+
+	-h	Print out a short help menu.  \fBircw\fP will also default to
+		this option if an invalid option is specified.  With
+		this option, \fBircw\fP will not run other options.
+
+	<nickname>s
+		a list of nicknames to look for.  These nicknames are
+		searched for via the \fBwhois\fP command.
+
+	-w <string>
+		The given string is searched for from the output of a
+		who command.
+.fi
+
+The three modes of using \fBircwho\fP have already been mentioned.  More
+examples of their usage are shown in the next section.
+.sp1
+.SH USAGE
+.sp1
+.nf
+	% ircw -c -t 12hr foo bar -w baz schlepp doe -w deer
+.fi
+.sp1
+In this line, we are saying,
+.nf
+	-c		Run in a continous mode
+	-t 12hr		Use a 12 hour time stamp to prefix most messages.
+	foo bar		Look for the nicknames, "foo" and "bar"
+	-w schlepp	Look for the string "schlepp" in the /who lists, 
+	doe		Look for the nickname, "doe"
+	-w deer		Look for the string "deer" in the /who lists
+.fi
+.sp1
+A typical output from this command would look like...
+.sp1
+.nf
+ 11:14pm  ircw: Up, up and away...
+ 11:21pm  foo fooey@nowhere.com (Fooey Boo) SIGNON
+ 11:56pm  bleah schlepp@schlump.schloe.edu (B. O'Schlepp) SIGNON
+ 12:00am  foo fooey@nowhere.com (Fooey Boo) SIGNOFF
+ 12:00am  foo fubar@somewhere.edu (B. Fooey) SIGNON
+ ...and so on...
+.fi
+.sp1
+The last two lines of the previous run occur because foo signs off and
+signs back on in the same minute.  Notice also, that a \fB-w\fP string
+can occur anywhere in the line.
+.sp1
+.nf
+	% ircw +c -t 24hr kannan
+.fi
+.sp1
+In this option, we are saying,
+.sp1
+.nf
+	+c		Do not run in the continous mode.
+	-t 24hr		Use a 24 hour clock.
+	kannan		Look for the nickname kannan
+.fi
+.sp1
+In this mode, \fBircw\fP will run until the nicknames specified have signed
+on, or the parent shell has exited, whichever comes first.  A typical
+out from this command will look as
+.sp1
+.nf
+11:25:30  ircw: Up, up and away...
+01:23:00  kannan kannan@oscsunb.osc.edu (Kannan Varadhan) SIGNON
+01:23:00  ircw: exiting
+.fi
+.sp1
+.nf
+	% ircwho
+.fi
+.sp1
+yields
+.sp1
+.nf
+Nickname 	User@Host                     	on   *	Name
+misha    	mikeb@salmon.ee.ubc.ca        	on   7	Mike Bolotski
+Bill     	wrf10445@uxa.cso.uiuc.edu     	on   7	William Roy Froelich
+sridhar  	sridhar@parsec.cis.ohio-state.	on   7	Sridhar Vasudevan
+...and so on...
+.fi
+.sp1
+while
+.sp1
+.nf
+	% ircwho -s
+.fi
+.sp1
+yields
+.sp1
+.nf
+Bill Ilham Tad gwydion misha pz scanner shawn sridhar tabbifli
+.fi
+.sp1
+and
+.sp1
+.nf
+	% ircwho bill kannan sridhar
+.fi
+.sp1
+gets us
+.sp1
+.nf
+Bill wrf10445@uxa.cso.uiuc.edu (William) is on channel 7 on IRC
+kannan is not on right now, sorry
+sridhar sridhar@parsec.cis.ohio-state.edu (Sridhar) is on channel 7 on IRC
+.fi
+.sp1
+Note also that the arguments for \fBircw\fP and \fBircwho\fP are case
+insensitive.
+.sp1
+.SH BUGS
+.sp1
+.LP
+Since \fBircw\fP interacts directly with \fBircd\fP,
+the search strings possible
+could be arbitrarily complex if a user knew how to get around the shell,
+and knew the internal format of output that \fBircd\fP feeds to it's clients.
+Barring this, only the simplest strings are safe at all times.  Such
+strings are items like single components of a user's real name, a
+possible account, or a machine name, if it unique to the user etc.
+Searching for a user by specifying a mainframe machine will not be an
+intelligent notion under these assumptions, obviously.
+
+A user changing his nickname causes nickname-searches in \fBircw\fP to break.
+This might also happen if one or more critical links go break
+frequently, as happens not too infrequently.
+Similiarly, users in a hidden channel will not show up in a
+\fB-w string\fP search.
+
+Atleast one of the authors feels that releasing \fBircw\fP into the public
+domain will cause a loss of privacy to a lot of people.  While a lot of
+arguments can be made one way or another, some few users may indeed feel
+harassed.  The best we can do is tender apologies.
+
+If \fBircw\fP searches the domain at the right instants, strange signon's may
+be detected, due to timing asynchronies.   While the indicated nicknames
+do get flagged correctly, some of the information gleaned shows up as
+garbled information.
+
+\fBircwho\fP may not show correct results for certain kinds of strings if the
+internal format of the client<->server interaction proferred by \fBircd\fP
+changes.  This has happenned to us even as we were testing these
+routines, and caused us more than a measure of grief.
+
+\fBircwho\fP as it is now, does not show up the second or more components of a
+user's name.  This is due to the way it's awk script has been written.
+While this is not an insurmountable problem, this author feels too lazy
+to bother correcting it....so flame me, see if I care ;-).
+
+Neither of the two authors of these set of routines is interested in
+maintaining these routines, or otherwise keeping track of protocol
+changes in \fBircd\fP, and upgrading these routines...sorry.
+
+\fBircw\fP and \fBircwho\fP could have permitted regular expression
+matches very trivially.
+
+.SH FUNKY STUFF
+.sp1
+Sending \fBircw\fP a -USR1 or a -USR2 signal will cause \fBircw\fP
+to display
+the current state of it's tables.  Such an output looks as
+.sp1
+.nf
+Dumping Intermediate States:
+	kannan kannan@cis.ohio-state.edu (Kannan Varadhan)
+	jeff		is not on IRC now
+	foo		if not on IRC now
+.fi
+.sp1
+This is useful if you have been running \fBircw\fP for a long time, and
+your screen is messed up, or otherwise, you have cleared the screen, and
+would like to see the state charts completely.
+
+Similiarly, sending \fBircw\fP an FPE signal will cause it to
+immediately re-evaluate all of it's arguments.  
+
+Sending most other signals will cause \fBircw\fP to exit with a short
+message.
+
+\fBircw\fP also has a \fB-s\fP option for adjusting the sleep time.
+This is not usually recommended for all but the most curious, or other
+hacker par compare.
+
+\fBIrcwho\fP is an executable binary, and is a raw interface.  Without
+any arguments, it acts as a client \fBirc\fP, does a /who and exits.
+With arguments, it does a /whois for each argument, and exits.\
+The esoteric hacker may prefer to use the raw \fBIrcwho\fP program, and
+write their own shell, awk, and perl hacks.
+
+.sp1
+.SH AUTHORS
+.sp1
+.LP
+.nf
+	Kannan Varadhan  - kannan@osc.edu
+	Jeff Trim       - jtrim@orion.cair.du.edu
+.fi
+.sp1
+.SH SEE ALSO
+.sp1
+.nf
+\fBirc(1)\fP, \fBircd(1)\fP, \fBkill(1)\fP, \fBsignal(3)\fP
+.fi

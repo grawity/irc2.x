@@ -1,0 +1,94 @@
+responds to signals SIGUSR1 or SIGUSR2 to dump state
+timestamped messages
+brief (or verbose, as you like it) signon and signoff messages,
+	actually, usertunable??
+an undocumented '-s' option to change the sleeptime?
+	We'd rather not have lay users changing the sleeptime.  They may
+	make it too little, and use more resources than is needed, or
+	make it too large, and wonder why they don't get informed
+	adequately, etc...
+	It is there essentially as a debugging tool, when we wanted to
+	verify other parts of the code, and not waste time sleeping :-)
+timestamping now handles a 24 hour clock, or a 12 hour clock.  12hour
+	clock algorithm is due to Jeff.  The option
+	-timer {12hr|24hr|none} is used to set it as desired.  A default
+	value is given though, via the TIMER_FLAG defined variable in
+	config.h.
+A continous monitoring of hosts via ircw will be a bad idea.  Meanwile,
+	here is an awk script to do it, using Ircwho output....
+	Figure out how you want the printf statements to appear.
+
+	while : ; do
+	  Ircwho
+	  echo "WHOREPLYDONE"
+	  sleep $SLEEPTIMER
+	  done | awk '{
+	if ($0 ~ /'<string>'/)
+	  users[$3] += 1;
+	else if ($0 ~ /WHOREPLYOVER/)
+	  for ( i in users )
+	    if (users[i] == 1)
+	      {		# User was not on, user is on
+	      printf "user %s just got on\n", i
+	      users[i] = 2;
+	      }
+	    else if (users[i] == 2)
+	      {		# User was on, user is not on
+	      printf "user %s logged off\n", i
+	      users[i] = 0;
+	      }
+	    else
+	      # user was on, user is on
+	      users[i] = 2;
+	  }'
+
+VIOLA :-)! Powerful, neh, the concept of tools?  teaches you to respect,
+worship, and venerate UNIX, and the UNIX guru, neh? :-)
+
+a better handling of the signals in dumpargs() routine, to first
+	verify the consistency of the database information with
+	ircd before dumping the info out?
+     o  ircw() did indeed do this at one time, but it turned out to be too
+	slow, and expensive....*sigh*
+	Option ignored...A minor 30 second delay is bearable, I guess
+	This option will stay ignored unless too many people protest
+
+responds to a whole lot of signals.  Here is a complete list...
+	o The signals USR1 and USR2 cause ircw to dump state.  I find
+	  this the most useful signals feature...
+	signal (SIGUSR1, dumpargs);
+	signal (SIGUSR2, dumpargs); 
+
+	o The signal FPE causes ircw to re-evaluate it's arguments, by
+	  querying ircw afresh.  This is useful if you are paranoid
+	  about gettin up-to-date info from ircd for any reason
+	  whatever.
+	signal (SIGFPE, re_eval_args);
+ * Now we set some bizzare signal settings here...
+	o The following signals are asking ircw to exit for any reason
+	  whatever.  We peacefully close down the socket, write a note
+	  to the terminal if the invoker is still around, and exit.
+	signal (SIGHUP, quit);
+	signal (SIGINT, quit);
+	signal (SIGQUIT, quit);
+	signal (SIGTERM, quit);
+	signal (SIGPIPE, quit);
+ * THe following signals are error flags...We believe the code is
+	o The following signals should not occur.  They indicate errors
+	  in the code.  We do not believe that such errors exist at this
+	  point in time.  If the format or some such thing changes,
+	  errors such as these may occur.  If they do, then you
+	  (a) can fix the code yourself ;-)
+	  (b) Catch a guru
+	  (c) Catch some one and try to get help
+	  (d) Scream, and rend your hair in agony
+	  (e) Try and find one of the authors (good luck on this one ;-)
+	signal (SIGBUS, abend);
+	signal (SIGSEGV, abend);
+	signal (SIGSYS, abend);
+	signal (SIGURG, abend);
+
+Upgraded for v2.1.1 in both ircw and ircwho.  The *very* *last* upgrade
+by any of the authors...bleah! :-/
+
+

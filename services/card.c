@@ -23,11 +23,11 @@ char card_id[]="card.c v2.0 (c) 1988 University of Oulu, Computing Center";
 #include <signal.h>
 #include "sys.h"
 
-#define MAIN
+
 #define DEPTH 10
 #include "struct.h"
 #include "msg.h"
-#undef MAIN
+
 
 #define NICKNAME "Bartender"
 #define USERNAME "ron"
