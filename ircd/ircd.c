@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.136 2004/06/17 14:14:22 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.137 2004/06/19 18:05:46 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -68,6 +68,8 @@ time_t	nextpreference = 1;	/* time for next calculate_preference call */
 #ifdef TKLINE
 time_t	nexttkexpire = 0;	/* time for next tkline_expire call */
 #endif
+
+aClient *ListenerLL = NULL;	/* Listeners linked list */
 
 RETSIGTYPE s_die(int s)
 {
