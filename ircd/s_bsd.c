@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.171 2004/11/19 15:42:08 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_bsd.c,v 1.172 2005/01/03 17:33:55 q Exp $";
 #endif
 
 #include "os.h"
@@ -2614,7 +2614,7 @@ free_server:
 		if (by && IsPerson(by) && !MyClient(by))
 		  sendto_one(by,
 			     ":%s NOTICE %s :Connect to host %s failed.",
-			     ME, by->name, cptr);
+			     ME, by->name, cptr->name);
 		errno = i;
 		if (errno == EINTR)
 			errno = ETIMEDOUT;
@@ -2640,7 +2640,7 @@ free_server:
 		if (by && IsPerson(by) && !MyClient(by))
 		  sendto_one(by,
 			     ":%s NOTICE %s :Connect to host %s failed.",
-			     ME, by->name, cptr);
+			     ME, by->name, cptr->name);
 		det_confs_butmask(cptr, 0);
 		goto free_server;
 	    }
