@@ -215,7 +215,9 @@ static	time_t	try_connections(time_t currenttime)
 	aClass	*cltmp;
 	aConfItem *con_conf = NULL;
 	int	allheld = 1;
+#ifdef DISABLE_DOUBLE_CONNECTS
 	int	i;
+#endif
 
 	Debug((DEBUG_NOTICE,"Connection check at   : %s",
 		myctime(currenttime)));
