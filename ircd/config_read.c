@@ -1,6 +1,4 @@
-#ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: config_read.c,v 1.28 2004/12/06 17:07:22 chopin Exp $";
-#endif
+/* "@(#)$Id: config_read.c,v 1.29 2004/12/12 17:30:45 chopin Exp $"; */
 
 /* used in config_error() */
 #define CF_NONE 0
