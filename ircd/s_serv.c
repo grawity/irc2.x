@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.225 2004/08/02 15:53:50 jv Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.226 2004/08/10 22:23:51 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -189,8 +189,18 @@ int	m_squit(aClient *cptr, aClient *sptr, int parc, char *parv[])
 			/* remote server is closing it's link */
 			rsquit = 1;
 		}
-		acptr = cptr;
-		server = cptr->sockhost;
+		if (IsServer(cptr))
+		{
+			acptr = cptr;
+			server = cptr->sockhost;
+		}
+		else
+		{
+			sendto_one(cptr, ":%s NOTICE %s :You can QUIT, "
+				"but you cannot SQUIT me.",
+				ME, cptr->name);
+			return 1;
+		}
 	}
 
 	/*
