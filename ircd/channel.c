@@ -2302,8 +2302,9 @@ char	*parv[];
 				       sptr->name, parv[1], modebuf, parabuf);
 
 	/* send NJOIN to capable servers */
-	sendto_serv_v(cptr, SV_NJOIN, ":%s NJOIN %s :%s", parv[0], parv[1],
-		      nbuf);
+	if (nbuf[0])
+		sendto_serv_v(cptr, SV_NJOIN, ":%s NJOIN %s :%s", parv[0],
+			      parv[1], nbuf);
 	return 0;
 }
 
