@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.4 1997/04/24 21:16:49 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.5 1997/04/28 02:20:11 kalt Exp $";
 #endif
 
 #include <sys/types.h>	/* HPUX requires sys/types.h for utmp.h */
@@ -951,7 +951,7 @@ nickkilldone:
 static	int	m_message(cptr, sptr, parc, parv, notice)
 aClient *cptr, *sptr;
 char	*parv[];
-int	notice;
+int	parc, notice;
 {
 	Reg	aClient	*acptr;
 	Reg	char	*s;
