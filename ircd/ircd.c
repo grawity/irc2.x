@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.91 2003/07/28 17:16:38 jv Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.92 2003/10/13 21:48:52 q Exp $";
 #endif
 
 #include "os.h"
@@ -32,6 +32,10 @@ aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
 
 static	void	open_debugfile(), setup_signals(), io_loop();
+
+#if defined(USE_IAUTH)
+static	RETSIGTYPE	s_slave(int s);
+#endif
 
 istat_t	istat;
 iconf_t iconf;
@@ -100,8 +104,7 @@ int s;
 }
 
 #if defined(USE_IAUTH)
-RETSIGTYPE s_slave(s)
-int s;
+static	RETSIGTYPE	s_slave(int s)
 {
 # if POSIX_SIGNALS
 	struct	sigaction act;
