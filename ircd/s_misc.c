@@ -600,8 +600,10 @@ int	exit_client(aClient *cptr, aClient *sptr, aClient *from,
 		check_split();
 		if ((cptr == sptr))
 		{
+			/* It serves no purpose. --B.
 			sendto_flag(SCH_SERVER, "Sending SQUIT %s (%s)",
 				cptr->name, comment);
+			*/
 			return FLUSH_BUFFER;
 		}
 		return 0;
