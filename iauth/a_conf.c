@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: a_conf.c,v 1.14 1999/03/11 21:03:02 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: a_conf.c,v 1.15 1999/03/11 21:04:47 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -395,6 +395,7 @@ char *cfile;
 	if (o_dto) *ch++ = 'T';
 	if (needh) *ch++ = 'W';
 	*ch++ = '\0';
+	return o_all;
 }
 
 /* conf_match: check if an instance is to be applied to a connection */
