@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: send.c,v 1.36 1999/07/02 16:49:37 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: send.c,v 1.37 1999/07/02 17:07:18 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -795,7 +795,7 @@ sendto_serv_notv(aClient *one, int ver, char *pattern, ...)
 			    }
 			else
 				rc = 1;
-	return;
+	return rc;
 }
 
 /*
@@ -1100,7 +1100,7 @@ sendto_match_servs_v(aChannel *chptr, aClient *from, int ver,
 	if (chptr)
 	    {
 		if (*chptr->chname == '&')
-			return;
+			return 0;
 		if ((mask = (char *)rindex(chptr->chname, ':')))
 			mask++;
 	    }
@@ -1161,7 +1161,7 @@ sendto_match_servs_notv(aChannel *chptr, aClient *from, int ver,
 	if (chptr)
 	    {
 		if (*chptr->chname == '&')
-			return;
+			return 0;
 		if ((mask = (char *)rindex(chptr->chname, ':')))
 			mask++;
 	    }
