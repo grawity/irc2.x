@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: send.c,v 1.39 1999/07/21 22:57:40 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: send.c,v 1.40 1999/08/15 20:57:56 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -37,7 +37,6 @@ static  char rcsid[] = "@(#)$Id: send.c,v 1.39 1999/07/21 22:57:40 kalt Exp $";
 #undef SEND_C
 
 static	char	sendbuf[2048];
-static	int	send_message __P((aClient *, char *, int));
 
 #if USE_STDARG
 static void	vsendto_prefix_one(aClient *, aClient *, char *, va_list);
@@ -141,7 +140,7 @@ int	fd;
 **	if ZIP_LINKS is defined, the message will eventually be compressed,
 **	anything stored in the sendQ is compressed.
 */
-static	int	send_message(to, msg, len)
+int	send_message(to, msg, len)
 aClient	*to;
 char	*msg;	/* if msg is a null pointer, we are flushing connection */
 int	len;
