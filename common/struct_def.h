@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.123 2004/10/13 16:28:23 chopin Exp $
+ *   $Id: struct_def.h,v 1.124 2004/10/23 13:54:29 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -905,6 +905,7 @@ typedef enum ServerChannels {
 #ifdef CLIENTS_CHANNEL
 	SCH_CLIENT,
 #endif
+	SCH_OPER,
 	SCH_MAX	
 } ServerChannels;
 
