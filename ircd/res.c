@@ -24,7 +24,7 @@
 #undef RES_C
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: res.c,v 1.32 2003/10/17 21:28:18 q Exp $";
+static  char rcsid[] = "@(#)$Id: res.c,v 1.33 2003/10/18 15:31:25 q Exp $";
 #endif
 
 /* because there is a lot of debug code in here :-) */
@@ -1709,7 +1709,7 @@ static	int	bad_hostname(char *name, int len)
 #ifdef RESTRICT_HOSTNAMES
 	{
 		/* basic character set */
-		if (isascii(c) && isalnum(c))
+		if (isalnum(c))
 			continue;
 		
 		/* special case: hyphen */
