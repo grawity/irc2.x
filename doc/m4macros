@@ -1,3 +1,4 @@
+# @(#)$Id$
 
 The following macros are included in "ircd.m4" for use with the m4 text
 preprocessor.  "ircd.m4" is parsed before the IRC server conf file so they
