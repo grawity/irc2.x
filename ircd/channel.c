@@ -1650,6 +1650,9 @@ static	int	set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 			switch(lp->flags & MODE_WPARAS)
 			{
 			case MODE_KEY :
+				if (IsServer(sptr) &&
+					!strncmp(mode->key, cp, (size_t) KEYLEN))
+					break;
 				*mbuf++ = c;
 				(void)strcat(pbuf, cp);
 				(void)strcat(upbuf, cp);
@@ -1670,6 +1673,8 @@ static	int	set_mode(aClient *cptr, aClient *sptr, aChannel *chptr,
 					*mode->key = '\0';
 				break;
 			case MODE_LIMIT :
+				if (IsServer(sptr) && mode->limit == nusers)
+					break;
 				*mbuf++ = c;
 				(void)strcat(pbuf, cp);
 				(void)strcat(upbuf, cp);
