@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: mod_socks.c,v 1.41 2004/10/01 20:22:13 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: mod_socks.c,v 1.42 2004/10/02 01:20:43 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -499,16 +499,11 @@ static	int	socks_read(u_int cl, char *strver)
 	return -1;
 
 again:
-	if (cldata[cl].mod_status == ST_V5b)
-	{
-		return 0;
-	}
-	else
+	if (cldata[cl].mod_status != ST_V5b)
 	{
 		return socks_start(cl);
 	}
 
-	/* not reached */
 	return 0;
 }
 
