@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: parse.c,v 1.59 2004/03/06 18:26:30 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.60 2004/03/07 17:41:56 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -544,7 +544,7 @@ static	int	find_sender(aClient *cptr, aClient **sptr, char *sender,
 	{
 		from = find_mask(sender, (aClient *) NULL);
 	}
-	if (isdigit(sender[0]) || sender[0] == '$')
+	if (from && (isdigit(sender[0]) || sender[0] == '$'))
 	{
 		para[0] = from->name;
 	}
