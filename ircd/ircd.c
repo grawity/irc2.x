@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: ircd.c,v 1.105 2003/10/19 17:27:33 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.106 2003/11/03 21:30:42 jv Exp $";
 #endif
 
 #include "os.h"
@@ -1075,7 +1075,7 @@ static	void	io_loop(void)
 		nextconnect = try_connections(timeofday);
 	/*
 	** Every once in a while, hunt channel structures that
-	** can be freed.
+	** can be freed. Reop channels while at it, too.
 	*/
 	if (timeofday >= nextgarbage)
 		nextgarbage = collect_channel_garbage(timeofday);
