@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.68 2003/10/18 21:33:53 chopin Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.69 2003/12/09 23:04:56 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -950,7 +950,6 @@ int	rehash(aClient *cptr, aClient *sptr, int sig)
 	{
 		rehashed = 1;
 	}
-	srand(now);
 	return ret;
 }
 
