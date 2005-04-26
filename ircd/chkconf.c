@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: chkconf.c,v 1.44 2005/02/15 19:21:44 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: chkconf.c,v 1.45 2005/02/22 18:27:30 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -27,6 +27,7 @@ static const volatile char rcsid[] = "@(#)$Id: chkconf.c,v 1.44 2005/02/15 19:21
 #include "match_ext.h"
 #undef CHKCONF_C
 
+#define mystrdup(x) strdup(x)
 #define MyMalloc(x)     malloc(x)
 /*#define MyFree(x)       free(x)*/
 
