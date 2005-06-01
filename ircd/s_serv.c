@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_serv.c,v 1.273 2005/04/13 23:17:28 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_serv.c,v 1.274 2005/05/14 20:51:26 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -3174,6 +3174,11 @@ int	m_set(aClient *cptr, aClient *sptr, int parc, char *parv[])
 				else if (!mycmp(parv[2], "ON"))
 				{
 					iconf.caccept = 1;
+					/* Well... give admin the chance. */
+					if (!firstrejoindone)
+					{
+						activate_delayed_listeners();
+					}
 				}
 				else if (!mycmp(parv[2], "SPLIT"))
 				{
