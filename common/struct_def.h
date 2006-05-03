@@ -292,6 +292,16 @@ struct	CPing	{
 	u_long	lrecvd;		/* # received */
 };
 
+#ifdef XLINE
+typedef	struct	UnregItem aUnregItem;
+struct	UnregItem {
+	int	fd;	/* client fd */
+	char	*user2;	/* 2nd param of USER */
+	char	*user3;	/* 3rd param of USER */
+	struct	UnregItem *next;
+};
+#endif
+
 struct	ConfItem	{
 	u_int	status;		/* If CONF_ILLEGAL, delete when no clients */
 	int	clients;	/* Number of *LOCAL* clients using this */
