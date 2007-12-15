@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: send.c,v 1.103 2005/02/20 23:10:57 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: send.c,v 1.104 2005/02/22 16:34:02 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1343,7 +1343,7 @@ void	sendto_flog(aClient *cptr, char msg, char *username, char *hostname)
 		/* client IP */
 		cptr->user ? cptr->user->sip :
 #ifdef INET6
-		inetntop(AF_INET6, (char *)&cptr->ip, mydummy, MYDUMMY_SIZE),
+		inetntop(AF_INET6, (char *)&cptr->ip, ipv6string, sizeof(ipv6string)),
 #else
 		inetntoa((char *)&cptr->ip),
 #endif
