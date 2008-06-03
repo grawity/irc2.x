@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_debug.c,v 1.51 2005/12/06 15:11:24 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_debug.c,v 1.52 2006/04/25 21:51:10 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -65,6 +65,9 @@ char	serveropts[] = {
 #endif
 #ifdef	DEFAULT_INVISIBLE
 'I',
+#endif
+#ifdef	JAPANESE
+'j',
 #endif
 #ifdef	OPER_DIE
 'J',
