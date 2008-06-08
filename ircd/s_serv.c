@@ -2010,7 +2010,7 @@ int	m_stats(aClient *cptr, aClient *sptr, int parc, char *parv[])
 					CONF_NOCONNECT_SERVER);
 		break;
 	case 'd' : case 'D' : /* defines */
-		send_defines(cptr, parv[0]);
+		send_defines(cptr, parv[0], parv[1]);
 		break;
 	case 'H' : case 'h' : /* H, L and D conf lines */
 		report_configured_links(cptr, parv[0],
