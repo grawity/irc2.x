@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: parse.c,v 1.93 2005/11/17 15:15:00 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: parse.c,v 1.94 2008/06/07 15:28:13 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -112,6 +112,10 @@ struct Message msgtab[] = {
 #endif
 #ifdef KLINE
 { "KLINE",    2, MPAR, { _m(m_nop), _m(m_nopriv), _m(m_kline), _m(m_kline), _m(m_unreg) } },
+#endif
+{ "ETRACE",   0, MPAR, { _m(m_nop), _m(m_nopriv), _m(m_etrace), _m(m_nop), _m(m_unreg) } },
+#ifdef ENABLE_SIDTRACE
+{ "SIDTRACE", 0, MPAR, { _m(m_nop), _m(m_nopriv), _m(m_sidtrace), _m(m_nop), _m(m_unreg) } },
 #endif
 { NULL,       0,    0, { _m(NULL), _m(NULL), _m(NULL), _m(NULL), _m(NULL) } }
 };
