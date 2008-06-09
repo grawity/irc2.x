@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: class.c,v 1.23 2008/06/09 17:42:26 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: class.c,v 1.24 2008/06/09 17:47:45 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -277,8 +277,8 @@ void	report_classes(aClient *sptr, char *to)
 	{
 #ifdef ENABLE_CIDR_LIMITS
 		if (MaxCidrAmount(cltmp) > 0 && CidrLen(cltmp) > 0)
-			// leading space is important
-			snprintf(tmp, sizeof(tmp), " %d/%d",
+			/* leading space is important */
+			sprintf(tmp, " %d/%d",
 				MaxCidrAmount(cltmp), CidrLen(cltmp));
 		else
 			tmp[0] = '\0';
