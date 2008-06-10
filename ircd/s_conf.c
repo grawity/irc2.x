@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_conf.c,v 1.179 2008/06/09 17:40:16 jv Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_conf.c,v 1.180 2008/06/09 18:51:20 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -2612,6 +2612,7 @@ void do_kline(int tkline, char *who, time_t time, char *user, char *host, char *
 				sprintf(buff, "Kill line active: %.80s",
 					aconf->passwd);
 			}
+			acptr->exitc = tkline ? EXITC_TKLINE : EXITC_KLINE;
 			(void) exit_client(acptr, acptr, &me, buff);
 		}
 	}
