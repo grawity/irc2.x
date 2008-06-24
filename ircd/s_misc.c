@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.114 2008/06/09 17:40:56 jv Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.115 2008/06/11 18:27:27 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1194,6 +1194,9 @@ void	check_split(void)
 			{
 				firstrejoindone = 1;
 				activate_delayed_listeners();
+#ifdef CACCEPT_DEFAULT
+				iconf.caccept = CACCEPT_DEFAULT;
+#endif
 			}
 		}
 	}
