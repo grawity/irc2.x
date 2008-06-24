@@ -150,6 +150,14 @@ static	int	openconf(void)
 {
 #ifdef	M4_PREPROC
 	int	pi[2];
+#ifdef HAVE_GNU_M4
+	char	*includedir, *includedirptr;
+
+	includedir = strdup(IRCDM4_PATH);
+	includedirptr = strrchr(includedir, '/');
+	if (includedirptr)
+		*includedirptr = '\0';
+#endif
 
 	/* ircd.m4 with full path now! Kratz */
 	if (access(IRCDM4_PATH, R_OK) == -1)
@@ -179,6 +187,9 @@ static	int	openconf(void)
 		 * two servers running with the same fd's >:-) -avalon
 		 */
 		(void)execlp(M4_PATH, "m4",
+#ifdef HAVE_GNU_M4
+			"-I", includedir,
+#endif
 #ifdef INET6
 			"-DINET6",
 #endif
