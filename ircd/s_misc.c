@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.115 2008/06/11 18:27:27 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: s_misc.c,v 1.116 2008/06/24 23:23:43 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -1152,8 +1152,6 @@ void	read_motd(char *filename)
 		else
 			line[len] = '\0';
 		temp = (aMotd *)MyMalloc(sizeof(aMotd));
-		if (!temp)
-			outofmemory();
 		temp->line = mystrdup(line);
 		temp->next = NULL;
 		       if (!motd)
