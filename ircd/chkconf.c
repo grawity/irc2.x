@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: chkconf.c,v 1.50 2008/06/24 22:18:59 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: chkconf.c,v 1.51 2008/06/24 22:24:52 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -196,7 +196,7 @@ static	int	openconf(void)
 #ifdef INET6
 			"-DINET6",
 #endif
-			IRCDM4_PATH, configfile, 0);
+			IRCDM4_PATH, configfile, (char *) NULL);
 		perror("m4");
 		exit(-1);
 	default :
