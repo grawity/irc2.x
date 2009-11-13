@@ -17,7 +17,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- *   $Id: struct_def.h,v 1.149 2008/06/09 17:37:43 jv Exp $
+ *   $Id: struct_def.h,v 1.150 2008/06/10 02:26:58 chopin Exp $
  */
 
 typedef	struct	ConfItem aConfItem;
@@ -798,7 +798,7 @@ struct Channel	{
 
 #define	IsMasked(x)		(x && x->serv && x->serv->maskedby != x)
 
-#define IsSplit()		(iconf.split == 1)
+#define IsSplit()		(iconf.split > 0)
 
 typedef	struct	{
 	u_long	is_user[2];	/* users, non[0] invis and invis[1] */
