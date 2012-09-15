@@ -36,6 +36,8 @@
 #endif
 #ifdef HAVE_SYS_BITYPES_H
 # include <sys/bitypes.h>
+#elif defined(__FreeBSD__)
+# include <machine/types.h>
 #else
 # include "bitypes.h"
 #endif

@@ -20,7 +20,7 @@
 /*
  *        Author: Jarle Lyngaas
  *        E-mail: jarlel@ii.uib.no
-*/
+ */
 
 #include "struct.h"
 #ifdef NPATH
@@ -32,7 +32,7 @@
 #include "channel.h"
 #include "h.h"
 
-#define VERSION "v2.7"
+#define VERSION "v2.7+"
 
 #define NOTE_SAVE_FREQUENCY 30 /* Frequency of save time in minutes */
 #define NOTE_MAXSERVER_TIME 120 /* Max days for a request in the server */
@@ -82,28 +82,20 @@
 
 #define DupNewString(x,y) if (!StrEq(x,y)) { MyFree(x); DupString(x,y); }  
 #define MyEq(x,y) (!myncmp(x,y,strlen(x)))
-#undef mycmp
+#undef	mycmp
 #define mycmp mystrcasecmp   /* mycmp sux, making note use double cpu */
 #define Usermycmp(x,y) mycmp(x,y)
 #define Key(sptr) KeyFlags(sptr,-1)
 #define Message(msgclient) get_msg(msgclient, 'm')
 #define IsOperHere(sptr) (IsOper(sptr) && MyConnect(sptr))
+#define HasPrefix(x) ((x=='^')||(x=='~')||(x=='+')||(x=='=')||(x=='-'))
 #define NULLCHAR ((char *)0)
 #define SPY_CTRLCHAR 13
-#define DummyChar '~'
 #define SECONDS_DAY 3600*24
 #define SECONDS_WEEK SECONDS_DAY*7
 #define SECONDS_MONTH SECONDS_WEEK*31
 #define SECONDS_FOR_ALL_DISTRIBUTE SECONDS_DAY/3
 #define SECONDS_SERVER_DISTRIBUTE SECONDS_DAY
-
-#ifndef EPATH
-#define EPATH dummy
-#define m_names n_names
-#define m_list n_list
-#define m_join n_join
-#define m_mode n_mode
-#endif
 
 /* Using Message(msgclient) to get message part of *any* message
    cause the spy function is an ugly hack saving log in this field - Jarle */
@@ -199,8 +191,8 @@ char *s1, *s2;
 static char *UserName(sptr)
 aClient *sptr;
 {
- if (*(sptr->user->username) != DummyChar) return sptr->user->username;
-  else return sptr->user->username+1; 
+ if (HasPrefix(*(sptr->user->username))) return sptr->user->username+1;
+  else return sptr->user->username; 
 }
 
 static int numeric(string)
@@ -399,7 +391,7 @@ static int number_fromname()
 {
  register int t, nr = 0;
 
- time (&clock);
+ timeofday = time(NULL);
  for (t = 1;t <= fromname_index; t++) 
       if (FromNameList[t]->timeout > timeofday
           && !(FromNameList[t]->flags & FLAGS_SERVER_GENERATED_DESTINATION)) 
@@ -678,7 +670,7 @@ static void init_messages()
     r_code(buf,fp);timeout = atol32(buf);r_code(buf,fp);
     atime = atol32(buf);r_code(message,fp);
     flags &= ~FLAGS_FROM_REG; rnd+=atime;
-    if (timeout > 0 && *toname != DummyChar && *fromname != DummyChar)
+    if (timeout > 0 && !HasPrefix(*toname) && !HasPrefix(*fromname))
       new(passwd,fromnick,fromname,fromhost,tonick,toname,
 	  tohost,flags,timeout,atime,message);
  } else {
@@ -1024,7 +1016,7 @@ long32 flags;
  first_tnl = first_tnl_indexnode(UserName(sptr));
  last_tnl = last_tnl_indexnode(UserName(sptr));
  index_p = ToNameList;
- time (&clock);
+ timeofday = time(NULL);
  while (1) {
      while (last && t <= last) {
 	    msgclient = index_p[t];
@@ -1681,7 +1673,7 @@ while (send && qptr != sptr &&
        gflags = 0;
        gflags |= FLAGS_WASOPER;
        gflags |= FLAGS_SERVER_GENERATED;
-       gnew = 1;
+       *gnew = 1;
        c = wild_fromnick(msgclient->fromnick, msgclient);
        new(msgclient->passwd,"SERVER_RECEIVED","-","-",
            c ? c : msgclient->fromnick, msgclient->fromname,
@@ -2080,7 +2072,7 @@ static int number_distribute()
 {
  register int t, nr = 0;
 
- time (&clock);
+ timeofday = time(NULL);
  for (t = 1; t <= fromname_index; t++) 
       if (FromNameList[t]->timeout > timeofday
           && FromNameList[t]->flags & FLAGS_DISTRIBUTE) nr++;
@@ -2169,7 +2161,7 @@ time_t *delay;
 {
  static time_t last_call = 0;
 
- time (&clock);
+ timeofday = time(NULL);
  if (!file_inited) { 
      *delay = 0; init_messages(); 
      return; /* Don't do anything more before save file is read */
@@ -2241,7 +2233,7 @@ char *message;
       && !Usermycmp(UserName(sptr),msgclient->fromname)
       && host_check(sptr->user->host, msgclient->fromhost)) return;
 
- time (&clock);
+ timeofday = time(NULL);
  sprintf(buf,"%s (%s@%s) %s for %s@%s", sptr->name, UserName(sptr),
 	 sptr->user->host, message, msgclient->toname, msgclient->tohost);
  c = wild_fromnick(msgclient->fromnick, msgclient);
@@ -2282,7 +2274,7 @@ char *arg, *passwd, *flag_s, *id_s, *name, *time_s;
  if (xrm) { 
     t = 1; last = fromname_index;
  }
- time (&clock);
+ timeofday = time(NULL);
  while (last && t <= last) {
        msgclient = FromNameList[t]; flags = msgclient->flags;
         if (timeofday > msgclient->timeout 
@@ -2487,7 +2479,7 @@ aClient *sptr;
  aMsgClient *msgclient, **index_p;
  char *msg, buf[BUF_LEN];
 
- time (&clock);
+ timeofday = time(NULL);
  t = first_tnl_indexnode(sptr->name);
  last = last_tnl_indexnode(sptr->name);
  first_tnl = first_tnl_indexnode(UserName(sptr));
@@ -2536,7 +2528,7 @@ char mode, *name, *toname, *tohost;
   int t, last, found = 0;
   aMsgClient *msgclient;
 
-  time (&clock);
+  timeofday = time(NULL);
 
   if (wildcards(name) || mode == 'l') { 
       t = 1; last = toname_index;
@@ -2614,7 +2606,7 @@ char *passwd, *flag_s, *timeout_s, *name, *message;
      sendto_one(sptr,"NOTICE %s :### Busy reading save file", sptr->name);
      return -1;
   }
- time (&clock);
+ timeofday = time(NULL);
  if (denied(sptr)) return -1;
  if (number_fromname() >= note_msm 
      && !IsOperHere(sptr) && !Key(sptr)) {
@@ -2644,7 +2636,7 @@ char *passwd, *flag_s, *timeout_s, *name, *message;
            return -1;
        }
   }
- if (*toname == DummyChar) {
+ if (HasPrefix(*toname)) {
      sendto_one(sptr,
                 "NOTICE %s :#?# Please skip that first character in username",
                 sptr->name);
@@ -2780,7 +2772,7 @@ char *passwd, *flag_s, *timeout_s, *name, *message;
                 sptr->name);
      return;
   }
- time (&clock);
+ timeofday = time(NULL);
  sprintf(buf, "[News:%s] ", tonick); msg_len = MSG_LEN-strlen(buf)-1;
  strncat(buf, message, msg_len); strcat(flag_s, "-RS");
  while (fromname_index && t <= fromname_index) {
@@ -3060,7 +3052,7 @@ char *arg, *name, *time_s, *delete;
  }
  t = first_fnl_indexnode(UserName(sptr));
  last = last_fnl_indexnode(UserName(sptr));
- time (&clock);
+ timeofday = time(NULL);
  while (last && t <= last) {
         msgclient = FromNameList[t];
         if (timeofday > msgclient->timeout) { t++; continue; }
@@ -3178,6 +3170,8 @@ aClient *sptr;
   }
 }
 
+#ifdef EPATH
+
 int	m_mode(cptr, sptr, parc, parv)
 aClient *cptr;
 aClient *sptr;
@@ -3206,7 +3200,7 @@ char *hostname;
  long32 gflags = 0;
  char *password, buf1[BUF_LEN], buf2[BUF_LEN];
 
- time (&clock);
+ timeofday = time(NULL);
  password = create_pwd();
  gflags |= FLAGS_CHANNEL;
  gflags |= FLAGS_WASOPER;
@@ -3256,7 +3250,7 @@ char *pwd;
      return 1;
    }
 
-  time (&clock);
+  timeofday = time(NULL);
   t = first_tnl_indexnode(UserName(sptr));
   last = last_tnl_indexnode(UserName(sptr));
   while (last && t <= last) {
@@ -3389,6 +3383,8 @@ char    *parv[];
  ret =  n_names(cptr, sptr, parc, parv);
  return ret;
 }
+
+#endif /* EPATH */
 
 int m_note(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;

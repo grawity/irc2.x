@@ -732,7 +732,9 @@ typedef	struct	{
 #define EXITC_FLOOD	'F'	/* client flooding */
 #define EXITC_KLINE	'k'	/* K-lined */
 #define EXITC_KILL	'K'	/* KILLed */
+#define EXITC_MBUF	'M'	/* mem alloc error */
 #define EXITC_PING	'P'	/* ping timeout */
+#define EXITC_SENDQ	'Q'	/* send queue exceeded */
 #define EXITC_RLINE	'r'	/* R-lined */
 
 /* misc variable externs */

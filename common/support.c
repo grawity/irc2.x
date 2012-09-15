@@ -595,6 +595,6 @@ char *make_version()
         if (be)
                 sprintf(ver + strlen(ver), "b%d", be);	/* beta */
         if (al)
-                sprintf(ver + strlen(ver), "a%d", al);	/* alpha */
+                sprintf(ver + strlen(ver), "p%d", al);	/* alpha */
 	return mystrdup(ver);
 }

@@ -38,7 +38,7 @@ RM=/bin/rm
 #          you are not defining CMDLINE_CONFIG 
 IRCDMODE = 711
 
-# IRCDDIR must be the same as DPATH in include/config.h
+# IRCDDIR is used as default path for file names in <systype>/config.h
 #
 IRCDDIR = $(prefix)/lib/irc
 
@@ -55,9 +55,9 @@ IRCLIBS=-lcurses -ltermcap
 #on NeXT other than 2.0:
 #IRCDLIBS=-lsys_s
 #
-# AIX 370 flags
-#CFLAGS=-D_BSD -Hxa -I$(INCLUDEDIR)
-#IRCDLIBS=-lbsd
+# AIX flags
+#CFLAGS=-D_BSD $(DEFS) -I$(INCLUDEDIR)
+#IRCDLIBS=-lm -lbsd
 #IRCLIBS=-lcurses -lcur
 #
 # Dynix/ptx V2.0.x

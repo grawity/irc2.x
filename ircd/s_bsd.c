@@ -101,7 +101,7 @@ FdAry	fdas, fdaa, fdall;
 int	highest_fd = 0, readcalls = 0, udpfd = -1, resfd = -1;
 time_t	timeofday;
 static	struct	sockaddr_in	mysk;
-static  int     setup_ping __P((u_short));
+static  int     setup_ping __P((int));
 static	void	polludp();
 
 static	struct	sockaddr *connect_inet __P((aConfItem *, aClient *, int *));
@@ -151,15 +151,15 @@ int	size;
 	/* try to fix up unqualified names */
 	if (!index(hname, '.'))
 	    {
-		if (!(_res.options & RES_INIT))
+		if (!(ircd_res.options & RES_INIT))
 		    {
 			Debug((DEBUG_DNS,"res_init()"));
 			res_init();
 		    }
-		if (_res.defdname[0])
+		if (ircd_res.defdname[0])
 		    {
 			(void)strncat(hname, ".", size-1);
-			(void)strncat(hname, _res.defdname, size-2);
+			(void)strncat(hname, ircd_res.defdname, size-2);
 		    }
 	    }
 #endif
@@ -556,7 +556,7 @@ void	init_sys()
 		    }
 #endif
 #if defined(HPUX) || defined(SVR4) || defined(DYNIXPTX) || \
-    defined(_POSIX_SOURCE) || defined(SVR4)
+    defined(_POSIX_SOURCE) || defined(SGI)
 		(void)setsid();
 #else
 		(void)setpgrp(0, (int)getpid());
@@ -1050,7 +1050,6 @@ void	close_connection(cptr)
 aClient *cptr;
 {
 	Reg	aConfItem *aconf;
-	Reg	aClient	*acptr;
 	Reg	int	i,j;
 
 	if (IsServer(cptr))
@@ -2753,7 +2752,7 @@ int	len;
 ** setup a UDP socket and listen for incoming packets
 */
 static	int	setup_ping(port)
-u_short	port;
+int	port;
 {
 	struct	sockaddr_in	from;
 	int	on = 1;
@@ -2762,7 +2761,7 @@ u_short	port;
 		return udpfd;
 	bzero((char *)&from, sizeof(from));
 	from.sin_addr.s_addr = htonl(INADDR_ANY);
-	from.sin_port = port;
+	from.sin_port = (u_short) port;
 	from.sin_family = AF_INET;
 
 	if ((udpfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
@@ -2850,11 +2849,10 @@ char	*buf;
 int	len;
 {
 	Ping	pi;
-	char	*s;
 	aConfItem	*aconf;
 	struct	timeval	tv;
 	double	d;
-	aCPing	*cp;
+	aCPing	*cp = NULL;
 	u_long	rtt;
 
 	(void)gettimeofday(&tv, NULL);

@@ -321,8 +321,7 @@ char	*parv[];
 			break;
 	if (*ch || !index(host, '.'))
 	    {
-		sendto_one(sptr,"ERROR :Bogus server name (%s)",
-			   sptr->name, host);
+		sendto_one(sptr,"ERROR :Bogus server name (%s)", host);
 		sendto_flag(SCH_ERROR, "Bogus server name (%s) from %s", host,
 			    get_client_name(cptr, TRUE));
 		return 0;
@@ -1430,7 +1429,6 @@ char	*parv[];
 				!= HUNTED_ISME)
 			return 0;
 
-	(void)collapse(parv[1]);
 	if (parc == 1)
 	    {
 		sendto_one(sptr, rpl_str(RPL_LUSERCLIENT, parv[0]),
@@ -1450,17 +1448,17 @@ char	*parv[];
 			   istat.is_myserv);
 		return 0;
 	    }
+	(void)collapse(parv[1]);
 	for (acptr = client; acptr; acptr = acptr->next)
 	    {
-		if (parc > 1)
-			if (!IsServer(acptr) && acptr->user)
-			    {
-				if (match(parv[1], acptr->user->server))
-					continue;
-			    }
-			else
-	      			if (match(parv[1], acptr->name))
-					continue;
+		if (!IsServer(acptr) && acptr->user)
+		    {
+			if (match(parv[1], acptr->user->server))
+				continue;
+		    }
+		else
+      			if (match(parv[1], acptr->name))
+				continue;
 
 		switch (acptr->status)
 		{
@@ -1786,10 +1784,6 @@ char	*parv[];
 	char	*tname;
 	int	doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
 	int	wilds, dow;
-
-	if (parc > 2)
-		if (hunt_server(cptr, sptr, ":%s TRACE %s :%s", 2, parc, parv))
-			return 0;
 
 	if (parc > 1)
 		tname = parv[1];

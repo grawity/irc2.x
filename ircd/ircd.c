@@ -515,9 +515,14 @@ aClient	*mp;
 static	int	bad_command()
 {
   (void)printf(
-	 "Usage: ircd %s[-h servername] [-p portnumber] [-x loglevel] [-t]\n",
+	 "Usage: ircd [-a] [-c] [-d path]%s [-h servername] [-q] [-o] [-i] [-T tunefile] [-v]%s\n",
 #ifdef CMDLINE_CONFIG
-	 "[-f config] "
+	 " [-f config]",
+#else
+	 "",
+#endif
+#ifdef DEBUGMODE
+	 " [-x loglevel] [-t]"
 #else
 	 ""
 #endif
@@ -819,7 +824,7 @@ time_t	delay;
 	if (timeofday > nextc)
 	    {
 		(void)read_message(delay, &fdall);
-		nextc = timeofday + HUB + 1;
+		nextc = timeofday + HUB;
 	    }
 	else
 	    {
@@ -1001,8 +1006,12 @@ char *filename;
 		(void) fprintf(fp, "%d\n%d\n%d\n%d\n%d\n%d\n", ww_size,
 			       lk_size, _HASHSIZE, _CHANNELHASHSIZE,
 			       _SERVERSIZE, poolsize);
+		sendto_flag(SCH_NOTICE, "Wrote %s.", filename);
 		fclose(fp);
 	    }
+	else
+		sendto_flag(SCH_ERROR, "Failed (%d) to open tune file: %s.",
+			    errno, filename);
 }
 
 /*

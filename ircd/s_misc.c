@@ -415,7 +415,7 @@ char	*comment;	/* Reason for the exit */
 # ifdef FNAME_USERLOG
 			sendto_flog(myctime(sptr->firsttime), NULL, on_for,
 				    sptr->user->username, sptr->user->host,
-				    sptr->username, sptr->exitc);
+				    sptr->username, &sptr->exitc);
 # endif
 		    }
 		else
@@ -434,7 +434,7 @@ char	*comment;	/* Reason for the exit */
 				    (IsUnixSocket(sptr)) ? me.sockhost :
 				    ((sptr->hostp) ? sptr->hostp->h_name :
 				     sptr->sockhost),
-				    sptr->username, sptr->exitc);
+				    sptr->username, &sptr->exitc);
 # endif
 		    }
 #endif

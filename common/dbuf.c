@@ -56,7 +56,7 @@ static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
 #endif
 
 int	dbufalloc = 0, dbufblocks = 0;
-int	poolsize = BUFFERPOOL;
+int	poolsize = (BUFFERPOOL > 1500000) ? BUFFERPOOL : 1500000;
 dbufbuf	*freelist = NULL;
 
 

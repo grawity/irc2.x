@@ -1494,7 +1494,7 @@ char	*parv[];
 
 		if (MyConnect(sptr) &&
 		    sptr->user->joined >= MAXCHANNELSPERUSER) {
-			/* Feature: Cannot join &flagchannels eithers
+			/* Feature: Cannot join &flagchannels either
 			   if already joined MAXCHANNELSPERUSER times. */
 			sendto_one(sptr, err_str(ERR_TOOMANYCHANNELS,
 				   parv[0]), name);
@@ -1960,6 +1960,9 @@ char	*parv[];
 	if (parc > 1 &&
 	    hunt_server(cptr, sptr, ":%s LIST %s %s", 2, parc, parv))
 		return 0;
+#ifdef MIRC_KLUDGE
+        sendto_one(sptr, rpl_str(RPL_LISTSTART, parv[0]));
+#endif
 	if (BadPtr(parv[1]))
 		for (chptr = channel; chptr; chptr = chptr->nextch)
 		    {

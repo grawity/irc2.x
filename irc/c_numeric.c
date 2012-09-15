@@ -336,10 +336,9 @@ char	*parv[];
 			sprintf(mybuf,"*** %s Class: %s %s: %s",
 				parv[0], parv[3], parv[2], parv[4]);
 		else
-			sprintf(mybuf,"*** %s %s Class: %s %s (%s %s) %s",
-				parv[0], parv[2], parv[3], parv[6],
-				parv[4], parv[5],
-				BadPtr(parv[7]) ? "" : parv[7]);
+			sprintf(mybuf,"*** %s %s Cl:%s %s/%s %s %s %s",
+				parv[0], parv[2], parv[3], parv[4],
+				parv[5], parv[6], parv[7], parv[8]);
 		break;
 	    case RPL_TRACECONNECTING:
 	    case RPL_TRACEHANDSHAKE:
@@ -371,6 +370,16 @@ char	*parv[];
 		sprintf(mybuf, "*** %s: %s has been used %s times (%s bytes)",
 			parv[0], parv[2], parv[3], parv[4]);
 		break;
+	    case RPL_STATSYLINE:
+		sprintf(mybuf, "*** %s: Cl:%s Pf:%s Cf:%s Max:%s Sq:%s",
+			parv[0], parv[3], parv[4],
+			parv[5], parv[6], parv[7]);
+		break;
+	    case RPL_UMODEIS:
+		sprintf(mybuf, "*** %s: Mode for user %s is %s",
+			parv[0], parv[1], parv[2]);
+		break;
+#ifdef HIDE_NUMERICS
 	    case RPL_STATSCLINE:
 	    case RPL_STATSNLINE:
 	    case RPL_STATSILINE:
@@ -382,15 +391,6 @@ char	*parv[];
 		sprintf(mybuf, "*** %s: %s:%s:%s:%s:%s:%s",
 			parv[0], parv[2], parv[3], parv[4],
 			parv[5], parv[6], parv[7]);
-		break;
-	    case RPL_STATSYLINE:
-		sprintf(mybuf, "*** %s: Cl:%s Pf:%s Cf:%s Max:%s Sq:%s",
-			parv[0], parv[3], parv[4],
-			parv[5], parv[6], parv[7]);
-		break;
-	    case RPL_UMODEIS:
-		sprintf(mybuf, "*** %s: Mode for user %s is %s",
-			parv[0], parv[1], parv[2]);
 		break;
 	    case RPL_SERVICEINFO:
 		sprintf(mybuf, "*** %s: Info For Service %s: %s",
@@ -409,11 +409,12 @@ char	*parv[];
 	    case RPL_ENDOFSERVICES:
 		mybuf[0] = '\0';
 		break;
+#endif /* !HIDE_NUMERICS */
 	    case RPL_WELCOME:
 		strcpy(me.name, parv[1]);
 		write_statusline();
 	    default:
-		sprintf(mybuf, "%03d %s: %s %s %s %s %s %s %s %s",
+		sprintf(mybuf, "%03d %s %s %s %s %s %s %s %s %s",
 			numeric, parv[0], parv[2],
 			parv[3], parv[4], parv[5], parv[6], parv[7],
 			parv[8], parv[9]);

@@ -159,13 +159,17 @@ int	len;
 			   	get_client_name(to, FALSE),
 				DBufLength(&to->sendQ), get_sendq(to));
 		if (!CBurst(to))
+		    {
+			to->exitc = EXITC_SENDQ;
 			return dead_link(to, "Max Sendq exceeded");
+		    }
 #  else
 		if (IsServer(to))
 			sendto_flag(SCH_ERROR,
 				"Max SendQ limit exceeded for %s: %d > %d",
 			   	get_client_name(to, FALSE),
 				DBufLength(&to->sendQ), get_sendq(to));
+		to->exitc = EXITC_SENDQ;
 		return dead_link(to, "Max Sendq exceeded");
 #  endif
 	    }
@@ -185,8 +189,11 @@ tryagain:
 				goto tryagain;
 			    }
 			else
+			    {
+				to->exitc = EXITC_MBUF;
 				return dead_link(to,
 					"Buffer allocation error for %s");
+			    }
 	/*
 	** Update statistics. The following is slightly incorrect
 	** because it counts messages even if queued, but bytes
@@ -268,8 +275,12 @@ tryagain:
 		    }
 		else
 # endif
-		    if (dbuf_put(&to->sendQ,msg+rlen,len-rlen) < 0)
-			return dead_link(to,"Buffer allocation error for %s");
+			if (dbuf_put(&to->sendQ,msg+rlen,len-rlen) < 0)
+			    {
+				to->exitc = EXITC_MBUF;
+				return dead_link(to,
+					"Buffer allocation error for %s");
+			    }
 	    }
 	/*
 	** Update statistics. The following is slightly incorrect
@@ -891,7 +902,7 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6;
 }
 
 void	sendto_flog(ftime, msg, duration, username, hostname, ident, exitc)
-char	*ftime, *msg, *username, *hostname, *ident, exitc;
+char	*ftime, *msg, *username, *hostname, *ident, *exitc;
 time_t	duration;
 {
 	char	linebuf[160];
@@ -930,11 +941,11 @@ time_t	duration;
 				     "%s (%3d:%02d:%02d): %s@%s [%s] %c\n",
 				     ftime, duration / 3600,
 				     (duration % 3600)/60, duration % 60,
-				     username, hostname, ident, exitc);
+				     username, hostname, ident, *exitc);
 		else
 			(void)sprintf(linebuf, "%s (%s): %s@%s [%s] %c\n",
 				      ftime, msg, username, hostname, ident,
-				      exitc);
+				      *exitc);
 		(void)alarm(3);
 		(void)write(logfile, linebuf, strlen(linebuf));
 		(void)alarm(0);

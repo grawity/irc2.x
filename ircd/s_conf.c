@@ -1192,7 +1192,8 @@ aClient	*cptr;
 			(void)dup2(2, 1);
 			if (pi[1] != 2 && pi[1] != 1)
 				(void)close(pi[1]);
-			(void)execlp(tmp->passwd, tmp->passwd, name, host, 0);
+			(void)execlp(tmp->passwd, tmp->passwd, name, host,
+				     cptr->username, 0);
 			_exit(-1);
 		    }
 		default :

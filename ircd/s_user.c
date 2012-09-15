@@ -358,6 +358,7 @@ char	*nick, *username;
 			ircstp->is_ref++;
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONN)
 			syslog(LOG_NOTICE, "%s ( %s ): <none>@%s [%s] %c\n",
+			       myctime(sptr->firsttime), 
 			       (i == -4) ? " IP  max " : (i == -3) ? 
 			       " No more " : " No Auth ",
 			       (IsUnixSocket(sptr)) ? me.sockhost :
@@ -370,7 +371,7 @@ char	*nick, *username;
 				    " No more " : " No Auth ", 0, "<none>",
 				    (IsUnixSocket(sptr)) ? me.sockhost :
 				    ((sptr->hostp) ? sptr->hostp->h_name :
-				    sptr->sockhost), sptr->username, '-');
+				    sptr->sockhost), sptr->username, "-");
 #endif
 			return exit_client(cptr, sptr, &me, (i == -4) ?
 				   "No more connections from your host" :
@@ -451,7 +452,7 @@ char	*nick, *username;
 #ifdef FNAME_CONNLOG
 			sendto_flog(myctime(sptr->firsttime), " K lined ", 0,
 				    sptr->user->username, sptr->user->host,
-				    sptr->username, '-');
+				    sptr->username, "-");
 #endif
 			return exit_client(cptr, sptr, &me, "K-lined");
 		    }
@@ -469,7 +470,7 @@ char	*nick, *username;
 # ifdef FNAME_CONNLOG
 			sendto_flog(myctime(sptr->firsttime), " R lined ", 0,
 				    sptr->user->username, sptr->user->host,
-				    sptr->username, '-');
+				    sptr->username, "-");
 # endif
 			return exit_client(cptr, sptr, &me , "R-lined");
 		    }

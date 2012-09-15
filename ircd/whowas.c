@@ -47,10 +47,10 @@ static	void	grow_history()
 			    ww_size, lk_size, numclients, was, locked));
 	ww_size = (int)((float)numclients * 1.1);
 	was = (aName *)MyRealloc((char *)was, sizeof(*was) * ww_size);
-	bzero((char *)was + osize, sizeof(*was) * (ww_size - osize));
+	bzero((char *)(was + osize), sizeof(*was) * (ww_size - osize));
 	lk_size = (int)((float)numclients * 1.1);
 	locked = (aLock *)MyRealloc((char *)locked, sizeof(*locked) * lk_size);
-	bzero((char *)locked + osize, sizeof(*locked) * (lk_size - osize));
+	bzero((char *)(locked + osize), sizeof(*locked) * (lk_size - osize));
 	Debug((DEBUG_ERROR, "Whowas/grow_history %#x/%#x", was, locked));
 	ircd_writetune(tunefile);
 }

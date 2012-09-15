@@ -91,7 +91,7 @@ static	struct	resinfo {
 int	init_resolver(op)
 int	op;
 {
-	int	ret = 0, on = 0;
+	int	ret = 0;
 
 #ifdef	LRAND48
 	srand48(time(NULL));
@@ -104,10 +104,10 @@ int	op;
 	if (op & RES_CALLINIT)
 	    {
 		ret = res_init();
-		if (!_res.nscount)
+		if (!ircd_res.nscount)
 		    {
-			_res.nscount = 1;
-			_res.nsaddr_list[0].sin_addr.s_addr =
+			ircd_res.nscount = 1;
+			ircd_res.nsaddr_list[0].sin_addr.s_addr =
 				inet_addr("127.0.0.1");
 		    }
 	    }
@@ -121,7 +121,7 @@ int	op;
 	    }
 #ifdef DEBUG
 	if (op & RES_INITDEBG);
-		_res.options |= RES_DEBUG;
+		ircd_res.options |= RES_DEBUG;
 #endif
 	if (op & RES_INITCACH)
 	    {
@@ -290,7 +290,7 @@ char	*cp;
 }
 
 /*
- * sends msg to all nameservers found in the "_res" structure.
+ * sends msg to all nameservers found in the "ircd_res" structure.
  * This should reflect /etc/resolv.conf. We will get responses
  * which arent needed but is easier than checking to see if nameserver
  * isnt present. Returns number of messages successfully sent to 
@@ -306,16 +306,16 @@ int	len, rcount;
 	if (!msg)
 		return -1;
 
-	max = MIN(_res.nscount, rcount);
-	if (_res.options & RES_PRIMARY)
+	max = MIN(ircd_res.nscount, rcount);
+	if (ircd_res.options & RES_PRIMARY)
 		max = 1;
 	if (!max)
 		max = 1;
 
 	for (i = 0; i < max; i++)
 	    {
-		_res.nsaddr_list[i].sin_family = AF_INET;
-		if (sendto(resfd, msg, len, 0, (SAP)&(_res.nsaddr_list[i]),
+		ircd_res.nsaddr_list[i].sin_family = AF_INET;
+		if (sendto(resfd, msg, len, 0, (SAP)&(ircd_res.nsaddr_list[i]),
 			   sizeof(struct sockaddr)) == len)
 		    {
 			reinfo.re_sent++;
@@ -385,11 +385,11 @@ Reg	ResRQ	*rptr;
 	(void)strncpy(hname, name, sizeof(hname) - 1);
 	len = strlen(hname);
 
-	if (rptr && !index(hname, '.') && _res.options & RES_DEFNAMES)
+	if (rptr && !index(hname, '.') && ircd_res.options & RES_DEFNAMES)
 	    {
 		(void)strncat(hname, dot, sizeof(hname) - len - 1);
 		len++;
-		(void)strncat(hname, _res.defdname, sizeof(hname) - len -1);
+		(void)strncat(hname, ircd_res.defdname, sizeof(hname) - len -1);
 	    }
 
 	/*
@@ -555,13 +555,13 @@ HEADER	*hptr;
 
 		len = strlen(hostbuf);
 		/* name server never returns with trailing '.' */
-		if (!index(hostbuf,'.') && (_res.options & RES_DEFNAMES))
+		if (!index(hostbuf,'.') && (ircd_res.options & RES_DEFNAMES))
 		    {
 			(void)strcat(hostbuf, dot);
 			len++;
-			(void)strncat(hostbuf, _res.defdname,
+			(void)strncat(hostbuf, ircd_res.defdname,
 				sizeof(hostbuf) - 1 - len);
-			len = MIN(len + strlen(_res.defdname),
+			len = MIN(len + strlen(ircd_res.defdname),
 				  sizeof(hostbuf) - 1);
 		    }
 
@@ -647,7 +647,7 @@ char	*lp;
 	static	char	buf[sizeof(HEADER) + MAXPACKET];
 	Reg	HEADER	*hptr;
 	Reg	ResRQ	*rptr = NULL;
-	aCache	*cp;
+	aCache	*cp = NULL;
 	struct	sockaddr_in	sin;
 	int	rc, a, len = sizeof(sin), max;
 
@@ -680,14 +680,14 @@ char	*lp;
 	/*
 	 * check against possibly fake replies
 	 */
-	max = MIN(_res.nscount, rptr->sends);
+	max = MIN(ircd_res.nscount, rptr->sends);
 	if (!max)
 		max = 1;
 
 	for (a = 0; a < max; a++)
-		if (!_res.nsaddr_list[a].sin_addr.s_addr ||
+		if (!ircd_res.nsaddr_list[a].sin_addr.s_addr ||
 		    !bcmp((char *)&sin.sin_addr,
-			  (char *)&_res.nsaddr_list[a].sin_addr,
+			  (char *)&ircd_res.nsaddr_list[a].sin_addr,
 			  sizeof(struct in_addr)))
 			break;
 	if (a == max)
@@ -796,9 +796,9 @@ getres_err:
 			 * If we havent tried with the default domain and its
 			 * set, then give it a try next.
 			 */
-			if (_res.options & RES_DEFNAMES && ++rptr->srch == 0)
+			if (ircd_res.options & RES_DEFNAMES && ++rptr->srch == 0)
 			    {
-				rptr->retries = _res.retry;
+				rptr->retries = ircd_res.retry;
 				rptr->sends = 0;
 				rptr->resend = 1;
 				resend_query(rptr);

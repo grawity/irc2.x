@@ -152,7 +152,7 @@ extern	void	sendto_prefix_one();
 extern	void	sendto_flag();
 
 extern	void	sendto_flog __P((char *, char *, time_t, char *, char *,
-				 char *, char));
+				 char *, char *));
 extern	int	writecalls, writeb[];
 extern	int	deliver_it __P((aClient *, char *, int));
 

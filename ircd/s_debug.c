@@ -125,6 +125,9 @@ char	serveropts[] = {
 #ifdef	V28PlusOnly
 '8',
 #endif
+#ifdef MIRC_KLUDGE
+'$',
+#endif
 ' ',
 'V',
 #ifndef NoV28Links
