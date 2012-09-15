@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, lib/ircd/packet.c
+ *   IRC - Internet Relay Chat, common/packet.c
  *   Copyright (C) 1990  Jarkko Oikarinen and
  *                       University of Oulu, Computing Center
  *
@@ -18,65 +18,82 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-char packet_id[]="packet.c v2.0 (c) 1988 University of Oulu, Computing Center\
- and Jarkko Oikarinen";
+#ifndef lint
+static  char sccsid[] = "@(#)packet.c	2.8 3/22/93 (C) 1988 University of Oulu, \
+Computing Center and Jarkko Oikarinen";
+#endif
  
 #include "struct.h"
 #include "common.h"
+#include "sys.h"
 #include "msg.h"
-extern aClient me;
+#include "h.h"
  
 /*
+** dopacket
+**	cptr - pointer to client structure for which the buffer data
+**	       applies.
+**	buffer - pointr to the buffer containing the newly read data
+**	length - number of valid bytes of data in the buffer
+**
 ** Note:
 **	It is implicitly assumed that dopacket is called only
 **	with cptr of "local" variation, which contains all the
 **	necessary fields (buffer etc..)
 */
 int	dopacket(cptr, buffer, length)
-aClient *cptr;
+Reg3	aClient *cptr;
 char	*buffer;
-int	length;
-    {
-	Reg1 char *ch1;
-	Reg2 char *ch2;
+Reg4	int	length;
+{
+	Reg1	char	*ch1;
+	Reg2	char	*ch2;
  
 	me.receiveB += length; /* Update bytes received */
 	cptr->receiveB += length;
-	if (cptr->acpt != &me)
-		cptr->acpt->receiveB += length;
 	ch1 = cptr->buffer + cptr->count;
 	ch2 = buffer;
 	while (--length >= 0)
 	    {
 		*ch1 = *ch2++;
-		if (*ch1 == '\r' || *ch1 == '\n')
+		/*
+		 * Yuck.  Stuck.  To make sure we stay backward compatible,
+		 * we must assume that either CR or LF terminates the message
+		 * and not CR-LF.  By allowing CR or LF (alone) into the body
+		 * of messages, backward compatibility is lost and major
+		 * problems will arise. - Avalon
+		 */
+		if (*ch1 == '\n' || *ch1 == '\r')
 		    {
 			if (ch1 == cptr->buffer)
 				continue; /* Skip extra LF/CR's */
 			*ch1 = '\0';
 			me.receiveM += 1; /* Update messages received */
 			cptr->receiveM += 1;
-			if (cptr->acpt != &me)
-				cptr->acpt->receiveM += 1;
 			cptr->count = 0; /* ...just in case parse returns with
 					 ** FLUSH_BUFFER without removing the
 					 ** structure pointed by cptr... --msa
 					 */
-			if (parse(cptr, cptr->buffer,
-				  ch1 - cptr->buffer,
-				  msgtab) == FLUSH_BUFFER)
+			switch (parse(cptr, cptr->buffer, ch1, msgtab))
+			{
+			case FLUSH_BUFFER :
 				/*
 				** FLUSH_BUFFER means actually
 				** that cptr structure *does*
 				** not exist anymore!!! --msa
 				*/
-				return(1);
+				return FLUSH_BUFFER;
+			case 1 :
+				return length;
+			}
 #ifndef CLIENT_COMPILE
+			/*
+			** Socket is dead so exit (which always returns with
+			** FLUSH_BUFFER here).  - avalon
+			*/
 			if (cptr->flags & FLAGS_DEADSOCKET)
-			    {
-				exit_client(NULL, cptr, &me, "Dead Socket");
-				return (-1);
-			    }
+				return exit_client(cptr, cptr, &me,
+						   "Dead Socket");
 #endif
 			ch1 = cptr->buffer;
 		    }
@@ -85,5 +102,4 @@ int	length;
 	    }
 	cptr->count = ch1 - cptr->buffer;
 	return 0;
-    }
- 
+}

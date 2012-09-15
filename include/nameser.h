@@ -120,13 +120,16 @@
 #define	PDP_ENDIAN	3412	/* LSB first in word, MSW first in long (pdp) */
 
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
-    defined(BIT_ZERO_ON_RIGHT)
+    defined(BIT_ZERO_ON_RIGHT) || defined(sequent) || defined(i386) ||\
+    defined(___vax__) || defined(__ns32000__) || defined(__sun386__)
 #define BYTE_ORDER	LITTLE_ENDIAN
 
 #endif
 #if defined(sel) || defined(pyr) || defined(mc68000) || defined(sparc) || \
     defined(is68k) || defined(tahoe) || defined(ibm032) || defined(ibm370) || \
-    defined(MIPSEB) || defined (BIT_ZERO_ON_LEFT)
+    defined(MIPSEB) || defined(__hpux) || defined(__convex__) || \
+    defined(__pyr__) || defined(__mc68000__) || defined(__sparc__) ||\
+    defined(_IBMR2) || defined (BIT_ZERO_ON_LEFT)
 #define BYTE_ORDER	BIG_ENDIAN
 #endif
 #endif /* BYTE_ORDER */
@@ -153,7 +156,7 @@ typedef struct {
 	u_char	rd:1;		/* recursion desired */
 			/* fields in fourth byte */
 	u_char	ra:1;		/* recursion available */
-	u_char	pr:1;		/* primary server required (non standard) */
+	u_char	pr:1;	/* primary server required (non standard) */
 	u_char	unused:2;	/* unused bits */
 	u_char	rcode:4;	/* response code */
 #endif
@@ -167,7 +170,7 @@ typedef struct {
 			/* fields in fourth byte */
 	u_char	rcode:4;	/* response code */
 	u_char	unused:2;	/* unused bits */
-	u_char	pr:1;		/* primary server required (non standard) */
+	u_char	pr:1;	/* primary server required (non standard) */
 	u_char	ra:1;		/* recursion available */
 #endif
 			/* remaining bytes */

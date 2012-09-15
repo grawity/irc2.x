@@ -17,12 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "config.h"
+#ifndef lint
+static  char sccsid[] = "@(#)support.c	2.9 3/27/93 (C) 1990, 1991 Armin Gruner";
+#endif
+
+#include "struct.h"
 #include "common.h"
 #include "sys.h"
-#include <sys/errno.h>
 
-extern int errno; /* ...seems that errno.h doesn't define this everywhere */
+extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
+#ifndef	CLIENT_COMPILE
+extern	void	outofmemory();
+#endif
 
 #ifdef NEED_STRTOKEN
 /*
@@ -101,33 +107,39 @@ int err_no;
 	if (errp == (char *)NULL)
 	    {
 		errp = buff;
-		sprintf(errp, "Unknown Error %d", err_no);
+		(void) sprintf(errp, "Unknown Error %d", err_no);
 	    }
 	return errp;
 }
 
 #endif /* NEED_STRERROR */
 
-#ifdef NEED_INET_NTOA
 /*
+**	inetntoa  --	changed name to remove collision possibility and
+**			so behaviour is gaurunteed to take a pointer arg.
+**			-avalon 23/11/92
 **	inet_ntoa --	returned the dotted notation of a given
 **			internet number (some ULTRIX don't have this)
-**			argv 11/90
+**			argv 11/90).
+**	inet_ntoa --	its broken on some Ultrix/Dynix too. -avalon
 **	$Id: support.c,v 6.1 1991/07/04 21:04:01 gruner stable gruner $
 */
 
-char *inet_ntoa(in)
-struct in_addr in;
+char	*inetntoa(in)
+char	*in;
 {
-    static char buf[16];
+	static	char	buf[16];
+	Reg1	u_char	*s = (u_char *)in;
+	Reg2	int	a,b,c,d;
 
-    (void) sprintf(buf, "%d.%d.%d.%d",
-		    (int)  in.s_net, (int)  in.s_host,
-		    (int)  in.s_lh,  (int)  in.s_impno);
+	a = (int)*s++;
+	b = (int)*s++;
+	c = (int)*s++;
+	d = (int)*s++;
+	(void) sprintf(buf, "%d.%d.%d.%d", a,b,c,d );
 
-    return buf;
+	return buf;
 }
-#endif /* NEED_INET_NTOA */
 
 #ifdef NEED_INET_ADDR
 /*
@@ -153,7 +165,7 @@ char *host;
 	return -1;
 
     bzero((char *)&addr, sizeof(addr));
-    strncpy(hosttmp, host, sizeof(hosttmp));
+    (void)strncpy(hosttmp, host, sizeof(hosttmp));
     host = hosttmp;
 
     for (; tmp = strtok(host, "."); host = NULL) 
@@ -195,14 +207,13 @@ struct in_addr in;
 
 char    *MyMalloc(x)
 int     x;
-    {
-	char *ret = (char *) malloc(x);
+{
+	char *ret = (char *) malloc((unsigned)x);
 
 	if (!ret)
 	    {
 #ifndef	CLIENT_COMPILE
-		debug(0,"Out of memory: restarting server...");
-		restart();
+		outofmemory();
 #else
 		perror("malloc");
 		exit(-1);
@@ -215,13 +226,12 @@ char    *MyRealloc(x, y)
 char	*x;
 int	y;
     {
-	char *ret = (char *)realloc(x, y);
+	char *ret = (char *)realloc(x, (unsigned)y);
 
 	if (!ret)
 	    {
 #ifndef	CLIENT_COMPILE
-		debug(0,"Out of memory: restarting server...");
-		restart();
+		outofmemory();
 #else
 		perror("realloc");
 		exit(-1);
@@ -229,6 +239,73 @@ int	y;
 	    }
 	return ret;
     }
+
+/*
+** read a string terminated by \r or \n in from a fd
+**
+** Created: Sat Dec 12 06:29:58 EST 1992 by avalon
+*/
+int	dgets(fd, buf, num)
+int	fd, num;
+char	*buf;
+{
+	static	char	dgbuf[8192];
+	static	char	*head = dgbuf, *tail = dgbuf;
+	register char	*s, *t;
+	register int	n, nr;
+
+	/*
+	** Sanity checks.
+	*/
+	if (!num)
+		return 0;
+	if (num > sizeof(dgbuf) - 1)
+		num = sizeof(dgbuf) - 1;
+dgetsagain:
+	/*
+	** check input buffer for EOL and if present return string.
+	*/
+	if (head < tail &&
+	    ((s = index(head, '\n')) || (s = index(head, '\r'))) && s < tail)
+	    {
+		n = MIN(s - head + 1, num);	/* at least 1 byte */
+dgetsreturnbuf:
+		bcopy(head, buf, n);
+		head += n;
+		if (head == tail)
+			head = tail = dgbuf;
+		return n;
+	    }
+
+	if (tail - head >= num)		/* dgets buf is big enough */
+	    {
+		n = num;
+		goto dgetsreturnbuf;
+	    }
+
+	if (head != dgbuf)
+	    {
+		for (nr = head - dgbuf, s = head, t = dgbuf; nr > 0; nr--)
+			*t++ = *s++;
+		tail = --t;
+	    }
+	n = sizeof(dgbuf) - (tail - dgbuf) - 1;
+	nr = read(fd, tail, n);
+	if (nr == -1)
+		return -1;
+	if (!nr)
+	    {
+		if (head < tail)
+		    {
+			n = MIN(head - tail, num);
+			goto dgetsreturnbuf;
+		    }
+		return 0;
+	    }
+	tail += nr;
+	*(tail + 1) = '\0';
+	goto dgetsagain;
+}
 
 #ifdef USE_OUR_CTYPE
 
@@ -347,72 +424,3 @@ unsigned char char_atribs[] = {
 		};
 
 #endif
-
-
-/*
-** read a string terminated by \r or \n in from a fd
-**
-** Created: Sat Dec 12 06:29:58 EST 1992 by avalon
-*/
-int	dgets(fd, buf, num)
-int	fd, num;
-char	*buf;
-{
-	static	char	dgbuf[8192];
-	static	char	*head = dgbuf, *tail = dgbuf;
-	static	int	eof = 0;
-	register char	*s, *t;
-	register int	n, nr;
-
-	/*
-	** Sanity checks.
-	*/
-	if (!num)
-		return 0;
-	if (num > sizeof(dgbuf) - 1)
-		num = sizeof(dgbuf) - 1;
-dgetsagain:
-	/*
-	** check input buffer for EOL and if present return string.
-	*/
-	if (head < tail &&
-	    ((s = index(head, '\n')) || (s= index(head, '\r'))) && s < tail)
-	    {
-		n = MIN(s - head + 1, num);	/* at least 1 byte */
-dgetsreturnbuf:
-		bcopy(head, buf, n);
-		head += n;
-		if (head == tail)
-			head = tail = dgbuf;
-		return n;
-	    }
-
-	if (tail - head >= num)		/* dgets buf is big enough */
-	    {
-		n = num;
-		goto dgetsreturnbuf;
-	    }
-
-	if (head != dgbuf)
-	    {
-		for (nr = head - dgbuf, s = head, t = dgbuf; nr > 0; nr--)
-			*t++ = *s++;
-		tail = --t;
-	    }
-	n = sizeof(dgbuf) - (tail - dgbuf) - 1;
-	nr = read(fd, tail, n);
-	if (nr == -1)
-		return -1;
-	if (!nr)
-	    {
-		if (head < tail)
-		    {
-			n = MIN(head - tail, num);
-			goto dgetsreturnbuf;
-		    }
-		return 0;
-	    }
-	tail += nr;
-	*(tail + 1) = '\0';
-	goto dgetsagain;
-}

@@ -18,14 +18,15 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and\
- Jarkko Oikarinen";
+#ifndef lint
+static  char sccsid[] = "@(#)bsd.c	2.9 2/14/93 (C) 1988 University of Oulu, \
+Computing Center and Jarkko Oikarinen";
+#endif
 
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include <signal.h>
-#include <sys/errno.h>
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
 extern	char	*sys_errlist[];
@@ -34,21 +35,27 @@ extern	char	*sys_errlist[];
 int	writecalls = 0, writeb[10];
 #endif
 VOIDSIG dummy()
-    {
+{
 #ifndef HAVE_RELIABLE_SIGNALS
-	signal(SIGALRM, dummy);
+	(void)signal(SIGALRM, dummy);
+	(void)signal(SIGPIPE, dummy);
+	(void)signal(SIGWINCH, dummy);
 #else
 # ifdef POSIX_SIGNALS
 	struct  sigaction       act;
 
 	act.sa_handler = dummy;
 	act.sa_flags = 0;
-	sigemptyset(&act.sa_mask);
-	sigaddset(&act.sa_mask, SIGALRM);
-	sigaction(SIGALRM, &act, (struct sigaction *)NULL);
+	(void)sigemptyset(&act.sa_mask);
+	(void)sigaddset(&act.sa_mask, SIGALRM);
+	(void)sigaddset(&act.sa_mask, SIGPIPE);
+	(void)sigaddset(&act.sa_mask, SIGWINCH);
+	(void)sigaction(SIGALRM, &act, (struct sigaction *)NULL);
+	(void)sigaction(SIGPIPE, &act, (struct sigaction *)NULL);
+	(void)sigaction(SIGWINCH, &act, (struct sigaction *)NULL);
 # endif
 #endif
-    }
+}
 
 
 /*
@@ -83,11 +90,11 @@ char	*str;
 			writeb[retval] = 0;
 	writecalls++;
 #endif
-	(void) alarm(WRITEWAITDELAY);
+	(void)alarm(WRITEWAITDELAY);
 #ifdef VMS
 	retval = netwrite(cptr->fd, str, len);
 #else
-	retval = write(cptr->fd, str, len);
+	retval = send(cptr->fd, str, len, 0);
 	/*
 	** Convert WOULDBLOCK to a return of "0 bytes moved". This
 	** should occur only if socket was non-blocking. Note, that
@@ -96,7 +103,12 @@ char	*str;
 	**
 	** ...now, would this work on VMS too? --msa
 	*/
-	if (retval < 0 && errno == EWOULDBLOCK)
+# ifdef	linux
+	if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN ||
+			   errno == ENOBUFS))
+# else
+	if (retval < 0 && (errno == EWOULDBLOCK || errno == ENOBUFS))
+# endif
 	    {
 		retval = 0;
 		cptr->flags |= FLAGS_BLOCKED;
@@ -109,8 +121,8 @@ char	*str;
 #ifdef DEBUGMODE
 	if (retval < 0) {
 		writeb[0]++;
-		debug(DEBUG_ERROR,"write error (%s) to %s",
-			sys_errlist[errno], cptr->name);
+		Debug((DEBUG_ERROR,"write error (%s) to %s",
+			sys_errlist[errno], cptr->name));
 	} else if (retval == 0)
 		writeb[1]++;
 	else if (retval < 16)
@@ -131,4 +143,4 @@ char	*str;
 		writeb[9]++;
 #endif
 	return(retval);
-    }
+}

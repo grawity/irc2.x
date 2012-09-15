@@ -35,6 +35,9 @@ char c_numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 #include "struct.h"
 #include "common.h"
 #include "numeric.h"
+#include "msg.h"
+#include "sys.h"
+#include "h.h"
 
 extern char mybuf[];
 /*
@@ -47,11 +50,7 @@ extern char mybuf[];
 **		terminated list (parv[parc] == NULL).
 */
 
-#define MAXPARAMS 7	/* This horrible hack--just assume parv has at
-			** least this many entries. It should, because
-			** some numerics need that many.
-			*/
-int do_numeric(numeric, cptr, sptr, parc, parv)
+int	do_numeric(numeric, cptr, sptr, parc, parv)
 int	numeric;
 aClient *cptr, *sptr;
 int	parc;
@@ -59,9 +58,10 @@ char	*parv[];
     {
 	char *nick, *tmp;
 	int i;
+	long l;		/* ctime(&l) on STATS L */
 	
 	/* ...make sure undefined parameters point to empty string */
-	for (i = parc; i < MAXPARAMS; parv[i++] = "");
+	for (i = parc; i < MAXPARA; parv[i++] = "");
 	
 	switch (numeric)
 	    {
@@ -140,8 +140,8 @@ char	*parv[];
 			"You have not joined any channel");
 		break;
 	    case ERR_NOTONCHANNEL:
-		sprintf(mybuf, "*** Error: %s: %s is not on channel %s",
-			parv[0], parv[2], parv[3]);
+		sprintf(mybuf, "*** Error: %s: %s %s",
+			parv[0], parv[3], parv[2]);
 		break;
 	    case ERR_INVITEONLYCHAN:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
@@ -273,8 +273,9 @@ char	*parv[];
 			parv[0], parv[2], parv[3]);
 		break;
 	    case RPL_VERSION:
-		sprintf(mybuf, "*** %s: Host %s runs irc version %s", parv[0],
-			parv[3], parv[2]);
+	/* sprintf(mybuf, "*** %s: Server %s runs ircd %s (%s)", parv[0], */
+		sprintf(mybuf, "*** Server %s runs ircd %s (%s)",
+			parv[3], parv[2], parv[4]);
 		break;
 	    case RPL_KILLDONE:
 		sprintf(mybuf, "*** %s: May %s rest in peace",
@@ -283,9 +284,11 @@ char	*parv[];
 	    case RPL_INFO:
 		sprintf(mybuf, "*** %s: Info: %s", parv[0], parv[2]);
 		break;
+#if 0
 	    case RPL_MOTD:
 		sprintf(mybuf, "*** %s: Motd: %s", parv[0], parv[2]);
 		break;
+#endif /* 0	Looks better this way!	-Vesa */
 	    case RPL_YOUREOPER:
 		sprintf(mybuf, "*** %s: %s", parv[0], (parv[2][0] == '\0') ?
 	   "You have operator privileges now. Be nice to mere mortal souls" :
@@ -308,7 +311,7 @@ char	*parv[];
 		break;
 	    case RPL_CHANNELMODEIS:
 		sprintf(mybuf, "*** Mode is %s %s %s",
-			parv[2],parv[3],parv[4]);
+			parv[2], parv[3], parv[4]);
 		break;
 	    case RPL_LINKS:
 		m_linreply(cptr, sptr, parc, parv);
@@ -321,10 +324,11 @@ char	*parv[];
 		break;
 	    case RPL_BANLIST:
 		sprintf(mybuf, "*** %s is banned on %s",
-			parv[4], parv[3]);
+			parv[3], parv[2]);
 		break;
 	    case RPL_TRACELINK:
-		sprintf(mybuf,"%s<%s> Link => %s", parv[0], parv[3], parv[4]);
+		sprintf(mybuf,"%s<%s> Link => %s (%s)", parv[0], parv[3],
+			parv[4], parv[5]);
 		break;
 	    case RPL_TRACESERVER:
 		if (parc <= 5)
@@ -342,17 +346,24 @@ char	*parv[];
 	    case RPL_TRACEUSER:
 	    case RPL_TRACESERVICE:
 	    case RPL_TRACENEWTYPE:
-		sprintf(mybuf,"*** %s Class: %s %s %s",
-			parv[0], parv[3], parv[2], parv[4]);
+		sprintf(mybuf,"*** %s %s Class: %s %s",
+			parv[0], parv[2], parv[3], parv[4]);
+		break;
+	    case RPL_TRACELOG:
+		sprintf(mybuf,"*** %s File: %s level:%s ",
+			parv[0], parv[3], parv[4]);
 		break;
 	    case RPL_TRACECLASS:
 		sprintf(mybuf,"*** %s Class: %s Links: %s",
 			parv[0], parv[3], parv[4]);
 		break;
 	    case RPL_STATSLINKINFO:
-		sprintf(mybuf,"*** %s: %s %s %s %s %s %s %s",
-			parv[0], parv[3], parv[4], parv[5], parv[6],
-			parv[7], parv[8], parv[9]);
+		l = time(NULL) - atol(parv[8]);	/* count startup time */
+		tmp = (char *) ctime(&l);
+		*((char *) index(tmp, '\n')) = (char) '\0'; /* remove '\n' */
+		sprintf(mybuf,"*** %s: %s Q:%s sM:%s sB:%s rM:%s rB:%s D:%s",
+			parv[0], parv[2], parv[3], parv[4], parv[5],
+			parv[6], parv[7], tmp);
 		break;
 	    case RPL_STATSCOMMANDS:
 		sprintf(mybuf, "*** %s: %s has been used %d times",
@@ -362,7 +373,7 @@ char	*parv[];
 	    case RPL_STATSNLINE:
 	    case RPL_STATSILINE:
 		sprintf(mybuf, "*** %s: %s:%s:*:%s:%s:%s",
-			parv[0], parv[3], parv[4], parv[6], parv[7], parv[8]);
+			parv[0], parv[2], parv[3], parv[5], parv[6], parv[7]);
 		break;
 	    case RPL_STATSKLINE:
 	    case RPL_STATSQLINE:
@@ -373,7 +384,8 @@ char	*parv[];
 		break;
 	    case RPL_UMODEIS:
 		sprintf(mybuf, "*** %s: Mode for user %s is %s",
-			parv[0], parv[2], parv[3]);
+			/* parv[0], parv[2], parv[3]);	-Vesa */
+			parv[0], parv[1], parv[2]);
 		break;
 	    case RPL_SERVICEINFO:
 		sprintf(mybuf, "*** %s: Info For Service %s: %s",
@@ -388,10 +400,14 @@ char	*parv[];
 	    case RPL_ENDOFSERVICES:
 		mybuf[0] = '\0';
 		break;
+	    case RPL_WELCOME:
+		strcpy(me.name, parv[1]);
+		write_statusline();
 	    default:
-		sprintf(mybuf, "*** %s: Numeric message %d: %s %s %s %s %s %s",
-			parv[0], numeric, parv[0], parv[1], parv[2],
-			parv[3], parv[4], parv[5], parv[6]);
+		sprintf(mybuf, "%03d %s: %s %s %s %s %s %s %s %s",
+			numeric, parv[0], parv[2],
+			parv[3], parv[4], parv[5], parv[6], parv[7],
+			parv[8], parv[9]);
 		break;
 	    }
 	if (mybuf[0])

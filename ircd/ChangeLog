@@ -17,163 +17,232 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sat Mar  6 14:08:30 1993
+	* s_conf.c	Added m4 preprocessing option to reading the server
+			configuration file.
 
-Sat Jun  6 06:00:00 1992   Darren Reed <avalon@coombs.anu.edu.au>
-	* general	Checksum checking introduced.
+Tue Feb 16 06:27:14 1993
+	* s_misc.c, s_serv.c
+			Fixed bug where server handled host masking
+			incorrectly in SQUIT and SERVER handling when H and L
+			lines are used in addition to C/N lines.
 
-Sat Jun  6 02:03:36 1992   Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c	User WALLOPs removed - too much abuse. They are
-			dropped silently to avoid generating more wasted
-			bandwidth.
-	* channel.c	Previous fix for spaces in banid didnt work and was
-			stuffed. fixed now.
+Mon Feb  8 05:22:25 1993
+	* ircd.c, s_bsd.c
+			Rewrote initialization of the server to properly
+			handle starting from inetd as well as being restarted
+			internally.
 
-Sat May 29 01:40:37 1992   Darren Reed <avalon@coombs.anu.edu.au>
-	* channel.c	Annoying problem with spaces in banid's fixed.
+Tue Feb  2 02:42:37 1993
+	* ircd.c, s_bsd.c, s_conf.c, ircd.c, s_user.c
+			Removed #ifdefs for BAD_DNS, FULL_HOSTNAME and
+			IDENT.  Code for these otions mandatory.
 
-Fri May 29 02:37:02 1992   Darren Reed <avalon@coombs.anu.edu.au>
-	* s_bsd.c	Fixed access check problem for servers.
+	* general	Patch fixes doc'd in sccs comments.  Mostly
+			trivial patches of little significance.
 
-Thu May 28 18:08:51 1992   Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c	bug fixed in m_user() with the ident code.
+Mon Nov 30 02:19:19 1992
+	* general
+			Some changes have gone in SCCS logs.  Some of the bugs
+			and changes are as follows:
 
-Thu May 28 18:00:34 1992   Darren Reed <avalon@coombs.anu.edu.au>
-			Added patches from Jan L. Peterson <jlp@math.byu.edu>
-	* s_msg.c	MIPS needs errno in s_msg.c (not in errno.h)
-	* config.h, ircd.c
-			LOG_FACILITY added for more ease in customising
-			the use og syslogd in the server.
+			* huge problems with DNS resolving and ident checkups
+			  found and fixed.
 
-	* s_msg.c	errno patched also for pyramids (same patch) - avalon
+			* privmsg/notice not delivering messages to nicks
+			  fixed.
 
-Sun May 24 01:34:59 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_misc.c	Added patch from Chuck Kane (ckane@h.ece.uiuc.edu)
-			kOfor using getrusage(2) on HP-UX. its a nasty one! >:)
+			* stats h created for H/L lines. L lines removed from
+			  stats c.
 
-Sun May 24 00:07:08 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_bsd.c, s_conf.c, ircd.c
-			P lines addded to allow multiple and easy setup
-			of unix sockets which server listens to. These also
-			provide a way for the server to listen on extra inet
-			ports. They are closed when the server rehashs and
-			then rebuilt.
+			* patches for Convex and Solaris2 incorporated
 
-Thu May 21 00:37:21 1992  Christopher Davis <ckd@eff.org>
+			* move +v propogation fixed as well as flags problem
+	
+			* channel count for luers altered to change with 
+			  SHOW_INVISIBLE_LUSERS
 
-        * s_msg.c       Fixed the bug that prevented user modes (such as
-                        the default invisibility) from propagating.
+			* problem with inet_ntoa and varying struct in_addr
+			  differences fixed by creating inetntoa which uses
+			  pointer to structure always.
 
-Wed May 20 21:52:19 1992  Christopher Davis <ckd@eff.org>
+			* free-list trial reversed.
 
-        * s_misc.c      Fixed dereferencing of NULL cptr
-                        (mycroft@gnu.ai.mit.edu, frechett@spot.colorado.edu)
+			* fixed check_server
 
-        * Makefile, s_bsd.c, s_msg.c
-                        Added support for IDENT (RFC931) protocol for
-                        sockets in AF_INET.
+			* problems with authd scanning fixed.
 
-Fri May 15 23:25:40 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, s_bsd.c
-			Changed rehash to rebuild Unix domain sockets used
-			for listening for connections.
+			* any other numerous small changes.
 
-Wed May 13 00:07:24 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c	STATS C reports L-lines (numeric 241) as well as
-			N-Lines. STATS also defaults to *not* send any
-			replies as opposed to old bejaviour which made
-			STATS default to 'M'.
+Fri Oct 30 22:50:27 1992
+	* s_serv.c    * encrypted storage of server passwords in ircd.conf
+			file done.
 
-Sun May 10 22:33:32 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, channel.c
-			fixed "WHO <channel>|*" bug and "JOIN #NEW-chan"
-			bug (later using patch from Daemon).
+Tue Oct 27 17:32:41 1992
+	* s_bsd.c     * Flood control done properly now and fixed.  Buffers
+			data using sendq bufs and pulls messages out as
+			they are due (if present).
 
-	* s_msg.c	Added SHOW_INVISIBLE_LUSERS define which shows
-			invisible count to all users when defined (not just
-			operators)
+Mon Oct 26 04:02:22 1992
+	* s_conf.c    * H-lines added, detach_conf fixed (was broken)
 
-Sun May  3 01:01:07 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, note.c, Makefile
-			NOTE system from Jarlek (Wizible) added back into
-			the server. All the code related to the NOTE system
-			is conditionally compiled in according to the
-			setting in config.h.
+Thu Oct 22 02:41:11 1992
+	* s_conf.c, s_bsd.c, s_user.c
+		      * attaching and use of I-lines fixed up properly.
+	* general     * I've not been listing bugs as I find them or changes,
+			but most have been minor and getting things right
+			and to agree with the upcoming RFC. SCCS being used
+			now too (havent done a delta for a while :-/).
 
-Tue Apr 21 23:12:34 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_bsd.c, ircd.c
-			Added support for Unix domain sockets. Current setup
-			allows the server to listen on a unix socket and
-			accept both server and client connections. This was
-			done to get around some problems with TCP/IP.
+Tue Sep  1 20:16:42 1992
+	* s_bsd.c, s_bsd.c, s_serv.c
+		      * TRACE/STATS now show logfiles if logging is enabled.
 
-Sun Apr 19 21:32:12 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, channel.c
-			Included patchs from msa which seem to have solved the
-			main problems we had with servers core dumping. Care
-			should be used when calling exit_client() and the
-			return value checked to see if its 'FLUSHBUFFER'.
+Tue Sep  1 03:56:21 1992
+	* channel.c   * bug found in set_mode() - length of strings when
+			setting/clearing chanop was possibly incorrect.
+		      * a few optimizations have hopefully been added as
+			well.
 
-Tue Apr  7 01:43:52 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c	fixed USER bug/vulnerability.
+	* s_bsd.c, s_auth.c
+		      * RFC913 (authd) / TAP code separated from s_bsd.c to
+			s_auth.c
 
-Mon Apr  6 19:28:09 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_misc.c,whowas.c,s_msg.c
-			added code to calculate memory used by server for
-			storing its data. Option added to STATS command for
-			this.
+	* s_misc.c, s_debug.c
+		      * various code/routines removed from s_misc.c and put
+			in s_debug.c where it truely belongs.
 
-Mon Arp  6 10:23:13 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c	fixed nickname bug for ascii >0x80.
+Tue Aug 25 16:07:01 1992
+	* ircd.c      * chroot(2) option from Seth added to work along
+			with SET_UID & SET_GID for servers running as
+			root. (seth@ctr.columbia.edu)
 
-Tue Mar 17 00:20:32 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* whowas.c	rewritten to be more efficient in memory use and speed
+Thu Aug 13 18:46:53 1992
+	* channel.c   * Bug in send_channel_modes() fixed which causes
+			trashed +b's to be sent on server rejoins.
 
-Mon Mar 16 23:45:29 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_misc.c, s_bsd.c, s_conf.c, ircd.c
-			Included patches for PCS MUNIX from Lynx and some
-			patches to allow the server to run set-uid from
-			Stephan.
+Thu Aug 13 17:40:47 1992
+	* channel.c   * Added channel passwords (keys).
 
-Wed Mar  4 16:58:35 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, s_misc.c
-		      - added R/U options to stats. R works only with
-			DEBUGMODE defined. R uses the getrusage() calls and
-			returns those values. U returns server uptime.
+Tue Aug 11 14:05:12 1992
+	* channel.c   * JOIN bug giving chanop on wrong channels fixed.
+			Reported by Rogue_F.
 
-Thu Feb 27  4:38:17 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, s_misc.c, ircd.c, s_bsd.c
-		      - Added syslog() support for logging various IRC
-			events such as RESTARTs, DIEs, REHASHes and system
-			errors.
+Tue Aug  4 04:38:23 1992
+	* s_bsd.c, s_serv.c, s_conf.c
+		      * Username authentication for servers completed.
+			Username now required in host portion of the
+			C/N lines for a connection to be completed.
 
-Sun Feb 22  3:55:43 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c, channel.c
-		      - moved m_names() & m_list() from s_msg.c to channel.c
-	* s_misc.c, date.c
-		      - merged the contents of these two files.
-	* s_msg.c, s_misc.c
-		      - moved exit_client() and exit_one_client() into
-			s_misc.c from s_msg.c
-	* s_msg.c
-		      - m_linreply(), m_whoreply(), m_namreply(), m_wall()
-			all removed at long last!
+Tue Aug  4 03:45:54 1992
+		      * IDENT changes finally debugged.
 
-Sat Feb 22  2:23:05 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_msg.c     - moved get_client_name(), my_name_for_link(),
-			to s_misc.c (created).
-	* s_msg.c, channel.c
-		      - Moved CheckRegistered() and CheckRegisteredUser()
-			into s_misc.c and made them functions
-			(they were large and awkward macros!).
-	* s_conf.c, ircd.c, s_msg.c
-		      - changed find_kill() parameters to make it a safer
-			function. Cleaned up find_restrict().
+Tue Aug  4 02:16:42 1992
+	* s_bsd.c, s_user.c, s_serv.c, ircd.c
+		      * IDENT code now written such that it works in a
+			similar manner to the DNS async code and thus should
+			stop the server hanging (if at all).
 
-Fri Feb 21  1:13:22 1992  Darren Reed <avalon@coombs.anu.edu.au>
-	* s_bsd.c     - replaced check_name/check_access with check_init,
-			check_client and check_server to clean up and
-			improve the server's access checking.
-	* s_msg.c     - changes to support above s_bsd.c changes.
+	* authuser.c  * Removed. (redundant).
+
+Fri Jul 31 01:05:57 1992
+	* s_user.c    * m_whois() changes to stop people abusing /whois *
+			and kiling other links to/from that server.
+
+Sat Jul 25 07:33:20 1992
+	* s_user.c    * m_oper() fixed so it doesnt core dump when it
+			calls send_umode(). send_umode_toservs() added.
+
+Sat Jul 25 05:51:01 1992
+	* s_bsd.c     * Patches for little endian systems (ie sequents :)
+			completed. (Fixing of RPL_MYPORTIS)
+
+Fri Jul 24 18:43:35 1992
+	* s_bsd.c, s_conf.c, ircd.c, s_misc.c
+		      * Applied patches from Adrian Hall for compiling on
+			Dynix/PTX (email: csc260@central1.lancaster.ac.uk).
+
+Fri Jul 24 00:07:41 1992
+			Its been busy with other things so these comments
+			apply over a few days.
+
+	* general	Compiles cleanly under ultrix 4.2 and AIX 3.1
+
+	* s_user.c	O-lines host field changed to user@host.
+			This change could sweep across to other lines yet.
+
+	* s_serv.c	L-lines host field made functional.
+
+	* s_bsd.c	I-lines also take user@host as the host now :)
+
+Tue Jul 14 03:51:04 1992
+	* s_msg.c, s_serv.c, s_user.c
+		      - THE BIG SPLIT occured! s_msg.c split into two files:
+			s_serv.c and s_user.c
+
+Mon Jul 13 03:08:03 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_conf.c, class.c
+		      - added MAXSENDQ. field for classes.
+
+Sun Jul 12 10:41:48 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c     - added m_close
+
+Sat Jul 11 01:01:09 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_err.c     - Created, debuged and Added.
+	* general     - Generic creation of ERR and RPL numerics from routines
+			in s_err.c. The use of these is optional.
+	* channel.c   - Changed NAMES, LIST to be able to query remote
+			servers.
+		      - NAMES, LIST, TOPIC all understand channel name lists
+			using a comma (,) as a name separator.
+
+Sat Jul  4 22:40:35 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c, ircd.c, s_conf.c, s_msg.c
+		      - Changed DIE/RESTART/REHASH to be signal activated or
+			optionally allow operators to issue REHASH/RESTART.
+
+Sat Jul  4 04:12:43 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c, res.c
+		      - fixed automatic lookup of hostnames returned by a
+			lookup of the IP#.
+
+Fri Jul  3 16:15:39 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* channel.c   - added comments to the KICK command.
+	* s_msg.c     - rewrote WHOIS, optimized sending of JOIN channels at
+			net splits.
+	* general     - checked to make sure all replies had a ':' in the
+			reply to mark the last parameter being sent.
+
+Thu Jul  2 07:56:46 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* channel.c   - imposed 256 character limit on channel names for
+			clients local to the server.
+
+Thu Jul  2 03:41:15 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c     - changed numeric reply 200 from TRACE. Now shows next
+			server in the reply line (extra arg).
+
+Tue Jun 30 04:53:11 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c     - split up check_server() to accomodate the name lookup
+			in the middle of it for access checking.
+	* s_msg.c     - split up m_server to work with the splitup of
+			check_server().
+
+Mon Jun 29 23:46:32 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* whowas.c    - added RPL_ENDOFWHOWAS to the whowas reply chain.
+
+Sun Jun 28 21:31:20 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* channel.c, send.c
+		      - channel name masks using ":mask" completed along with
+			removal of # significance. '%' channel prefix is
+			local to server.
+
+		      + The removal of the # significance was temporary due to
+			too many problems with the nickname/channelname space
+			problems.
+
+	* s_bsd.c, res.c, s_conf.c
+		      - hostname and ip number lookup working asynchronously.
+	* s_bsd.c     - udp port created. echo's any data sent to it.
 
 Sun Dec 1 Greg Lindahl <gl8f@virginia.edu>
 	* general     - gee, avalon, you could at least try. as of pre16
@@ -209,7 +278,7 @@ Mon Sep 02 16:27:53 1991  Darren Reed <avalon@coombs.anu.edu.au>
 	   for 2.6.2. Following is changes from 2.6.1 to 2.6.2).
 
 	* s_conf.c    - added L-line handling for Leaf Enforcement.
-			(Courtesy Wumpus (Greg Lindhal))
+			(Courtesy Wumpus (Greg Lindahl))
 		      - added det_I_lines_butfirst to make sure each client
 			connection only ever has (at most) 1 I-line attached
 			to it.

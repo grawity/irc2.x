@@ -17,31 +17,37 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: sys.h,v 6.1 1991/07/04 21:04:38 gruner stable gruner $
- *
- * $Log: sys.h,v $
- * Revision 6.1  1991/07/04  21:04:38  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:07  gruner
- * frozen beta revision 2.6.1
- *
- */
+#ifdef ISC202
+#include <net/errno.h>
+#else
+#include <sys/errno.h>
+#endif
 
-#if defined(HPUX) || defined(VMS) || defined(AIX)
+#if !defined(mips) || defined(SGI) || defined(ULTRIX)
+#include <unistd.h>
+#endif
+#if defined(HPUX) || defined(sun)
+#include <stdlib.h>
+#endif
+
+#if defined(HPUX) || defined(VMS) || defined(AIX) || defined(SOL20)
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
 #define bcmp          memcmp
+# ifndef AIX
 extern char *strchr(), *strrchr();
 extern char *inet_ntoa();
 #define index strchr
 #define rindex strrchr
+# endif
 #else 
 #include <strings.h>
+extern	char	*index();
+extern	char	*rindex();
+extern	int	strcasecmp();
+extern	int	strncasecmp();
 #endif
-#include <pwd.h>
 
 #ifdef AIX
 #include <sys/select.h>
@@ -63,9 +69,22 @@ extern char *inet_ntoa();
 
 extern VOIDSIG dummy(), restart();
 
+#ifdef	DYNIXPTX
+#define	bcopy(a,b,s)	memcpy(b,a,s)
+#define	bzero(a,s)	memset(a,0,s)
+#define	bcmp		memcmp
+#define index strchr
+#define rindex strrchr
+#define	NO_U_TYPES
+#endif
+
 #ifdef	NO_U_TYPES
-typedef	u_char	unsigned char
-typedef	u_short	unsigned short
-typedef	u_long	unsigned long
-typedef	u_int	unsigned int
+typedef	unsigned char	u_char;
+typedef	unsigned short	u_short;
+typedef	unsigned long	u_long;
+typedef	unsigned int	u_int;
+#endif
+
+#ifdef	USE_VARARGS
+#include <varargs.h>
 #endif

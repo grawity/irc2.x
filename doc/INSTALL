@@ -1,6 +1,7 @@
 /************************************************************************
  *   IRC - Internet Relay Chat, doc/INSTALL
- *   Copyright (C) 1990, Jeff Trim, Mike Bolotski, Jarkko Oikarinen
+ *   Copyright (C) 1990,1991,1992, Jeff Trim, Mike Bolotski,
+ *   Jarkko Oikarinen and Darren Reed.
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -25,90 +26,103 @@ Overview of this document:
   1) The config.h file
   2) Editing the Makefile
   3) Compiling IRC
-  4) The irc.conf file
+  4) The ircd.conf file
 
 
 1) Edit the "config.h" file and make changes to the various #DEFINE's:
  
-   a) Copy the config.h.dist file to confiig.h before editing.
+   a) Copy the config.h.dist file to config.h before editing.
   
-   b) Define what type of UNIX your machine uses. IRC currently
-      supports, BSD42, BSD43, HPUX, APOLLO.  To select the one you want, 
-      replace the "0" with a "1" next to the choice you want.  All the other
-      UNIX #defines should be set to "0".
+   b) Define what type of UNIX your machine uses.
 
-   c) Define DEBUGMODE if you want to see the ircd debugging information
+      Pick the machine type which best describes your machine and change
+      the #undef to #define (if needed).  Some flavours of Unix require no
+      #define and in such cases all others should be #undef'd.
+
+   c) DEBUGMODE
+
+	Define DEBUGMODE if you want to see the ircd debugging information
       as the daemon is running. Normally this function will be undefined
-      as ircd produces a considerable amount of output.
+      as ircd produces a considerable amount of output.  DEBUGMODE must be
+      defined for either of -t or -x command line options to work.
       
-   d) Define SPATH to be the directory path to ircd.  This is usually
+   d) DPATH, SPATH, CPATH, MPATH, LPATH, PPATH
+
+        DPATH is provided so that the other pathnames (SPATH, CPATH, etc)
+      may be provided in just filename form.  When the server starts, it
+      chdir's to DPATH before chroot or any other file operation, making
+      it the "current directory" for the server.  This is where core files
+      will go if it core dumps.
+
+	Define SPATH to be the directory path to ircd.  This is usually
       /usr/local/bin/ircd, unless you don't have installation permission
       there. 
 
-   e) Define CPATH to be the directory path to the "irc.conf" file.
+      Define CPATH to be the directory path to the "irc.conf" file.
       This path is usually /usr/local/lib/irc.conf. The format of this file 
       will be discussed later.
 
-   f) The LPATH #define should be set to "/dev/null" unless you plan to 
+      The LPATH #define should be set to "/dev/null" unless you plan to 
       debug the program.  Note that the logfile grows very quickly.
 
-      --------------------------------------------------------------------
-      The remaining #defines should not be altered unless you are sure that
-      you know what you are doing.  If you are planning to change them,
-      it is recommended that you contact irclist first.
+      Define MPATH to be the path to the 'motd' (message of the day) file
+      for the server.  Keep in mind this is displayed whenever anyone
+      signs on to your server.
 
-   g) The PORTNUM #define sets the alters the Internet socket port for IRC.  
-      IRC will use this port to accept connections from other irc servers
-      and clients.  The current addresses used for irc are 6667 and 
-      infrequently 6666.  Note that if you change these values, all other
-      servers that connect to yours will have to know your port setting. In
-      order to avoid the problems of distributing this information, it is
-      recommended that you leave the port at 6667.
+      The PPATH is optional, but if defined, should point to a file which
+      either doesn't exist (but is creatable) or a previously used PPATH
+      file.  It is used for storing the server's PID so a ps(1) isn't
+      necessary.
 
-      Although these are not OFFICIALLY reserved for IRC, they are the ports
-      we have unofficially claimed for the program.  
+   e) CHROOTDIR
 
-   h) Define TIMESEC to be the amount of IDLE time you will allow your server
-      to WAIT before checking connections if no messages have occurred
-      during that time. PINGFREQUENCY refers to the amount of time
-      you will allow socket connections to be IDLE.  After this IDLE time
-      has expired (IE the connection has been IDLE for PINGFREQUENCY seconds)
-      the program will PING that particular peer and will expect a PONG
-      message response.  If no reply to a PING message is received in
-      2 * PINGFREQUENCY seconds the connection will be closed, and
-      reconnection attempts can be made by your IRCD or the remote IRCD
-      depending upon which server connects to whom. Note that TIMESEC
-      should be smaller than PINGFREQUENCY, as for PINGFREQUENCY to
-      execute a TIMESEC event is needed.
+	To use the CHROOTDIR feature, make sure it is #define'd and that
+      the server is being run as root.  The server will chroot to the
+      directory name provded by DPATH.
 
-   j) Define CONNECTFREQUENCY - will define the default number of SECONDS
-      for your server to wait before it attempts reconnection at it's
-      neighboring IRC hosts. The suggested value is 20 minutes (1200 seconds)
-      and that is generally pretty good for RECONNECTION time.  You should
-      probably not change this Define as changing this to be too short of
-      a time results in delays in your server's connections to users
-      because server does nameserver enqueries every time it attempts
-      to form a connection and it takes time, sometimes more, sometimes
-      less. For backbone servers whose connections should be reliable
-      and up as often as possible the value can be cut in half (600 seconds).
+   f) ENABLE_SUMMON, ENABLE_USERS
+
+	For security conscious server admins, they may wish to leave
+      ENABLE_USERS undefined, disabling the USERS command which can be used
+      to glean information the same as finger can.  ENABLE_SUMMON toggles
+      whether the server will attempt to summon local users to irc by
+      writing a message similar to that from talk(1) to a user's tty.
+
+   g) SHOW_INVISIBLE_LUSERS, NO_DEFAULT_INVISIBLE
+
+	On large IRC networks, the number of invisible users is likely to
+      be large and reporting that number cause no pain.  To aid and effect
+      this, SHOW_INVISIBLE_LUSERS is provided to cause the LUSERS command
+      to report the number of invisible users to all people and not just
+      operators.  The NO_DEFAULT_INVISIBLE define is used to toggle whether
+      clients are automatically made invisible when they register.
+
+   h) OPER_KILL, OPER_REHASH, OPER_RESTART, LOCAL_KILL_ONLY
+
+	The three operator only commands, KILL, REHASH and RESTART, may all
+      be disabled to ensure that an operator who does not have the correct
+      privilidges does not have the power to cause untoward things to occur.
+      To further curb the actions of guest operators, LOCAL_KILL_ONLY can
+      be defined to only allow locally connected clients to be KILLed.
+
+   i) The rest of the user changable #define's should be pretty much self
+      explanatory in the config.h file.  It is *NOT* recommended that any
+      of the file undef the line with "STOP STOP" in it be changed.
 
 3) Configure and compile the code.
 
+      Edit the root Makefile for the server, uncomment/comment the correct
+   CFLAGS/IRCDLIBS lines as appropriate for your system.
+      Change DESTDIR to be the same as the path for DPATH in config.h.
    Type "make". This will compile the server, the client, and the services.
    At the end of this step, the server directory will contain 'ircd',
-   and the client directory will contain 'irc'.
+   and the client directory will contain 'irc'.  To get the server installed,
+   type "make install" which will build a default m4 file for preprocessing,
+   copy example.conf and put the server all in DESTDIR.  The irc client and
+   a copy of the server will also be placed in BINDIR and the modes set
+   accordingly.
 
-   Note that the ircd executable will have the  SETUID bit set on so that
-   other besides you can boot the server if it goes down and you aren't around
-   to boot it yourself.  The SETUID bit allows others to run the server,
-   but it will run under your UID so that you will be able to kill it later.
-
-   The SETUID bit also allows ircd to read the "irc.conf" file, because it
-   would be accessed as USER instead of GROUP or OTHER.  You should ensure
-   that "irc.conf" is not readable by others, since it contains the operator
-   password.
-
-4) The irc.conf file.
+4) The ircd.conf file.
 
    After installing the ircd and irc programs, edit the irc.conf file
    as per the instructions in this section and  install it in the 
@@ -134,6 +148,7 @@ Overview of this document:
   10.  Leaf connections         (L)
   11.  Service connections      (S)
   12.  Port connections		(P)
+  13.  Hub connections		(H)
 
 
    1. SERVER CONNECTIONS:  How to connect to other servers
@@ -178,6 +193,11 @@ Field: 1        2              3                4               5
 
     C:128.214.6.100:passwd:nic.funet.fi:6667
 
+          - or -
+
+    C:root@nic.funet.fi:passwd:nic.funet.fi:6667
+
+
     Explanation:
 
     Each field is separated with a ":" charcter:
@@ -186,7 +206,10 @@ Field: 1        2              3                4               5
              "C" corresponds to a server Connect option.
 
     Field 2: Specifies the host name or IP address of the machine to connect
-	     to.
+	     to.  If "user@" prefixes the actual hostname or IP address
+	     and the IDENT option has been defined in the config.h file,
+	     the server will require that the remote username returned by
+	     the ident server be the same as the one given before the "@".
 
     Field 3: The password of the other host.  Some hosts require passwords
              before you can connect to them.  If no password is required
@@ -210,14 +233,14 @@ Field: 1        2              3                4               5
  
             This reads: Connect to host "nic.funet.fi", with no password
             and expect this server to identify itself to you as
-            "nic.funet.fi". Your machine will connect to this host at
+            "nic.funet.fi". Your machine will connect to this host to
             PORT 6667.
 
             C:18.72.0.252:Jeff:garfield.mit.edu:6667
 
             This reads: Connect to a host at address "18.72.0.252", using a
             password of "Jeff".  The TARGET server should identify
-            itself as "garfield.mit.edu".  *YOU* will connect at Internet
+            itself as "garfield.mit.edu".  You will connect to Internet
             Port 6667 on this host.
 
             C:irc.nada.kth.se::irc.nada.kth.se
@@ -624,8 +647,8 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
 
    The format for the line is:
 
-       Y:<CLASS NUMBER>:<PING FREQUENCY>:<CONNECT FREQUENCY>:<MAX LINKS>
-Field: 1       2                3                4                5
+       Y:<CLASS>:<PING FREQUENCY>:<CONNECT FREQUENCY>:<MAX LINKS>:<SENDQ>
+Field: 1    2                3                4                5     6
 
    Field 2:  This is the class number which gains the following attributes
    and should match that which is on the end of the C/N line.
@@ -644,6 +667,9 @@ Field: 1       2                3                4                5
    Field 5:  This field defines the maximum number of links this class
    will allow from automatic connections.  Using /CONNECT overrides this
    feature.
+
+   Field 6:  This field defines the 'sendq' value for this class.  If this
+   field is not present, the default (from config.h) is assigned.
 
    NOTE: leaving any of the fields out means their value is 0 (ZERO)!!
 
@@ -672,7 +698,7 @@ Field: 1       2                3                4                5
    hubs accidently, the L line was introduced so that hubs can be aware
    of which servers should and shouldnt be treated as leaves. A leaf
    server is supposed to remain a node for the entirity of its life
-   whilst connected to the IRC server network. It is quite easy, however
+   whilst connected to the IRC server network.  It is quite easy, however
    for a leaf server to be incorrectly setup and create problems by
    becoming a node of 2 or more servers, ending its life as a leaf. The
    L line enables the administrator of an IRC 'Hub server' to 'stop' a
@@ -681,14 +707,27 @@ Field: 1       2                3                4                5
    have an L-line for it, the one which does will drop the connection, once
    again making the server a leaf.
 
-       L:*:*:<SERVER NAME>
-Field: 1 2 3       4
+       L:<SERVER MASK>:*:<SERVER NAME>:<MAX DEPTH>
+Field: 1       2       3       4            5
 
-   Field 4 is the only 'active' field in the L-line at the moment.
-   The <server name> given is that for which you want to enforce leaf-like
-   attributes upon.
+   Field 2 is a mask of which servers the leaf-like attributes are used on
+   when the server receives SERVER messages.  The wildcards * and ? may be
+   used within this field for matching purposes.  If this field is empty,
+   it acts the same as if it were a single * (ie matches everything).
 
- 11. Service Connections
+   Field 4 is the the server connectted to you that for which you want to
+   enforce leaf-like attributes upon.
+
+   Field 5 is the maximum depth allowed on that leaf and if not specified,
+   a value of 1 is assumed.  The depth is checked each time a SERVER message
+   is received by the server, the hops to the server being the field checked
+   against this max depth and if greater, the connection to the server that
+   made its leaf too deep has its connection dropped.
+   For the L-line to come into effect, both fields, 2 and 4, must match up
+   with the new server being introduced and the server which is responsible
+   for introducing this new server.
+
+ 11. Service Connections (Not yet implemented)
 
   Introduction.
    The Service is a special kind of IRC client. It does not have the full
@@ -766,7 +805,7 @@ Field: 1        2             3   4     5
 		P:128.2*.1.2:::6664
 	will not match 128.20.1.2.
 
-    Field 5
+     Field 5
 	The port number field tells the server which port number it should
 	listen on for incoming connections.
 
@@ -785,6 +824,49 @@ Field: 1        2             3   4     5
 
 	Creates a unix socket in the /tmp/.ircd directory called "6667".
 	The unix socket (file) must be a numerical.
+
+13.  Hub Connections
+
+      In direct contrast to L-lines, the server also implements H-lines to
+   determine which servers may act as a hub and what they may 'hub for'.
+   If a server is only going to supply its own name (ie act as a solitary
+   leaf) then no H-line is required for, else a H-line must be added as
+   follows:
+
+       H:<SERVER MASK>:*:<SERVER NAME>
+Field: 1       2       3       4
+
+   Explanation:
+    Field 2
+      All servers that are allowed via this H-line must match the mask
+      given in this field.
+
+    Field 4
+      This field is used to match exactly against a server name, wildcards
+      being treated as literal characters.
+
+   Examples:
+
+		H:*.edu:*:*.bu.edu
+
+	Allows a server named "*.bu.edu" to introduce only servers that
+ 	match the "*.edu" name mask.
+
+		H:*:*:eff.org
+
+	Allow "eff.org" to introduce (and act as a hub for) any server.
+
+   Note:  It is possible to have and use multiple H-lines (or L-lines) for
+	  the one server.  eg:
+
+		H:*.edu:*:*.bu.edu
+		H:*.au:*:*.bu.edu
+
+	   is allowed as is
+
+		L:*.edu:*:*.au
+		L:*.com:*:*.au
+
 
 Appendix A: Difference between IP addresses and hostnames
 

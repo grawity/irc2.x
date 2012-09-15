@@ -17,18 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: class.h,v 6.1 1991/07/04 21:04:24 gruner stable gruner $
- *
- * $Log: class.h,v $
- * Revision 6.1  1991/07/04  21:04:24  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:04:58  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 #ifndef PROTO
 #if __STDC__
 #       define PROTO(x) x
@@ -38,18 +26,20 @@
 #endif
 
 typedef struct Class {
-  int class;
-  int conFreq;
-  int pingFreq;
-  int maxLinks;
-  int links;
-  struct Class *next;
+	int	class;
+	int	conFreq;
+	int	pingFreq;
+	int	maxLinks;
+	long	maxSendq;
+	int	links;
+	struct Class *next;
 } aClass;
 
 #define	Class(x)	((x)->class)
 #define	ConFreq(x)	((x)->conFreq)
 #define	PingFreq(x)	((x)->pingFreq)
 #define	MaxLinks(x)	((x)->maxLinks)
+#define	MaxSendq(x)	((x)->maxSendq)
 #define	Links(x)	((x)->links)
 
 #define	ConfLinks(x)	(Class(x)->links)
@@ -57,18 +47,18 @@ typedef struct Class {
 #define	ConfClass(x)	(Class(x)->class)
 #define	ConfConFreq(x)	(Class(x)->conFreq)
 #define	ConfPingFreq(x)	(Class(x)->pingFreq)
+#define	ConfSendq(x)	(Class(x)->maxSendq)
 
-#define  FirstClass() 	classes
-#define  NextClass(x)	((x)->next)
+#define	FirstClass() 	classes
+#define	NextClass(x)	((x)->next)
 
-extern aClass *classes;
-extern aClass *find_class PROTO((int));
-extern int GetConfClass PROTO((aConfItem *));
+extern	aClass	*classes;
 
-extern int GetClientClass PROTO((aClient *));
-extern int GetClientPing PROTO((aClient *));
-
-extern int GetConFreq PROTO((aClass *));
-extern void AddClass PROTO((int, int, int, int));
-extern void check_class PROTO((void));
-extern void initclass PROTO((void));
+extern	aClass	*find_class PROTO((int));
+extern	int	GetConfClass PROTO((aConfItem *));
+extern	int	GetClientClass PROTO((aClient *));
+extern	int	GetClientPing PROTO((aClient *));
+extern	int	GetConFreq PROTO((aClass *));
+extern	void	AddClass PROTO((int, int, int, int, long));
+extern	void	check_class PROTO((void));
+extern	void	initclass PROTO((void));

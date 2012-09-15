@@ -32,7 +32,9 @@ char *infotext[] =
 	0,
     };
 
-char *HEADER = 
-" * Internet Relay Chat * Type /help to get help * Client v%s *      ";
+char *HEADEROLD = 
+"*Internet Relay Chat* Type /help to get help * Client v%s *                 ";
 
+char *HEADER =
+" *IRC Client v%s* %10.10s on %10.10s */help for help*      ";
 

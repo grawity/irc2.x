@@ -49,4 +49,4 @@ close ($ircdin);
 print "/bin/cp ",$tmpfile," ",$ircdconf,"\n";
 (fork()==0) ? exec("/bin/cp", $tmpfile, $ircdconf) : wait;
 
-unlink("/tmp/ircd.conf.tmp");
+#unlink($tmpfile);

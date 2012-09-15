@@ -1,6 +1,6 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, doc/BugList
- *   Copyright (C) 1990, Mike Bolotski
+ *   IRC - Internet Relay Chat, ircd/channel.h
+ *   Copyright (C) 1990 Jarkko Oikarinen
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,17 +17,13 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define CREATE 1	/* whether a channel should be
+			   created or just tested for existance */
 
-This document specifies the notation for bug numbers, and lists the currently
-outstanding bugs.
+#define	MODEBUFLEN	200
 
-Notation:    FB  Fatal Bug		(causes core dumps)
-	     NB  Non-Fatal Bug		(does not cause core dumps)
-	     CB	 Configuration bug	(problem in configuration files)
-	     DB	 Documentation bug	(incorrect/missing documentation)
-	     EB	 Extention request	(not a bug, really)
+#define NullChn	((aChannel *)0)
 
-! indicates that the problem has been solved and the fix will be released
-  for the next patchlevel. 
+#define ChannelExists(n)	(find_channel(n, NullChn) != NullChn)
 
-* indicates that the problem was solved during a previous patchlevel.
+#define	MAXMODEPARAMS	6

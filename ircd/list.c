@@ -36,24 +36,50 @@
  * Changed memset(xx,0,yy) into bzero(xx,yy)
  */
 
-char list_id[] = "list.c v2.0 (c) 1988 University of Oulu, Computing Center\
- and Jarkko Oikarinen";
+#ifndef lint
+static  char sccsid[] = "@(#)list.c	2.16 3/22/93 (C) 1988 University of Oulu, \
+Computing Center and Jarkko Oikarinen";
+#endif
 
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include "h.h"
+#ifdef	DBMALLOC
+#include "malloc.h"
+#endif
+void	free_link PROTO((Link *));
+Link	*make_link PROTO(());
 
-extern aClient *client;
-extern aConfItem *conf;
+#ifdef	DEBUGMODE
+static	struct	liststats {
+	int	inuse;
+} cloc, crem, users, servs, links, classs, aconfs;
+
+#endif
+
+void	outofmemory();
 
 int	numclients = 0;
 
-static int outofmemory()
-    {
-	debug(DEBUG_FATAL, "Out of memory: restarting server...");
-	restart();
-	return -1;
-    }
+void	initlists()
+{
+#ifdef	DEBUGMODE
+	bzero((char *)&cloc, sizeof(cloc));
+	bzero((char *)&crem, sizeof(crem));
+	bzero((char *)&users, sizeof(users));
+	bzero((char *)&servs, sizeof(servs));
+	bzero((char *)&links, sizeof(links));
+	bzero((char *)&classs, sizeof(classs));
+	bzero((char *)&aconfs, sizeof(aconfs));
+#endif
+}
+
+void	outofmemory()
+{
+	Debug((DEBUG_FATAL, "Out of memory: restarting server..."));
+	restart("Out of Memory");
+}
 
 	
 /*
@@ -62,20 +88,33 @@ static int outofmemory()
 **	from == NULL,	create local client (a client connected
 **			to a socket).
 **
-**	from != NULL,	create remote client (behind a socket
+**	from,	create remote client (behind a socket
 **			associated with the client defined by
 **			'from'). ('from' is a local client!!).
 */
-aClient *make_client(from)
-aClient *from;
-    {
-	aClient *cptr;
-	int size = (from == NULL) ? CLIENT_LOCAL_SIZE : CLIENT_REMOTE_SIZE;
+aClient	*make_client(from)
+aClient	*from;
+{
+	Reg1	aClient *cptr = NULL;
+	Reg2	unsigned size = CLIENT_REMOTE_SIZE;
 
-	if ((cptr = (aClient *) calloc(1, size)) == NULL)
+	/*
+	 * Check freelists first to see if we can grab a client without
+	 * having to call malloc.
+	 */
+	if (!from)
+		size = CLIENT_LOCAL_SIZE;
+
+	if (!(cptr = (aClient *)malloc(size)))
 		outofmemory();
+	bzero((char *)cptr, (int)size);
 
-	numclients++;
+#ifdef	DEBUGMODE
+	if (size == CLIENT_LOCAL_SIZE)
+		cloc.inuse++;
+	else
+		crem.inuse++;
+#endif
 
 	/* Note:  structure is zero (calloc) */
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
@@ -83,81 +122,126 @@ aClient *from;
 	cptr->prev = NULL;
 	cptr->hnext = NULL;
 	cptr->user = NULL;
+	cptr->serv = NULL;
 	cptr->status = STAT_UNKNOWN;
 	cptr->fd = -1;
-	if (size == CLIENT_LOCAL_SIZE) {
-	  cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
-	  cptr->confs = (Link *)NULL;
-	  cptr->sockhost[0] = '\0';
-#ifdef DOUBLE_BUFFER
-	  cptr->obuffer[0] = '\0';
-#endif
-	  cptr->buffer[0] = '\0';
-	}
+	(void)strcpy(cptr->username, "unknown");
+	if (size == CLIENT_LOCAL_SIZE)
+	    {
+		cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
+		cptr->confs = NULL;
+		cptr->sockhost[0] = '\0';
+		cptr->buffer[0] = '\0';
+		cptr->authfd = -1;
+	    }
 	return (cptr);
-    }
+}
 
 /*
 ** 'make_user' add's an User information block to a client
 ** if it was not previously allocated.
 */
-anUser	*make_user(sptr)
-aClient *sptr;
-    {
-	if (sptr->user != NULL)
-		return sptr->user;
-	sptr->user = (anUser *)MyMalloc(sizeof(anUser));
-	bzero((char *)sptr->user,sizeof(anUser));
-	sptr->user->away = NULL;
-	sptr->user->refcnt = 1;
-	sptr->user->channel = NULL;
-	sptr->user->invited = NULL;
-	return sptr->user;
-    }
+anUser	*make_user(cptr)
+aClient *cptr;
+{
+	Reg1	anUser	*user;
+
+	user = cptr->user;
+	if (!user)
+	    {
+		user = (anUser *)MyMalloc(sizeof(anUser));
+#ifdef	DEBUGMODE
+		users.inuse++;
+#endif
+		user->away = NULL;
+		user->refcnt = 1;
+		user->channel = NULL;
+		user->invited = NULL;
+		cptr->user = user;
+	    }
+	return user;
+}
+
+aServer	*make_server(cptr)
+aClient	*cptr;
+{
+	Reg1	aServer	*serv = cptr->serv;
+
+	if (!serv)
+	    {
+		serv = (aServer *)MyMalloc(sizeof(aServer));
+#ifdef	DEBUGMODE
+		servs.inuse++;
+#endif
+		serv->user = NULL;
+		serv->nexts = NULL;
+		*serv->by = '\0';
+		*serv->up = '\0';
+		cptr->serv = serv;
+	    }
+	return cptr->serv;
+}
 
 /*
 ** free_user
 **	Decrease user reference count by one and realease block,
 **	if count reaches 0
 */
-anUser	*free_user(user)
-anUser	*user;
-    {
-	if (--user->refcnt == 0)
+void	free_user(user)
+Reg1	anUser	*user;
+{
+	if (--user->refcnt <= 0)
 	    {
 		if (user->away)
-			free(user->away);
-		free(user);
-		return NULL;
+			(void)free((char *)user->away);
+		(void)free((char *)user);
+#ifdef	DEBUGMODE
+		users.inuse--;
+#endif
 	    }
-	else
-		return user;
-    }
+}
 
 /*
  * taken the code from ExitOneClient() for this and placed it here.
  * - avalon
  */
-int	remove_client_from_list(cptr)
-aClient	*cptr;
+void	remove_client_from_list(cptr)
+Reg1	aClient	*cptr;
 {
 	checklist();
 	if (cptr->prev)
 		cptr->prev->next = cptr->next;
-	else {
+	else
+	    {
 		client = cptr->next;
 		client->prev = NULL;
-	}
+	    }
 	if (cptr->next)
 		cptr->next->prev = cptr->prev;
-	if (cptr->user) {
+	if (cptr->user)
+	    {
 		add_history(cptr);
 		off_history(cptr);
-		free_user(cptr->user);
-	}
-	free(cptr);
+		(void)free_user(cptr->user);
+	    }
+	if (cptr->serv)
+	    {
+		if (cptr->serv->user)
+			free_user(cptr->serv->user);
+		(void)free((char *)cptr->serv);
+#ifdef	DEBUGMODE
+		servs.inuse--;
+#endif
+	    }
+#ifdef	DEBUGMODE
+	if (cptr->fd == -2)
+		cloc.inuse--;
+	else
+		crem.inuse--;
+#endif
+	(void)free((char *)cptr);
 	numclients--;
-	return 0;
+	return;
 }
 
 /*
@@ -166,7 +250,7 @@ aClient	*cptr;
  * in this file, shouldnt they ?  after all, this is list.c, isnt it ?
  * -avalon
  */
-int add_client_to_list(cptr)
+void	add_client_to_list(cptr)
 aClient	*cptr;
 {
 	/*
@@ -177,21 +261,142 @@ aClient	*cptr;
 	client = cptr;
 	if (cptr->next)
 		cptr->next->prev = cptr;
-	return 0;
+	return;
 }
 
 /*
  * Look for ptr in the linked listed pointed to by link.
  */
-Link	*find_user_link(link, ptr)
-Reg1	Link	*link;
+Link	*find_user_link(lp, ptr)
+Reg1	Link	*lp;
 Reg2	aClient *ptr;
 {
-	while (link && ptr)
+	while (lp && ptr)
 	   {
-		if (link->value.cptr == ptr)
-			return (link);
-		link = link->next;
+		if (lp->value.cptr == ptr)
+			return (lp);
+		lp = lp->next;
 	    }
-	return (Link *)NULL;
+	return NULL;
 }
+
+Link	*make_link()
+{
+	Reg1	Link	*lp;
+
+	lp = (Link *)MyMalloc(sizeof(Link));
+#ifdef	DEBUGMODE
+	links.inuse++;
+#endif
+	return lp;
+}
+
+void	free_link(lp)
+Reg1	Link	*lp;
+{
+	(void)free((char *)lp);
+#ifdef	DEBUGMODE
+	links.inuse--;
+#endif
+}
+
+
+aClass	*make_class()
+{
+	Reg1	aClass	*tmp;
+
+	tmp = (aClass *)MyMalloc(sizeof(aClass));
+#ifdef	DEBUGMODE
+	classs.inuse++;
+#endif
+	return tmp;
+}
+
+void	free_class(tmp)
+Reg1	aClass	*tmp;
+{
+	(void)free((char *)tmp);
+#ifdef	DEBUGMODE
+	classs.inuse--;
+#endif
+}
+
+aConfItem	*make_conf()
+{
+	Reg1	aConfItem *aconf;
+
+	aconf = (struct ConfItem *)MyMalloc(sizeof(aConfItem));
+#ifdef	DEBUGMODE
+	aconfs.inuse++;
+#endif
+
+	aconf->next = NULL;
+	aconf->host = aconf->passwd = aconf->name = NULL;
+	aconf->status = CONF_ILLEGAL;
+	aconf->clients = 0;
+	aconf->port = 0;
+	aconf->hold = 0;
+	Class(aconf) = 0;
+	return (aconf);
+}
+
+void	free_conf(aconf)
+aConfItem *aconf;
+{
+	MyFree(aconf->host);
+	if (aconf->passwd)
+		bzero(aconf->passwd, strlen(aconf->passwd));
+	MyFree(aconf->passwd);
+	MyFree(aconf->name);
+	(void)free((char *)aconf);
+#ifdef	DEBUGMODE
+	aconfs.inuse--;
+#endif
+	return;
+}
+
+#ifdef	DEBUGMODE
+void	send_listinfo(cptr, name)
+aClient	*cptr;
+char	*name;
+{
+	int	inuse = 0, mem = 0, tmp = 0;
+
+	sendto_one(cptr, ":%s NOTICE %s :Local: inuse: %d(%d)",
+		   me.name, name, inuse += cloc.inuse,
+		   tmp = cloc.inuse * CLIENT_LOCAL_SIZE);
+	mem += tmp;
+	sendto_one(cptr, ":%s NOTICE %s :Remote: inuse: %d(%d)",
+		   me.name, name,
+		   crem.inuse, tmp = crem.inuse * CLIENT_REMOTE_SIZE);
+	mem += tmp;
+	inuse += crem.inuse;
+	sendto_one(cptr, ":%s NOTICE %s :Users: inuse: %d(%d)",
+		   me.name, name, users.inuse,
+		   tmp = users.inuse * sizeof(anUser));
+	mem += tmp;
+	inuse += users.inuse,
+	sendto_one(cptr, ":%s NOTICE %s :Servs: inuse: %d(%d)",
+		   me.name, name, servs.inuse,
+		   tmp = servs.inuse * sizeof(aServer));
+	mem += tmp;
+	inuse += servs.inuse,
+	sendto_one(cptr, ":%s NOTICE %s :Links: inuse: %d(%d)",
+		   me.name, name, links.inuse,
+		   tmp = links.inuse * sizeof(Link));
+	mem += tmp;
+	inuse += links.inuse,
+	sendto_one(cptr, ":%s NOTICE %s :Classes: inuse: %d(%d)",
+		   me.name, name, classs.inuse,
+		   tmp = classs.inuse * sizeof(aClass));
+	mem += tmp;
+	inuse += classs.inuse,
+	sendto_one(cptr, ":%s NOTICE %s :Confs: inuse: %d(%d)",
+		   me.name, name, aconfs.inuse,
+		   tmp = aconfs.inuse * sizeof(aConfItem));
+	mem += tmp;
+	inuse += aconfs.inuse,
+	sendto_one(cptr, ":%s NOTICE %s :Totals: inuse %d %d",
+		   me.name, name, inuse, mem);
+}
+#endif

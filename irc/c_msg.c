@@ -22,9 +22,12 @@
  * Fixes to allow channels to be strings
  */
  
-char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+#ifndef lint
+char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
+ and Jarkko Oikarinen";
+#endif
 
-#include "config.h"
+#include "struct.h"
 #ifdef AUTOMATON
 #include <ctype.h>
 #else
@@ -34,14 +37,18 @@ char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #endif
 
 #include "common.h"
-#include "struct.h"
 #include "msg.h"
+#if 0
+#ifndef SOL20
+#include "h.h"
+#endif /* SOL20	Bad m_names and m_private prototypes	Vesa */
+#endif /* 0	Nobody needs it. */
 
-char mybuf[513];
+char	mybuf[513];
 
-extern anIgnore *find_ignore();
-extern char *last_to_me(), userhost[];
-extern aClient *client;
+extern	anIgnore *find_ignore();
+extern	char	*last_to_me(), userhost[];
+extern	aClient	*client, me; /* 'me' from h.h	Vesa */
 
 m_restart() {
   putline("*** Oh boy... somebody wants *me* to restart... exiting...\n");
@@ -157,15 +164,19 @@ char *parv[];
   putline(mybuf);
 }
 
-m_nick(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
+int	m_nick(sptr, cptr, parc, parv)
+aClient	*sptr, *cptr;
+int	parc;
+char	*parv[];
 {
-  sprintf(mybuf,"*** Change: %s is now known as %s", parv[0], parv[1]);
-  putline(mybuf);
+	sprintf(mybuf,"*** Change: %s is now known as %s", parv[0], parv[1]);
+	if (!mycmp(me.name, parv[0])) {
+		strcpy(me.name, parv[1]);
+		write_statusline();
+	}
+	putline(mybuf);
 #ifdef AUTOMATON
-  a_nick(parv[0], parv[1]);
+	a_nick(parv[0], parv[1]);
 #endif
 }
 
@@ -216,14 +227,14 @@ char *parv[];
   putline(mybuf);
 }
 
-m_join(sptr, cptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	m_join(sptr, cptr, parc, parv)
+aClient	*cptr, *sptr;
+int	parc;
+char	*parv[];
 {
-  sprintf(mybuf,"*** Change: %s has joined channel %s", 
-	  parv[0], parv[1]);
-  putline(mybuf);
+	sprintf(mybuf,"*** Change: %s has joined channel %s", 
+		parv[0], parv[1]);
+	putline(mybuf);
 }
 
 m_part(sptr, cptr, parc, parv)
@@ -261,7 +272,7 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf,"*** Signoff: %s", parv[0]);
+  sprintf(mybuf,"*** Signoff: %s (%s)", parv[0], parv[1]);
   putline(mybuf);
 #ifdef AUTOMATON
   a_quit(sender);
@@ -360,6 +371,7 @@ char *channel, *username, *host, *nickname, *away, *realname;
     }
 }
 
+#if 0
 m_text(sptr, cptr, parc, parv)
 aClient *sptr, *cptr;
 int parc;
@@ -379,6 +391,7 @@ char *parv[];
   } else
     putline(parv[1]);
 }
+#endif /* 0 Vesa */
 
 m_namreply(sptr, cptr, parc, parv)
 aClient *sptr, *cptr;
@@ -422,43 +435,39 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf,"*** Server: %s (%s)", parv[2], parv[3]);
+  sprintf(mybuf,"*** Server: %s (%s) %s", parv[2], parv[3], parv[4]);
 }
 
-m_private(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
+int	m_private(sptr, cptr, parc, parv)
+aClient	*sptr, *cptr;
+int	parc;
+char	*parv[];
 {
-  anIgnore *iptr;
-  int ignoreflag = 0;
-  iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost);
-  if ((iptr != (anIgnore *)NULL) && iptr->flags & IGNORE_PRIVATE)
-    ignoreflag = 1;
-  if (parv[0] && parv[0][0]) {
+	anIgnore *iptr;
+	int	ignoreflag = 0;
+
+	iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost);
+	if ((iptr != (anIgnore *)NULL) && iptr->flags & IGNORE_PRIVATE)
+		return 0;
+	check_ctcp(sptr, cptr, parc, parv);
+
+	if (parv[0] && *parv[0]) {
 #ifdef AUTOMATON
-    a_privmsg(sender, parv[2]);
+		a_privmsg(sender, parv[2]);
 #else
-    if ((parv[1][0] >= '0' && parv[1][0] <= '9') || parv[1][0] == '-'
-	|| parv[1][0] == '+' || parv[1][0] == '#' || parv[1][0] == '$') {
-      if (ignoreflag)
-	return (0);
-      sprintf(mybuf,"(%s:%s) %s", parv[0], parv[1], parv[2]);
-    } else {
-      if (ignoreflag) {
-	sendto_one(client,
-		   "NOTICE %s :*** Automatic reply: You have been ignored",
-		   parv[0]);
-	return(0);
-      }
-      sprintf(mybuf,"*%s* %s", parv[0], parv[2]);
-      last_to_me(parv[0]);
-    }
-    putline(mybuf);
+		if (((*parv[1] >= '0') && (*parv[1] <= '9')) ||
+		    (*parv[1] == '-') || (*parv[1] == '+') ||
+		    IsChannelName(parv[1]) || (*parv[1] == '$')) {
+			sprintf(mybuf,"<%s:%s> %s", parv[0], parv[1], parv[2]);
+		} else {
+			sprintf(mybuf,"*%s* %s", parv[0], parv[2]);
+			last_to_me(parv[0]);
+		}
+		putline(mybuf);
 #endif
-  }
-  else
-    putline(parv[2]);
+	} else
+		putline(parv[2]); /* parv[2] and no parv[0] ?! - avalon */
+	return 0;
 }
 
 
@@ -467,27 +476,29 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf,"*** %s Kicked %s off channel %s",
-	  (parv[0]) ? parv[0] : "*Unknown*",
-	  (parv[2]) ? parv[2] : "*Unknown*",
-	  (parv[1]) ? parv[1] : "*Unknown*");
-  putline(mybuf);
+	sprintf(mybuf,"*** %s kicked %s off channel %s (%s)",
+		(parv[0]) ? parv[0] : "*Unknown*",
+		(parv[2]) ? parv[2] : "*Unknown*",
+		(parv[1]) ? parv[1] : "*Unknown*",
+		parv[3]);
+	putline(mybuf);
 }
 
-m_notice(sptr, cptr, parc, parv)
-aClient *sptr, *cptr;
-int parc;
-char *parv[];
+int	m_notice(sptr, cptr, parc, parv)
+aClient	*sptr, *cptr;
+int	parc;
+char	*parv[];
 {
-  if (parv[0] && parv[0][0]) {
-    if ((parv[1][0] >= '0' && parv[1][0] <= '9') || parv[1][0] == '-')
-      sprintf(mybuf,"(%s) %s", parv[0], parv[2]);
-    else
-      sprintf(mybuf,"*%s* %s", parv[0], parv[2]);
-    putline(mybuf);
-  }
-  else
-    putline(parv[2]);
+	if (parv[0] && parv[0][0]) {
+		if ((*parv[1] >= '0' && *parv[1] <= '9') ||
+		    *parv[1] == '-' || IsChannelName(parv[1]) ||
+		    *parv[1] == '$' || *parv[1] == '+')
+			sprintf(mybuf,"(%s:%s) %s",parv[0],parv[1],parv[2]);
+		else
+			sprintf(mybuf, "-%s- %s", parv[0], parv[2]);
+		putline(mybuf);
+	} else
+		putline(parv[2]);
 }
 
 m_invite(sptr, cptr, parc, parv)
@@ -509,6 +520,7 @@ char *parv[];
   sprintf(mybuf,"*** %s Invites you to channel %s", parv[0], parv[2]);
   putline(mybuf);
 #endif
+  return(0);
 }
 
 m_error(sptr, cptr, parc, parv)
@@ -528,6 +540,6 @@ m_ison() {
   putline("*** Oh boy... server asking ison from client... exiting...");
 }
 
-m_deop() {
-  putline("*** Oh boy... server asking deop from client... exiting...");
+m_close() {
+  putline("*** Oh boy... server asking close from client... exiting...");
 }

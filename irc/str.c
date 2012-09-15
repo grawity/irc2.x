@@ -23,9 +23,9 @@ char str_id[] = "str.c v2.0 (c) 1988 University of Oulu, Computing Center and Ja
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include <pwd.h>
 
-char *
-center(buf,str,len)
+char * center(buf,str,len)
 char *buf, *str;
 int len;
 {

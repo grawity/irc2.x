@@ -25,14 +25,15 @@ char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include <stdio.h>
 #include "struct.h"
 #include "common.h"
-#if HPUX
+#ifdef HPUX
 #include <fcntl.h>
 #endif
 
 extern int debuglevel;
+struct	stats	ircst, *ircstp = &ircst;
 
 #ifdef DEBUGMODE
-debug(level, form, para1, para2, para3, para4, para5, para6)
+void debug(level, form, para1, para2, para3, para4, para5, para6)
 int level;
 char *form, *para1, *para2, *para3, *para4, *para5, *para6;
 {
@@ -42,10 +43,5 @@ char *form, *para1, *para2, *para3, *para4, *para5, *para6;
       sprintf(buf, form, para1, para2, para3, para4, para5, para6);
       putline(buf);
     }
-}
-#else
-debug()
-{
-	/* do nothing so we dont chew much cpu (hopefully!) -avalon */
 }
 #endif

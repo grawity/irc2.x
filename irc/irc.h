@@ -34,7 +34,8 @@ struct Command {
 
 extern int do_mypriv(), do_cmdch(), do_quote(), do_query();
 extern int do_ignore(), do_help(), do_log(), do_clear();
-extern int do_unkill(), do_bye(), do_server(), do_channel();
+extern int do_unkill(), do_bye(), do_kill(), do_kick();
+extern int do_server(), do_channel();
 #ifdef VMSP
 extern int do_bye(), do_exec();
 #endif
@@ -47,7 +48,7 @@ struct Command commands[] = {
   { do_bye,        "QUIT",    LOCAL_FUNC, "\0\0", MSG_QUIT },
   { do_bye,        "EXIT",    LOCAL_FUNC, "\0\0", MSG_QUIT },
   { do_bye,        "BYE",     LOCAL_FUNC, "\0\0", MSG_QUIT },
-  { (int (*)()) 0, "KILL",    SERVER_CMD, "\0\0", MSG_KILL },
+  { do_kill,       "KILL",    LOCAL_FUNC, "\0\0", MSG_KILL },
   { (int (*)()) 0, "SUMMON",  SERVER_CMD, "\0\0", MSG_SUMMON },
   { (int (*)()) 0, "STATS",   SERVER_CMD, "\0\0", MSG_STATS },
   { (int (*)()) 0, "USERS",   SERVER_CMD, "\0\0", MSG_USERS },
@@ -99,8 +100,10 @@ struct Command commands[] = {
 #ifdef MSG_MAIL
   { (int (*)()) 0, "MAIL",    SERVER_CMD, "\0\0", MSG_MAIL },
 #endif
-  { (int (*)()) 0, "KICK",    SERVER_CMD, "\0\0", MSG_KICK },
+  { do_kick,       "KICK",    LOCAL_FUNC, "\0\0", MSG_KICK },
   { (int (*)()) 0, "USERHOST",SERVER_CMD, "\0\0", MSG_USERHOST },
   { (int (*)()) 0, "ISON",    SERVER_CMD, "\0\0", MSG_ISON },
+  { (int (*)()) 0, "CONNECT", SERVER_CMD, "\0\0", MSG_CONNECT },
+  { do_kill,       "SQUIT",   LOCAL_FUNC, "\0\0", MSG_SQUIT },
   { (int (*)()) 0, (char *) 0, 0,         "\0\0", (char *) 0 }
 };

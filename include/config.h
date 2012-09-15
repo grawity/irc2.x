@@ -20,12 +20,16 @@
 /* Type of host. These should be made redundant somehow. -avalon */
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
-#undef	HPUX			/* HP-UX */
-#undef	ULTRIX			/* Vax Ultrix. */
+/*	HPUX			Nothing needed (A.08.07) */
+/*	ULTRIX			Nothing needed (4.2) */
 #undef	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
-#undef	SGI			/* SGI Irix */
-#undef	SYSV			/* SYSV stuff - being worked on where poss. */
+/*	SGI			Nothing needed (IRIX 4.0.4) */
+#undef	SVR3			/* SVR3 stuff - being worked on where poss. */
+#undef	DYNIXPTX		/* Sequents Brain-dead Posix implement.
+				 * Also #define SYSV
+				 */
+#undef	SOL20			/* Solaris2 */
 
 /* Do these work? I dunno... */
 
@@ -52,7 +56,7 @@
  * If you get loader errors about unreferenced function calls, you must
  * define the following accordingly:
  */
-#if defined(NEXT) || defined(HPUX)
+#if defined(NEXT) || defined(HPUX) || defined(AIX)
 #undef	NEED_STRERROR
 #else
 #define	NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
@@ -64,7 +68,8 @@
 #undef	NEED_INET_ADDR  	/* You need inet_addr(3)	*/
 #undef	NEED_INET_NTOA  	/* You need inet_ntoa(3)	*/
 #undef	NEED_INET_NETOF 	/* You need inet_netof(3)	*/
-#undef	NEED_STRCASECMP		/* You need strcasecmp(3s)	*/
+#undef	NEED_STRCASECMP		/* Your libc.a does not have strcasecmp(3s)
+				 * which also implies strncasecmp(3s) */
 /*
  * NOTE: On some systems, valloc() causes many problems.
  */
@@ -78,14 +83,16 @@
  * action when a signal is trapped. BSD signals are by reliable.
  */
 #define	BSD_RELIABLE_SIGNALS
-
 /*
  * if you are on a sysv-ish system, your signals arent reliable.
  */
 #undef	SYSV_UNRELIABLE_SIGNALS
-
 /*
- * define POSIX_SIGNALS if your system has the POSIX signal library.
+ * Define POSIX_SIGNALS if your system has the POSIX signal library.
+ *
+ * Dynix/ptx users should define this and not the others above as well as
+ * DYNIXPTX above.
+ *
  * POSIX_SIGNALS are RELIABLE. NOTE: these may *NOT* be used automatically
  * by your system when you compile so define here to make sure.
  */
@@ -98,6 +105,17 @@
 				     compiled, which attempts to remove this
 				     behaviour (apollo sr10.1/bsd4.3 needs
 				     this) */
+
+/*
+ * If your host supports varargs and has vsprintf(), vprintf() and vscanf()
+ * C calls in its library, then you can define USE_VARARGS to use varargs
+ * instead of imitation variable arg passing.
+#undef	USE_VARARGS
+ * NOTE: with current server code, varargs doesn't survive because it can't
+ *       be used in a chain of 3 or more funtions which all have a variable
+ *       number of params.  If anyone has a solution to this, please notify
+ *       the maintainer.
+ */
 
 #define	DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
 
@@ -112,28 +130,40 @@
  *
  * NOTE: These *ONLY* apply to the irc client in this package
  */
-
 #define	HAVECURSES		/* If you have curses, and want to use it.  */
 #undef	HAVETERMCAP		/* If you have termcap, and want to use it. */
 
+#ifdef notdef
 /* Define NPATH if you want to run NOTE system. Be sure that this file is
  * either not present or non empty (result of previous size). If it is empty,
  * then remove it before starting the server.
  * The file is for request save/backup.
  */
-/* #define NPATH "/usr/lib/irc/.ircdnote" /* */
+#define NPATH "/usr/lib/irc/.ircdnote"
+#endif
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
+#define	DPATH	"/home/soft/src/irc/ircd"	/* dir where all ircd stuff is */
+#define	SPATH	"/home/disuns2/usr/public/bin/ircd/ircd"	/* path to server executeable */
+#define	CPATH	"ircd.conf"	/* server configuration file */
+#define	MPATH	"ircd.motd"	/* server MOTD file */
+#define	LPATH	"/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
+#define	PPATH	"ircd.pid"	/* file for server pid */
 
-#define	SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
-#define	CPATH "/usr/local/lib/ircd.conf" /* IRC configuration file.  */
-#define	MPATH "/usr/local/lib/ircd.motd" /* message of the day file. */
-#define	LPATH "/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
-#define	PPATH "/usr/local/lib/ircd.pid" /* where the server's pid is */
+/* CHROOTDIR
+ *
+ * Define for value added security if you are a rooter.
+ *
+ * All files you access must be in the directory you define as DPATH.
+ * (This may effect the PATH locations above, though you can symlink it)
+ *
+ * You may want to define IRC_UID and IRC_GID
+ */
+#undef CHROOTDIR
 
 /* ENABLE_SUMMON
  *
@@ -142,9 +172,8 @@
  * won't work, or simply don't want local users to be summoned, undefine
  * this.
  */
-
 #undef	ENABLE_SUMMON	/* local summon */
-#define	ENABLE_USERS	/* enables local /users (same as who/finger output) */
+#undef	ENABLE_USERS	/* enables local /users (same as who/finger output) */
 
 /* SHOW_INVISIBLE_LUSERS
  *
@@ -160,16 +189,21 @@
  * mode "i" (i == invisible). Invisibility means people dont showup in
  * WHO or NAMES unless they are on the same channel as you.
  */
-#undef	NO_DEFAULT_INVISIBLE
+#define	NO_DEFAULT_INVISIBLE
 
 /* OPER_KILL
  *
  * If you dont believe operators should be allowed to use the /KILL command
  * or believe it is uncessary for them to use it, then leave OPER_KILL
  * undefined. This will not affect other operators or servers issuing KILL
- * commands however.
+ * commands however.  OPER_REHASH and OPER_RESTART allow operators to
+ * issue the REHASH and RESTART commands when connected to your server.
+ * Left undefined they increase the security of your server from wayward
+ * operators and accidents.
  */
-#undef	OPER_KILL
+#define	OPER_KILL
+#define	OPER_REHASH
+#define	OPER_RESTART
 
 /* MAXIMUM LINKS
  *
@@ -198,8 +232,7 @@
  * a server is in class 0 (the default class if none is set).
  *
  */
-
-#define MAXIMUM_LINKS 1
+#define MAXIMUM_LINKS 100
 
 /*
  * If your server is running as a a HUB Server then define this.
@@ -207,7 +240,7 @@
  * to a leaf which just has 1 server (typically the uplink). Define this
  * correctly for performance reasons.
  */
-#undef	HUB
+#define	HUB
 
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
@@ -219,7 +252,6 @@
  *
  * The default is no R_LINES as most people probably don't need it. --Jto
  */
-
 #undef	R_LINES
 
 #ifdef	R_LINES
@@ -245,12 +277,18 @@
 #undef	CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
+ * To use m4 as a preprocessor on the ircd.conf file, define M4_PREPROC.
+ * The server will then call m4 each time it reads the ircd.conf file,
+ * reading m4 output as the server's ircd.conf file.
+ */
+#undef	M4_PREPROC
+
+/*
  * Define this filename to maintain a list of persons who log
  * into this server. Logging will stop when the file does not exist.
  * Logging will be disable also if you do not define this.
  */
-
-/*#define FNAME_USERLOG "/usr/local/lib/ircd/userlog" /* */
+/* #define FNAME_USERLOG "/usr/local/lib/irc/users" */
 
 /*
  * If you wish to have the server send 'vital' messages about server
@@ -260,9 +298,9 @@
  * this option is used unless you tell the system administrator beforehand
  * and obtain their permission to send messages to the system log files.
  */
-
 #undef	USE_SYSLOG
 
+#ifdef USE_SYSLOG
 /*
  * If you use syslog above, you may want to turn some (none) of the
  * spurious log messages for KILL/SQUIT off.
@@ -278,15 +316,7 @@
  * this define.
  */
 #define LOG_FACILITY LOG_DAEMON
-
-/*
- * If you want your server to be paranoid about IP# lookup, define GETHOST
- * so that a gethostbyname() is done for each gethostbyaddr() which returns
- * a hostname. If your system already has paranoid calls (SunOS 4.1.1 or
- * later) #undef this. The resolv and resolv+ libraries from Berkeley are
- * *NOT* paranoid about hostname lookups in this way.
- */
-#undef	GETHOST
+#endif /* USE_SYSLOG */
 
 /*
  * define this if you want to use crypted passwords for operators in your
@@ -295,15 +325,32 @@
 #define	CRYPT_OPER_PASSWORD
 
 /*
+ * If you want to store encrypted passwords in N-lines for server links,
+ * define this.  For a C/N pair in your ircd.conf file, the password
+ * need not be the same for both, as long as hte opposite end has the
+ * right password in the opposite line.  See INSTALL doc for more details.
+ */
+#define	CRYPT_LINK_PASSWORD
+
+/*
  * define this if you enable summon and if you want summon to look for the
  * least idle tty a user is logged in on.
  */
-#undef	LEAST_IDLE
+#define	LEAST_IDLE
+
+/*
+ * IDLE_FROM_MSG
+ *
+ * Idle-time nullified only from privmsg, if undefined idle-time
+ * is nullified from everything except ping/pong.
+ * Added 3.8.1992, kny@cs.hut.fi (nam)
+ */
+#define IDLE_FROM_MSG
 
 /*
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
-#define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
+#define MAXSENDQLENGTH 2000000    /* Recommended value: 100000 for leaves */
                                  /*                    200000 for backbones */
 
 /*
@@ -323,58 +370,54 @@
  * use our ctype, but make sure yours understands { is lower case [, and
  * so on for }] and |\.
  */
-
 #define USE_OUR_CTYPE
-
-/*
- * DNS.
- *
- * It is *very* important that if you are running an IRC server that the
- * DNS (Domain Name Service) libraries work properly and that it be correctly
- * setup on your host. However, on many hosts, its run with improper
- * configurations. A simple test is to run the "hostname" command at any
- * shell prompt. If it returns your FULL hostname (ie has your domainname in
- * it) then it should be working and setup correctly. If not, then you *MUST*
- * #define the following. If while running your server, you get clients which
- * connect as just "host" with no ".local.domain" then you should also define
- * this. There is nothing wrong with defining it just to be safe except that
- * some operating systems may have compile time errors.
- */
-#define	BAD_DNS
 
 /*
  * use these to setup a Unix domain socket to connect clients/servers to.
  */
-#undef	UNIXPORT
+#define	UNIXPORT
 
 /*
- * define IDENT to use the RFC931 identification server to verify usernames
- * note that you also need to edit ircd/Makefile to link (or not link) in
- * the authuser library code.
+ * IRC_UID
  *
- * AUTHTIMEOUT is the number of seconds to time out a connection that neither
- * accepts or refuses.  3s is good.  Most sites will either accept within a
- * short time frame, or refuse immediately.
- *
- * RFC931 servers are available on ftp.lysator.liu.se (for Suns, HPs, some
- * others -- pidentd-1.7 is the most recent version as of 920519) and also
- * ftp.uu.net (networking/authd/rfc931-authd.3.01.shar.Z -- this is far more
- * portable than pidentd, but slower)
- *
- * #defining IDENT adds an additional measure of security by making it harder
- * to spoof usernames with hacked clients and/or telnet-to-the-port.
- *
- * I recommend defining IDENT and leaving AUTHTIMEOUT at 3.  -ckd@eff.org
+ * If you start the server as root but wish to have it run as another user,
+ * define IRC_UID to that UID.  This should only be defined if you are running
+ * as root and even then perhaps not.
  */
-#undef	IDENT
-#ifdef	IDENT
-#define	AUTHTIMEOUT 3
-#endif /* IDENT */
+#define	IRC_UID
+#define	IRC_GID
+
+#ifdef	notdef
+#define	IRC_UID	115	/* eg for what to do to enable this feature */
+#define	IRC_GID	115
+#endif
+
+/* Default server for standard client */
+#define	UPHOST	"disuns2.epfl.ch"
+
+/* Define this if you want the server to accomplish ircII standard */
+/* Sends an extra NOTICE in the beginning of client connection     */
+#define	IRCII_KLUDGE
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
 /* You shouldn't change anything below this line, unless absolutely needed. */
 
+#ifdef  OPER_KILL
+/* LOCAL_KILL_ONLY
+ *
+ * To be used, OPER_KILL must be defined.
+ * LOCAL_KILL_ONLY restricts KILLs to clients which are connected to the
+ * server the Operator is connected to (ie lets them deal with local
+ * problem users or 'ghost' clients
+ *
+ * NOTE: #define'ing this on an IRC net with servers which have a version
+ *	 earlier than 2.7 is prohibited.  Such an action and subsequent use
+ *	 of KILL for non-local clients should be punished by removal of the
+ *	 server's links (if only for ignoring this warning!).
+ */
+#undef  LOCAL_KILL_ONLY
+#endif
 /*
  * Port where ircd resides. NOTE: This *MUST* be greater than 1024 if you
  * plan to run ircd under any other uid than root.
@@ -390,6 +433,7 @@
  * if you have a lot of server connections, it may be worth splitting the load
  * over 2 or more servers.
  * 1 server = 1 connection, 1 user = 1 connection.
+ * This should be at *least* 3: 1 listen port, 1 dns port + 1 client
  */
 #define MAXCONNECTIONS	50
 
@@ -397,16 +441,17 @@
  * this defines the length of the nickname history.  each time a user changes
  * nickname or signs off, their old nickname is added to the top of the list.
  * The following sizes are recommended:
- * 8MB or less  core memory : 200
- * 8MB-16MB     core memory : 200-300
- * 16MB-32MB    core memory : 300-500
- * 32MB or more core memory : 500+
+ * 8MB or less  core memory : 500	(at least 1/4 of max users)
+ * 8MB-16MB     core memory : 500-750	(1/4 -> 1/2 of max users)
+ * 16MB-32MB    core memory : 750-1000	(1/2 -> 3/4 of max users)
+ * 32MB or more core memory : 1000+	(> 3/4 if max users)
+ * where max users is the expected maximum number of users.
  * (100 nicks/users ~ 25k)
  * NOTE: this is directly related to the amount of memory ircd will use whilst
  *	 resident and running - it hardly ever gets swapped to disk! You can
  *	 ignore these recommendations- they only are meant to serve as a guide
  */
-#define NICKNAMEHISTORYLENGTH 500
+#define NICKNAMEHISTORYLENGTH 1000
 
 /*
  * Time interval to wait and if no messages have been received, then check for
@@ -446,6 +491,11 @@
 #define WRITEWAITDELAY     15	/* Recommended value: 15 */
 
 /*
+ * Number of seconds to wait for a connect(2) call to complete.
+ */
+#define	CONNECTTIMEOUT     30	/* Recommended value: 30 */
+
+/*
  * Max time from the nickname change that still causes KILL
  * automaticly to switch for the current nick of that user. (seconds)
  */
@@ -471,9 +521,32 @@
 #define	CONFIGFILE CPATH
 #define	IRCD_PIDFILE PPATH
 
+#ifdef	ultrix
+#define	ULTRIX
+#endif
+
+#ifdef	hpux
+#define	HPUX
+#endif
+
+#ifdef	sgi
+#define	SGI
+#endif
+
+#ifdef	CLIENT_COMPILE
+#undef	SENDQ_ALWAYS
+#endif
+
 #ifdef DEBUGMODE
+extern	void	debug();
+# define Debug(x) debug x
 # define LOGFILE LPATH
 #else
+# ifdef HPUX
+#  define Debug(x) ;
+# else
+#  define Debug(x) (void)
+# endif
 # if VMS
 #	define LOGFILE "NLA0:"
 # else
@@ -507,17 +580,21 @@
 #define SEQ_NOFILE    128        /* set to your current kernel impl, */
 #endif                           /* max number of socket connections */
 
-#ifdef	BSD_RELIABLE_SIGNALS
-#if defined(SYSV_UNRELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
-error You stuffed up config.h signals #defines use only one.
+#ifdef	DYNIXPTX
+#define	POSIX_SIGNALS
 #endif
+
+#ifdef	BSD_RELIABLE_SIGNALS
+# if defined(SYSV_UNRELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
+error You stuffed up config.h signals #defines use only one.
+# endif
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
 #ifdef	SYSYV_UNRELIABLE_SIGNALS
-#ifdef	POSIX_SIGNALS
+# ifdef	POSIX_SIGNALS
 error You stuffed up config.h signals #defines use only one.
-#endif
+# endif
 #undef	HAVE_RELIABLE_SIGNALS
 #endif
 
@@ -545,6 +622,23 @@ error You stuffed up config.h signals #defines use only one.
 #undef	UNIXPORTPATH
 #endif
 
+/*
+ * Some ugliness for AIX platforms.
+ */
+#ifdef AIX
+# include <sys/machine.h>
+# if BYTE_ORDER == BIG_ENDIAN
+#  define BIT_ZERO_ON_LEFT
+# endif
+# if BYTE_ORDER == LITTLE_ENDIAN
+#  define BIT_ZERO_ON_RIGHT
+# endif
+/*
+ * this one is used later in sys/types.h (or so i believe). -avalon
+ */
+# define BSD_INCLUDES
+#endif
+
 #define Reg1 register
 #define Reg2 register
 #define Reg3 register
@@ -560,4 +654,4 @@ error You stuffed up config.h signals #defines use only one.
 #define Reg13 
 #define Reg14 
 #define Reg15 
-#define Reg16 
+#define Reg16

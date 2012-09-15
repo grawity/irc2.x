@@ -25,6 +25,8 @@ static char sccsid[] = "@(#)res_init.c	6.14.1 (Berkeley) 6/27/90";
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include "config.h"	/* To get #define SOL20		Vesa */
+#include "sys.h"
 #include "nameser.h"
 #include "resolv.h"
 
@@ -56,8 +58,6 @@ res_init()
 	register int n;
 	char buf[BUFSIZ];
 	extern u_long inet_addr();
-	extern char *index();
-	extern char *strcpy(), *strncpy();
 	extern char *getenv();
 	int nserv = 0;    /* number of nameserver records read from file */
 	int norder = 0;

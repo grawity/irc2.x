@@ -17,166 +17,228 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
+CC=/bin/cc
+RM=/bin/rm
+CP=/bin/cp
+TOUCH=/bin/touch
+SHELL=/bin/sh
+BINDIR=/home/sorokin/avalon/ircd
+INSTALL=/usr/bin/install
+
 # IRCDMODE given in top level Makefile, but added here to make sure
 # compilation works if started in ircd subdirectory
 
-CC=cc
-RM=/bin/rm
-SHELL=/bin/sh
-
-IRCDMODE=4711
+IRCDMODE=711
+IRCDDIR=/home/sorokin/avalon/ircd
 INCLUDE=../include
 
 # For MIPS, use the following:
-# CFLAGS= -O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
-CFLAGS= -O -I${INCLUDE}
-#use the following on SUN OS without nameserver libraries inside libc
-##NOTE: most dont have the resolver libraries inside libc
-#IRCDLIBS= -lresolv
+#CFLAGS= -g -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
+# For Irix 4.x (SGI), use the following:
+#CFLAGS= -g -cckr -I${INCLUDE}
+# else just this
+CFLAGS= -g -I${INCLUDE}
+#
+# use the following on SUN OS without nameserver libraries inside libc
+# NOTE: most dont have the resolver libraries inside libc
+IRCDLIBS=
 #
 #on NeXT other than 2.0:
-# IRCDLIBS=-lsys_s
+#IRCDLIBS=-lsys_s
 #
 # HPUX:
-# IRCDLIBS=-lBSD
+#IRCDLIBS=-lBSD
 #
-#and otherwise:
-#IRCDLIBS=
+# Solaris 2.0
+#IRCDLIBS= -lsocket -lnsl
+#
+#When profiling:
+#IRCDLIBS=-lc_p
 
-OBJS=channel.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o class.o hash.o note.o s_misc.o
-
-SRC=channel.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c class.c note.c hash.c s_misc.c authuser.c
+LINTFLAGS=-hba
+#
+# LDFLAGS - flags to send the loader (ld). SunOS users may want to add
+# -Bstatic here.
+#
+#LDFLAGS=-Bstatic
+#
+# RES - if you are missing the resolv library (man 5 resolv.conf), or you
+# experience probems with ip# to hostname lookups for local machines or
+# the server wont compile because _res is missing, uncomment RES.
+# For those who know what these are, if you normally use the resolv+
+# libraries and have setup /etc/resolv.conf, these are fromm resolv+ if they
+# are not part of your system libraries.  In all cases you should try your
+# system libraries before these.
+#
+RES=res_init.o res_comp.o res_mkquery.o
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
            ../common/match.o ../common/parse.o ../common/support.o
 
-COMMONSRC=../common/bsd.c ../common/dbuf.c \
-	  ../common/packet.c ../common/send.c\
-	  ../common/match.c ../common/parse.c ../common/support.c
+OBJS=channel.o class.o hash.o ircd.o list.o res.o s_auth.o s_bsd.o s_conf.o \
+	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_user.o whowas.o \
+	$(RES) $(COMMONOBJS)
 
-RESOBJS= ../res/res_init.o ../res/res_comp.o ../res/res_query.o \
-	../res/res_debug.o ../res/res_mkquery.o ../res/res_send.o \
-	../res/gethostnamadr.o ../res/sethostent.o
+SRC=$(OBJS:%.o=%.c)
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
+COMMONSRC=$(COMMONOBJS:%.o=%.c)
+
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
+	    'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}'
+
 
 all: build
 
 build: ircd
 
-ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
+ircd: $(OBJS) ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAGS) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
-	chmod $(IRCDMODE) ircd
-
-auth: $(OBJS) $(COMMONOBJS) authuser.o ../include/patchlevel.h
-	$(SHELL) version.c.SH
-	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAGS) $(OBJS) $(COMMONOBJS) authuser.o version.o \
-		-o ircd $(IRCDLIBS)
-	chmod $(IRCDMODE) ircd
-
-bindircd: $(RESOBJS) $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
-	$(SHELL) version.c.SH
-	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAGS) $(RESOBJS) $(OBJS) $(COMMONOBJS) version.o \
-		-o ircd $(IRCDLIBS)
-	chmod $(IRCDMODE) ircd
-
-authbind: $(OBJS) $(COMMONOBJS) $(RESOBJS) authuser.o ../include/patchlevel.h
-	$(SHELL) version.c.SH
-	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAgS) $(OBJS) $(COMMONOBJS) $(RESOBJS) authuser.o version.o \
-		-o ircd $(IRCDLIBS)
+	$(CC) $(CFLAGS) $(OBJS) version.o $(LDFLAGS) $(IRCDLIBS) -o ircd
 	chmod $(IRCDMODE) ircd
 
 saber: $(SRC)
 	#load $(SRC) $(COMMONSRC) version.c $(IRCDLIBS)
 
+lint:
+	lint $(LINTFLAGS) -I../include $(SRC) | egrep -v 'sendto_|debug'
+
 ../common/parse.o: ../common/parse.c ../include/msg.h ../include/config.h\
 		   ../include/struct.h ../include/sys.h ../include/numeric.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/bsd.o: ../common/bsd.c ../include/config.h ../include/common.h\
 		 ../include/struct.h ../include/sys.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/dbuf.o: ../common/dbuf.c ../include/config.h ../include/common.h\
 		  ../include/struct.h ../include/dbuf.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/packet.o: ../common/packet.c ../include/config.h ../include/common.h\
 		    ../include/struct.h ../include/msg.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/send.o: ../common/send.c ../include/config.h ../include/common.h\
 		  ../include/struct.h ../include/sys.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/match.o: ../common/match.c ../include/config.h ../include/common.h\
 		   ../include/sys.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 ../common/support.o: ../common/support.c ../include/config.h ../include/sys.h\
 		     ../include/common.h
-	(cd ../common; ${MAKE} build);
+	(cd ../common; $(MAKE) build);
 
-../res/res_init.o: ../res/res_init.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/res_comp.o: ../res/res_comp.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/res_debug.o: ../res/res_debug.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/res_query.o: ../res/res_query.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/res_mkquery.o: ../res/res_mkquery.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/res_send.o: ../res/res_send.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/gethostnamadr.o: ../res/gethostnamadr.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
-../res/sethostent.o: ../res/sethostent.c ../include/resolv.h
-	(cd ../res; ${MAKE} build);
+install: all
+	if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
+		mkdir ${IRCDDIR}; \
+	fi
+	$(INSTALL) -csm ${IRCDMODE} ircd ${BINDIR}
+	$(CP) ../doc/example.conf ${IRCDDIR}
+	$(TOUCH) ${IRCDDIR}/ircd.motd
+	$(RM) -f ${IRCDDIR}/ircd.m4
+	$(TOUCH) ${IRCDDIR}/ircd.m4
+	./buildm4 ${IRCDDIR}
 
-hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
-	../include/config.h
-	@crypt/sums
-	  $(CC) $(CFLAGS) -c hash.c
-	@/bin/mv -f hash.c.old hash.c
 clean:
-	${RM} -f *.o *~ core ircd version.c #* *.bak
+	$(RM) -f *.o *~ core ircd version.c #* *.bak
 
 depend:
 	makedepend -I${INCLUDE} ${SRC}
 
+channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	   ../include/numeric.h ../include/channel.h
+	$(CC) $(CFLAGS) -c channel.c
+
+class.o: ../include/struct.h ../include/class.h ../include/numeric.h \
+	 ../include/common.h class.c
+	$(CC) $(CFLAGS) -c class.c
+
+ircd.o: ircd.c ../include/struct.h ../include/config.h \
+	../include/dbuf.h ../include/numeric.h
+	$(CC) $(CFLAGS) -c ircd.c
+
+list.o: list.c ../include/struct.h ../include/config.h ../include/dbuf.h \
+	../include/sys.h
+	$(CC) $(CFLAGS) -c list.c
+
+res.o: res.c ../include/struct.h ../include/config.h ../include/res.h
+	$(CC) $(CFLAGS) -c res.c
+
+s_bsd.o: s_bsd.c ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 ../include/sys.h
+	$(CC) $(CFLAGS) -c s_bsd.c
+
+s_auth.o: s_auth.c ../include/struct.h ../include/config.h ../include/dbuf.h \
+	  ../include/sys.h
+	$(CC) $(CFLAGS) -c s_auth.c
+
+s_conf.o: s_conf.c ../include/struct.h ../include/config.h \
+	  ../include/numeric.h  ../include/dbuf.h ../include/sys.h
+	$(CC) $(CFLAGS) -c s_conf.c
+
+s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h \
+	   s_debug.c
+	$(CC) $(CFLAGS) -c s_debug.c
+
+s_misc.o: s_misc.c ../include/struct.h ../include/config.h ../include/dbuf.h
+	$(CC) $(CFLAGS) -c s_misc.c
+
+s_user.o: s_user.c ../include/struct.h ../include/config.h \
+	  ../include/dbuf.h ../include/sys.h ../include/channel.h \
+	  ../include/msg.h ../include/numeric.h ../include/whowas.h
+	$(CC) $(CFLAGS) -c s_user.c
+
+s_serv.o: s_serv.c ../include/struct.h ../include/config.h \
+	  ../include/dbuf.h ../include/sys.h ../include/channel.h \
+	  ../include/msg.h ../include/numeric.h ../include/whowas.h
+	$(CC) $(CFLAGS) -c s_serv.c
+
+s_numeric.o: s_numeric.c ../include/config.h ../include/sys.h \
+	     ../include/struct.h ../include/dbuf.h ../include/numeric.h
+	$(CC) $(CFLAGS) -c s_numeric.c
+
+whowas.o: ../include/struct.h ../include/config.h \
+	../include/dbuf.h ../include/sys.h ../include/numeric.h \
+	../include/whowas.h whowas.c
+	$(CC) $(CFLAGS) -c whowas.c
+
+hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
+	../include/config.h s_bsd.c s_serv.c s_user.c channel.c s_misc.c
+	@crypt/sums
+	$(CC) $(CFLAGS) -c hash.c
+	@/bin/rm -f hash.c
+	@/bin/mv -f hash.c.old hash.c
+	@touch hash.o
+
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
 channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h
-channel.o: ../include/numeric.h channel.h
+channel.o: ../include/numeric.h ../include/channel.h
+s_misc.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 ircd.o: ../include/struct.h ../include/config.h
 ircd.o: ../include/dbuf.h ../include/numeric.h
 list.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 list.o: ../include/sys.h
+res.o: ../include/struct.h ../include/config.h ../include/res.h
 s_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_bsd.o: ../include/sys.h
+s_auth.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+s_auth.o: ../include/sys.h
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h
-note.o: ../include/struct.h ../include/numeric.h ../include/config.h
-s_misc.o: ../include/struct.h ../include/config.h ../include/dbuf.h
-s_msg.o: ../include/struct.h ../include/config.h
-s_msg.o: ../include/dbuf.h ../include/sys.h channel.h
-s_msg.o: ../include/msg.h ../include/numeric.h ../include/authuser.h
+s_user.o: ../include/struct.h ../include/config.h
+s_user.o: ../include/dbuf.h ../include/sys.h ../include/channel.h
+s_user.o: ../include/msg.h ../include/numeric.h ../include/whowas.h
+s_serv.o: ../include/struct.h ../include/config.h
+s_serv.o: ../include/dbuf.h ../include/sys.h ../include/channel.h
+s_serv.o: ../include/msg.h ../include/numeric.h ../include/whowas.h
 s_numeric.o: ../include/config.h ../include/sys.h
 s_numeric.o: ../include/struct.h
 s_numeric.o: ../include/dbuf.h ../include/numeric.h
 whowas.o: ../include/struct.h ../include/config.h
 whowas.o: ../include/dbuf.h ../include/sys.h
 whowas.o: ../include/numeric.h
-s_debug.o: ../include/struct.h
-class.o: ../include/struct.h ../include/class.h
+whowas.o: ../include/whowas.h
+s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h
+class.o: ../include/struct.h ../include/class.h ../include/numeric.h
+class.o: ../include/common.h
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h
-res_init.o: ../include/resolv.h ../include/nameser.h
-res_comp.o: ../include/resolv.h ../include/nameser.h
-res_debug.o: ../include/resolv.h ../include/nameser.h
-res_query.o: ../include/resolv.h ../include/nameser.h
-res_mkquery.o: ../include/resolv.h ../include/nameser.h
-res_send.o: ../include/resolv.h ../include/nameser.h
-authuser.o: ../include/authuser.h
+version.o: version.c.SH

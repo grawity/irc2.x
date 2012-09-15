@@ -25,7 +25,7 @@
  * inital name server(s) to query and the domain search list.
  */
 
-#ifndef _PATH_RESCONF
+#ifndef	_PATH_RESCONF
 #define _PATH_RESCONF        "/etc/resolv.conf"
 #endif
 
@@ -47,10 +47,10 @@ struct state {
 	int	nscount;		/* number of name servers */
 	struct	sockaddr_in nsaddr_list[MAXNS];	/* address of name server */
 #define	nsaddr	nsaddr_list[0]		/* for backward compatibility */
-	u_short	id;			/* current packet id */
+	unsigned short	id;			/* current packet id */
 	char	defdname[MAXDNAME];	/* default domain */
 	char	*dnsrch[MAXDNSRCH+1];	/* components of domain to search */
-	u_short	order[MAXSERVICES+1];	/* search service order */
+	unsigned short	order[MAXSERVICES+1];	/* search service order */
 };
 
 #define RES_SERVICE_NONE	0
@@ -75,3 +75,4 @@ struct state {
 
 extern struct state _res;
 extern char *p_cdname(), *p_rr(), *p_type(), *p_class(), *p_time();
+

@@ -19,15 +19,16 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-char numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
+#ifndef lint
+static  char sccsid[] = "@(#)s_numeric.c	2.11 12/20/92 (C) 1988 University of Oulu, \
+Computing Center and Jarkko Oikarinen";
+#endif
 
 #include "struct.h"
 #include "common.h"
 #include "sys.h" 
 #include "numeric.h"
-
-extern aClient *find_client();
-extern aChannel *find_channel();
+#include "h.h"
 
 static char buffer[1024];
 
@@ -51,11 +52,11 @@ int	numeric;
 aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
-    {
+{
 	aClient *acptr;
 	aChannel *chptr;
-	char *nick, *p;
-	int i;
+	char	*nick, *p;
+	int	i;
 
 	if (parc < 1 || !IsServer(sptr))
 		return 0;
@@ -74,11 +75,11 @@ char	*parv[];
 	    {
 		for (i = 2; i < (parc - 1); i++)
 		    {
-			strcat(buffer, " ");
-			strcat(buffer, parv[i]);
+			(void)strcat(buffer, " ");
+			(void)strcat(buffer, parv[i]);
 		    }
-		strcat(buffer, " :");
-		strcat(buffer, parv[parc-1]);
+		(void)strcat(buffer, " :");
+		(void)strcat(buffer, parv[parc-1]);
 	    }
 	for (; nick = strtoken(&p, parv[1], ","); parv[1] = NULL)
 	    {

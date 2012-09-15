@@ -18,29 +18,30 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-char screen_id[] = "screen.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char screen_id[] = "screen.c v2.0 (c) 1988 University of Oulu, Computing\
+ Center and Jarkko Oikarinen";
 
 #include <stdio.h>
 #include <curses.h>
 #include "struct.h"
 #include "common.h"
 
-#define SBUFSIZ 240
+#define	SBUFSIZ 240
 
-#define FROM_START 0
-#define FROM_END   1
-#define RELATIVE   2
+#define	FROM_START 0
+#define	FROM_END   1
+#define	RELATIVE   2
 
-#define HIST_SIZ 1000
+#define	HIST_SIZ 1000
 
-static char last_line[SBUFSIZ+1];
-static char yank_buffer[SBUFSIZ+1];
-static char history[HIST_SIZ][SBUFSIZ+1];
-static int position=0;
-static int pos_in_history=0;
+static	char	last_line[SBUFSIZ+1];
+static	char	yank_buffer[SBUFSIZ+1];
+static	char	history[HIST_SIZ][SBUFSIZ+1];
+static	int	position = 0;
+static	int	pos_in_history = 0;
 
-int insert=1;  /* default to insert mode */
-               /* I want insert mode, thazwhat emacs does ! //jkp */
+int	insert = 1;	/* default to insert mode */
+			/* I want insert mode, thazwhat emacs does ! //jkp */
 
 extern int termtype;
 

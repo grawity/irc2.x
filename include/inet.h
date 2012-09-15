@@ -23,7 +23,7 @@
 
 #ifdef __STDC__
 extern unsigned long inet_addr(char *);
-extern char *inet_ntoa(struct in_addr);
+extern char *inet_ntoa(char *);
 extern struct in_addr inet_makeaddr(int , int);
 extern unsigned long inet_network(char *);
 extern unsigned long inet_lnaof(struct in_addr);

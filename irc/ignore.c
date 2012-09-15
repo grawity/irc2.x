@@ -84,6 +84,7 @@ char *user, *temp;
 	putline("Fatal Error: Cannot allocate memory for ignore buffer");
     }
   }
+  return (0);
 }    
 
 anIgnore *find_ignore(user, para, fromhost)

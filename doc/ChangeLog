@@ -17,6 +17,23 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Mar 29 01:26:16 1993
+
+	* INTSALL	updated.
+	* m4macros	added.
+
+Fri Jan 22 22:49:20 1993
+
+	* INTSALL	updated.
+
+Thu Dec 17 19:41:19 1992  Darren Reed <avalon@coombs.anu.edu.au>
+
+	* general	Well, these docs were updated for 2.7, nobody
+			documented it - must be a general distaste for
+			documentation I'd say :)
+
+			Work on 2.8 documentation slowly creaping along.
+
 Mon Sep 02 17:12:41 1991  Darren Reed <avalon@coombs.anu.edu.au>
 
 	* Documentation brought upto date with new features to 2.6.2

@@ -17,50 +17,67 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-# choose your poison
-CC=cc
-#CC=gcc -traditional
+CC=cc 
 RM=/bin/rm
 INCLUDEDIR=../include
 
+# Default flags:
+CFLAGS= -I$(INCLUDEDIR) -g
+IRCDLIBS=
+IRCLIBS=-lcurses -ltermcap
+#
 # use the following on MIPS:
-# CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
+#CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
+# For Irix 4.x (SGI), use the following:
+#CFLAGS= -g -cckr -I${INCLUDE}
+#
 # on NEXT use:
-# CFLAGS=-bsd -I$(INCLUDEDIR)
-#otherwise this:
-CFLAGS= -I$(INCLUDEDIR) -O
-# with GCC 2.1, you can use this instead
-#CFLAGS= -I$(INCLUDEDIR) -O
-
+#CFLAGS=-bsd -I$(INCLUDEDIR)
 #on NeXT other than 2.0:
-# IRCDLIBS=-lsys_s
+#IRCDLIBS=-lsys_s
 #
-# HPUX: (was IRCDLIBS= -lBSD but apparently its not needed)
-# IRCDLIBS=
+# AIX 370 flags
+#CLFAGS=-D_BSD -Hxa
+#IRCDLIBS=-lbsd
+#IRCLIBS=-lcurses -lcur
 #
-# PCS MUNIX:
-# IRCDLIBS= -lresolv -lbsd -lc_s
+# Dynix/ptx V1.3.1
+#IRCDLIBS= -lsocket -linet -lseq -lnsl
 #
-#and otherwise:
-#IRCDLIBS=
+#use the following on SUN OS without nameserver libraries inside libc
+#IRCDLIBS= -lresolv
+#
+# Solaris 2.0
+#IRCDLIBS= -lsocket -lnsl
+#IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
+
+# LDFLAGS - flags to send the loader (ld). SunOS users may want to add
+# -Bstatic here.
+#
+#LDFLAGS=-Bstatic
 
 # IRCDMODE is the mode you want the binary to be.
-# the 4 at the front is important (allows for setuidness)
+# The 4 at the front is important (allows for setuidness)
 #
 # WARNING: if you are making ircd SUID or SGID, check config.h to make sure
 #          you are not defining CMDLINE_CONFIG 
-IRCDMODE = 4711
+IRCDMODE = 711
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}'\
-	'IRCDMODE=${IRCDMODE}'
+# IRCDDIR must be the same as DPATH in include/config.h
+#
+IRCDDIR=/usr/local/lib/ircd
+
 SHELL=/bin/sh
-# don't make the client by default, it's broken anyway
-SUBDIRS=common ircd # irc
+SUBDIRS=common ircd irc
+BINDIR=/usr/local/bin
+MANDIR=/usr/local/man
+INSTALL=/usr/bin/install
+
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
+            'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}' 'BINDIR=${BINDIR}' \
+            'INSTALL=${INSTALL}' 'IRCLIBS=${IRCLIBS}' 'IRCDDIR=${IRCDDIR}'
 
 all:	build
-
-sun: all
-	IRCDLIBS=-lresolv
 
 server:
 	@echo 'Making server'; cd ircd; ${MAKE} build; cd ..;
@@ -75,28 +92,6 @@ build:
 		${MAKE} build; cd ..;\
 	done
 
-auth:
-	echo "Building common";\
-	cd common;\
-	${MAKE} build;\
-	cd ../ircd;\
-	${MAKE} auth;\
-	cd ..;
-
-bindircd:
-	echo "Building common";\
-	cd common;\
-	${MAKE} build;\
-	cd ../ircd;\
-	${MAKE} bindircd;
-
-authbind:
-	echo "Building common";\
-	cd common;\
-	${MAKE} build;\
-	cd ../ircd;\
-	${MAKE} authbind;
-
 clean:
 	${RM} -f *~ #* core
 	@for i in $(SUBDIRS); do \
@@ -104,10 +99,6 @@ clean:
 		cd $$i;\
 		${MAKE} clean; cd ..;\
 	done
-	@echo "Cleaning res"; cd res; make clean; cd ..;
-
-bindircd: server
-	cd ircd; ${MAKE} bindircd; cd ..;
 
 depend:
 	@for i in $(SUBDIRS); do \
@@ -116,8 +107,15 @@ depend:
 		${MAKE} depend; cd ..;\
 	done
 
-install:
-	echo "Installing...";
+install: all
+	@for i in ircd irc; do \
+		echo "Installing $$i";\
+		cd $$i;\
+		${MAKE} install; cd ..;\
+	done
+	${INSTALL} -c doc/ircd.8 ${MANDIR}/man8
+	${INSTALL} -c doc/irc.1 ${MANDIR}/man1
+
 
 rcs:
 	cii -H -R Makefile common include ircd

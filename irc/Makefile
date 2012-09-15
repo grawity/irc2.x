@@ -27,23 +27,30 @@
 
 # Check the curses libraries if your systems wants them differently...
 
-INCLUDE =../include
+INCLUDE=../include
+DFLAGS =-DCLIENT_COMPILE
+INSTALL=/usr/bin/install
 
 #For MIPS, use this:
-#CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
+#CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE} ${DFLAGS}
 CFLAGS = -g -I${INCLUDE}
 
 # For AIX, use the following:
 #IRCLIBS=-lcurses -lcur
+#
+# Solaris 2.0
+#IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
+#
+# Otherwise
 IRCLIBS=-lcurses -ltermcap
 
-CC=/bin/cc
+#CC=/bin/cc
+CC=cc
 RM=/bin/rm
 OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
-     irc.o screen.o str.o c_debug.o
+     irc.o screen.o str.o c_debug.o ctcp.o
 
-SRC=c_bsd.c c_conf.c c_msg.c c_numeric.c c_version.c edit.c help.c ignore.c\
-     irc.c screen.c str.c c_debug.c
+SRC=(OBJS:%.o=%.c)
 
 COMMONOBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
 
@@ -58,25 +65,74 @@ irc: $(OBJS) $(COMMONOBJS)
 	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(IRCLIBS) $(LIBFLAGS)
 
 parse.o: ../common/parse.c ../include/msg.h
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/parse.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/parse.c
 
 bsd.o: ../common/bsd.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/bsd.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/bsd.c
 
 dbuf.o: ../common/dbuf.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/dbuf.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/dbuf.c
 
 packet.o: ../common/packet.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/packet.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/packet.c
 
 send.o: ../common/send.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/send.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/send.c
 
 match.o: ../common/match.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/match.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/match.c
 
 support.o: ../common/support.c
-	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/support.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ../common/support.c
+
+c_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h c_bsd.c
+	${CC} ${CFLAGS} ${DFLAGS} -c c_bsd.c
+
+c_conf.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	  ../include/sys.h c_conf.c
+	${CC} ${CFLAGS} ${DFLAGS} -c c_conf.c
+
+c_msg.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 ../include/msg.h c_msg.c
+	${CC} ${CFLAGS} ${DFLAGS} -c c_msg.c
+
+c_numeric.o: ../include/config.h ../include/sys.h ../include/struct.h \
+	     ../include/dbuf.h ../include/numeric.h ../include/struct.h \
+	     c_numeric.c
+	${CC} ${CFLAGS} ${DFLAGS} -c c_numeric.c
+
+c_version.o: ../include/patchlevel.h c_version.c ../include/config.h \
+	     ../include/dbuf.h
+	${CC} ${CFLAGS} ${DFLAGS} -c c_version.c
+
+edit.o: ../include/struct.h ../include/config.h ../include/dbuf.h edit.c
+	${CC} ${CFLAGS} ${DFLAGS} -c edit.c
+
+help.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 /usr/include/pwd.h ../include/sys.h help.c help.h
+	${CC} ${CFLAGS} ${DFLAGS} -c help.c
+
+ignore.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 /usr/include/pwd.h ../include/sys.h ignore.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ignore.c
+
+irc.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 ../include/msg.h ../include/sys.h irc.c irc.h
+	${CC} ${CFLAGS} ${DFLAGS} -c irc.c
+
+screen.o: ../include/struct.h ../include/config.h ../include/dbuf.h screen.c
+	${CC} ${CFLAGS} ${DFLAGS} -c screen.c
+
+str.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
+	 ../include/sys.h str.c
+	${CC} ${CFLAGS} ${DFLAGS} -c str.c
+
+swear.o: ../include/struct.h ../include/config.h \
+	 ../include/dbuf.h ../include/sys.h /usr/include/pwd.h swear.c
+	${CC} ${CFLAGS} ${DFLAGS} -c swear.c
+
+c_debug.o: ../include/struct.h c_debug.c
+	${CC} ${CFLAGS} ${DFLAGS} -c c_debug.c
 
 clean:
 	rm -f *.o *~ irc core #* *.bak

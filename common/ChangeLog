@@ -17,19 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-Sun May 24 00:09:36 1992  Darren Reed  <avalon@coombs.anu.edu.au>
-	* send.c, packet.c	For connections accepted from ports which
-				were created via P-lines in the ircd.conf
-				file, the send/receive messages/bytes
-				statistics are kept for each such port as well
-				as being added to the server's total.
-
-	* general comment:
-				many other changes have been made to files
-				here which havent been documented (such as
-				sendq_always changes, changes to dbuf workings,
-				statistical stuff in bsd.c, etc :-()
-
 Mon Sep 02 17:08:43 1991  Darren Reed  <avalon@coombs.anu.edu.au>
 
 	* general comments:

@@ -53,13 +53,13 @@ typedef struct dbuf
 ** keyword...
 ** If it was possible, this would compile to be exactly 1 memory
 ** page in size. 2048 bytes seems to be the most common size, so
-** as long as a pointer is 4 bytes, we get 2044 bytes for buffer
-** data. -avalon
+** as long as a pointer is 4 bytes, we get 2032 bytes for buffer
+** data after we take away a bit for malloc to play with. -avalon
 */
 typedef struct dbufbuf
     {
 	struct dbufbuf *next;	/* Next data buffer, NULL if this is last */
-	char data[2044];	/* Actual data stored here */
+	char data[2032];	/* Actual data stored here */
     } dbufbuf;
 
 /*
@@ -142,3 +142,5 @@ int dbuf_delete PROTO((dbuf *, long int));
 **	allocated buffers and make it empty.
 */
 #define DBufClear(dyn)	dbuf_delete((dyn),DBufLength(dyn))
+
+extern	int	dbuf_getmsg PROTO((dbuf *, char *, int));

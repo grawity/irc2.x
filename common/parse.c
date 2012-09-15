@@ -22,9 +22,10 @@
  * Changed the order of defines...
  */
 
-char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center\
- and Jarkko Oikarinen";
-
+#ifndef lint
+static  char sccsid[] = "@(#)parse.c	2.17 3/29/93 (C) 1988 University of Oulu, \
+Computing Center and Jarkko Oikarinen";
+#endif
 #include "struct.h"
 #include "common.h"
 #define MSGTAB
@@ -32,20 +33,25 @@ char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #undef MSGTAB
 #include "sys.h"
 #include "numeric.h"
+#include "h.h"
 
-extern aClient *client;
-extern aClient *hash_find_client(), *hash_find_server();
+/*
+ * NOTE: parse() should not be called recusively by other fucntions!
+ */
+static	char	*para[MAXPARA+1];
+static	int	cancel_clients PROTO((aClient *, aClient *));
 
 #ifdef CLIENT_COMPILE
-static char sender[NICKLEN+USERLEN+HOSTLEN+3];
-char userhost[USERLEN+HOSTLEN+2];
+static	char	sender[NICKLEN+USERLEN+HOSTLEN+3];
+char	userhost[USERLEN+HOSTLEN+2];
 #else
-static char sender[HOSTLEN+1];
+static	char	sender[HOSTLEN+1];
 #endif
 
+#ifdef	NEED_STRCASECMP
 int	myncmp(str1, str2, n)
-Reg1	u_char	*str1;
-Reg2	u_char	*str2;
+Reg1	unsigned char	*str1;
+Reg2	unsigned char	*str2;
 int	n;
     {
 #ifdef USE_OUR_CTYPE
@@ -68,12 +74,12 @@ int	n;
 **	return	0, if equal
 **		1, if not equal
 */
-int mycmp(s1, s2)
-char *s1;
-char *s2;
+int	mycmp(s1, s2)
+char	*s1;
+char	*s2;
     {
-	Reg1 u_char *str1 = (u_char *)s1;
-	Reg2 u_char *str2 = (u_char *)s2;
+	Reg1 unsigned char *str1 = (unsigned char *)s1;
+	Reg2 unsigned char *str2 = (unsigned char *)s2;
 #ifdef USE_OUR_CTYPE
 	while (toupper(*str2) == toupper(*str1))
 #else
@@ -88,6 +94,7 @@ char *s2;
 	    }
 	return 1;
     }
+#endif
 
 /*
 **  Find a client (server or user) by name.
@@ -100,14 +107,21 @@ char *s2;
 #ifndef CLIENT_COMPILE
 aClient *find_client(name, cptr)
 char	*name;
-aClient *cptr;
+Reg1	aClient *cptr;
     {
-	Reg1 aClient *c2ptr;
+	if (name)
+		cptr = hash_find_client(name, cptr);
 
-	if (name) {
-		c2ptr = hash_find_client(name, cptr);
-		return (c2ptr ? c2ptr : cptr);
-	}
+	return cptr;
+    }
+
+aClient	*find_nickserv(name, cptr)
+char	*name;
+Reg1	aClient *cptr;
+    {
+	if (name)
+		cptr = hash_find_nickserver(name, cptr);
+
 	return cptr;
     }
 
@@ -116,12 +130,14 @@ aClient *find_client(name, cptr)
 char *name;
 aClient *cptr;
     {
-	Reg1 aClient *c2ptr;
+	Reg1 aClient *c2ptr = cptr;
 
-	if (name)
-		for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
-			if (mycmp(name, c2ptr->name) == 0)
-				return c2ptr;
+	if (!name)
+		return c2ptr;
+
+	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
+		if (mycmp(name, c2ptr->name) == 0)
+			return c2ptr;
 	return cptr;
     }
 #endif
@@ -135,26 +151,27 @@ aClient *cptr;
 **	string and the search is the for server and user.
 */
 aClient *find_userhost(user, host, cptr, count)
-char *user, *host;
+char	*user, *host;
 aClient *cptr;
-int *count;
+int	*count;
     {
-	Reg1 aClient *c2ptr;
-	Reg2 aClient *res = (aClient *) 0;
+	Reg1	aClient	*c2ptr;
+	Reg2	aClient	*res = cptr;
 
 	*count = 0;
-	if (user && host)
-	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
-	    if (c2ptr->user)
-	      if (matches(host, c2ptr->user->host) == 0 &&
-		  mycmp(user, c2ptr->user->username) == 0) {
-		(*count)++;
-		res = c2ptr;
-	      }
-	if (res)
-	  return res;
-	else
-	  return cptr;
+	if (user)
+		for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
+		    {
+			if (!MyClient(c2ptr)) /* implies mine and a user */
+				continue;
+			if ((!host || !matches(host, c2ptr->user->host)) &&
+			     mycmp(user, c2ptr->user->username) == 0)
+			    {
+				(*count)++;
+				res = c2ptr;
+			    }
+		    }
+	return res;
     }
 
 /*
@@ -172,56 +189,58 @@ int *count;
 */
 #ifndef CLIENT_COMPILE
 aClient *find_server(name, cptr)
-char *name;
-aClient *cptr;
+char	*name;
+Reg1	aClient *cptr;
 {
-  Reg1 aClient *c2ptr = (aClient *) 0;
-
-  if (name)
-    c2ptr = hash_find_server(name, (aClient *)NULL);
-  return (c2ptr ? c2ptr : cptr);
+	if (name)
+		cptr = hash_find_server(name, cptr);
+	return cptr;
 }
 
 aClient *find_name(name, cptr)
-char *name;
+char	*name;
 aClient *cptr;
 {
-  Reg1 aClient *c2ptr = (aClient *) 0;
+	Reg1 aClient *c2ptr = cptr;
 
-  if (name) {
-    if (c2ptr = hash_find_server(name, (aClient *)NULL))
-      return (c2ptr);
-    if (!index(name, '*'))
-      return (aClient *)NULL;
-    for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) {
-      if (!IsServer(c2ptr) && !IsMe(c2ptr))
-	continue;
-      if (matches(name, c2ptr->name) == 0)
-	break;
-      if (index(c2ptr->name, '*'))
-        if (matches(c2ptr->name, name) == 0)
-          break;
-    }
-  }
-  return (c2ptr ? c2ptr : cptr);
+	if (!name)
+		return c2ptr;
+
+	if (c2ptr = hash_find_server(name, cptr))
+		return (c2ptr);
+	if (!index(name, '*'))
+		return c2ptr;
+	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next)
+	    {
+		if (!IsServer(c2ptr) && !IsMe(c2ptr))
+			continue;
+		if (matches(name, c2ptr->name) == 0)
+			break;
+		if (index(c2ptr->name, '*'))
+			if (matches(c2ptr->name, name) == 0)
+					break;
+	    }
+	return (c2ptr ? c2ptr : cptr);
 }
 #else
-aClient *find_server(name, cptr)
-char *name;
-aClient *cptr;
+aClient	*find_server(name, cptr)
+char	*name;
+aClient	*cptr;
 {
-  Reg1 aClient *c2ptr = (aClient *) 0;
+	Reg1	aClient *c2ptr = cptr;
 
-  if (name) {
-    for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) {
-      if (!IsServer(c2ptr) && !IsMe(c2ptr))
-	continue;
-      if (matches(c2ptr->name, name) == 0 ||
-	  matches(name, c2ptr->name) == 0)
-	break;
-    }
-  }
-  return c2ptr;
+	if (!name)
+		return c2ptr;
+
+	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next)
+	    {
+		if (!IsServer(c2ptr) && !IsMe(c2ptr))
+			continue;
+		if (matches(c2ptr->name, name) == 0 ||
+		    matches(name, c2ptr->name) == 0)
+			break;
+	    }
+	return (c2ptr ? c2ptr : cptr);
 }
 #endif
 
@@ -229,10 +248,12 @@ aClient *cptr;
 **  Find person by (nick)name.
 */
 aClient *find_person(name, cptr)
-char *name;
+char	*name;
 aClient *cptr;
     {
-	aClient *c2ptr = find_client(name, (aClient *)NULL);
+	Reg1	aClient	*c2ptr = cptr;
+
+	c2ptr = find_client(name, c2ptr);
 
 	if (c2ptr != NULL && IsClient(c2ptr) && c2ptr->user)
 		return c2ptr;
@@ -240,21 +261,27 @@ aClient *cptr;
 		return cptr;
     }
 
-int parse(cptr, buffer, length, mptr)
+/*
+ * parse a buffer.
+ *
+ * NOTE: parse() should not be called recusively by any other fucntions!
+ */
+int	parse(cptr, buffer, bufend, mptr)
 aClient *cptr;
-char *buffer;
-int length;
-struct Message *mptr;
+char	*buffer, *bufend;
+struct	Message *mptr;
     {
-	aClient *from = cptr;
-	Reg2 char *ch;
-	char *ch2, *para[MAXPARA+1];
-	int len, i, numeric, paramcount;
+	Reg1	aClient *from = cptr;
+	Reg2	char *ch, *s;
+	Reg3	int	len, i, numeric, paramcount;
 
-	debug(DEBUG_DEBUG,"Parsing: %s",buffer);
-	*sender = '\0';
-	for (ch = buffer; *ch == ' '; ch++);
-	para[0] = cptr->name;
+	Debug((DEBUG_DEBUG,"Parsing: %s", buffer));
+
+	s = sender;
+	*s = '\0';
+	for (ch = buffer; *ch == ' '; ch++)
+		;
+	para[0] = from->name;
 	if (*ch == ':')
 	    {
 		/*
@@ -262,24 +289,20 @@ struct Message *mptr;
 		** with SPACE (or NULL, which is an error, though).
 		*/
 		for (++ch, i = 0; *ch && *ch != ' '; ++ch )
-			if (i < sizeof(sender)-1) /* Leave room for NULL */
-				sender[i++] = *ch;
-		sender[i] = '\0';
+			if (s < (sender + sizeof(sender)-1))
+				*s++ = *ch; /* leave room for NULL */
+		*s = '\0';
 #ifdef CLIENT_COMPILE
-		{
-		    Reg1 char *s;
-
-			if (s = index(sender, '!'))
-			    {
-				*s++ = '\0';
-				strncpy(userhost, s, sizeof(userhost));
-			    }
-			else if (s = index(sender, '@'))
-			    {
-				*s++ = '\0';
-				strncpy(userhost, s, sizeof(userhost));
-			    }
-		}
+		if (s = index(sender, '!'))
+		    {
+			*s++ = '\0';
+			(void)strncpy(userhost, s, sizeof(userhost));
+		    }
+		else if (s = index(sender, '@'))
+		    {
+			*s++ = '\0';
+			(void)strncpy(userhost, s, sizeof(userhost));
+		    }
 #endif
 		/*
 		** Actually, only messages coming from servers can have
@@ -292,50 +315,77 @@ struct Message *mptr;
 		** where it's null--the following will handle this case
 		** as "no prefix" at all --msa  (": NOTICE nick ...")
 		*/
-		if (sender[0] != '\0' && IsServer(cptr))
+		if (*sender && IsServer(cptr))
 		    {
-		      from = find_server(sender, (aClient *) NULL);
-		      if (!from || matches(from->name, sender)) {
-			from = find_client(sender, (aClient *)NULL);
-			}
+ 			from = find_client(sender, (aClient *) NULL);
+			if (!from || matches(from->name, sender))
+				from = find_server(sender, (aClient *)NULL);
+#ifndef	CLIENT_COMPILE
+			else if (!from && index(sender, '@'))
+				from = find_nickserv(sender, (aClient *)NULL);
+#endif
 
-		      para[0] = sender;
+			para[0] = sender;
 
-		      /* Hmm! If the client corresponding to the
-			 prefix is not found--what is the correct
-			 action??? Now, I will ignore the message
-			 (old IRC just let it through as if the
-			 prefix just wasn't there...) --msa
+			/* Hmm! If the client corresponding to the
+			 * prefix is not found--what is the correct
+			 * action??? Now, I will ignore the message
+			 * (old IRC just let it through as if the
+			 * prefix just wasn't there...) --msa
 			 */
-		      if (from == NULL)
-			{
-			  debug(DEBUG_NOTICE,
-				"Unknown prefix (%s) from (%s)",
-				buffer, cptr->name);
-			  return (-1);
-			}
-		      if (from->from != cptr)
-			{
-			  debug(DEBUG_ERROR,
-				"Message (%s) coming from (%s)",
-				buffer, cptr->name);
-			  return (-1);
-			}
+			if (from == NULL)
+			    {
+				Debug((DEBUG_NOTICE,
+					"Unknown prefix (%s) from (%s)",
+					buffer, cptr->name));
+				ircstp->is_unpf++;
+#ifndef	CLIENT_COMPILE
+				/*
+				 * Do kill if it came from a server because
+				 * it means there is a ghost user on the other
+				 * server which needs to be removed. -avalon
+				 */
+				sendto_ops("Killing Unknown prefix %s from %s",
+					sender, get_client_name(cptr, FALSE));
+				sendto_one(cptr,
+					":%s KILL %s :%s (%s(?) <- %s)",
+					me.name, sender, me.name, sender,
+					get_client_name(cptr, FALSE));
+#endif
+				return -1;
+			    }
+			if (from->from != cptr)
+			    {
+				ircstp->is_wrdi++;
+				Debug((DEBUG_ERROR,
+					"Message (%s) coming from (%s)",
+					buffer, cptr->name));
+#ifndef	CLIENT_COMPILE
+				return cancel_clients(cptr, from);
+#else
+				return -1;
+#endif
+			    }
 		    }
 		while (*ch == ' ')
 			ch++;
 	    }
 	if (*ch == '\0')
 	    {
-		debug(DEBUG_NOTICE, "Empty message from host %s:%s",
-		      cptr->name,from->name);
+		ircstp->is_empt++;
+		Debug((DEBUG_NOTICE, "Empty message from host %s:%s",
+		      cptr->name, from->name));
 		return(-1);
 	    }
 	/*
-	** Extract the command code from the packet
+	** Extract the command code from the packet.  Point s to the end
+	** of the command code and calculate the length using pointer
+	** arithmetic.  Note: only need length for numerics and *all*
+	** numerics must have paramters and thus a space after the command
+	** code. -avalon
 	*/
-	ch2 = (char *)index(ch, ' '); /* ch2 -> End of the command code */
-	len = (ch2) ? (ch2 - ch) : strlen(ch);
+	s = (char *)index(ch, ' '); /* s -> End of the command code */
+	len = (s) ? (s - ch) : 0;
 	if (len == 3 &&
 	    isdigit(*ch) && isdigit(*(ch + 1)) && isdigit(*(ch + 2)))
 	    {
@@ -343,12 +393,14 @@ struct Message *mptr;
 		numeric = (*ch - '0') * 100 + (*(ch + 1) - '0') * 10
 			+ (*(ch + 2) - '0');
 		paramcount = MAXPARA;
+		ircstp->is_num++;
 	    }
 	else
 	    {
+		if (s)
+			*s++ = '\0';
 		for (; mptr->cmd; mptr++) 
-			if (myncmp(mptr->cmd, ch, len) == 0 &&
-			    strlen(mptr->cmd) == len)
+			if (mycmp(mptr->cmd, ch) == 0)
 				break;
 
 		if (!mptr->cmd)
@@ -364,71 +416,82 @@ struct Message *mptr;
 			** Hm, when is the buffer empty -- if a command
 			** code has been found ?? -Armin
 			*/
-			if (buffer[0] != '\0') {
-			  if (IsPerson(from))
-			    sendto_one(from,
-				       ":%s %d %s %s :Unknown command",
-				       me.name, ERR_UNKNOWNCOMMAND,
-				       from->name, ch);
-			  /*
-                          ** This concerns only client ... --Armin
-			  */
-			  if (me.user)
-			    debug(DEBUG_ERROR,
-				  "*** Error: %s %s from server",
-				  "Unknown command", ch);
-			}
+			if (buffer[0] != '\0')
+			    {
+				if (IsPerson(from))
+					sendto_one(from,
+					    ":%s %d %s %s :Unknown command",
+					    me.name, ERR_UNKNOWNCOMMAND,
+					    from->name, ch);
+#ifdef	CLIENT_COMPILE
+				/*
+				** This concerns only client ... --Armin
+				*/
+				if (me.user)
+					Debug((DEBUG_ERROR,
+						"*** Error: %s %s from server",
+						"Unknown command", ch));
+#endif
+			    }
+			ircstp->is_unco++;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
+		i = bufend - ((s) ? s : ch);
+		mptr->bytes += i;
 		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr)))
-		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
-				      * (on average) to prevent dumping.
-				      * to keep the response rate up,
-				      * bursts of up to 5 msgs are allowed--SRB
-				      */
+			cptr->since += i / 120;
+					/* Allow only 1 msg per 2 seconds
+					 * (on average) to prevent dumping.
+					 * to keep the response rate up,
+					 * bursts of up to 5 msgs are allowed
+					 * -SRB
+					 */
 	    }
 	/*
 	** Must the following loop really be so devious? On
 	** surface it splits the message to parameters from
 	** blank spaces. But, if paramcount has been reached,
 	** the rest of the message goes into this last parameter
-	** (about same effect as ":" has...) Prime example is
-	** the SERVER message (2 parameters). --msa
+	** (about same effect as ":" has...) --msa
 	*/
 
-	/* Note initially true: ch2==NULL || *ch2 == ' ' !! */
+	/* Note initially true: s==NULL || *(s-1) == '\0' !! */
 
+#ifdef	CLIENT_COMPILE
 	if (me.user)
 		para[0] = sender;
+#endif
 	i = 0;
-	if (ch2 != NULL)
+	if (s)
 	    {
 		if (paramcount > MAXPARA)
 			paramcount = MAXPARA;
 		for (;;)
 		    {
-			while (*ch2 == ' ')
-				/*
-				** Never "FRANCE " again!! ;-) Clean
-				** out *all* blanks.. --msa
-				*/
-				*ch2++ = '\0';
-			if (*ch2 == '\0')
+			/*
+			** Never "FRANCE " again!! ;-) Clean
+			** out *all* blanks.. --msa
+			*/
+			while (*s == ' ')
+				*s++ = '\0';
+
+			if (*s == '\0')
 				break;
-			if (*ch2 == ':')
+			if (*s == ':')
 			    {
 				/*
 				** The rest is single parameter--can
 				** include blanks also.
 				*/
-				para[++i] = ch2 + 1;
+				para[++i] = s + 1;
 				break;
 			    }
-			para[++i] = ch2;
+			para[++i] = s;
 			if (i >= paramcount)
 				break;
-			for (; *ch2 != ' ' && *ch2; ch2++);
+			for (; *s != ' ' && *s; s++)
+				;
 		    }
 	    }
 	para[++i] = NULL;
@@ -438,13 +501,19 @@ struct Message *mptr;
 	    {
 		mptr->count++;
 		if (IsRegisteredUser(cptr) &&
+#ifdef	IDLE_FROM_MSG
+		    mptr->func == m_private)
+#else
 		    mptr->func != m_ping && mptr->func != m_pong)
-		  from->user->last = time(NULL);
+#endif
+			from->user->last = time(NULL);
 		return (*mptr->func)(cptr, from, i, para);
 	    }
     }
 
-
+/*
+ * field breakup for ircd.conf file.
+ */
 char	*getfield(newline)
 char	*newline;
 {
@@ -468,3 +537,39 @@ char	*newline;
 	*end = '\0';
 	return(field);
 }
+
+#ifndef	CLIENT_COMPILE
+static	int	cancel_clients(cptr, sptr)
+aClient	*cptr, *sptr;
+{
+	/*
+	 * kill all possible points that are causing confusion here,
+	 * I'm not sure I've got this all right...
+	 * - avalon
+	 */
+	sendto_ops("Message for %s[%s] from %s",
+		   sptr->name, sptr->from->name, get_client_name(cptr, TRUE));
+	/*
+	 * Incorrect prefix for a server from some connection.  If it is a
+	 * client trying to be annoying, just QUIT them, if it is a server
+	 * then the same deal.
+	 */
+	if (IsServer(sptr))
+		return exit_client(cptr, cptr, &me, "Fake Direction");
+	/*
+	 * Ok, someone is trying to impose as a client and things are
+	 * confused.  If we got the wrong prefix from a server, send out a
+	 * kill, else just exit the lame client.
+	 */
+	if (IsServer(cptr))
+	    {
+		sendto_serv_butone(NULL, ":%s KILL %s :%s (%s[%s] != %s)",
+				   me.name, sptr->name, me.name,
+				   sptr->name, sptr->from->name,
+				   get_client_name(cptr, TRUE));
+		sptr->flags |= FLAGS_KILLED;
+		return exit_client(sptr, sptr, &me, "Fake Prefix");
+	    }
+	return exit_client(cptr, cptr, &me, "Fake prefix");
+}
+#endif

@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, lib/ircd/dbuf.c
+ *   IRC - Internet Relay Chat, common/dbuf.c
  *   Copyright (C) 1990 Markku Savela
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,10 @@
 **
 */
 
+#ifndef lint
+static  char sccsid[] = "@(#)dbuf.c	2.6 2/2/93 (C) 1990 Markku Savela";
+#endif
+
 #include <stdio.h>
 #include "config.h"
 #include "common.h"
@@ -62,8 +66,12 @@ static	dbufbuf	*freelist = NULL;
 */
 static dbufbuf *dbuf_alloc()
 {
+#ifdef	VALLOC
 	Reg1	dbufbuf	*dbptr, *db2ptr;
 	Reg2	int	num;
+#else
+	Reg1	dbufbuf *dbptr;
+#endif
 
 	dbufalloc++;
 	if (dbptr = freelist)
@@ -83,9 +91,10 @@ static dbufbuf *dbuf_alloc()
 	if (!dbptr)
 		return (dbufbuf *)NULL;
 
-	for (db2ptr = dbptr; num > 1; num--)
+	num--;
+	for (db2ptr = dbptr; num; num--)
 	    {
-		db2ptr = (dbufbuf *)((char *)dbptr + sizeof(dbufbuf));
+		db2ptr = (dbufbuf *)((char *)db2ptr + sizeof(dbufbuf));
 		db2ptr->next = freelist;
 		freelist = db2ptr;
 	    }
@@ -121,7 +130,7 @@ dbuf *dyn;
 	while ((p = dyn->head) != NULL)
 	    {
 		dyn->head = p->next;
-		free((void *)p);
+		(void)free((char *)p);
 	    }
 	return -1;
     }
@@ -131,7 +140,7 @@ int	dbuf_put(dyn, buf, length)
 dbuf	*dyn;
 char	*buf;
 long	length;
-    {
+{
 	Reg1	dbufbuf	**h, *d;
 	Reg2	int	nbr, off;
 	Reg3	int	chunk;
@@ -217,7 +226,7 @@ long	length;
 	return 0;
     }
 
-long	dbuf_get(dyn,buf,length)
+long	dbuf_get(dyn, buf, length)
 dbuf	*dyn;
 char	*buf;
 long	length;
@@ -230,11 +239,126 @@ long	length;
 	    {
 		if (chunk > length)
 			chunk = length;
-		bcopy(buf,b,(int)chunk);
-		dbuf_delete(dyn,chunk);
+		bcopy(b, buf, (int)chunk);
+		(void)dbuf_delete(dyn, chunk);
 		buf += chunk;
 		length -= chunk;
 		moved += chunk;
 	    }
 	return moved;
     }
+
+/*
+long	dbuf_copy(dyn, buf, length)
+dbuf	*dyn;
+register char	*buf;
+long	length;
+{
+	register dbufbuf	*d = dyn->head;
+	register char	*s;
+	register int	chunk, len = length, dlen = dyn->length;
+
+	s = d->data + dyn->offset;
+	chunk = MIN(DBUFSIZ - dyn->offset, dlen);
+
+	while (len > 0)
+	    {
+		if (chunk > dlen)
+			chunk = dlen;
+		if (chunk > len)
+			chunk = len;
+
+		bcopy(s, buf, chunk);
+		buf += chunk;
+		len -= chunk;
+		dlen -= chunk;
+
+		if (dlen > 0 && (d = d->next))
+		    {
+			chunk = DBUFSIZ;
+			s = d->data;
+		    }
+		else
+			break;
+	    }
+	return length - len;
+}
+*/
+
+/*
+** dbuf_getmsg
+**
+** Check the buffers to see if there is a string which is terminted with
+** either a \r or \n prsent.  If so, copy as much as possible (determined by
+** length) into buf and return the amount copied - else return 0.
+*/
+int	dbuf_getmsg(dyn, buf, length)
+dbuf	*dyn;
+char	*buf;
+register int	length;
+{
+	dbufbuf	*d;
+	register char	*s;
+	register int	dlen;
+	register int	i;
+	int	copy;
+
+getmsg_init:
+	d = dyn->head;
+	dlen = dyn->length;
+	i = DBUFSIZ - dyn->offset;
+	copy = 0;
+	if (d && dlen)
+		s = dyn->offset + d->data;
+	else
+		return 0;
+
+	if (i > dlen)
+		i = dlen;
+	while (length > 0)
+	    {
+		dlen--;
+		if (*s == '\n' || *s == '\r')
+		    {
+			copy = dyn->length - dlen;
+			/*
+			** Shortcut this case here to save time elsewhere.
+			** -avalon
+			*/
+			if (copy == 1)
+			    {
+				(void)dbuf_delete(dyn, 1);
+				goto getmsg_init;
+			    }
+			break;
+		    }
+		length--;
+		if (!--i)
+		    {
+			if (d = d->next)
+			    {
+				s = d->data;
+				i = MIN(DBUFSIZ, dlen);
+			    }
+		    }
+		else
+			s++;
+	    }
+
+	if (copy <= 0)
+		return 0;
+
+	/*
+	** copy as much of the message as wanted into parse buffer
+	*/
+	i = dbuf_get(dyn, buf, MIN(copy, length));
+	/*
+	** and delete the rest of it!
+	*/
+	if (copy - i > 0)
+		(void)dbuf_delete(dyn, copy - i);
+	if (i >= 0)
+		*(buf+i) = '\0';	/* mark end of messsage */
+
+	return i;
+}

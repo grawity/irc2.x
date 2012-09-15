@@ -40,18 +40,22 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-/*
- * Real BSD systems dont have a malloc.h. - avalon
- */
-#if defined(BSD) || defined(MIPS) || defined(pyr) || defined(apollo)
-char *malloc(), *calloc();
-void free();
+#if defined(mips) || defined(pyr) || defined(apollo) || (defined(sequent) &&\
+    !defined(DYNIXPTX)) || defined(__convex__) ||\
+    (defined(BSD) && !defined(sun) && !defined(ultrix))
+char	*malloc(), *calloc();
+void	free();
 #else
 #include <malloc.h>
 #endif
 
-extern	int	matches PROTO((char *, char *)), mycmp PROTO((char *, char *));
-
+extern	int	matches PROTO((char *, char *));
+#ifdef	NEED_STRCASECMP
+extern	int	mycmp PROTO((char *, char *));
+#else
+#define	mycmp	strcasecmp
+#define	myncmp	strncasecmp
+#endif
 #ifdef NEED_STRTOK
 extern	char	*strtok PROTO((char *, char *));
 #endif
@@ -77,12 +81,19 @@ extern int inet_netof PROTO((struct in_addr));
 extern char *myctime PROTO((long));
 extern char *strtoken PROTO((char **, char *, char *));
 
-
-#define MAX(a, b)	((a) > (b) ? (a) : (b))
-#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#if defined(ULTRIX) || defined(SGI) || defined(sequent) || defined(hpux)
+#include <sys/param.h>
+#else
+# ifndef MAX
+#  define MAX(a, b)	((a) > (b) ? (a) : (b))
+# endif
+# ifndef MIN
+#  define MIN(a, b)	((a) < (b) ? (a) : (b))
+# endif
+#endif
 
 #define MyFree(x)       if ((x) != NULL) free(x)
-#define DupString(x,y) do { x = MyMalloc(strlen(y)+1); strcpy(x, y);}while (0)
+#define DupString(x,y) do{x=MyMalloc(strlen(y)+1);(void)strcpy(x,y);}while(0)
 
 #ifdef USE_OUR_CTYPE
 

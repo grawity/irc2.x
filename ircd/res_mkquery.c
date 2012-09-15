@@ -24,6 +24,8 @@ static char sccsid[] = "@(#)res_mkquery.c	6.12 (Berkeley) 6/1/90";
 #include <stdio.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include "config.h"
+#include "sys.h"
 #include "nameser.h"
 #include "resolv.h"
 
@@ -45,12 +47,11 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 	register char *cp;
 	register int n;
 	char *dnptrs[10], **dpp, **lastdnptr;
-	extern char *index();
 
 #ifdef DEBUG
 	if (_res.options & RES_DEBUG)
 		printf("res_mkquery(%d, %s, %d, %d)\n", op, dname, class, type);
-#endif DEBUG
+#endif /*DEBUG*/
 	/*
 	 * Initialize header fields.
 	 */
@@ -185,7 +186,7 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 		hp->ancount = htons(0);
 		break;
 
-#endif ALLOW_UPDATES
+#endif /* ALLOW_UPDATES */
 	}
 	return (cp - buf);
 }

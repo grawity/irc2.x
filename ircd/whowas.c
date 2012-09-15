@@ -23,15 +23,20 @@
  * is referenced like a circular loop. Should be faster and more efficient.
  */
 
+#ifndef lint
+static  char sccsid[] = "@(#)whowas.c	2.12 2/23/93 (C) 1988 Markku Savela";
+#endif
+
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "h.h"
 
 typedef struct aname {
 	anUser	*ww_user;
 	aClient	*ww_online;
-	long	ww_logout;
+	time_t	ww_logout;
 	char	ww_nick[NICKLEN+1];
 	char	ww_info[REALLEN+1];
 } aName;
@@ -40,80 +45,78 @@ typedef struct aname {
 static	aName	was[NICKNAMEHISTORYLENGTH];
 static	int	ww_index = 0;
 
-int add_history(cptr)
-aClient	*cptr;
+void	add_history(cptr)
+Reg1	aClient	*cptr;
 {
 	aName	ntmp;
+	Reg2	aName	*np = &ntmp, *np2;
 
-	strncpyzt(ntmp.ww_nick, cptr->name, NICKLEN+1);
-	strncpyzt(ntmp.ww_info, cptr->info, REALLEN+1);
-	ntmp.ww_user = cptr->user;
-	ntmp.ww_logout = time(NULL);
-	ntmp.ww_online = cptr->from ? cptr : NULL;
-	ntmp.ww_user->refcnt++;
+	strncpyzt(np->ww_nick, cptr->name, NICKLEN+1);
+	strncpyzt(np->ww_info, cptr->info, REALLEN+1);
+	np->ww_user = cptr->user;
+	np->ww_logout = time(NULL);
+	np->ww_online = (cptr->from != NULL) ? cptr : NULL;
+	np->ww_user->refcnt++;
 
-	if (was[ww_index].ww_user)
-		free_user(was[ww_index].ww_user);
+	np2 = &was[ww_index];
+	if (np2->ww_user)
+		free_user(np2->ww_user);
 
-	bcopy(&ntmp, &was[ww_index], sizeof(aName));
+	bcopy((char *)&ntmp, (char *)np2, sizeof(aName));
 
 	ww_index++;
 	if (ww_index >= NICKNAMEHISTORYLENGTH)
 		ww_index = 0;
-	return 0;
+	return;
 }
 
 /*
-** GetHistory
+** get_history
 **      Return the current client that was using the given
 **      nickname within the timelimit. Returns NULL, if no
 **      one found...
 */
 aClient	*get_history(nick, timelimit)
 char	*nick;
-u_long	timelimit;
+time_t	timelimit;
 {
-	Reg1	int	i;
-	aName	*wptr = NULL;
+	Reg1	aName	*wp, *wp2;
 
-	i = ww_index;
+	wp = wp2 = &was[ww_index];
 	timelimit = time(NULL)-timelimit;
 
 	do {
-		if (!mycmp(nick, was[i].ww_nick) &&
-		    was[i].ww_logout >= timelimit)
-		    {
-			wptr = &was[i];
+		if (!mycmp(nick, wp->ww_nick) && wp->ww_logout >= timelimit)
 			break;
-		    }
-		i++;
-		if (i >= NICKNAMEHISTORYLENGTH)
-			i = 0;
-	} while (i != ww_index);
+		wp++;
+		if (wp == &was[NICKNAMEHISTORYLENGTH])
+			wp = was;
+	} while (wp != wp2);
 
-	if (wptr)
-		return (wptr->ww_online);
+	if (wp != NULL)
+		return (wp->ww_online);
 	return (NULL);
 }
 
-int off_history(cptr)
-aClient	*cptr;
+void	off_history(cptr)
+Reg3	aClient	*cptr;
 {
-	Reg1	int	i;
+	Reg1	aName	*wp;
+	Reg2	int	i;
 
-	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
-		if (was[i].ww_online == cptr)
-			was[i].ww_online = (aClient *)NULL;
-	return 0;
+	for (i = NICKNAMEHISTORYLENGTH, wp = was; i; wp++, i--)
+		if (wp->ww_online == cptr)
+			wp->ww_online = NULL;
+	return;
 }
 
-int	init_whowas()
+void	initwhowas()
 {
 	Reg1	int	i;
 
 	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
-		bzero(&was[i], sizeof(aName));
-	return 0;
+		bzero((char *)&was[i], sizeof(aName));
+	return;
 }
 
 
@@ -122,88 +125,88 @@ int	init_whowas()
 **	parv[0] = sender prefix
 **	parv[1] = nickname queried
 */
-int m_whowas(cptr, sptr, parc, parv)
-aClient	*cptr;
-aClient	*sptr;
+int	m_whowas(cptr, sptr, parc, parv)
+aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
-    {
-	Reg1	aName	*nptr = (aName *)NULL;
-	Reg2	int	i, j = 0;
+{
+	Reg1	aName	*wp, *wp2 = NULL;
+	Reg2	int	j = 0;
+	Reg3	anUser	*up = NULL;
 	int	max = -1;
 	char	*p, *nick, *s;
 
  	if (parc < 2)
 	    {
-		sendto_one(sptr, ":%s %d %s :No nickname specified",
-			   me.name, ERR_NONICKNAMEGIVEN, sptr->name);
+		sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
+			   me.name, parv[0]);
 		return 0;
 	    }
 	if (parc > 2)
 		max = atoi(parv[2]);
 	if (parc > 3)
-		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s %s", 3,parc,parv))
+		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s :%s", 3,parc,parv))
 			return 0;
 
 	for (s = parv[1]; nick = strtoken(&p, s, ","); s = NULL)
 	    {
-		i = ww_index - 1;
+		wp = wp2 = &was[ww_index - 1];
 
 		do {
-			if (i < 0)
-				i = NICKNAMEHISTORYLENGTH - 1;
-			if (mycmp(nick, was[i].ww_nick) == 0)
+			if (wp < was)
+				wp = &was[NICKNAMEHISTORYLENGTH - 1];
+			if (mycmp(nick, wp->ww_nick) == 0)
 			    {
-				nptr = &was[i];
-
-				sendto_one(sptr,":%s %d %s %s %s %s * :%s",
-					   me.name, RPL_WHOWASUSER,
-					   parv[0], nptr->ww_nick,
-					   nptr->ww_user->username,
-					   nptr->ww_user->host,
-					   nptr->ww_info);
-				sendto_one(sptr,":%s %d %s %s %s :Signoff: %s",
-					   me.name, RPL_WHOISSERVER,
-					   parv[0], nptr->ww_nick,
-					   nptr->ww_user->server,
-					   myctime(nptr->ww_logout));
-				if (nptr->ww_user->away)
-					sendto_one(sptr,":%s %d %s %s :%s",
-						   me.name, RPL_AWAY,
-						   parv[0], nptr->ww_nick,
-						   nptr->ww_user->away);
+				up = wp->ww_user;
+				sendto_one(sptr, rpl_str(RPL_WHOWASUSER),
+					   me.name, parv[0], wp->ww_nick,
+					   up->username,
+					   up->host, wp->ww_info);
+				sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
+					   me.name, parv[0], wp->ww_nick,
+					   up->server, myctime(wp->ww_logout));
+				if (up->away)
+					sendto_one(sptr, rpl_str(RPL_AWAY),
+						   me.name, parv[0],
+						   wp->ww_nick, up->away);
 				j++;
 			    }
 			if (max > 0 && j >= max)
 				break;
-			i--;
-		} while (i != ww_index - 1);
+			wp--;
+		} while (wp != wp2);
 
-		if (nptr == (aName *)NULL)
-			sendto_one(sptr,
-				   ":%s %d %s %s :There was no such nickname",
-				   me.name, ERR_WASNOSUCHNICK, parv[0],
-				   parv[1]);
+		if (up == NULL)
+			sendto_one(sptr, err_str(ERR_WASNOSUCHNICK),
+				   me.name, parv[0], parv[1]);
+
+		if (p)
+			p[-1] = ',';
 	    }
-	sendto_one(sptr, ":%s %d %s :End of WHOWAS",
-		   me.name, RPL_ENDWHOWAS, parv[0]);
+	sendto_one(sptr, rpl_str(RPL_ENDOFWHOWAS), me.name, parv[0], parv[1]);
 	return 0;
     }
 
 
 #ifdef DEBUGMODE
-int count_whowas_memory(wwu, wwa, wwam)
+void	count_whowas_memory(wwu, wwa, wwam)
 int	*wwu, *wwa;
 u_long	*wwam;
 {
-	int	u = 0, a = 0, i = 0;
+	Reg1	anUser	*tmp;
+	Reg2	int	i, j;
+	int	u = 0, a = 0;
 	u_long	am = 0;
-	anUser	*tmp;
 
 	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
 		if (tmp = was[i].ww_user)
 			if (!was[i].ww_online)
 			    {
+				for (j = 0; j < i; j++)
+					if (was[j].ww_user == tmp)
+						break;
+				if (j < i)
+					continue;
 				u++;
 				if (tmp->away)
 				    {
@@ -215,6 +218,6 @@ u_long	*wwam;
 	*wwa = a;
 	*wwam = am;
 
-	return 0;
+	return;
 }
 #endif

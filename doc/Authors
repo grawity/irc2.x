@@ -77,7 +77,13 @@ Chelsea Ashley Dyerman
 The version 2.5.2 release was coordinated by Christopher Davis, Helen Rose,
 and Tom Hopkins.
 
-The version 2.6.2 and 2.7 releases were coordinated by Darren Reed.
+The versions 2.6.2, 2.7 and 2.8 releases were coordinated by Darren Reed.
+
+Contributions for the 2.8 release from the following people:
+Matthew Green <phone@coombs.anu.edu.au>
+Chuck Kane <ckane@ece.uiuc.edu>
+Matt Lyle <matt@oc.com>
+Vesa Ruokonen <ruokonen@lut.fi>
 
 Markku Savela <Markku.Savela@vtt.fi> / April 1990
 Fixed various bugs in 2.2PL1 release server (2.2msa.4) and changed
@@ -123,7 +129,7 @@ Michael Sandrof <ms5n+@andrew.cmu.edu>
 Jon Solomon <jsol@cs.bu.edu>
 Jan Peterson <jlp@hamblin.math.byu.edu>
 Nathan Glasser <nathan@brokaw.lcs.mit.edu>
-Helen Rose <hrose@cs.bu.edu>
+Helen Rose <hrose@eff.org>
 Mike Pelletier <stealth@caen.engin.umich.edu>
 Basalat Ali Raja <gwydion@tavi.rice.edu>
 Eric P. Scott <eps@toaster.sfsu.edu>
