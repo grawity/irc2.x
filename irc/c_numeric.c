@@ -112,7 +112,8 @@ char *parv[];
 			"You have not joined any channel");
 		break;
             case ERR_NOTONCHANNEL:
-		sprintf(mybuf, "*** Error: %s: %s", parv[0], parv[2]);
+		sprintf(mybuf, "*** Error: %s: %s is not on channel %s",
+			parv[0], parv[2], parv[3]);
 		break;
             case ERR_INVITEONLYCHAN:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
@@ -194,8 +195,8 @@ char *parv[];
 			parv[2]);
 		break;
 	    case RPL_WHOISIDLE:
-		sprintf(mybuf, "*** %s %s %s %s %s %s",
-			parv[2], parv[3], parv[4], parv[5], parv[6], parv[7]);
+		sprintf(mybuf, "*** %s %s %s",
+			parv[2], parv[3], parv[4]);
 		break;
 	    case RPL_LISTSTART:
 		sprintf(mybuf, "*** Chn Users  Name");
@@ -212,7 +213,8 @@ char *parv[];
 		sprintf(mybuf, "*** %s: No Topic is set", parv[0]);
 		break;
 	    case RPL_TOPIC:
-		sprintf(mybuf, "*** %s: Topic is %s", parv[0], parv[2]);
+		sprintf(mybuf, "*** %s: Topic is %s:%s", parv[0], parv[2],
+			parv[3]);
 		break;
 	    case RPL_INVITING:
 		sprintf(mybuf, "*** %s: Inviting user %s into channel %s",
@@ -223,7 +225,7 @@ char *parv[];
 			parv[3], parv[2]);
 		break;
 	    case RPL_KILLDONE:
-		sprintf(mybuf, "*** %s: May %s test in peace",
+		sprintf(mybuf, "*** %s: May %s rest in peace",
 			parv[0], parv[2]);
 		break;
 	    case RPL_INFO:
@@ -252,7 +254,12 @@ char *parv[];
 		sprintf(mybuf, "*** Mode is %s %s %s",
 			parv[2],parv[3],parv[4]);
 		break;
+	    case RPL_LINKS:
+		sprintf(mybuf, "*** Server %s >> %s",
+			parv[2], parv[3]);
+		break;
 	    case RPL_ENDOFWHO:
+	    case RPL_ENDOFWHOIS:
 	    case RPL_ENDOFLINKS:
 	    case RPL_ENDOFNAMES:
 		mybuf[0] = '\0';

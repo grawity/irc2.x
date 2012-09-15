@@ -31,20 +31,27 @@ INCLUDE=../include
 # CFLAGS=-g -systype bsd43 -I${INCLUDE}
 CFLAGS=-g -I${INCLUDE}
 
-# For SunOS without nameserver libraries in libc, use:
+#use the following on SUN OS without nameserver libraries inside libc
 # IRCDLIBS=-lresolv
-# otherwise:
+#
+#on NeXT other than 2.0:
+# IRCDLIBS=-lsys_s
+#
+# HPUX:
+# IRCDLIBS=-lBSD
+#
+#and otherwise:
 IRCDLIBS=
 
 OBJS=channel.o date.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o mail.o class.o
+     whowas.o s_debug.o note.o class.o
 
 SRC=channel.c date.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c mail.c class.c
+     whowas.c s_debug.c note.c class.c
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
-           ../common/match.o ../common/parse.o
+           ../common/match.o ../common/parse.o ../common/support.o
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
@@ -76,6 +83,9 @@ ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 ../common/match.o:
 	(cd ../common; ${MAKE} build);
 
+../common/support.o:
+	(cd ../common; ${MAKE} build);
+
 clean:
 	${RM} -f *.o *~ core ircd version.c #* *.bak
 
@@ -84,7 +94,7 @@ depend:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-mail.o: ../include/struct.h ../include/numeric.h
+note.o: ../include/struct.h ../include/numeric.h
 channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 channel.o: ../include/numeric.h channel.h
 date.o: ../include/struct.h ../include/config.h ../include/dbuf.h

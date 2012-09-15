@@ -1,6 +1,5 @@
 /************************************************************************
  *   IRC - Internet Relay Chat, include/patchlevel.h
- *   Copyright (C) 1990 Chelsea Dyerman
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,5 +16,16 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* $Header: /usr/stud/gruner/src/irc2.6/include/RCS/patchlevel.h,v 2.6 90/11/01 01:45:54 gruner Exp $ */
-#define PATCHLEVEL "2.6pre19"
+/*
+ * $Id: patchlevel.h,v 6.1 1991/07/04 21:04:33 gruner stable gruner $
+ *
+ * $Log: patchlevel.h,v $
+ * Revision 6.1  1991/07/04  21:04:33  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:04  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
+#define PATCHLEVEL "2.6.1"

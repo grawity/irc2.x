@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: class.h,v 6.1 1991/07/04 21:04:24 gruner stable gruner $
+ *
+ * $Log: class.h,v $
+ * Revision 6.1  1991/07/04  21:04:24  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:58  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #ifndef PROTO
 #if __STDC__
 #       define PROTO(x) x

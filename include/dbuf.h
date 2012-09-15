@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: dbuf.h,v 6.1 1991/07/04 21:04:28 gruner stable gruner $
+ *
+ * $Log: dbuf.h,v $
+ * Revision 6.1  1991/07/04  21:04:28  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:01  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #ifndef PROTO
 #ifdef __STDC__
 #	define PROTO(x)	x

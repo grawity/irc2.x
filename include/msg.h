@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: msg.h,v 6.1 1991/07/04 21:04:30 gruner stable gruner $
+ *
+ * $Log: msg.h,v $
+ * Revision 6.1  1991/07/04  21:04:30  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:02  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #define MSG_TEXT     "MSG"
 #define MSG_PRIVATE  "PRIVMSG"
 #define MSG_WHO      "WHO"
@@ -78,7 +90,7 @@ extern int m_topic(), m_invite(), m_version(), m_quit();
 extern int m_server(), m_kill(), m_info(), m_links(), m_summon(), m_stats();
 extern int m_users(), m_nick(), m_error(), m_help(), m_whoreply();
 extern int m_squit(), m_restart(), m_away(), m_die(), m_connect();
-extern int m_ping(), m_pong(), m_oper(), m_pass(), m_wall(), m_trace();
+extern int m_ping(), m_pong(), m_oper(), m_pass(), m_trace();
 extern int m_time(), m_rehash(), m_names(), m_namreply(), m_admin();
 extern int m_linreply(), m_notice(), m_lusers();
 extern int m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
@@ -86,6 +98,7 @@ extern int m_join(), m_part(), m_text(), m_service();
 #ifdef MSG_MAIL
 extern int m_mail();
 #endif
+extern int m_wall();
 
 struct Message {
   char *cmd;
@@ -99,8 +112,8 @@ struct Message {
 #ifdef MSGTAB
 struct Message msgtab[] = {
   { MSG_NICK,    m_nick,     0, 1, 1 },
-  { MSG_TEXT,    m_text,     0, 1, 1 },
   { MSG_PRIVATE, m_private,  0, 2, 1 },
+  { MSG_TEXT,    m_text,     0, 1, 1 },
   { MSG_WHO,     m_who,      0, 1, 0 },
   { MSG_WHOIS,   m_whois,    0, 4, 0 },
   { MSG_WHOWAS,  m_whowas,   0, 4, 0 },
@@ -109,7 +122,7 @@ struct Message msgtab[] = {
   { MSG_LIST,    m_list,     0, 2, 0 },
   { MSG_TOPIC,   m_topic,    0, 1, 1 },
   { MSG_INVITE,  m_invite,   0, 2, 1 },
-  { MSG_JOIN,    m_join,     0, 2, 0 },
+  { MSG_JOIN,    m_join,     0, 6, 0 },
   { MSG_CHANNEL, m_join,     0, 2, 0 },
   { MSG_PART,    m_part,     0, 2, 1 },
   { MSG_VERSION, m_version,  0, 1, 0 },
@@ -117,7 +130,7 @@ struct Message msgtab[] = {
   { MSG_SQUIT,   m_squit,    0, 2, 0 },
   { MSG_KILL,    m_kill,     0, 2, 0 },
   { MSG_INFO,    m_info,     0, 1, 0 },
-  { MSG_LINKS,   m_links,    0, 1, 0 },
+  { MSG_LINKS,   m_links,    0, 2, 0 },
   { MSG_SUMMON,  m_summon,   0, 1, 1 },
   { MSG_STATS,   m_stats,    0, 2, 0 },
   { MSG_USERS,   m_users,    0, 1, 0 },

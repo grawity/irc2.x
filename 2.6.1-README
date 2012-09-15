@@ -44,9 +44,6 @@ To install the new server, there is just a few changes to be made.
   this version is simply something to begin with if you don't happen
   to have other clients available.
 
-  This version was brought to you by jto@tolsun.oulu.fi and send any
-  bug fixes and suggestions to me.
-
   NOTE: This server does *NOT* have MAIL system installed by default.
 
 * Connecting to the ircd network
@@ -77,3 +74,20 @@ To install the new server, there is just a few changes to be made.
      where. This is very important when debugging the irc network.
 
 --Jarkko (jto@oulu.fi)
+
+Bug reports and questions about this version 2.6.1 should be directed to
+
+	    IRC@Informatik.TU-Muenchen.DE
+
+as Jarkko isn't coordinating the release currently.
+
+
+This version is supposed for BUG fixes/cleanup ONLY. Don't expect greater
+enhancements, and please send BUG reports and patches ONLY but no additions
+and enhancements.
+
+It is planned to clean up code and rewrite some sections for better
+code maintenance (2.6.2), this will (hopefully) result in less code as well as
+less CPU time consumption.
+
+--Armin <gruner@informatik.tu-muenchen.de>

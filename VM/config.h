@@ -49,7 +49,7 @@
  
 #define MAXUNKILLS  5
 #define BUFFERLEN 8192
-#define VERSION  "2.6VM"
+#define VERSION  "2.6.1VM"
  
 #define PORTNUM  6667             /* assumed portnumber */
 #define ESC_HI "\35\10"

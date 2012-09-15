@@ -17,6 +17,19 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Tue Jul 02 11:10:26 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* config.h
+	  changed MSG_MAIL to MSG_NOTE as requested by the author.
+
+Mon Jul 01 20:37:38 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* config.h
+	  #define WALL a priori. WALL should be go away in future version.
+
+	* numeric.h
+	  ERR_TOOMANYTARGETS added.
+
 Mon Dec 03 13:56:36 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* config.h

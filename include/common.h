@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: common.h,v 6.1 1991/07/04 21:04:25 gruner stable gruner $
+ *
+ * $Log: common.h,v $
+ * Revision 6.1  1991/07/04  21:04:25  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:59  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x
@@ -60,8 +72,9 @@ extern char *inet_ntoa PROTO((struct in_addr));
 extern int inet_netof PROTO((struct in_addr));
 #endif
 
-extern long time ();
+extern long time();
 extern char *myctime PROTO((long));
+extern char *strtoken PROTO((char **, char *, char *));
 
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 #define MIN(a, b)	((a) < (b) ? (a) : (b))

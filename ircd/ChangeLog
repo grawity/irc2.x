@@ -17,6 +17,90 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Thu Jul 04 20:31:10 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_numeric.c
+	  Changed sptr->name to parv[0]; use strtoken() for loop.
+
+Tue Jul 02 11:11:15 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* ircd.c, channel.c, s_msg.c
+	  changed MSG_MAIL to MSG_NOTE as requested by the author
+	  Fixed m_links(); remote LINKS should work now.
+	* mail.c
+	  Removed mail.c, replaced by new version 1.3pre8, now note.c
+
+Mon Jul 01 20:35:40 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_msg.c
+	  m_notice(), m_text(), m_privmsg() merged to one function.
+	  m_wall() changed. Default is WALL. Should be eliminated
+	  anyways in next version.
+
+	* channel.c
+	  Changed error msgs when parameters from 'l' are missing.
+
+Sun Jun 30 14:53:42 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_msg.c
+	  Major cleanups; Server/host mask msgs moved to NOTICEs.
+	  m_whois changed. For nonexistent nickname an error is created now.
+
+Sat Jun 29 15:46:35 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* s_msg.c
+	  Fixed m_summon error bug
+	  Applied msa'a patches. Fixes ExitOneClient().
+
+	* channel.c
+	  Fixed join ctrl-g bug
+
+Sat Apr 6  19:47:00 1991  Jarkko Oikarinen <jto@tolsun.oulu.fi>
+
+	* Added destination parameter to /links (a'la /whois)
+
+Thu Apr 4  16:01:16 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+      * ircd.c, s_bsd.c
+        Fix SIGHUP - SIGHUP to ircd causes a rehash() finally.
+
+      * c_msg.c
+        Fix KILL from an OPER - pre19 with wildcard match didn't pro-
+        pagate the correct sender. Server kills behind *-domains are
+        still unsolved.
+
+Sun Mar 31 08:57:12 1991  Jarkko Oikarinen <jto@tolsun.oulu.fi>
+
+        * WALL placed under #ifdef. Default is no WALL
+        * Fixed JOIN mode option to accept more parameters
+          like userlimit.
+
+Sun Mar 24 07:43:00 1991  Jarkko Oikarinen <jto@tolsun.oulu.fi>
+
+        * A couple minor bug fixes.
+        * Channel name to ERR_CHANOPRIVSNEEDED and ERR_NOTONCHANNEL.
+
+Sun Mar 17 09:50:12 1991  Jarkko Oikarinen <jto@tolsun.oulu.fi>
+
+        * m_who() numeric RPL_ENDOFWHO (315) for all queries
+        * RPL_ENDOFWHOIS (316) reply added
+        * RPL_ENDOFWHO (315) and RPL_ENDOFWHOIS (316) return
+          the query parameter now as well.
+        * RPL_WHOISIDLE (317) returns the idle time of a particular user.
+        * RPL_NOTOPIC (331), RPL_TOPIC (332) return channel name as a
+          paramater (this has been already added to RPL_CHANNELMODEIS (324))
+        * Limited trace (won't show users on a server) available now for
+          all users
+        * Fix to HuntServer() to make sure loops do not happen.
+        * Added new numeric, ERR_CHANOPRIVSNEEDED (482) which replaces
+          *all* ERR_NOPRIVILEGES (481) messages where the missing privileges
+          were channel operator privileges.
+        * KICK to user not existant on irc now generates
+          ERR_NOTONCHANNEL (442) error reply.
+        * ERR_NOSUCHSERVER (402) returns the server name as a parameter.
+        * ERR_CANNOTSENDTOCHAN (404) now returns the channel name you couldn't
+          send to.
+
 Mon Feb 25 16:08:51 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* s_msg.c

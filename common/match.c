@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: match.c,v 6.1 1991/07/04 21:03:55 gruner stable gruner $
+ *
+ * $Log: match.c,v $
+ * Revision 6.1  1991/07/04  21:03:55  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:49  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #include "config.h"
 #include "common.h"
 #include "sys.h"

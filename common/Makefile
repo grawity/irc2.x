@@ -27,9 +27,9 @@ INCLUDE=../include
 CFLAGS=-O -I${INCLUDE}
 
 
-OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o
+OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
 
-SRC=bsd.c dbuf.c packet.c parse.c send.c match.c
+SRC=bsd.c dbuf.c packet.c parse.c send.c match.c support.c
 
 all: build
 
@@ -43,14 +43,26 @@ depend:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-match.o: ../include/struct.h ../include/sys.h
-bsd.o: ../include/struct.h ../include/config.h
-bsd.o: ../include/dbuf.h
-dbuf.o: ../include/struct.h ../include/config.h ../include/dbuf.h
-dbuf.o: ../include/sys.h
-packet.o: ../include/struct.h ../include/config.h ../include/dbuf.h
-packet.o: ../include/msg.h
-parse.o: ../include/msg.h ../include/struct.h
-parse.o: ../include/config.h ../include/dbuf.h ../include/sys.h
+bsd.o: /usr/include/signal.h /usr/include/sys/errno.h ../include/config.h
+bsd.o: ../include/common.h ../include/sys.h /usr/include/strings.h
+bsd.o: /usr/include/ctype.h /usr/include/pwd.h /usr/include/sys/types.h
+bsd.o: /usr/include/sys/time.h
+dbuf.o: ../include/config.h ../include/common.h ../include/dbuf.h
+dbuf.o: ../include/sys.h /usr/include/strings.h /usr/include/ctype.h
+dbuf.o: /usr/include/pwd.h /usr/include/sys/types.h /usr/include/sys/time.h
+packet.o: ../include/struct.h ../include/config.h ../include/class.h
+packet.o: ../include/dbuf.h ../include/common.h ../include/msg.h
+parse.o: /usr/include/ctype.h ../include/struct.h ../include/config.h
+parse.o: ../include/class.h ../include/dbuf.h ../include/common.h
+parse.o: ../include/msg.h ../include/sys.h /usr/include/strings.h
+parse.o: /usr/include/pwd.h /usr/include/sys/types.h /usr/include/sys/time.h
 parse.o: ../include/numeric.h
-send.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+send.o: ../include/struct.h ../include/config.h ../include/class.h
+send.o: ../include/dbuf.h ../include/common.h
+match.o: ../include/config.h ../include/common.h ../include/sys.h
+match.o: /usr/include/strings.h /usr/include/ctype.h /usr/include/pwd.h
+match.o: /usr/include/sys/types.h /usr/include/sys/time.h
+support.o: /usr/include/sys/errno.h ../include/config.h ../include/common.h
+support.o: ../include/sys.h /usr/include/strings.h /usr/include/ctype.h
+support.o: /usr/include/pwd.h /usr/include/sys/types.h
+support.o: /usr/include/sys/time.h

@@ -1,10 +1,13 @@
-/* $Header: copyright.c,v 2.3 90/04/06 00:28:44 casie Exp $ */
-
 /*
- * $Log:	copyright.c,v $
- * Revision 2.3  90/04/06  00:28:44  casie
- *  alpha release
- * 
+ * $Id: copyright.c,v 6.1 1991/07/04 21:05:14 gruner stable gruner $
+ *
+ * $Log: copyright.c,v $
+ * Revision 6.1  1991/07/04  21:05:14  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:36  gruner
+ * frozen beta revision 2.6.1
+ *
  */
 
 /*
@@ -16,7 +19,7 @@ static char copyright[] =
 "\
    IRC - Internet Relay Chat                                            \n\
    Based on Internet Relay Chat v2.0 by Jarkko Oikarinen		\n\
-   Copyright (C) 1990                                                   \n\
+   Copyright (C) 1990, 1991 by Jarkko Oikarinen                         \n\
                                                                         \n\
    This program is free software; you can redistribute it and/or modify \n\
    it under the terms of the GNU General Public License as published by \n\

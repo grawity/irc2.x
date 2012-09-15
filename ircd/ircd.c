@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: ircd.c,v 6.1 1991/07/04 21:05:17 gruner stable gruner $
+ *
+ * $Log: ircd.c,v $
+ * Revision 6.1  1991/07/04  21:05:17  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:38  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include <sys/types.h>
@@ -43,6 +55,7 @@ char *configfile = CONFIGFILE;	/* Server configuration file */
 int debuglevel = -1;		/* Server debug level */
 int debugtty = 0;
 int autodie = 0;
+static int dorehash = 0;
 char *debugmode = "";		/*  -"-    -"-   -"-  */
 
 int maxusersperchannel = MAXUSERSPERCHANNEL;
@@ -52,19 +65,17 @@ long nextping = -1;		/* same as above for check_pings() */
 
 VOIDSIG terminate()
 {
-#ifdef MSG_MAIL
+#ifdef MSG_NOTE
   save_messages();
 #endif
   exit(-1);
 }
 
-/* Not working yet...
- * static VOIDSIG catch_hup()
- * {
- *   sendto_ops("Got signal SIGHUP, rehashing ircd configuration file.");
- *   rehash();
- * }
- */
+static VOIDSIG catch_hup()
+{
+    dorehash = 1;
+    signal(SIGHUP, catch_hup);	/* sysV -argv */
+}
 
 VOIDSIG restart()
     {
@@ -77,7 +88,7 @@ VOIDSIG restart()
 
 		restarting = 1;
 		sendto_ops("Aieeeee!!!  Restarting server...");
-#ifdef MSG_MAIL
+#ifdef MSG_NOTE
 		save_messages();
 #endif
 	    }
@@ -198,7 +209,7 @@ long currenttime;
 	 ** Note: No need to notify opers here. It's
 	 ** already done when "FLAGS_DEADSOCKET" is set.
 	 */
-	ExitClient((aClient *)NULL, cptr);
+	ExitClient((aClient *)NULL, cptr, &me, "Dead socket");
 	cptr = ncptr; /* NOTICE THIS! */
 	continue;
       }
@@ -248,7 +259,7 @@ long currenttime;
 			 ERR_YOUREBANNEDCREEP,reply);
 	    }
 #endif
-	  ExitClient((aClient *)NULL, cptr);
+	  ExitClient((aClient *)NULL, cptr, &me, "Ping timeout");
 	  cptr = ncptr; /* NOTICE THIS! */
 	  continue;
 	} else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
@@ -305,7 +316,7 @@ char *argv[];
 
 	myargv = argv; umask(077); /* better safe than sorry --SRB */
 	signal(SIGPIPE, SIG_IGN);
-	signal(SIGHUP, restart);
+	signal(SIGHUP, catch_hup);
 	signal(SIGALRM, dummy);   
 	signal(SIGTERM, restart); 
 	signal(SIGINT, terminate);
@@ -422,7 +433,7 @@ char *argv[];
 	me.status = STAT_ME;
 	me.lasttime = me.since = me.firsttime = time(NULL);
 
-#ifdef MSG_MAIL
+#ifdef MSG_NOTE
 	init_messages();
 #endif
 	check_class();
@@ -483,6 +494,14 @@ char *argv[];
 		*/
 		if (now >= nextping)
 			nextping = check_pings(now);
+
+		if (dorehash)
+		    {
+		    sendto_ops(
+		       "Got signal SIGHUP, rehashing ircd configuration file.");
+		    rehash();
+		    dorehash = 0;
+		    }
 	    }
     }
 

@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: send.c,v 6.1 1991/07/04 21:03:59 gruner stable gruner $
+ *
+ * $Log: send.c,v $
+ * Revision 6.1  1991/07/04  21:03:59  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:53  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 16 Jun 1990
  * Added Armin's PRIVMSG patches...
  */
@@ -180,7 +192,7 @@ aChannel *channel;
   Link *link, *tmplink;
   for (link = channel->members; link; link = link->next)
     {
-      if (((aClient *) link->value) == one)
+      if ((((aClient *) link->value)->from) == one)
 	continue;	/* ...was the one I should skip */
       if (MyConnect(((aClient *)link->value)) &&
 	  IsRegisteredUser((aClient *)link->value)) {

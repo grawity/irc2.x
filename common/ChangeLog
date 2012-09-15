@@ -17,7 +17,16 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-Mon Nov 26 10:37:31 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+Sun Jun 30 23:21:50 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* parse.c
+	Changed from->name to sender; Maybe double search can be removed
+
+	* send.c
+	LOOP detected!!
+	Fixed sendto_channel_butone() as suggested by msa.
+	send.c needs TOTAL cleanup.
 
 	* bsd.c
 	Final fixes of inet_netof() and inet_nota()

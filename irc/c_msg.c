@@ -325,19 +325,35 @@ char *parv[];
   char *channel = parv[1],
        *username = parv[2],
        *host = parv[3],
-  /*   *server = parv[4], not used .. --Armin */
+  /*   *server = parv[4], not used .. --argv */
        *nickname = parv[5],
        *away = parv[6],
        *realname = parv[7];
 
-  if (channel[0] != '*')
-    sprintf(mybuf, "%3s:  %-10s %s %s@%s (%s)", channel, nickname, away,
-	    username, host, realname);
-  else if (*away == 'S')
-    sprintf(mybuf, "Chn:  Nickname   S  User@Host, Name");
+  if (*away == 'S')
+    sprintf(mybuf, "  %-13s    %s %-42s %s",
+	"Nickname", "Chan", "Name", "<User@Host>");
   else 
-    sprintf(mybuf, "Prv:  %-10s %s %s@%s (%s)", nickname, away, username,
-	    host, realname);
+    {
+    int i = 50-strlen(realname)-strlen(username);
+    char uh[USERLEN + HOSTLEN + 1];
+
+    if (channel[0] == '*')
+	channel = "";
+
+    if (strlen(host) > i)	/* kludge --argv */
+	{
+	host += strlen(host) - i;
+	}
+
+    sprintf(uh, "%s@%s", username, host);
+
+    sprintf(mybuf, "%c %s%s %*s %s %*s",
+	away[0], nickname, away+1,
+	21-strlen(nickname)-strlen(away), channel,
+	realname, 
+	53-strlen(realname), uh);
+    }
   putline(mybuf);
 }
 

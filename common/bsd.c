@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, lib/ircd/bsd.c
+ *   IRC - Internet Relay Chat, common/bsd.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
  *                      University of Oulu, Computing Center
  *
@@ -16,6 +16,18 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+/*
+ * $Id: bsd.c,v 6.1 1991/07/04 21:03:52 gruner stable gruner $
+ *
+ * $Log: bsd.c,v $
+ * Revision 6.1  1991/07/04  21:03:52  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:47  gruner
+ * frozen beta revision 2.6.1
+ *
  */
 
 char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
@@ -79,149 +91,3 @@ char *str;
 	alarm(0);
 	return(retval);
     }
-
-#if NEED_STRTOK
-/*
-** 	strtok.c --  	walk through a string of tokens, using a set
-**			of separators
-**			ag 9/90
-**
-**	$Id: strtok.c,v 1.1 90/09/15 12:59:51 ag Exp $
-*/
-
-char * strtok(str, fs)
-char *str, *fs;
-{
-	static char *pos = NULL;	/* keep last position across calls */
-	Reg1 char *tmp;
-
-	if (str)
-		pos = str;		/* new string scan */
-
-	while (pos && *pos && index(fs, *pos) != NULL)
-		*pos++ = NULL; 		/* delete & skip leading separators */
-
-	if (!pos || !*pos)
-		return (pos = NULL); 	/* string contains only sep's */
-
-	tmp = pos; 			/* now, keep position of the token */
-
-	while (*pos && index(fs, *pos) == NULL)
-		pos++; 			/* skip content of the token */
-
-	if (*pos)
-		*pos++ = NULL;		/* remove first sep after the token */
-	else	pos = NULL;		/* end of string */
-
-	return(tmp);
-}
-
-#endif /* NEED_STRTOK */
-
-#if NEED_STRERROR
-/*
-**	strerror - return an appropriate system error string to a given errno
-**
-**		   ag 11/90
-**	$Id$
-*/
-
-char *strerror(err_no)
-int err_no;
-{
-	extern char *sys_errlist[];	 /* Sigh... hopefully on all systems */
-	extern int sys_nerr;
-
-	return(err_no > sys_nerr ? 
-		"Undefined system error" : sys_errlist[err_no]);
-}
-
-#endif /* NEED_STRERROR */
-
-#if NEED_INET_NTOA
-/*
-**	inet_ntoa --	returned the dotted notation of a given
-**			internet number (some ULTRIX doesn't have this)
-**			ag 11/90
-**	$Id$
-*/
-
-char *inet_ntoa(in)
-struct in_addr in;
-{
-	static char buf[16];
-
-	(void) sprintf(buf, "%d.%d.%d.%d",
-			    (int)  in.s_net,
-			    (int)  in.s_host,
-			    (int)  in.s_lh,
-			    (int)  in.s_impno);
-
-	return buf;
-}
-#endif /* NEED_INET_NTOA */
-
-#if NEED_INET_ADDR
-/*
-**	inet_addr --	convert a character string
-**			to the internet number
-**		   	ag 11/90
-**	$Id$
-**
-*/
-
-/* netinet/in.h and sys/types.h already included from common.h */
-
-unsigned long inet_addr(host)
-char *host;
-{
-	char hosttmp[16];
-	struct in_addr addr;
-	Reg1 char *tmp;
-	Reg2 int i = 0;
-	extern char *strtok();
-	extern int atoi();
-
-	if (host == NULL)
-		return -1;
-
-	bzero((char *)&addr, sizeof(addr));
-	strncpy(hosttmp, host, sizeof(hosttmp));
-	host = hosttmp;
-
-	for (; tmp = strtok(host, "."); host = NULL) 
-		switch(i++)
-		{
-		case 0:	addr.s_net   = (unsigned char) atoi(tmp); break;
-		case 1:	addr.s_host  = (unsigned char) atoi(tmp); break;
-		case 2:	addr.s_lh    = (unsigned char) atoi(tmp); break;
-		case 3:	addr.s_impno = (unsigned char) atoi(tmp); break;
-		}
-
-	return(addr.s_addr ? addr.s_addr : -1);
-}
-#endif /* NEED_INET_ADDR */
-
-#if NEED_INET_NETOF
-/*
-**	inet_netof --	return the appropriate part of the internet number
-**			to reflect net-class.
-**			ag 11/90
-**	$Id$
-**
-*/
-
-int inet_netof(in)
-struct in_addr in;
-{
-	int addr = in.s_net;
-
-   	if (addr & 0x80 == 0)
-		return ((int) in.s_net);
-
-	if (addr & 0x40 == 0)
-		return ((int) in.s_net * 256 + in.s_host);
-
-	return ((int) in.s_net * 256 + in.s_host * 256 + in.s_lh);
-}
-#endif /* NEED_INET_NETOF */

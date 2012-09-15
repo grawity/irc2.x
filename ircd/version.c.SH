@@ -63,7 +63,7 @@ char *infotext[] =
     {
 	"$package --",
 	"Based on the original code written by Jarkko Oikarinen",
-	"Copyright 1988, 1989, 1990 University of Oulu, Computing Center",
+	"Copyright 1988, 1989, 1990, 1991 University of Oulu, Computing Center",
 	"",
 	"This program is free software; you can redistribute it and/or",
 	"modify it under the terms of the GNU General Public License as",

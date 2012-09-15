@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: whowas.h,v 6.1 1991/07/04 21:04:39 gruner stable gruner $
+ *
+ * $Log: whowas.h,v $
+ * Revision 6.1  1991/07/04  21:04:39  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:08  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x

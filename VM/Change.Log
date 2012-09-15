@@ -17,6 +17,11 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sun Jun 30 20:45:15 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+	* edit.c
+	Changed MSG protocol command into PRIVMSG
+
 Wed Mar 06 16:21:37 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* irc.c, socket.c

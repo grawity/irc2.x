@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: channel.c,v 6.1 1991/07/04 21:05:10 gruner stable gruner $
+ *
+ * $Log: channel.c,v $
+ * Revision 6.1  1991/07/04  21:05:10  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:33  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 09 Jul 1990
  * Bug fix
  */
@@ -214,7 +226,7 @@ aChannel *chptr;
     modebuf[i++] = 'n';
   modebuf[i] = '\0';
   if (chptr->mode.limit)
-    sprintf(&(modebuf[strlen(modebuf)]), " %d", chptr->mode.limit);
+    sprintf(&(modebuf[strlen(modebuf)]), "l %d", chptr->mode.limit);
 }
 
 m_mode(cptr, sptr, parc, parv)
@@ -247,8 +259,8 @@ char *parv[];
 	(IsChanOp(sptr, chptr) && IsMember(sptr, chptr))) {
       mcount = SetMode(sptr, chptr, parc - 2, parv + 2, modebuf, parabuf);
     } else {
-      sendto_one(sptr, ":%s %d %s :You're not channel operator",
-		 me.name, ERR_NOPRIVILEGES, parv[0]);
+      sendto_one(sptr, ":%s %d %s %s :You're not channel operator",
+		 me.name, ERR_CHANOPRIVSNEEDED, parv[0], chptr->chname);
       return -1;
     }
 
@@ -331,8 +343,9 @@ char *parabuf;
 	    }
 	  } else if (MyClient(cptr)) {
 	    sendto_one(cptr,
-		       ":%s %d %s %s :%s is not here", me.name,
-		       ERR_NOTONCHANNEL, cptr->name, parv[0], parv[0]);
+		       ":%s %d %s %s %s :%s is not here", me.name,
+		       ERR_NOTONCHANNEL, cptr->name, parv[0], chptr->chname,
+		       parv[0]);
 	  }
 	} else if (MyClient(cptr))
 	  sendto_one(cptr,
@@ -351,8 +364,8 @@ char *parabuf;
 	  break;
 	}
 	if (MyClient(cptr))
-	  sendto_one(cptr, "ERROR: Number of users on limited channel %s",
-		     "not given...");
+	  sendto_one(cptr, ":%s %d %s :Number of users on limited channel %s",
+	     me.name, ERR_NEEDMOREPARAMS, parv[0], "not given.");
       } else
 	if (whatt == MODE_DEL) {
 	  limitset = 1;
@@ -475,6 +488,21 @@ aChannel *channel;
   return(0);
 }
 
+/*
+** Remove bells and commas from channel name
+*/
+
+static void
+clean_channelname(cn)
+char *cn;
+{
+    for (; *cn; cn++)
+	if (*cn == '\007' || *cn == ' ' || *cn == ',')
+	    {
+	    *cn = '\0';
+	    return;
+	    }
+}
 
 /*
 **  Get Channel block for i (and allocate a new channel
@@ -486,18 +514,10 @@ char *i;
 int flag;
     {
 	Reg1 aChannel *chptr = channel;
-
-	char *ptr = i;
 	int number;
 
 	if (i == (char *) 0)
 		return NullChn;
-
-	while (*ptr) {  /* Remove bells and commas from channel name */
-	  if (*ptr == '\007' || *ptr == ' ' || *ptr == ',')
-	    *ptr = '\0';
-	  ptr++;
-	}
 
 	for ( ; ; chptr = chptr->nextch)
 	    {
@@ -560,7 +580,7 @@ aClient *cptr;
 {
   Invites **inv, *tmp;
   if (cptr->user->invited) {
-    for (inv = &(cptr->user->invited->invites); *inv;
+    for (inv = &(cptr->user->invited->invites); inv && *inv;
 	 inv = &((*inv)->next)) {
       if ((*inv)->user == cptr) {
 	tmp = *inv;
@@ -622,7 +642,6 @@ char *parv[];
     {
 	aChannel *chptr;
 	int i, flags = 0;
-	Reg1 char *ch;
 
 	CheckRegisteredUser(sptr);
 
@@ -633,7 +652,8 @@ char *parv[];
 			   parv[0]);
 		return 0;
 	    }
-	ch = parv[1];
+
+	clean_channelname(parv[1]);
 
 	if (atoi(parv[1]) == 0 && parv[1][0] != '+' && parv[1][0] != '#') {
 	  if (parv[1][0] == '0' && sptr->user->channel) {
@@ -702,7 +722,7 @@ char *parv[];
 	  m_names(cptr, sptr, parc, parv);
 	}
 #endif
-#ifdef MSG_MAIL
+#ifdef MSG_NOTE
 	check_messages(cptr, sptr,sptr->name,'r');
 #endif
 	return 0;
@@ -740,8 +760,9 @@ char *parv[];
 	  return 0;
 	}
 	if (!IsMember(sptr, chptr)) {
-	  sendto_one(sptr, ":%s %d %s %s :You're not on channel",
-		     me.name, ERR_NOTONCHANNEL, parv[0], parv[1]);
+	  sendto_one(sptr, ":%s %d %s %s %s :You're not on channel",
+		     me.name, ERR_NOTONCHANNEL, parv[0], parv[1],
+		     chptr->chname);
 	  return 0;
 	}
 	/*
@@ -790,8 +811,8 @@ char *parv[];
   if (!who) {
     if (MyClient(sptr))
       sendto_one(sptr,
-		 ":%s %d %s %s :%s", me.name,
-		 ERR_NOSUCHNICK, parv[0], parv[2],
+		 ":%s %d %s %s %s :%s", me.name,
+		 ERR_NOTONCHANNEL, parv[0], parv[2], chptr->chname,
 		 "Cannot kick user off channel");
     return 0;
   }
@@ -802,10 +823,10 @@ char *parv[];
 		       chptr->chname, who->name);
     RemoveUserFromChannel(who, chptr);
   } else if (!IsChanOp(sptr, chptr)) {
-    sendto_one(sptr, ":%s %d %s :You're not channel operator",
-	       me.name, ERR_NOPRIVILEGES, parv[0]);
+    sendto_one(sptr, ":%s %d %s %s :You're not channel operator",
+	       me.name, ERR_CHANOPRIVSNEEDED, parv[0], chptr->chname);
   } else
-    sendto_one(sptr, ":%s %d %s %s :isn't on your channel !",
-	       me.name, ERR_NOTONCHANNEL, parv[0], who->name);
+    sendto_one(sptr, ":%s %d %s %s %s :isn't on your channel !",
+	       me.name, ERR_NOTONCHANNEL, parv[0], who->name, chptr->chname);
   return (0);
 }

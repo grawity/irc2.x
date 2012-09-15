@@ -47,7 +47,7 @@ SRC=c_bsd.c c_conf.c c_msg.c c_numeric.c c_version.c edit.c help.c ignore.c\
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o\
            ../common/packet.o ../common/send.o\
-	   ../common/match.o ../common/parse.o
+	   ../common/match.o ../common/parse.o ../common/support.o
 
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
@@ -75,6 +75,9 @@ irc: $(OBJS) $(COMMONOBJS)
 	(cd ../common; ${MAKE} build);
 
 ../common/match.o:
+	(cd ../common; ${MAKE} build);
+
+../common/support.o:
 	(cd ../common; ${MAKE} build);
 
 clean:

@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: channel.h,v 6.1 1991/07/04 21:05:11 gruner stable gruner $
+ *
+ * $Log: channel.h,v $
+ * Revision 6.1  1991/07/04  21:05:11  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:34  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #define CREATE 1	/* whether a channel should be
 			   created or just tested for existance */
 

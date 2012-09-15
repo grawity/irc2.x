@@ -478,12 +478,14 @@ char *buf1, *buf2;
   return (0);
 }
 
+static char *querychannel = "0";
+
 int
 do_mytext(buf1, temp)
 char *buf1, *temp;
 {
-  sendto_one(&me, "MSG :%s", buf1);
-  sprintf(buf,"> %s",buf1);
+  sendto_one(&me, "PRIVMSG %s :%s", querychannel, buf1);
+  sprintf(buf,"%s> %s", querychannel, buf1);
   putline(buf);
   return (0);
 }
@@ -855,3 +857,23 @@ char *ptr, *xtra;
 
 /* Fake routine (it's only in server...) */
 int IsMember() { return 0; }
+
+do_channel(ptr, xtra)
+char *ptr, *xtra;
+{
+    if (BadPtr(ptr))
+	{
+	putline("*** Which channel do you want to join?");
+	return;
+	}
+
+    if (querychannel)
+	free((char *)querychannel);
+
+    if (querychannel = (char *)malloc(strlen(ptr) + 1))
+	strcpy(querychannel, ptr);
+    else
+	querychannel = me.name; /* kludge */
+
+    sendto_one(&me, "%s %s", xtra, ptr);
+}

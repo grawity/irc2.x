@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: sys.h,v 6.1 1991/07/04 21:04:38 gruner stable gruner $
+ *
+ * $Log: sys.h,v $
+ * Revision 6.1  1991/07/04  21:04:38  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:07  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #if HPUX | VMS | AIX
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)

@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: dbuf.c,v 6.1 1991/07/04 21:03:54 gruner stable gruner $
+ *
+ * $Log: dbuf.c,v $
+ * Revision 6.1  1991/07/04  21:03:54  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:48  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 20 Jun 1990
  * extern void free() fixed as suggested by
  * gruner@informatik.tu-muenchen.de

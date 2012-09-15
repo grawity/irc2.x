@@ -19,6 +19,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: s_numeric.c,v 6.1 1991/07/04 21:05:33 gruner stable gruner $
+ *
+ * $Log: s_numeric.c,v $
+ * Revision 6.1  1991/07/04  21:05:33  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:49  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 char numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 
 #include "config.h"
@@ -55,7 +67,7 @@ char *parv[];
     {
 	aClient *acptr;
 	aChannel *chptr;
-	char *nick, *tmp;
+	char *nick, *p;
 	int i;
 
 	if (parc < 1 || !IsServer(sptr))
@@ -78,10 +90,8 @@ char *parv[];
 		strcat(buffer, " :");
 		strcat(buffer, parv[parc-1]);
 	    }
-	for (tmp = parv[1]; (nick = tmp) != NULL && *tmp; )
+	for (; nick = strtoken(&p, parv[1], ","); parv[1] = NULL)
 	    {
-		if (tmp = index(nick, ','))
-			*(tmp++) = '\0';
 		if (acptr = find_client(nick, (aClient *)NULL))
 		    {
 			if (IsMe(acptr))
@@ -90,12 +100,12 @@ char *parv[];
 					  ** ...one might consider sendto_ops
 					  ** here... --msa
 					  */
-			sendto_one(acptr,":%s %d %s%s", sptr->name,
+			sendto_one(acptr,":%s %d %s%s", parv[0],
 				   numeric, nick, buffer);
 		    }
 		else if (chptr = find_channel(nick, (aClient *)NULL))
 			sendto_channel_butone(cptr,chptr,":%s %d %s%s",
-					      sptr->name,
+					      parv[0],
 					      numeric, chptr->chname, buffer);
 	    }
 	return 0;

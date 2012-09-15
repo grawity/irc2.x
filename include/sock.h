@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: sock.h,v 6.1 1991/07/04 21:04:35 gruner stable gruner $
+ *
+ * $Log: sock.h,v $
+ * Revision 6.1  1991/07/04  21:04:35  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:04  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 #ifndef FD_ZERO
 #define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
 #define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))

@@ -17,6 +17,13 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sun Jun 30 14:45:59 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+      * irc.c
+	Removed MSG protocol command. Kludge to get channel msgs working.
+      * msg.c
+	Reformatted WHOERPLY output :)
+
 Wed Nov 28 20:45:42 1990  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
       * c_msg.c

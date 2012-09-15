@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: s_bsd.c,v 6.1 1991/07/04 21:05:25 gruner stable gruner $
+ *
+ * $Log: s_bsd.c,v $
+ * Revision 6.1  1991/07/04  21:05:25  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:43  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 07 Jul 1990
  * Added jlp@hamblin.byu.edu's debugtty fix
  */
@@ -365,7 +377,7 @@ aClient *cptr;
   switch (check_access(cptr, CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER))
     {
     case -1:
-      sendto_ops("NOTICE * :Host %s is not enabled for connecting (N-line)",
+      sendto_ops("Host %s is not enabled for connecting (N-line)",
 		 GetClientName(cptr,FALSE));
       return FALSE;
     case 0:
@@ -491,7 +503,7 @@ ReadMessage(buffer, buflen, from, delay)
       wait.tv_usec = 0;
       nfds = select(FD_SETSIZE, &read_set, &write_set,
 		    (fd_set *) 0, &wait);
-      if (nfds == 0)
+      if (nfds == 0 || (nfds == -1 && errno == EINTR))
 	return 0;
       else if (nfds > 0)
 	break;
@@ -544,7 +556,7 @@ ReadMessage(buffer, buflen, from, delay)
       /* ... if socket was closed (-2 from check_access), then
 	 this message is also misleading, but it shouldn't
 	 really happen... --msa */
-      sendto_ops("NOTICE * :Received unauthorized connection from %s.",
+      sendto_ops("Received unauthorized connection from %s.",
 		 GetClientName(cptr,FALSE));
       close(fd);
       free(cptr);
@@ -561,7 +573,7 @@ ReadMessage(buffer, buflen, from, delay)
 	{
 	  if (IsConnecting(cptr) && !CompletedConnection(cptr))
 	    {
-	      ExitClient(cptr,cptr);
+	      ExitClient(cptr,cptr,&me,"Failed connect?");
 	      return 0; /* Cannot continue loop after exit */
 	    }
 	  /*
@@ -615,7 +627,7 @@ ReadMessage(buffer, buflen, from, delay)
 	  if (nextconnect > aconf->hold)
 	    nextconnect = aconf->hold;
 	}
-      ExitClient(cptr, cptr);
+      ExitClient(cptr, cptr, &me, "Bad link?");
       return 0; /* ...cannot continue loop, blocks freed! --msa */
       /*
        ** Another solution would be to restart the loop from the

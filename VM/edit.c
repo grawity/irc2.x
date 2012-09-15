@@ -124,14 +124,14 @@ char *buf1;
                 }
         }
 }
- 
+
 do_mytext(buf1)
 char *buf1;
 {
   if (!BadPtr(buf1))
-     if (sendto_one(&me, "%s :%s", MSG_TEXT, buf1) == 0)
+     if (sendto_one(&me, "%s %s :%s", MSG_PRIVMSG, meUser.channel, buf1) == 0)
         {
-        sprintf(buf,">%s%s%s", ESC_HI, buf1, ESC_NORM);
+        sprintf(buf,"%s>%s%s%s", meUser.channel, ESC_HI, buf1, ESC_NORM);
         putline(buf);
         }
 }

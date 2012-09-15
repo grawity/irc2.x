@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: parse.c,v 6.1 1991/07/04 21:03:58 gruner stable gruner $
+ *
+ * $Log: parse.c,v $
+ * Revision 6.1  1991/07/04  21:03:58  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:51  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 03 Jun 1990
  * Changed the order of defines...
  */
@@ -211,9 +223,9 @@ struct Message *mptr;
 		      from = find_server(sender, (aClient *) NULL);
 		      if (!from || matches(from->name, sender)) {
 			from = find_client(sender, (aClient *)NULL);
-			para[0] = from->name;
-		      } else
-			para[0] = sender;
+			}
+
+		      para[0] = sender;
 
 		      /* Hmm! If the client corresponding to the
 			 prefix is not found--what is the correct

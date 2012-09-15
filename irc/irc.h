@@ -34,12 +34,12 @@ struct Command {
 
 extern int do_mypriv(), do_cmdch(), do_quote(), do_query();
 extern int do_ignore(), do_help(), do_log(), do_clear();
-extern int do_unkill(), do_bye(), do_server();
+extern int do_unkill(), do_bye(), do_server(), do_channel();
 #ifdef VMSP
-extern int do_channel(), do_bye(), do_exec();
+extern int do_bye(), do_exec();
+#endif
 #ifdef GETPASS
 extern int do_oper();
-#endif
 #endif
 
 struct Command commands[] = {
@@ -62,19 +62,16 @@ struct Command commands[] = {
   { (int (*)()) 0, "PART",    SERVER_CMD, "\0\0", MSG_PART },
   { (int (*)()) 0, "WALL",    SERVER_CMD, "\0\0", MSG_WALL },
   { (int (*)()) 0, "WOPS",    SERVER_CMD, "\0\0", MSG_WALLOPS },
+  { do_channel,    "JOIN",    LOCAL_FUNC, "\0\0", MSG_JOIN },
+  { do_channel,    "CHANNEL", LOCAL_FUNC, "\0\0", MSG_JOIN },
 #ifdef VMSP
   { do_exec,       "EXEC",    LOCAL_FUNC, "\0\0", "EXEC" },
-  { do_channel,    "JOIN",    SERVER_CMD, "\0\0", MSG_JOIN },
-  { do_channel,    "CHANNEL", SERVER_CMD, "\0\0", MSG_JOIN },
   { do_oper,       "OPER",    LOCAL_FUNC, "\0\0", "OPER" },
-#else
-  { (int (*)()) 0, "JOIN",    SERVER_CMD, "\0\0", MSG_JOIN },
-  { (int (*)()) 0, "CHANNEL", SERVER_CMD, "\0\0", MSG_JOIN },
+#endif
 #ifdef GETPASS
   { do_oper,       "OPER",    LOCAL_FUNC, "\0\0", "OPER" },
 #else
   { (int (*)()) 0, "OPER",    SERVER_CMD, "\0\0", MSG_OPER },
-#endif
 #endif
   { (int (*)()) 0, "AWAY",    SERVER_CMD, "\0\0", MSG_AWAY },
   { do_mypriv,     "MSG",     LOCAL_FUNC, "\0\0", MSG_PRIVATE },

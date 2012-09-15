@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: numeric.h,v 6.1 1991/07/04 21:04:31 gruner stable gruner $
+ *
+ * $Log: numeric.h,v $
+ * Revision 6.1  1991/07/04  21:04:31  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:03  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* -- Jto -- 16 Jun 1990
  * A couple of new numerics added...
  */
@@ -33,6 +45,7 @@
 #define ERR_CANNOTSENDTOCHAN 404
 #define ERR_TOOMANYCHANNELS  405
 #define ERR_WASNOSUCHNICK    406
+#define ERR_TOOMANYTARGETS   407
 
 #define ERR_NORECIPIENT      411
 #define ERR_NOTEXTTOSEND     412
@@ -60,6 +73,7 @@
 #define ERR_INVITEONLYCHAN   473
 
 #define ERR_NOPRIVILEGES     481
+#define ERR_CHANOPRIVSNEEDED 482
 
 #define ERR_NOOPERHOST       491
 #define ERR_NOSERVICEHOST    492
@@ -69,12 +83,14 @@
 #define RPL_WHOISUSER        311
 #define RPL_WHOISSERVER      312
 #define RPL_WHOISOPERATOR    313
+
+#define RPL_WHOWASUSER       314
+#define RPL_ENDOFWHO         315
+
 #define RPL_WHOISCHANOP      316
 #define RPL_WHOISIDLE        317
 
-#define RPL_WHOWASUSER       314
-
-#define RPL_ENDOFWHO         315
+#define RPL_ENDOFWHOIS       318
 
 #define RPL_LISTSTART        321
 #define RPL_LIST             322
@@ -90,6 +106,7 @@
 
 #define RPL_KILLDONE         361
 
+#define RPL_LINKS            364
 #define RPL_ENDOFLINKS       365
 #define RPL_ENDOFNAMES       366
 
@@ -119,13 +136,14 @@
 ** other thing generated for remotes...
 */
 
-#define CheckRegisteredUser(x) \
+#define CheckRegisteredUser(x) do { \
   if (!IsRegisteredUser(x)) \
     { \
 	sendto_one(sptr, ":%s %d * :You have not registered as a user", \
 		   me.name, ERR_NOTREGISTERED); \
 	return -1;\
-    }
+    } \
+  } while (0)
 
 /*
 ** CheckRegistered user cancels message, if 'x' is not
@@ -133,10 +151,11 @@
 ** or user)
 */
 
-#define CheckRegistered(x) \
+#define CheckRegistered(x) do { \
   if (!IsRegistered(x)) \
     { \
 	sendto_one(sptr, ":%s %d * :You have not registered yourself yet", \
 		   me.name, ERR_NOTREGISTERED); \
 	return -1;\
-    }
+    } \
+  } while (0)

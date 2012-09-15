@@ -18,6 +18,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
  
+/*
+ * $Id: packet.c,v 6.1 1991/07/04 21:03:56 gruner stable gruner $
+ *
+ * $Log: packet.c,v $
+ * Revision 6.1  1991/07/04  21:03:56  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:04:50  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 char packet_id[]="packet.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
  
 #include "struct.h"

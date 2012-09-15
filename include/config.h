@@ -17,6 +17,18 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * $Id: config.h,v 6.1 1991/07/04 21:04:27 gruner stable gruner $
+ *
+ * $Log: config.h,v $
+ * Revision 6.1  1991/07/04  21:04:27  gruner
+ * Revision 2.6.1 [released]
+ *
+ * Revision 6.0  1991/07/04  18:05:00  gruner
+ * frozen beta revision 2.6.1
+ *
+ */
+
 /* Type of host... currently only BSD and similar are supported */
 
 #define BSD		1	/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
@@ -43,7 +55,7 @@
 #define NEED_STRERROR	1	/* Your libc.a is no ANSI-library and has */
 				/* no strerror() */
 #endif
-#define NEED_STRTOK	0	/* Your libc.a hasn't strtok(3) */
+#define NEED_STRTOKEN	1	/* Your libc.a hasn't strtoken(3) */
 #define NEED_INET_ADDR  0	/* You need inet_addr(3)	*/
 #define NEED_INET_NTOA  0	/* You need inet_ntoa(3)	*/
 #define NEED_INET_NETOF 0	/* You need inet_netof(3)	*/
@@ -79,7 +91,7 @@
   /* MSGBASE is a system which allows you to leave messages       */
   /* for users and make them be sent to recipient when he/she     */
   /* signs on IRC. This does not work on all systems !            */
-/* #define MSG_MAIL     "MAIL" /* */
+/* #define MSG_NOTE     "NOTE" /* */
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
@@ -90,9 +102,9 @@
 #define CPATH "/usr/local/lib/irc/ircd.conf"	 /* IRC Configuration file.  */
 #define MPATH "/usr/local/lib/irc/ircd.motd"     /* Message Of The Day file. */
 #define LPATH "/usr/local/lib/irc/ircd.log"      /* Where the Logfile lives. */
-#ifdef MSG_MAIL
+#ifdef MSG_NOTE
 /* Where MSGBASE saves its messages from time to time... */
-#define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
+#define NOTE_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
 #endif
 
 #define UPHOST "tolsun.oulu.fi"              /* Default UPHOST for irc */
@@ -176,6 +188,8 @@
  */
 
 /* #define FNAME_USERLOG "/usr/local/lib/irc/userlog" /* */
+
+#define WALL /* Define this if you want walls */
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
