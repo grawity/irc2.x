@@ -169,7 +169,7 @@ typedef	struct	SMode	Mode;
 #define	IsLocOp(x)		((x)->flags & FLAGS_LOCOP)
 #define	IsInvisible(x)		((x)->flags & FLAGS_INVISIBLE)
 #define	IsAnOper(x)		((x)->flags & (FLAGS_OPER|FLAGS_LOCOP))
-#define	IsPerson(x)		IsClient(x)
+#define	IsPerson(x)		((x)->user && IsClient(x))
 #define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->flags & FLAGS_WALLOP)
 #define	SendServNotice(x)	((x)->flags & FLAGS_SERVNOTICE)

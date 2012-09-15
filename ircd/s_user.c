@@ -429,11 +429,15 @@ char	*nick, *username;
 		    }
 		else if (acptr->from != sptr->from)
 		   {
-			sendto_ops("Drop %s : %s USER %s %s, != %s[%s]",
+			sendto_ops("Bad User [%s] :%s USER %s %s, != %s[%s]",
 				cptr->name, nick, user->username, user->server,
 				acptr->name, acptr->from->name);
-			return exit_client(cptr, cptr, &me,
-					   "USER wrong direction");
+			sendto_one(cptr, ":%s KILL %s :%s (%s != %s[%s])",
+				   me.name, sptr->name, me.name, user->server,
+				   acptr->from->name, acptr->from->sockhost);
+			sptr->flags |= FLAGS_KILLED;
+			return exit_client(sptr, sptr, &me,
+					   "USER server wrong direction");
 		   }
 	    }
 

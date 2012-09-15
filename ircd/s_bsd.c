@@ -408,9 +408,8 @@ void	close_listeners()
 		if (!IsMe(cptr) || cptr == &me || !IsListening(cptr))
 			continue;
 		aconf = cptr->confs->value.aconf;
-		aconf->status |= CONF_ILLEGAL;
 
-		if (aconf->clients == 0)
+		if (IsIllegal(aconf) && aconf->clients == 0)
 		    {
 #ifdef	UNIXPORT
 			if (IsUnixSocket(cptr))
@@ -1019,7 +1018,7 @@ aClient *cptr;
 		 * clean up extra sockets from P-lines which have been
 		 * discarded.
 		 */
-		if (cptr->acpt != &me)
+		if (cptr->acpt != &me && cptr->acpt != cptr)
 		    {
 			aconf = cptr->acpt->confs->value.aconf;
 			if (aconf->clients > 0)

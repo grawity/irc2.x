@@ -585,10 +585,8 @@ int	sig;
 #endif
 		    }
 
-	close_listeners();
-
 	while ((tmp2 = *tmp))
-		if (tmp2->clients)
+		if (tmp2->clients || tmp2->status & CONF_LISTEN_PORT)
 		    {
 			/*
 			** Configuration entry is still in use by some
@@ -621,6 +619,7 @@ int	sig;
 	if (sig != 2)
 		flush_cache();
 	(void) initconf(0);
+	close_listeners();
 
 	/*
 	 * flush out deleted I and P lines although still in use.
@@ -632,6 +631,8 @@ int	sig;
 		    {
 			*tmp = tmp2->next;
 			tmp2->next = NULL;
+			if (!tmp2->clients)
+				free_conf(tmp2);
 		    }
 	return ret;
 }
@@ -879,15 +880,16 @@ int	opt;
 
 			if (bconf = find_conf_entry(aconf, aconf->status))
 			    {
+				delist_conf(bconf);
 				bconf->status &= ~CONF_ILLEGAL;
-				if (aconf->status == CONF_CLIENT &&
-				    aconf->class != bconf->class)
+				if (aconf->status == CONF_CLIENT)
 				    {
 					bconf->class->links -= bconf->clients;
 					bconf->class = aconf->class;
 					bconf->class->links += bconf->clients;
 				    }
-				continue;
+				free_conf(aconf);
+				aconf = bconf;
 			    }
 			else if (aconf->host &&
 				 aconf->status == CONF_LISTEN_PORT)

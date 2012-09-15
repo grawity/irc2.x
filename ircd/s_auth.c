@@ -235,7 +235,7 @@ Reg1	aClient	*cptr;
 	    }
 	ircstp->is_asuc++;
 	strncpyzt(cptr->username, ruser, USERLEN+1);
-	if (strcmp(system, "OTHER"))
+	if (strncmp(system, "OTHER", 5))
 		cptr->flags |= FLAGS_GOTID;
 	Debug((DEBUG_INFO, "got username [%s]", ruser));
 	return;

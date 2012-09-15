@@ -392,7 +392,7 @@ char	*parv[];
 			sendto_ops("Non-Hub link %s introduced %s(%s).",
 				   get_client_name(cptr, FALSE), host,
 				   aconf ? (aconf->host ? aconf->host : "*") :
-				   "*");
+				   "!");
 			return exit_client(cptr, cptr, cptr,
 					   "Too many servers");
 		    }
