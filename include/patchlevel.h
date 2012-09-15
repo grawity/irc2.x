@@ -18,4 +18,4 @@
  */
 
 /* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
-#define PATCHLEVEL "2.5"
+#define PATCHLEVEL "2.5+"

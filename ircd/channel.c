@@ -18,6 +18,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 09 Jul 1990
+ * Bug fix
+ */
+
 /* -- Jto -- 03 Jun 1990
  * Moved m_channel() and related functions from s_msg.c to here
  * Many changes to start changing into string channels...
@@ -260,7 +264,7 @@ char *parabuf;
 	parv++;
 	who = find_person(parv[0], (aClient *) 0);
 	if (who) {
-	  if (ChanSame(cptr, who)) {
+	  if (IsServer(cptr) || ChanSame(cptr, who)) {
 	    if (whatt == MODE_ADD) {
 	      who->status |= STAT_CHANOP;
 	      modebuf[i++] = 'o';
