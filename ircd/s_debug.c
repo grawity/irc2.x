@@ -18,20 +18,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: s_debug.c,v 6.1 1991/07/04 21:05:28 gruner stable gruner $
- *
- * $Log: s_debug.c,v $
- * Revision 6.1  1991/07/04  21:05:28  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:45  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center\
-and Jarkko Oikarinen";
+ and Jarkko Oikarinen";
 
 #include "struct.h"
 #include "common.h"
@@ -47,17 +35,19 @@ extern int debuglevel;
 debug(level, form, para1, para2, para3, para4, para5, para6)
 int level;
 char *form, *para1, *para2, *para3, *para4, *para5, *para6;
-{
-  if (debuglevel >= 0)
-    if (level <= debuglevel) {
-      fprintf(stderr, form, para1, para2, para3, para4, para5, para6);
-      fputc('\n', stderr);
+    {
+	if (debuglevel >= 0)
+		if (level <= debuglevel)
+		    {
+			fprintf(stderr, form,
+				para1, para2, para3, para4, para5, para6);
+			fputc('\n', stderr);
+		    }
     }
-}
 #else
 debug()
-{
+    {
 	/* do nothing so as not to waste much cpu.
 	 * would make gcc very unhappy :) -avalon */
-}
+    }
 #endif

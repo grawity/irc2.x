@@ -333,8 +333,6 @@ int	len, fam;
 	int	stop = 0;
 
 	hp = gethostbyaddr(sp, len, fam);
-	if (!hp)
-		return NULL;
 
 	hp2 = gethostbyname(hp->h_name);
 	if (!hp2)

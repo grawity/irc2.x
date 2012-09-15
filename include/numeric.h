@@ -181,42 +181,8 @@
 
 #define RPL_SERVICEINFO      231
 #define RPL_ENDOFSERVICES    232
+#define	RPL_SERVICE          233
+#define RPL_SERVLIST         234
+#define RPL_SERVLISTEND      235
 
-/*
-** CheckRegisteredUser is a macro to cancel message, if the
-** originator is a server or not registered yet. In other
-** words, passing this test, *MUST* guarantee that the
-** sptr->user exists (not checked after this--let there
-** be coredumps to catch bugs... this is intentional --msa ;)
-**
-** There is this nagging feeling... should this NOT_REGISTERED
-** error really be sent to remote users? This happening means
-** that remote servers have this user registered, althout this
-** one has it not... Not really users fault... Perhaps this
-** error message should be restricted to local clients and some
-** other thing generated for remotes...
-*/
 
-#define CheckRegisteredUser(x) do { \
-  if (!IsRegisteredUser(x)) \
-    { \
-	sendto_one(sptr, ":%s %d * :You have not registered as a user", \
-		   me.name, ERR_NOTREGISTERED); \
-	return -1;\
-    } \
-  } while (0)
-
-/*
-** CheckRegistered user cancels message, if 'x' is not
-** registered (e.g. we don't know yet whether a server
-** or user)
-*/
-
-#define CheckRegistered(x) do { \
-  if (!IsRegistered(x)) \
-    { \
-	sendto_one(sptr, ":%s %d * :You have not registered yourself yet", \
-		   me.name, ERR_NOTREGISTERED); \
-	return -1;\
-    } \
-  } while (0)

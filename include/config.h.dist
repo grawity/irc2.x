@@ -17,19 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: config.h,v 6.1 1991/07/04 21:04:27 gruner stable gruner $
- *
- * $Log: config.h,v $
- * Revision 6.1  1991/07/04  21:04:27  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:00  gruner
- * frozen beta revision 2.6.1
- *
- */
-
-/* Type of host */
+/* Type of host. These should be made redundant somehow. -avalon */
 
 #define BSD		1	/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
 #define HPUX		0	/* HP-UX */
@@ -42,8 +30,15 @@
 #define SYSV		0	/* Does not work yet. Under construction */
 #define VMS		0	/* Should work for IRC client, not server */
 #define MAIL50		0	/* If you're running VMS 5.0 */
-#define RSUMMON		0	/* Remote summon feature --does not work */
 
+/*
+ * getrusage(2) is a BSDism used in s_misc.c. If you have both of these
+ * use GETRUSEAGE_2 unless you get some compile time errors in which case
+ * try TIMES_2. If both fail, #undef them both. -avalon
+ */
+#define	GETRUSAGE_2             /* if your system supports getrusage(2) */
+#undef	TIMES_2                 /* or if it supports this. yuck. */
+ 
 /*
  * The following are additional symbols to define. If you are not
  * sure about them, leave them all defined as they are.
@@ -89,8 +84,8 @@
  * NOTE: These *ONLY* apply to the irc client in this package
  */
 
-#define HAVECURSES      1       /* If you have curses, and want to use it.  */
-#define HAVETERMCAP     0       /* If you have termcap, and want to use it. */
+#define HAVECURSES		/* If you have curses, and want to use it.  */
+#undef HAVETERMCAP		/* If you have termcap, and want to use it. */
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
@@ -112,7 +107,7 @@
  * this.
  */
 
-/* #define ENABLE_SUMMON /* local summon */
+#undef ENABLE_SUMMON /* local summon */
  
 /* MAXIMUM LINKS
  *
@@ -144,10 +139,6 @@
 
 #define MAXIMUM_LINKS 1
 
-#define WALLOPS_REMOTES    /* Notify all opers of remote SQUITS/CONNECTS */
-
-#define WALLOPS_QUARANTINE /* Notify all opers of closing undesirable links */
-
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
  * who is to sign on and when.  What the R line does is call an outside
@@ -159,7 +150,7 @@
  * The default is no R_LINES as most people probably don't need it. --Jto
  */
 
-/* #define R_LINES /* */
+#undef R_LINES
 
 #ifdef R_LINES
 /* Also, even if you have R lines defined, you might not want them to be 
@@ -169,8 +160,8 @@
    as it does K lines.  Note that R_LINES_OFTEN is *very* likely to cause 
    a resource drain, use at your own risk.  R_LINES_REHASH shouldn't be too
    bad, assuming the programs are fairly short. */
-#define R_LINES_REHASH /* */
-#define R_LINES_OFTEN  /* */
+#define R_LINES_REHASH
+#define R_LINES_OFTEN
 #endif
 
 /*
@@ -181,7 +172,7 @@
  *       starts up the server with a new conf file that has some extra
  *       O-lines. So don't use this unless you're debugging.
  */
-/* #define CMDLINE_CONFIG /* allow conf-file to be specified on command line */
+#undef CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
  * Define this filename to maintain a list of persons who log
@@ -189,7 +180,36 @@
  * Logging will be disable also if you do not define this.
  */
 
-/*#define FNAME_USERLOG "/usr/local/src/ircd/userlog" /* */
+/*#define FNAME_USERLOG "/usr/local/lib/ircd/userlog" /* */
+
+/*
+ * If you wish to have the server send 'vital' messages about server
+ * through syslog, define USE_SYSLOG. Only system errors and events critical
+ * to the server are logged although if this is defined with FNAME_USERLOG,
+ * syslog() is used instead of the above file. It is not recommended that
+ * this option is used unless you tell the system administrator beforehand
+ * and obtain their permission to send messages to the system log files.
+ */
+
+#undef USE_SYSLOG
+
+/*
+ * If you use syslog above, you may want to turn some (none) of the
+ * spurious log messages for KILL/SQUIT off.
+ */
+#undef	SYSLOG_KILL	/* log all operator kills to syslog */
+#undef	SYSLOG_SQUIT	/* log all remote squits for all servers to syslog */
+#undef	SYSLOG_CONNECT	/* log remote connect messages for other all servs */
+#undef	SYSLOG_USERS	/* send userlog stuff to syslog */
+
+/*
+ * If you want your server to be paranoid about IP# lookup, define GETHOST
+ * so that a gethostbyname() is done for each gethostbyaddr() which returns
+ * a hostname. If your system already has paranoid calls (SunOS 4.1.1 or
+ * later) #undef this. The resolv and resolv+ libraries from Berkeley are
+ * *NOT* paranoid about hostname lookups in this way.
+ */
+#define GETHOST
 
 /*
  * define this if you want to use crypted passwords for operators in your
@@ -197,13 +217,11 @@
  */
 #undef CRYPT_OPER_PASSWORD
 
-#undef WALL /* Define this if you want walls */
-
 /*
  * define this if you enable summon and if you want summon to look for the
  * least idle tty a user is logged in on.
  */
-/* #define LEAST_IDLE /* */
+#undef LEAST_IDLE
 
 /*
  * Max amount of internal send buffering when socket is stuck (bytes)
@@ -323,7 +341,9 @@
 /*
  * Max number of channels a user is allowed to join.
  */
-#define MAXCHANNELSPERUSER  10
+#define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
+
+#undef WALL /* Define this if you want walls */
 
 /*
  * Double buffering has been designed to increase the packet size of
@@ -335,9 +355,17 @@
  * Whether or not this idea is worth doing is yet to be seen but there is
  * no harm in trying it out.
  * It is not fully tested and may cause problems. Define it only for testing
- * or if you are sure you know what you are doing. -avalon
+ * or if you are sure you know what you are doing. Still dont work 100% -avalon
  */
-#undef DOUBLE_BUFFER
+#undef	DOUBLE_BUFFER
+/*
+ * SendQ-Always causes the server to put all outbound data into the sendq and
+ * flushing the sendq at the end of input processing. This should cause more
+ * efficient write's to be made to the network.
+ * There *shouldn't* be any problems with this method.
+ * -avalon
+ */
+#define	SENDQ_ALWAYS
 
 #define MOTD MPATH
 #define MYNAME SPATH
@@ -358,6 +386,10 @@
 #  undef LEAST_IDLE
 #endif
 
+#ifndef DEBUGMODE
+#undef	GETRUSAGE_2
+#undef	TIMES_2
+#endif
 
 #ifdef mips
 #undef SYSV
@@ -372,13 +404,13 @@
 #define SEQ_NOFILE    128        /* set to your current kernel impl, */
 #endif                           /* max number of socket connections */
 
-#if HAVECURSES
+#ifdef HAVECURSES
 # define DOCURSES
 #else
 # undef DOCURSES
 #endif
 
-#if HAVETERMCAP
+#ifdef HAVETERMCAP
 # define DOTERMCAP
 #else
 # undef DOTERMCAP

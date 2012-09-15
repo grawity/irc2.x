@@ -58,8 +58,10 @@ aConfItem	*aconf;
 	return (BAD_PING);
 }
 
-
-
+/*
+ * Return the highest class for a client by virtue of its associated conf
+ * lines or BAD_CLIENT_CLASS if there are no attached conf lines.
+ */
 int	get_client_class(acptr)
 aClient	*acptr;
 {
@@ -80,6 +82,12 @@ aClient	*acptr;
 	return (retc);
 }
 
+/*
+ * Find the lowest ping value for a client from all its associated conf lines.
+ * In an ideal situation, there should be only one, but in can of others, we
+ * check just to be sure. If there are no conf lines attached, the default
+ * ping value is used.
+ */
 int	get_client_ping(acptr)
 aClient	*acptr;
 {
@@ -132,68 +140,88 @@ aClass	*clptr;
 void add_class(class, ping, confreq, maxli)
 int class, ping, confreq, maxli;
 {
-  aClass *t, *p;
+	aClass *t, *p;
 
-  t = find_class(class);
-  if ((t == classes) && (class != 0)) {
-    p = (aClass *)MyMalloc(sizeof(aClass));
-    NextClass(p) = NextClass(t);
-    NextClass(t) = p;
-  }
-  else
-    p = t;
-  debug(DEBUG_DEBUG,"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d",
-	class, p, t, confreq, ping, maxli);
-  Class(p) = class;
-  ConFreq(p) = confreq;
-  PingFreq(p) = ping;
-  MaxLinks(p) = maxli;
-  if (p != t)
-    Links(p) = 0;
+	t = find_class(class);
+	if ((t == classes) && (class != 0))
+	    {
+		p = (aClass *)MyMalloc(sizeof(aClass));
+		NextClass(p) = NextClass(t);
+		NextClass(t) = p;
+	    }
+	else
+		p = t;
+
+	debug(DEBUG_DEBUG,"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d",
+		class, p, t, confreq, ping, maxli);
+
+	Class(p) = class;
+	ConFreq(p) = confreq;
+	PingFreq(p) = ping;
+	MaxLinks(p) = maxli;
+	if (p != t)
+		Links(p) = 0;
 }
 
+/*
+ * Search for a class in those already present by the class number.
+ * If it isnt found, the default class (0) is returned.
+ */
 aClass *find_class(cclass)
 int cclass;
 {
-  aClass *cltmp;
+	aClass *cltmp;
 
-  for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
-    if (Class(cltmp) == cclass)
-      return cltmp;
-  return classes;
+	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
+		if (Class(cltmp) == cclass)
+			return cltmp;
+	return classes;
 }
 
+/*
+ * Check the class list for entries which are void and marked for deletion.
+ */
 void check_class()
 {
-  Reg1 aClass *cltmp, *cltmp2;
+	Reg1 aClass *cltmp, *cltmp2;
 
-  debug(DEBUG_DEBUG, "Class check:");
+	debug(DEBUG_DEBUG, "Class check:");
 
-  for (cltmp2 = cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp2)) {
-    debug(DEBUG_DEBUG, "Class %d : CF: %d PF: %d ML: %d LI: %d",
-	  Class(cltmp), ConFreq(cltmp), PingFreq(cltmp),
-	  MaxLinks(cltmp), Links(cltmp));
-    if (MaxLinks(cltmp) < 0) {
-      NextClass(cltmp2) = NextClass(cltmp);
-      if (Links(cltmp) <= 0)
-	free(cltmp);
-    } else
-      cltmp2 = cltmp;
-  }
+	for (cltmp2 = cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp2))
+	    {
+		debug(DEBUG_DEBUG, "Class %d : CF: %d PF: %d ML: %d LI: %d",
+			Class(cltmp), ConFreq(cltmp), PingFreq(cltmp),
+			MaxLinks(cltmp), Links(cltmp));
+
+		if (MaxLinks(cltmp) < 0)
+		    {
+			NextClass(cltmp2) = NextClass(cltmp);
+			if (Links(cltmp) <= 0)
+				free(cltmp);
+		    }
+		else
+			cltmp2 = cltmp;
+	    }
 }
 
+/*
+ * Build initial class (0) from defined defaults in config.h
+ */
 void initclass()
 {
-  classes = (aClass *)MyMalloc(sizeof(aClass));
+	classes = (aClass *)MyMalloc(sizeof(aClass));
 
-  Class(FirstClass()) = 0;
-  ConFreq(FirstClass()) = CONNECTFREQUENCY;
-  PingFreq(FirstClass()) = PINGFREQUENCY;
-  MaxLinks(FirstClass()) = MAXIMUM_LINKS;
-  Links(FirstClass()) = 0;
-  NextClass(FirstClass()) = (aClass *) NULL;
+	Class(FirstClass()) = 0;
+	ConFreq(FirstClass()) = CONNECTFREQUENCY;
+	PingFreq(FirstClass()) = PINGFREQUENCY;
+	MaxLinks(FirstClass()) = MAXIMUM_LINKS;
+	Links(FirstClass()) = 0;
+	NextClass(FirstClass()) = (aClass *) NULL;
 }
 
+/*
+ * Function to send reponses to the "STATS Y" command.
+ */
 report_classes(sptr)
 aClient *sptr;
 {

@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: send.c,v 6.1 1991/07/04 21:03:59 gruner stable gruner $
- *
- * $Log: send.c,v $
- * Revision 6.1  1991/07/04  21:03:59  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:04:53  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 16 Jun 1990
  * Added Armin's PRIVMSG patches...
  */
@@ -97,10 +85,11 @@ char *notice;
 void	flush_connections(fd)
 int	fd;
 {
-#ifdef DOUBLE_BUFFER
+#if defined(DOUBLE_BUFFER) || defined(SENDQ_ALWAYS)
 	Reg1 int i;
 	Reg2 aClient *cptr;
-
+#endif
+#ifdef DOUBLE_BUFFER
 	if (fd == me.fd)
 	    {
 		for (i = 0; i <= highest_fd; i++)
@@ -109,6 +98,16 @@ int	fd;
 	    }
 	else if (fd >= 0 && local[fd])
 		send_message(local[fd], NULL, local[fd]->ocount);
+#endif
+#ifdef SENDQ_ALWAYS
+	if (fd == me.fd)
+	    {
+		for (i = 0; i <= highest_fd; i++)
+			if ((cptr = local[i]) && DBufLength(&cptr->sendQ) > 0)
+				send_queued(cptr);
+	    }
+	else if (fd >= 0 && local[fd])
+		send_queued(local[fd]);
 #endif
 }
 #endif
@@ -190,6 +189,21 @@ int len;
 	return 0;
     }
 #else
+# ifdef SENDQ_ALWAYS
+	if (DBufLength(&to->sendQ) > MAXSENDQLENGTH)
+		dead_link(to,"Max buffering limit exceed for %s");
+	else if (dbuf_put(&to->sendQ,msg, len) < 0)
+		dead_link(to,"Buffer allocation error for %s");
+	/*
+	** Update statistics. The following is slightly incorrect
+	** because it counts messages even if queued, but bytes
+	** only really sent. Queued bytes get updated in SendQueued.
+	*/
+	to->sendM += 1;
+	me.sendM += 1;
+	return 0;
+    }
+# else
 	/*
 	** DeliverIt can be called only if SendQ is empty...
 	*/
@@ -207,7 +221,6 @@ int len;
 		else if (dbuf_put(&to->sendQ,msg+rlen,len-rlen) < 0)
 			dead_link(to,"Buffer allocation error for %s");
 	    }
-
 	/*
 	** Update statistics. The following is slightly incorrect
 	** because it counts messages even if queued, but bytes
@@ -219,6 +232,7 @@ int len;
 	me.sendB += rlen;
 	return 0;
     }
+# endif
 #endif
 /*
 ** send_queued
@@ -247,7 +261,7 @@ aClient *to;
 	    }
 	while (DBufLength(&to->sendQ) > 0)
 	    {
-		msg = dbuf_map(&to->sendQ, (long *)&len);
+		msg = dbuf_map(&to->sendQ, &len);
 					/* Returns always len > 0 */
 		if ((rlen = deliver_it(to->fd, msg, len)) < 0)
 		    {

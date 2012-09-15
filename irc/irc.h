@@ -60,7 +60,6 @@ struct Command commands[] = {
   { (int (*)()) 0, "WHOWAS",  SERVER_CMD, "\0\0", MSG_WHOWAS },
   { (int (*)()) 0, "LEAVE",   SERVER_CMD, "\0\0", MSG_PART },
   { (int (*)()) 0, "PART",    SERVER_CMD, "\0\0", MSG_PART },
-  { (int (*)()) 0, "WALL",    SERVER_CMD, "\0\0", MSG_WALL },
   { (int (*)()) 0, "WOPS",    SERVER_CMD, "\0\0", MSG_WALLOPS },
   { do_channel,    "JOIN",    LOCAL_FUNC, "\0\0", MSG_JOIN },
   { do_channel,    "CHANNEL", LOCAL_FUNC, "\0\0", MSG_JOIN },

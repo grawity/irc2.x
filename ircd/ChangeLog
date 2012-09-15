@@ -17,6 +17,47 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Wed Mar  4 16:58:35 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, s_misc.c
+		      - added R/U options to stats. R works only with
+			DEBUGMODE defined. R uses the getrusage() calls and
+			returns those values. U returns server uptime.
+
+Thu Feb 27  4:38:17 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, s_misc.c, ircd.c, s_bsd.c
+		      - Added syslog() support for logging various IRC
+			events such as RESTARTs, DIEs, REHASHes and system
+			errors.
+
+Sun Feb 22  3:55:43 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, channel.c
+		      - moved m_names() & m_list() from s_msg.c to channel.c
+	* s_misc.c, date.c
+		      - merged the contents of these two files.
+	* s_msg.c, s_misc.c
+		      - moved exit_client() and exit_one_client() into
+			s_misc.c from s_msg.c
+	* s_msg.c
+		      - m_linreply(), m_whoreply(), m_namreply(), m_wall()
+			all removed at long last!
+
+Sat Feb 22  2:23:05 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c     - moved get_client_name(), my_name_for_link(),
+			to s_misc.c (created).
+	* s_msg.c, channel.c
+		      - Moved CheckRegistered() and CheckRegisteredUser()
+			into s_misc.c and made them functions
+			(they were large and awkward macros!).
+	* s_conf.c, ircd.c, s_msg.c
+		      - changed find_kill() parameters to make it a safer
+			function. Cleaned up find_restrict().
+
+Fri Feb 21  1:13:22 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c     - replaced check_name/check_access with check_init,
+			check_client and check_server to clean up and
+			improve the server's access checking.
+	* s_msg.c     - changes to support above s_bsd.c changes.
+
 Sun Dec 1 Greg Lindahl <gl8f@virginia.edu>
 	* general     - gee, avalon, you could at least try. as of pre16
 			numerics restored to old values. MSG_NOTE code

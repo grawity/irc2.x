@@ -17,18 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: dbuf.h,v 6.1 1991/07/04 21:04:28 gruner stable gruner $
- *
- * $Log: dbuf.h,v $
- * Revision 6.1  1991/07/04  21:04:28  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:01  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 #ifndef PROTO
 #ifdef __STDC__
 #	define PROTO(x)	x
@@ -63,11 +51,15 @@ typedef struct dbuf
 ** And this 'dbufbuf' should never be referenced outside the
 ** implementation of 'dbuf'--would be "hidden" if C had such
 ** keyword...
+** If it was possible, this would compile to be exactly 1 memory
+** page in size. 2048 bytes seems to be the most common size, so
+** as long as a pointer is 4 bytes, we get 2044 bytes for buffer
+** data. -avalon
 */
 typedef struct dbufbuf
     {
 	struct dbufbuf *next;	/* Next data buffer, NULL if this is last */
-	char data[1020];	/* Actual data stored here */
+	char data[2044];	/* Actual data stored here */
     } dbufbuf;
 
 /*

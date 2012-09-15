@@ -34,6 +34,9 @@
 
 #include <sys/types.h>
 #include <netinet/in.h>
+#ifdef USE_SYSLOG
+#include <sys/syslog.h>
+#endif
 
 typedef struct ConfItem aConfItem;
 typedef struct Client aClient;
@@ -69,6 +72,10 @@ typedef struct User anUser;
 #define USERHOST_REPLYLEN       (NICKLEN+HOSTLEN+USERLEN+5)
 
 #define MAXRECIPIENTS 	20
+
+#ifdef USE_SERVICES
+#include <service.h>
+#endif
 
 #define STAT_MASTER     -5    /* Local ircd master before identification */
 #define STAT_CONNECTING -4
@@ -224,7 +231,10 @@ struct Client
 	short status;		/* Client type */
 	char name[HOSTLEN+1];	/* Unique name of the client, nick or host */
 	char info[REALLEN+1];	/* Free form additional client information */
-	struct User *user;	/* ...defined, if this is a User */
+	anUser *user;		/* ...defined, if this is a User */
+#ifdef USE_SERVICES
+	aService *service;	/* service record */
+#endif
 	long lasttime;		/* ...should be only LOCAL clients? --msa */
 	long firsttime;
 	long since;		/* When this client entry was created */
@@ -260,6 +270,7 @@ struct Client
 				  ** and after which the connection was
 				  ** accepted.
 				  */
+	struct	in_addr	ip;	/* keep real ip# too */
 	char passwd[PASSWDLEN+1];
     };
 
@@ -368,4 +379,3 @@ extern struct Client *make_client();
 #define MODE_NULL      0
 #define MODE_ADD       1
 #define MODE_DEL       2
- 

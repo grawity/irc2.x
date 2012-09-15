@@ -48,7 +48,6 @@
 #define MSG_PONG     "PONG"
 #define MSG_OPER     "OPER"
 #define MSG_PASS     "PASS"
-#define MSG_WALL     "WALL"
 #define MSG_WALLOPS  "WALLOPS"
 #define MSG_TIME     "TIME"
 #define MSG_REHASH   "REHASH"
@@ -66,11 +65,12 @@
 #define MSG_MODE     "MODE"
 #define MSG_KICK     "KICK"
 #define MSG_SERVICE  "SERVICE"
-#define MSG_SVCQUERY "SVCQUERY"
-#define MSG_SVCREPLY "SVCREPLY"
 #define MSG_USERHOST "USERHOST"
 #define MSG_ISON     "ISON"
-#define MSG_DEOP     "DEOP"
+#define MSG_SERVICE  "SERVICE"
+#define MSG_SQUERY   "SQUERY"
+#define MSG_SERVLIST "SERVLIST"
+#define MSG_SERVSET  "SERVSET"
 #ifdef DEBUGMODE
 #ifndef CLIENT_COMPILE
 #define	MSG_HASH     "HASH"
@@ -82,13 +82,14 @@
 extern int m_private(), m_who(), m_whois(), m_user(), m_list();
 extern int m_topic(), m_invite(), m_version(), m_quit();
 extern int m_server(), m_kill(), m_info(), m_links(), m_summon(), m_stats();
-extern int m_users(), m_nick(), m_error(), m_help(), m_whoreply();
+extern int m_users(), m_nick(), m_error(), m_help();
 extern int m_squit(), m_restart(), m_away(), m_die(), m_connect();
-extern int m_ping(), m_pong(), m_oper(), m_pass(), m_wall(), m_trace();
-extern int m_time(), m_rehash(), m_names(), m_namreply(), m_admin();
-extern int m_linreply(), m_notice(), m_lusers(), m_umode(), m_deop();
+extern int m_ping(), m_pong(), m_oper(), m_pass(), m_trace();
+extern int m_time(), m_rehash(), m_names(), m_admin();
+extern int m_notice(), m_lusers(), m_umode();
 extern int m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
 extern int m_join(), m_part(), m_service(), m_userhost(), m_ison();
+extern int m_service(), m_servset(), m_servlist(), m_squery();
 #ifdef DEBUGMODE
 #ifndef CLIENT_COMPILE
 extern int m_hash();
@@ -149,17 +150,18 @@ struct Message msgtab[] = {
   { MSG_HELP,    m_help,     0, 2, 1 },
   { MSG_INFO,    m_info,     0, 1, 1 },
   { MSG_MOTD,    m_motd,     0, 2, 1 },
-  { MSG_RESTART, m_restart,  0, 1, 1 },
-  { MSG_NAMREPLY,m_namreply, 0, 3, 1 },
-  { MSG_LINREPLY,m_linreply, 0, 2, 1 },
-  { MSG_WHOREPLY,m_whoreply, 0, 7, 1 },
-  { MSG_SERVICE, m_service,  0, 6, 1 },
-  { MSG_DEOP,    m_deop,     0, 1, 1 },
+#ifdef USE_SERVICES
+  { MSG_SERVICE, m_service,  0, 7, 1 },
+  { MSG_SERVSET, m_servset,  0, 3, 1 },
+  { MSG_SQUERY,  m_squery,   0, 3, 1 },
+  { MSG_SERVLIST,m_servlist, 0, 4, 1 },
+#endif
 #ifdef DEBUGMODE
 #ifndef CLIENT_COMPILE
   { MSG_HASH,    m_hash,     0, 2, 1 },
 #endif
 #endif
+  { MSG_RESTART, m_restart,  0, 1, 1 },
   { MSG_DIE,     m_die,      0, 1, 0 },
   { (char *) 0, (int (*)()) 0 }
 };

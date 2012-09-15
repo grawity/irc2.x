@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: parse.c,v 6.1 1991/07/04 21:03:58 gruner stable gruner $
- *
- * $Log: parse.c,v $
- * Revision 6.1  1991/07/04  21:03:58  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:04:51  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 03 Jun 1990
  * Changed the order of defines...
  */
@@ -116,7 +104,7 @@ aClient *cptr;
 
 	if (name) {
 		c2ptr = hash_find_client(name, cptr);
-		return c2ptr;
+		return (c2ptr ? c2ptr : cptr);
 	}
 	return cptr;
     }
@@ -213,7 +201,7 @@ aClient *cptr;
           break;
     }
   }
-  return c2ptr;
+  return (c2ptr ? c2ptr : cptr);
 }
 #else
 aClient *find_server(name, cptr)
@@ -391,7 +379,7 @@ struct Message *mptr;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
-		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr)))
+		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr) && !IsOper(cptr)))
 		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
 				      * (on average) to prevent dumping.
 				      * to keep the response rate up,

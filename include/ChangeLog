@@ -17,6 +17,22 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Thu Feb 27  4:52:17 1991  Darren Reed  <avalon@coombs.anu.edu.au>
+	* config.h
+		      - Updated for syslog options. WALLOPS_REMOTE and
+			WALLOPS_QUARANTINE removed since they are now
+			unused and default in all servers.
+
+Sun Feb 23  5:02:38 1991  Darren Reed  <avalon@coombs.anu.edu.au>
+	* msg.h
+	  m_namereply(), m_whoreply(), m_linreply() and
+	  m_wall() removed at last!
+
+Sat Feb 22  2:14:43 1991  Darren Reed  <avalon@coombs.anu.edu.au>
+	* numeric.h
+	  CheckRegistered() and CheckRegiseredUser() macros removed from
+	  this horrid home.
+
 Mon Sep 02 17:06:59 1991  Darren Reed  <avalon@coombs.anu.edu.au>
 
 	* config.h

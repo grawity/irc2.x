@@ -80,7 +80,7 @@ aClient *cptr;
 
 	if (cptr->name[0] == '\0')
 		return 0; /* No old name defined, no history to save */
-	if ((new = (aName *)malloc(sizeof(aName))) == NULL)
+	if ((new = (aName *)MyMalloc(sizeof(aName))) == NULL)
 		return -1;
 	if ((new->home = (aHome *)cptr->history) == NULL)
 	    {
@@ -88,11 +88,7 @@ aClient *cptr;
 		** A fresh user. Allocate a Home block for the
 		** fixed user specific information.
 		*/
-		if ((new->home = (aHome *)malloc(sizeof(aHome))) == NULL)
-		    {
-			free((char *)new);
-			return -1;
-		    }
+		new->home = (aHome *)MyMalloc(sizeof(aHome));
 		cptr->history = (char *)new->home;
 		new->home->online = cptr;
 		new->home->user = cptr->user;

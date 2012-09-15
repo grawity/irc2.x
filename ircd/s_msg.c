@@ -1,4 +1,4 @@
-/************************************************************************
+ /************************************************************************
  *   IRC - Internet Relay Chat, ircd/s_msg.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
  *                      University of Oulu, Computing Center
@@ -39,26 +39,33 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <stdio.h>
 #include <utmp.h>
 
-extern aClient *client, me, *local[];
-extern aClient *find_server(), *find_person(), *find_service();
-extern aClient *find_userhost(), *find_client(), *find_name();
-extern aConfItem *find_conf(), *find_conf_name(), *find_admin();
-extern aConfItem *conf, *find_conf_exact(), *find_conf_host();
-extern int connect_server();
-extern int close_connection();
-extern aChannel *channel;
-extern char *debugmode;
-extern char *configfile;
-extern int maxusersperchannel;
-extern int autodie, highest_fd;
+extern	aClient	*client, me, *local[];
+extern	aClient	*find_server PROTO((char *, aClient *));
+extern	aClient	*find_person PROTO((char *, aClient *));
+extern	aClient	*find_service PROTO((char *, aClient *));
+extern	aClient *find_userhost();
+extern	aClient	*find_client PROTO((char *, aClient *));
+extern	aClient	*find_name PROTO((char *, aClient *));
+extern	aConfItem *conf, *find_conf();
+extern	aConfItem *find_conf_name PROTO((char *, int)), *find_admin();
+extern	aConfItem *find_conf_exact PROTO((char *, char *, int));
+extern	aConfItem *find_conf_host PROTO((Link *, char *, int));
+extern	int	connect_server(), close_connection(), find_kill();
+extern	aChannel *channel;
+extern	char	*debugmode, *configfile;
+extern	char	*get_client_name PROTO((aClient *, int));
+extern	int	maxusersperchannel, autodie, highest_fd, debuglevel;
+#ifdef	R_LINES
+extern	int	find_restrict PROTO((aClient *));
+#endif		
 
 extern char *date PROTO((long));
 extern char *strerror();
-extern void send_channel_modes();
+extern void send_channel_modes PROTO((aChannel *));
 extern void terminate();
 extern struct SLink *find_user_link();
 
-void send_umode();
+void send_umode PROTO((aClient *));
 
 #define BIGBUFFERSIZE 2000
 
@@ -122,77 +129,6 @@ static char buf[BIGBUFFERSIZE];
 */
 
 /*
- * Return wildcard name of my server name according to given config entry
- * --Jto
- */
-
-char *my_name_for_link(name, conf)
-char *name;
-aConfItem *conf;
-{
-  int count = conf->port;
-  static char namebuf[HOSTLEN];
-  char *start = name;
-  if (count <= 0 || count > 5) {
-    return start;
-  }
-  while (count--) {
-    name++;
-    name = index(name, '.');
-  }
-  if (!name)
-    return start;
-  namebuf[0] = '*';
-  strncpy(&namebuf[1], name, HOSTLEN - 1);
-  namebuf[HOSTLEN - 1] = '\0';
-  return namebuf;
-}
-
-/*****
-****** NOTE:	get_client_name should be moved to some other file!!!
-******		It's now used from other places...  --msa
-*****/
-
-/*
-** get_client_name
-**	Return the name of the client for various tracking and
-**	admin purposes. The main purpose of this function is to
-**	return the "socket host" name of the client, if that
-**	differs from the advertised name (other than case).
-**	But, this can be used to any client structure.
-**
-**	Returns:
-**	  "servername", if remote server or sockethost == servername
-**	  "servername[sockethost]", for local servers otherwise
-**	  "nickname", for remote users (or sockethost == nickname, never!)
-**	  "nickname[sockethost]", for local users (non-servers)
-**
-** NOTE 1:
-**	Watch out the allocation of "nbuf", if either sptr->name
-**	or sptr->sockhost gets changed into pointers instead of
-**	directly allocated within the structure...
-**
-** NOTE 2:
-**	Function return either a pointer to the structure (sptr) or
-**	to internal buffer (nbuf). *NEVER* use the returned pointer
-**	to modify what it points!!!
-*/
-char *get_client_name(sptr,spaced)
-aClient *sptr;
-int spaced; /* ...actually a kludge for for m_server */
-{
-    static char nbuf[sizeof(sptr->name)+sizeof(sptr->sockhost)+3];
-
-    if (MyConnect(sptr) && mycmp(sptr->name,sptr->sockhost) != 0)
-	{
-	sprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
-	return nbuf;
-	}
-
-    return sptr->name;
-}
-
-/*
 ** next_client
 **	Local function to find the next matching client. The search
 **	can be continued from the specified client entry. Normal
@@ -202,8 +138,8 @@ int spaced; /* ...actually a kludge for for m_server */
 **		HandleMatchingClient;
 **	      
 */
-static aClient *next_client(next, ch)
-char *ch;	/* Null terminated search string (may include wilds) */
+static	aClient *next_client(next, ch)
+char	*ch;	/* Null terminated search string (may include wilds) */
 aClient *next;	/* First client to check */
     {
 	for ( ; next != NULL; next = next->next)
@@ -241,12 +177,10 @@ aClient *next;	/* First client to check */
 #define	HUNTED_ISME	0	/* if this server should execute the command */
 #define HUNTED_PASS	1	/* if message passed onwards successfully */
 
-static int hunt_server(cptr, sptr, command, server, parc, parv)
-aClient *cptr, *sptr;
-char *command;
-int server;
-int parc;
-char *parv[];
+int	hunt_server(cptr, sptr, command, server, parc, parv)
+aClient	*cptr, *sptr;
+char	*command, *parv[];
+int	server, parc;
     {
 	aClient *acptr;
 
@@ -299,21 +233,21 @@ char *parv[];
 **	result if only few servers allowed it...
 */
 
-static int do_nick_name(nick)
-char *nick;
+static	int do_nick_name(nick)
+char	*nick;
 {
-    Reg1 char *ch;
+	Reg1 char *ch;
 
-    if (*nick == '-' || isdigit(*nick)) /* first character in [0-9-] */
-	return 0;
+	if (*nick == '-' || isdigit(*nick)) /* first character in [0-9-] */
+		return 0;
 
-    for (ch = nick; *ch && (ch - nick) < NICKLEN; ch++)
-	if (!isvalid(*ch) || isspace(*ch))
-	    break;
+	for (ch = nick; *ch && (ch - nick) < NICKLEN; ch++)
+		if (!isvalid(*ch) || isspace(*ch))
+			break;
 
-    *ch = '\0';
+	*ch = '\0';
 
-    return (ch - nick);
+	return (ch - nick);
 }
 
 
@@ -339,15 +273,16 @@ char *nick;
 **	   nick from local user or kill him/her...
 */
 
-static register_user(cptr,sptr,nick)
-aClient *cptr;
-aClient *sptr;
-char *nick;
+static	register_user(cptr,sptr,nick)
+aClient	*cptr;
+aClient	*sptr;
+char	*nick;
     {
-        char *parv[3];
-	short oldstatus = sptr->status;
+	Reg1	int	i;
+        char	*parv[3];
+	short	oldstatus = sptr->status;
 	aConfItem *aconf = NULL;
-	anUser *user;
+	anUser	*user;
 
 	sptr->user->last = time((long *) 0);
 	parv[0] = sptr->name;
@@ -356,7 +291,7 @@ char *nick;
 	add_history(sptr);
 	if (MyConnect(sptr))
 	  {
-	    if (check_access(cptr, CONF_CLIENT, 0))
+	    if (check_client(cptr, CONF_CLIENT))
 	      {
 		sendto_ops("Received unauthorized connection from %s.",
 			   get_client_name(cptr,FALSE));
@@ -366,19 +301,28 @@ char *nick;
 	    det_I_lines_butfirst(cptr);
 	    if (cptr->confs == (Link *)NULL)
 	      {
-		sendto_one(sptr, ":%s %d * :%s",
-			   me.name, ERR_NOPERMFORHOST,
+		sendto_one(sptr, ":%s %d %s :%s",
+			   me.name, ERR_NOPERMFORHOST, parv[0],
 			   "Your host isn't among the privileged..");
 		return exit_client(sptr, sptr, sptr, "Unpriveledged Host");
 	      }
 	    aconf = cptr->confs->value.aconf;
 	    if (!StrEq(sptr->passwd, aconf->passwd))
 	      {
-		sendto_one(sptr, ":%s %d * :%s",
-			   me.name, ERR_PASSWDMISMATCH,
+		sendto_one(sptr, ":%s %d %s :%s",
+			   me.name, ERR_PASSWDMISMATCH, parv[0],
 			   "Only correct words will open this gate..");
 		return exit_client(sptr, sptr, sptr, "Bad Password");
 	      }
+	    /*
+	     * following block for the benefit of time-dependent K:-lines
+	     */
+	    if (find_kill(sptr))
+		return exit_client(sptr,sptr,sptr,"K-lined");
+#ifdef R_LINES
+	    if (find_restrict(sptr))
+		return exit_client(sptr, sptr, sptr , "R-lined");
+#endif
 	    strncpyzt(sptr->user->host, sptr->sockhost, HOSTLEN);
 	    if (oldstatus == STAT_MASTER && MyConnect(sptr))
 		m_oper(&me, sptr, 1, parv);
@@ -392,17 +336,19 @@ char *nick;
 	    sendto_one(sptr,
 			"NOTICE %s :*** Your host is %s, running version %s",
 			nick, get_client_name(&me,FALSE), version);
-	    sendto_one(sptr,
-			"NOTICE %s :*** This server was created %s",
+	    sendto_one(sptr, "NOTICE %s :*** This server was created %s",
 			nick, creation);
 	    m_lusers(sptr, sptr, 1, parv);
 	    m_motd(sptr, sptr, 1, parv);
 	  }
 	sendto_serv_butone(cptr, "NICK %s %d", nick, sptr->hopcount+1);
 	user = sptr->user;
-	sendto_serv_butone(cptr, ":%s USER %s %s %s %s", nick,
+	sendto_serv_butone(cptr, ":%s USER %s %s %s :%s", nick,
 			   user->username, user->host,
 			   user->server, sptr->info);
+	for (i = 0; i <= highest_fd; i++)
+		if (local[i])
+			send_umode(local[i], cptr);
 	return 0;
     }
 
@@ -502,7 +448,7 @@ char *parv[];
 		** and proceed with the nick. This should take care of the
 		** "dormant nick" way of generating collisions...
 		*/
-		if (!IsPerson(acptr) && MyConnect(acptr) && acptr != sptr)
+		if (IsUnknown(acptr) && MyConnect(acptr) && acptr != sptr)
 		    {
 			exit_client((aClient *)NULL,acptr,&me,"Overridden");
 			break;
@@ -613,10 +559,10 @@ char *parv[];
 		** on a channel, send note of change to all clients
 		** on that channel. Propagate notice to other servers.
 		*/
-	      sendto_common_channels(sptr, ":%s NICK %s", parv[0], nick);
-	      if (sptr->user)
-		add_history(sptr);
-	      sendto_serv_butone(cptr, ":%s NICK %s", parv[0], nick);
+		sendto_common_channels(sptr, ":%s NICK %s", parv[0], nick);
+		if (sptr->user)
+			add_history(sptr);
+		sendto_serv_butone(cptr, ":%s NICK %s", parv[0], nick);
 	    }
 	else
 	    {
@@ -642,6 +588,7 @@ char *parv[];
 		del_from_client_hash_table(sptr->name, sptr);
 	strcpy(sptr->name, nick); /* correctness guaranteed by 'DoNickName' */
 	add_to_client_hash_table(sptr->name, sptr);
+
 	return 0;
     }
 
@@ -669,9 +616,12 @@ int notice;
     char *nick, *server, *p, *cmd, *host;
 
     if (notice)
-	CheckRegistered(sptr);
-    else
-	CheckRegisteredUser(sptr);
+      {
+	if (check_registered(sptr))
+	    return 0;
+      }
+    else if (check_registered_user(sptr))
+	    return 0;
 
     if (parc < 2 || *parv[1] == '\0')
 	{
@@ -1000,7 +950,8 @@ char *parv[];
     Reg2 Link *link;
     aChannel *chptr;
 
-    CheckRegistered(sptr);
+    if (check_registered(sptr))
+	return 0;
 
     if (parc < 2)
 	{
@@ -1142,116 +1093,57 @@ char *parv[];
 **	parv[4] = users real name info
 */
 m_user(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
+aClient	*cptr, *sptr;
+int	parc;
+char	*parv[];
 {
-  char *username, *host, *server, *realname;
+#define	UFLAGS	(FLAGS_INVISIBLE|FLAGS_WALLOP|FLAGS_SERVNOTICE)
+
+	char	*username, *host, *server, *realname;
+	anUser	*user;
  
-  if (parc > 2 && (username = index(parv[1],'@')))
-    *username = '\0'; 
-  if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
-      *parv[3] == '\0' || *parv[4] == '\0') {
-    sendto_one(sptr,":%s %d * :Not enough parameters", 
-	       me.name, ERR_NEEDMOREPARAMS);
-    return 0;
-  }
-  
-  /* Copy parameters into better documenting variables */
-  
-  username = parv[1];
-  host = parv[2];
-  server = parv[3];
-  realname = parv[4];
-
-  if (MyConnect(sptr))
-    host = sptr->sockhost;
-  if (!IsUnknown(sptr))
-    {
-      sendto_one(sptr,":%s %d * :Identity problems, eh ?",
-		 me.name, ERR_ALREADYREGISTRED);
-      return 0;
-    }
-    /*
-     * following block for the benefit of time-dependent K:-lines
-     */
-    {
-      int rc;
-      char reply[128];
-      extern int find_kill();
-#ifdef R_LINES
-      extern int find_restrict();
-#endif		
-   if (MyConnect(sptr)) {   
-      if (rc = find_kill(host, username, reply))
-	{
-	  sendto_one(sptr, reply, me.name, rc, "*");
-	  if (rc == ERR_YOUREBANNEDCREEP)
+	if (parc > 2 && (username = index(parv[1],'@')))
+		*username = '\0'; 
+	if (parc < 5 || *parv[1] == '\0' || *parv[2] == '\0' ||
+	    *parv[3] == '\0' || *parv[4] == '\0')
 	    {
-	      return 0;
+		sendto_one(sptr,":%s %d * :Not enough parameters", 
+	    		   me.name, ERR_NEEDMOREPARAMS);
+		return 0;
 	    }
-	}
-#ifdef R_LINES
-      if (find_restrict(host,username,reply))
-	{
-	  sendto_one(sptr,":%s %d :*** %s",me.name,
-		     ERR_YOUREBANNEDCREEP,reply);
-	  return exit_client(sptr, sptr, sptr , "");
-	}
-#endif
-    }
-  }
-  make_user(sptr);
-  strncpyzt(sptr->user->username, username, USERLEN);
-  strncpyzt(sptr->info, realname, REALLEN);
-  strncpyzt(sptr->user->server, cptr != sptr ? server : me.name, HOSTLEN);
-  strncpyzt(sptr->user->host, host, HOSTLEN);
+  
+	/* Copy parameters into better documenting variables */
+  
+	username = parv[1];
+	host = parv[2];
+	server = parv[3];
+	realname = parv[4];
 
-  if (sptr->name[0]) /* NICK already received, now we have USER... */
-    register_user(cptr,sptr,sptr->name);
+	if (MyConnect(sptr))
+	    {
+		if (!IsUnknown(sptr))
+		    {
+			sendto_one(sptr,":%s %d * :Identity problems, eh ?",
+				   me.name, ERR_ALREADYREGISTRED);
+			return 0;
+		    }
+		sptr->flags |= (UFLAGS & atoi(host));
+		host = sptr->sockhost;
 
-  return 0;
-}
+	    }
 
-/*
-** m_list
-**	parv[0] = sender prefix
-**      parv[1] = channel
-*/
-m_list(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-    {
-	aChannel *chptr;
-	
-	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
-		   me.name, RPL_LISTSTART, parv[0]);
-	
-	if (parc < 2 || BadPtr(parv[1])) {
-	  for (chptr = channel; chptr; chptr = chptr->nextch) {
-	    if (sptr->user == NULL ||
-		(SecretChannel(chptr) && !IsMember(sptr, chptr)))
-	      continue;
-	    sendto_one(sptr,":%s %d %s %s %d :%s",
-		       me.name, RPL_LIST, parv[0],
-		       (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
-		       chptr->users,
-		       (ShowChannel(sptr, chptr) ? chptr->topic : ""));
-	  }
-	} else {
-	  chptr = find_channel(parv[1], NullChn);
-	  if (chptr != NullChn && ShowChannel(sptr, chptr) &&
-	      sptr->user != NULL)
-	    sendto_one(sptr, ":%s %d %s %s %d :%s",
-		       me.name, RPL_LIST, parv[0],
-		       (ShowChannel(sptr, chptr) ? chptr->chname : "*"),
-		       chptr->users, chptr->topic ? chptr->topic : "*");
-	}
-	sendto_one(sptr,":%s %d %s :End of /LIST",
-		   me.name, RPL_LISTEND, parv[0]);
+	make_user(sptr);
+	user = sptr->user;
+	strncpyzt(user->username, username, USERLEN);
+	strncpyzt(sptr->info, realname, REALLEN);
+	strncpyzt(user->server, cptr != sptr ? server : me.name, HOSTLEN);
+	strncpyzt(user->host, host, HOSTLEN);
+
+	if (sptr->name[0]) /* NICK already received, now we have USER... */
+		register_user(cptr,sptr,sptr->name);
+
 	return 0;
-    }
+}
 
 /*
 ** m_version
@@ -1263,9 +1155,12 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
     {
-	if (hunt_server(cptr,sptr,":%s VERSION %s",1,parc,parv) == HUNTED_ISME)
-	    sendto_one(sptr,":%s %d %s %s.%s %s", me.name, RPL_VERSION,
-	       parv[0], version, debugmode, me.name);
+	if (check_registered(sptr))
+		return 0;
+
+	if (hunt_server(cptr,sptr,":%s VERSION %s",1,parc,parv)==HUNTED_ISME)
+		sendto_one(sptr,":%s %d %s %s.%s %s", me.name, RPL_VERSION,
+			   parv[0], version, debugmode, me.name);
 	return 0;
     }
 
@@ -1367,9 +1262,15 @@ char *parv[];
 	**  Notify all opers, if my local link is remotely squitted
 	*/
 	if (MyConnect(acptr) && !IsAnOper(cptr))
+	  {
 	    sendto_ops_butone((aClient *)NULL, &me,
 		":%s WALLOPS :Received SQUIT %s from %s (%s)",
 		me.name, server, get_client_name(sptr,FALSE), comment);
+#if defined(USE_SYSLOG) && defined(SYSLOG_SQUIT)
+	    syslog(LOG_DEBUG,"SQUIT From %s : %s (%s)",
+		   parv[0], server, comment);
+#endif
+	  }
 
 	return exit_client(cptr, acptr, sptr, comment);
     }
@@ -1386,12 +1287,12 @@ m_server(cptr, sptr, parc, parv)
      int parc;
      char *parv[];
 {
-  char *host, info[REALLEN+1], *inpath;
+  char	*host, info[REALLEN+1], *inpath;
   aClient *acptr, *bcptr;
   aConfItem *aconf, *bconf;
-  Reg1 char *ch;
-  Reg2 int i;
-  int hop, split;
+  Reg1	char *ch;
+  Reg2	int i;
+  int	hop, split;
 
   info[0] = '\0';
   inpath = get_client_name(cptr,FALSE);
@@ -1533,7 +1434,7 @@ m_server(cptr, sptr, parc, parv)
       SetServer(acptr);
       add_client_to_list(acptr);
       add_to_client_hash_table(acptr->name, acptr);
-      
+
       /*
        ** Old sendto_serv_but_one() call removed because we now
        ** need to send different names to different servers
@@ -1562,7 +1463,7 @@ m_server(cptr, sptr, parc, parv)
   strncpyzt(cptr->name, host, sizeof(cptr->name));
   strncpyzt(cptr->info, info[0] ? info:me.name, sizeof(cptr->info));
 
-  if (check_access(cptr, CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER, 1))
+  if (check_server(cptr))
     {
       sendto_ops("Received unauthorized connection from %s.",
                  get_client_name(cptr,FALSE));
@@ -1769,6 +1670,12 @@ char *parv[];
 			   me.name, parv[0], user, acptr->name);
 		chasing = 1;
 	    }
+	if (IsServer(acptr) || IsMe(acptr))
+	    {
+		sendto_one(sptr,":%s %d %s :You cant kill a server!",
+			   me.name, ERR_NOPRIVILEGES, parv[0]);
+		return 0;
+	    }
 
 	if (!IsServer(cptr))
 	    {
@@ -1808,29 +1715,21 @@ char *parv[];
 		     me.name, ERR_NOPRIVILEGES, parv[0]);
 	    return 0;
 	  }
-	sendto_ops("Received KILL message for %s. Path: %s!%s",
-		   acptr->name, inpath, path);
+	sendto_ops("Received KILL message for %s. From %s Path: %s!%s",
+		   acptr->name, parv[0], inpath, path);
+#if defined(USE_SYSLOG) && defined(SYSLOG_KILL)
+	if (IsOper(sptr))
+		syslog(LOG_DEBUG,"KILL From %s For %s Path %s!%s",
+			parv[0], acptr->name, inpath, path);
+#endif
 	/*
 	** And pass on the message to other servers. Note, that if KILL
 	** was changed, the message has to be sent to all links, also
 	** back.
 	*/
 	if (sptr != acptr)     /* Suicide kills are NOT passed on --SRB */
-	  {
-	    /* Just to make sure we use the link name as source.
-	       Therefore we have to scan through all links.
-	       The reason is wildcard servers and possible
-	       problems with older servers handling wildcards --Jto */
-	    aClient *ptr = client;
-	    for (i = 0; i <= highest_fd; i++) {
-	      if (!(ptr = local[i]) || !IsServer(ptr) || IsMe(ptr))
-		continue;
-	      if (cptr != ptr || chasing)
-		sendto_prefix_one(ptr, sptr, ":%s KILL %s :%s!%s",
-				  IsServer(sptr) ? "" : parv[0],
-				  acptr->name, inpath, path);
-	    }
-	}
+		sendto_serv_butone(chasing ? NULL : cptr,":%s KILL %s :%s!%s",
+				   parv[0], acptr->name, inpath, path);
 	/*
 	** Tell the victim she/he has been zapped, but *only* if
 	** the victim is on current server--no sense in sending the
@@ -1861,6 +1760,9 @@ int parc;
 char *parv[];
     {
     char **text = infotext;
+
+    if (check_registered(sptr))
+	return 0;
 
     if (hunt_server(cptr,sptr,":%s INFO %s",1,parc,parv) == HUNTED_ISME)
 	{
@@ -1897,7 +1799,8 @@ char *parv[];
     char *mask;
     aClient *acptr;
 
-    CheckRegisteredUser(sptr);
+    if (check_registered_user(sptr))
+	return 0;
     
     if (parc > 2)
 	{
@@ -1926,9 +1829,11 @@ char *parv[];
 /*
 ** m_summon should be redefined to ":prefix SUMMON host user" so
 ** that "hunt_server"-function could be used for this too!!! --msa
+** As of 2.7.1e, this was the case. -avalon
 **
 **	parv[0] = sender prefix
-**	parv[1] = user%client@servername
+**	parv[1] = server
+**	parv[2] = user
 */
 m_summon(cptr, sptr, parc, parv)
 aClient *sptr, *cptr;
@@ -1944,7 +1849,8 @@ char *parv[];
 #endif
 	int fd, flag = 0;
 
-	CheckRegisteredUser(sptr);
+	if (check_registered_user(sptr))
+		return 0;
 	if (parc < 2 || *parv[1] == '\0')
 	    {
 		sendto_one(sptr,":%s %d %s (Summon) No recipient given",
@@ -1960,13 +1866,7 @@ char *parv[];
 
 	if (BadPtr(host) || matches(host,me.name) == 0)
 	    {
-#if RSUMMON
-		if (index(user,'%') != NULL)
-		    {
-			rsummon(sptr,user);
-			return 0;
-		    }
-#endif
+#ifdef ENABLE_SUMMON
 		if ((fd = utmp_open()) == -1)
 		    {
 			sendto_one(sptr,":%s NOTICE %s :Cannot open %s",
@@ -2012,6 +1912,7 @@ char *parv[];
 				   me.name, parv[0], user);
 		else
 			summon(sptr, user, linebuf);
+#endif /* ENABLE_SUMMON */
 		return 0;
 	    }
 	/*
@@ -2026,8 +1927,8 @@ char *parv[];
 		sendto_prefix_one(acptr, sptr, ":%s SUMMON %s@%s",
 				  parv[0], user, host);
 	else
-	  sendto_one(sptr, ":%s NOTICE %s :SUMMON: Summon bug bites",
-		     me.name, parv[0]);
+		sendto_one(sptr, ":%s NOTICE %s :SUMMON: Summon bug bites",
+			   me.name, parv[0]);
 	return 0;
     }
 
@@ -2097,16 +1998,16 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
+	static char Lheading[] = ":%s %d %s %s %s %s %s %s %s :%s";
+	static char Lformat[]  = ":%s %d %s %s %u %u %u %u %u :%s";
 	struct Message *mptr;
 	aClient *acptr;
 	char *stat = parc > 1 ? parv[1] : "M";
 	Reg1 int i;
-	/*
-	** Server should not format things, but this a temporary kludge
-	*/
-	static char Lheading[] = ":%s %d %s %s %s %s %s %s %s :%s";
-	static char Lformat[]  = ":%s %d %s %s %u %u %u %u %u :%s";
-	
+
+	if (check_registered(sptr))
+		return 0;
+
 	if (hunt_server(cptr,sptr,":%s STATS %s :%s",2,parc,parv)!= HUNTED_ISME)
 		return 0;
 
@@ -2125,9 +2026,12 @@ char *parv[];
 		for (i = 0; i <= highest_fd; i++)
 			if ((acptr = local[i]) && /* Includes IsMe! */
 			    (IsOper(sptr) || !IsPerson(acptr) ||
+			     (sptr == acptr) ||
 			     IsLocOp(sptr) && IsLocOp(acptr))) {
 				sendto_one(sptr,Lformat,
 					   me.name,RPL_STATSLINKINFO,parv[0],
+					   (isupper(*stat)) ?
+					   get_client_name(acptr, TRUE) :
 					   get_client_name(acptr,FALSE),
 					   (int)DBufLength(&acptr->sendQ),
 					   (int)acptr->sendM,
@@ -2156,6 +2060,22 @@ char *parv[];
 	case 'I' : case 'i' :
 		report_configured_links(sptr,CONF_CLIENT);
 		break;
+#ifdef DEBUGMODE
+	case 'R' : case 'r' :
+		send_usage(sptr,parv[0]);
+		break;
+#endif
+	case 'U' : case 'u' :
+	    {
+		register long now;
+
+		now = time(0) - me.since;
+		sendto_one(sptr,
+			   ":%s NOTICE %s :Server Uptime: %d days, %d:%d:%d",
+			   me.name, parv[0],
+			   now/86400, (now/3600)%24, (now/60)%60, now%60);
+		break;
+	    }
 	default :
 		for (mptr = msgtab; mptr->cmd; mptr++)
 		   if (mptr->count)
@@ -2183,10 +2103,12 @@ char *parv[];
     char namebuf[10],linebuf[10],hostbuf[17];
     int fd, flag = 0;
 
-    CheckRegisteredUser(sptr);
+    if (check_registered_user(sptr))
+	return 0;
 
     if (hunt_server(cptr,sptr,":%s USERS %s",1,parc,parv) == HUNTED_ISME)
 	{
+#ifdef ENABLE_SUMMON
 	if ((fd = utmp_open()) == -1)
 	    {
 	    sendto_one(sptr,":%s NOTICE %s Cannot open %s",
@@ -2207,213 +2129,10 @@ char *parv[];
 			me.name, parv[0], parv[1]);
 
 	utmp_close(fd);
+#endif
 	}
     return 0;
 }
-
-/*
-** exit_client
-**	This is old "m_bye". Name  changed, because this is not a
-**	protocol function, but a general server utility function.
-**
-**	This function exits a client of *any* type (user, server, etc)
-**	from this server. Also, this generates all necessary prototol
-**	messages that this exit may cause.
-**
-**   1) If the client is a local client, then this implicitly
-**	exits all other clients depending on this connection (e.g.
-**	remote clients having 'from'-field that points to this.
-**
-**   2) If the client is a remote client, then only this is exited.
-**
-** For convenience, this function returns a suitable value for
-** m_funtion return value:
-**
-**	FLUSH_BUFFER	if (cptr == sptr)
-**	0		if (cptr != sptr)
-*/
-int exit_client(cptr, sptr, from, comment)
-aClient *cptr;	/*
-		** The local client originating the exit or NULL, if this
-		** exit is generated by this server for internal reasons.
-		** This will not get any of the generated messages.
-		*/
-aClient *sptr;	/* Client exiting */
-aClient *from;	/* Client firing off this Exit, never NULL! */
-char *comment;	/* Reason for the exit */
-    {
-	Reg1 aClient *acptr;
-	Reg2 aClient *next;
-	static int exit_one_client();
-
-	if (MyConnect(sptr))
-	    {
-		/*
-		** Currently only server connections can have
-		** depending remote clients here, but it does no
-		** harm to check for all local clients. In
-		** future some other clients than servers might
-		** have remotes too...
-		**
-		** Close the Client connection first and mark it
-		** so that no messages are attempted to send to it.
-		** (The following *must* make MyConnect(sptr) == FALSE!).
-		** It also makes sptr->from == NULL, thus it's unnecessary
-		** to test whether "sptr != acptr" in the following loops.
-		*/
-#ifdef FNAME_USERLOG
-	    {
-		FILE *userlogfile;
-		struct stat stbuf;
-		long	on_for;
-
-		/*
- 		 * This conditional makes the logfile active only after
-		 * it's been created - thus logging can be turned off by
-		 * removing the file.
-		 */
-		/*
-		 * stop NFS hangs...most systems should be able to open a
-		 * file in 3 seconds. -avalon (curtesy of wumpus)
-		 */
-		alarm(3);
-		if (IsPerson(sptr) && !stat(FNAME_USERLOG, &stbuf) &&
-		    (userlogfile = fopen(FNAME_USERLOG, "a")))
-		    {
-			alarm(0);
-			on_for = time(NULL) - sptr->firsttime;
-			fprintf(userlogfile, "%s (%3d:%02d:%02d): %s@%s\n",
-				myctime(sptr->firsttime),
-				on_for / 3600, (on_for % 3600)/60,
-				on_for % 60,
-				sptr->user->username, sptr->user->host);
-			fclose(userlogfile);
-		    }
-		alarm(0);
-		/* Modification by stealth@caen.engin.umich.edu */
-	    }
-#endif
-		close_connection(sptr);
-		/*
-		** Note	There is no danger of 'cptr' being exited in
-		**	the following loops. 'cptr' is a *local* client,
-		**	all dependants are *remote* clients.
-		*/
-		for (acptr = client; acptr; acptr = next)
-		    {
-			next = acptr->next;
-			if (!IsServer(acptr) && acptr->from == sptr)
-				exit_one_client((aClient *)0,acptr,
-						&me,me.name);
-		    }
-		for (acptr = client; acptr; acptr = next)
-		    {
-			next = acptr->next;
-			if (IsServer(acptr) && acptr->from == sptr)
-				exit_one_client((aClient *)0,acptr,
-						&me,me.name);
-		    }
-	    }
-
-	exit_one_client(cptr, sptr, from, comment);
-	return cptr == sptr ? FLUSH_BUFFER : 0;
-    }
-
-/*
-** Exit one client, local or remote. Assuming all dependants have
-** been already removed, and socket closed for local client.
-*/
-static exit_one_client(cptr, sptr, from, comment)
-aClient *sptr;
-aClient *cptr;
-aClient *from;
-char *comment;
-    {
-	aClient *acptr;
-	Reg1 int i;
-	Reg2 Link *link;
-
-	/*
-	**  For a server or user quitting, propagage the information to
-	**  other servers (except to the one where is came from (cptr))
-	*/
-	if (IsMe(sptr))
-		return 0;	/* ...must *never* exit self!! */
-	else if (IsServer(sptr)) {
-	  /*
-	   ** Old sendto_serv_but_one() call removed because we now
-	   ** need to send different names to different servers
-	   ** (domain name matching)
-	   */
-	  for (i = 0; i <= highest_fd; i++)
-	    {
-	      if (!(acptr = local[i]) || !IsServer(acptr) ||
-		  acptr == cptr || IsMe(acptr))
-		continue;
-	      if (matches(my_name_for_link(me.name, acptr->confs->value.aconf),
-			  sptr->name) == 0)
-		continue;
-	      if (sptr->from == acptr)
-		/*
-		** SQUIT going "upstream". This is the remote
-		** squit still hunting for the target. Use prefixed
-		** form. "from" will be either the oper that issued
-		** the squit or some server along the path that didn't
-		** have this fix installed. --msa
-		*/
-		sendto_one(acptr, ":%s SQUIT %s :%s",
-			   from->name, sptr->name, comment);
-	      else
-		sendto_one(acptr, "SQUIT %s :%s", sptr->name, comment);
-	    }
-	} else if (!IsRegistered(sptr))
-				    /* ...this test is *dubious*, would need
-				    ** some thougth.. but for now it plugs a
-				    ** nasty whole in the server... --msa
-				    */
-		 ; /* Nothing */
-	else if (sptr->name[0]) /* ...just clean all others with QUIT... */
-	    {
-		/*
-		** If this exit is generated from "m_kill", then there
-		** is no sense in sending the QUIT--KILL's have been
-		** sent instead.
-		*/
-		if ((sptr->flags & FLAGS_KILLED) == 0)
-			sendto_serv_butone(cptr,":%s QUIT :%s",
-					   sptr->name, comment);
-		/*
-		** If a person is on a channel, send a QUIT notice
-		** to every client (person) on the same channel (so
-		** that the client can show the "**signoff" message).
-		** (Note: The notice is to the local clients *only*)
-		*/
-		if (sptr->user) {
-		  Link *tmp;
-		  sendto_common_channels(sptr, ":%s QUIT :%s",
-					 sptr->name, comment);
-		  link = sptr->user->channel;
-		  while (link) {
-		    tmp = link->next;
-		    remove_user_from_channel(sptr, link->value.chptr);
-		    sptr->user->channel = tmp;
-		    /* free(link); */
-		    link = tmp;
-		
-		  }
-		  /* Clean up invitefield */
-		  for (link = sptr->user->invited; link; link = tmp) {
-		    tmp = link->next;
-		    del_invite(sptr, link->value.chptr);
-		    /* no need to free link, del_invite does that */
-		  }
-		}
-	    }
-	/* Remove sptr from the client list */
-	del_from_client_hash_table(sptr->name, sptr);
-	remove_client_from_list(sptr);
-	return (0);
-    }
 
 /*
 ** Note: At least at protocol level ERROR has only one parameter,
@@ -2472,7 +2191,13 @@ int parc;
 char *parv[];
     {
 	if (IsOper(sptr) && MyConnect(sptr))
+	    {
+#ifdef USE_SYSLOG
+		syslog(LOG_WARNING, "Server RESTART by %s\n",
+       			get_client_name(sptr,FALSE));
+#endif
 		restart();
+	    }
 	else
 		sendto_one(sptr, ":%s %d %s :Only Janitors can %s",
 			   me.name, ERR_NOPRIVILEGES, parv[0],
@@ -2486,7 +2211,11 @@ char *parv[];
     {
 	if (IsOper(sptr) && MyConnect(sptr))
 	    {
-		sendto_ops("*** %s has pulled the plug on us sir!\n", parv[0]);
+		sendto_ops("*** %s has pulled the plug on us sir!", parv[0]);
+#ifdef USE_SYSLOG
+		syslog(LOG_CRIT, "Server DIE by %s\n",
+			get_client_name(sptr, FALSE));
+#endif
 		terminate();
 	    }
 	else
@@ -2509,6 +2238,9 @@ char *parv[];
 	int s_count = 0, c_count = 0, u_count = 0, i_count = 0, o_count = 0;
 	int m_client = 0, m_server = 0;
 	aClient *acptr;
+
+	if (check_registered_user(sptr))
+	  return 0;
 
 	if (parc > 2)
 	  if(hunt_server(cptr, sptr, ":%s LUSERS %s %s", 2, parc, parv))
@@ -2603,7 +2335,8 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	CheckRegisteredUser(sptr);
+	if (check_registered_user(sptr))
+		return 0;
 	if (sptr->user->away)
 	    {
 		free(sptr->user->away);
@@ -2624,7 +2357,7 @@ char *parv[];
 	/* Marking as away */
 
 	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], parv[1]);
-	sptr->user->away = (char *) malloc((unsigned int) (strlen(parv[1])+1));
+	sptr->user->away = (char *)MyMalloc((unsigned int)(strlen(parv[1])+1));
 	if (sptr->user->away == NULL)
 	    {
 		sendto_one(sptr,
@@ -2691,11 +2424,17 @@ char *parv[];
 	** Notify all operators about remote connect requests
 	*/
 	if (!IsAnOper(cptr))
+	 {
 	  sendto_ops_butone((aClient *)0, &me,
 			    ":%s WALLOPS :Remote 'CONNECT %s %s' from %s",
 			    me.name,
 			    parv[1], parv[2] ? parv[2] : "",
 			    get_client_name(sptr,FALSE));
+#if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
+	  syslog(LOG_DEBUG, "CONNECT From %s : %s %d",
+		 parv[0], parv[1], parv[2] ? parv[2] : "");
+#endif
+	 }
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status == CONF_CONNECT_SERVER &&
@@ -2933,7 +2672,7 @@ char *parv[];
 	    && StrEq(encr, aconf->passwd))
 	    {
 		sptr->flags |= FLAGS_SERVNOTICE|FLAGS_WALLOP;
-		attach_conf(aconf,sptr);
+		attach_conf(sptr,aconf);
 		if (aconf->status == CONF_LOCOP)
 		  SetLocOp(sptr);
 		else {
@@ -2988,39 +2727,6 @@ char *parv[];
     }
 
 /*
-** m_wall
-**	parv[0] = sender prefix
-**	parv[1] = message text
-*/
-#ifdef WALL
-m_wall(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-    {
-	char *message = parc > 1 ? parv[1] : NULL;
-
-	if (!IsAnOper(sptr))
-	    {
-		sendto_one(sptr,
-			   ":%s %d %s :Only real wizards know the correct %s",
-			   me.name, ERR_NOPRIVILEGES, parv[0],
-			   "spells to open this gate");
-		return 0;
-	    }
-	if (BadPtr(message))
-	    {
-		sendto_one(sptr, ":%s %d %s :Empty WALL message",
-			   me.name, ERR_NEEDMOREPARAMS, parv[0]);
-		return 0;
-	    }
-	if (IsServer(cptr))
-	sendto_all_butone(IsServer(cptr) ? cptr : NULL, sptr,
-			  ":%s WALL :%s", parv[0], message);
-	return 0;
-    }
-#endif
-/*
 ** m_wallops (write to *all* opers currently online)
 **	parv[0] = sender prefix
 **	parv[1] = message text
@@ -3032,7 +2738,8 @@ char *parv[];
     {
 	char *message = parc > 1 ? parv[1] : NULL;
 
-	CheckRegistered(sptr);
+	if (check_registered(sptr))
+		return 0;
 
 #ifndef WALLOPS
 	if (!IsServer(cptr))
@@ -3059,7 +2766,8 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	CheckRegisteredUser(sptr);
+	if (check_registered_user(sptr))
+	    return 0;
 	if (hunt_server(cptr,sptr,":%s TIME %s",1,parc,parv) == HUNTED_ISME)
 	    sendto_one(sptr,":%s %d %s %s :%s", me.name, RPL_TIME,
 		   parv[0], me.name, date((long)0));
@@ -3080,154 +2788,31 @@ char *parv[];
 	sendto_one(sptr,":%s %d %s :Rehashing %s",
 		   me.name, RPL_REHASHING, parv[0], configfile);
 	sendto_ops("Rehashing Server config file (%s)",configfile);
+#ifdef USE_SYSLOG
+	syslog(LOG_INFO, "REHASH From %s\n", get_client_name(sptr, FALSE));
+#endif
+
 	rehash();
+
 #if defined(R_LINES_REHASH) && !defined(R_LINES_OFTEN)
 	{
-	  register aClient *cptr;
-	  extern int find_restrict();
-	  char reply[128];
+	  Reg1 aClient *cptr;
+	  Reg2 int i;
 	  
-	  for (cptr=client;cptr;cptr=cptr->next)
+	  for (i = 0; i <= highest_fd; i++)
 	    
-	    if (MyClient(cptr) && !IsMe(cptr) &&
-		find_restrict(cptr->user->host,cptr->user->username,reply))
+	    if ((cptr = local[i]) && !IsMe(cptr))
 	      {
-		sendto_ops("Restricting %s (%s), closing link",
-			   get_client_name(cptr,FALSE),reply);
-		sendto_one(cptr,":%s %d :*** %s",me.name,
-			   ERR_YOUREBANNEDCREEP,reply);
-		return exit_client((aClient *)NULL, cptr, cptr, "");
+		if (find_restrict(cptr))
+		  {
+		    sendto_ops("Restricting %s, closing link",
+				get_client_name(cptr,FALSE));
+		    exit_client((aClient *)NULL, cptr, cptr, "R-lined");
+		  }
 	      }
 	}
 #endif
 	return 0;
-    }
-
-/************************************************************************
- * m_names() - Added by Jto 27 Apr 1989
- ************************************************************************/
-
-/*
-** m_names
-**	parv[0] = sender prefix
-**	parv[1] = channel
-*/
-m_names(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-    { 
-	Reg1 aChannel *chptr;
-	Reg2 aClient *c2ptr;
-	Reg3 Link *link;
-	int idx, flag;
-	char *para = parc > 1 ? parv[1] : NULL;
-
-	/* Allow NAMES without registering */
-
-	/* First, do all visible channels (public and the one user self is) */
-
-	for (chptr = channel; chptr; chptr = chptr->nextch)
-	    {
-		if (!BadPtr(para) && !ChanIs(chptr, para))
-			continue; /* -- wanted a specific channel */
-		if (!ShowChannel(sptr, chptr))
-			continue; /* -- users on this are not listed */
-
-		/* Find users on same channel (defined by chptr) */
-
-		sprintf(buf, "* %s :", chptr->chname);
-
-		if (PubChannel(chptr))
-			*buf = '=';
-		else if (SecretChannel(chptr))
-			*buf = '@';
-		idx = strlen(buf);
-		flag = 0;
-		for (link = chptr->members; link; link = link->next)
-		    {
-			c2ptr = link->value.cptr;
-			if (IsInvisible(c2ptr) && !IsMember(sptr,chptr))
-			  continue;
-		        if (TestChanOpFlag(link->flags))
-			  strcat(buf, "@");
-			strncat(buf, c2ptr->name, NICKLEN);
-			idx += strlen(c2ptr->name) + 1;
-			flag = 1;
-			strcat(buf," ");
-			if (idx + NICKLEN > BUFSIZE - 2)
-			    {
-				sendto_one(sptr, ":%s %d %s %s",
-					   me.name, RPL_NAMREPLY, parv[0],
-					   buf);
-				sprintf(buf, "* %s :", chptr->chname);
-				if (PubChannel(chptr))
-					*buf = '=';
-				else if (SecretChannel(chptr))
-					*buf = '@';
-				idx = strlen(buf);
-				flag = 0;
-			    }
-		    }
-		if (flag)
-			sendto_one(sptr, ":%s %d %s %s",
-				   me.name, RPL_NAMREPLY, parv[0], buf);
-	    }
-	if (!BadPtr(para)) {
-	  sendto_one(sptr, ":%s %d %s :* End of /NAMES list.", me.name,
-		     RPL_ENDOFNAMES,parv[0]);
-	  return(1);
-	}
-
-	/* Second, do all non-public, non-secret channels in one big sweep */
-
-	strcpy(buf, "* * :");
-	idx = strlen(buf);
-	flag = 0;
-	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next)
-	    {
-  	        aChannel *ch3ptr;
-		int showflag = 0, secret = 0;
-
-		if (!IsPerson(c2ptr) || IsInvisible(c2ptr))
-		  continue;
-		link = c2ptr->user->channel;
-		/*
-		 * dont show a client if they are on a secret channel or
-		 * they are on a channel sptr is on since they have already
-		 * been show earlier. -avalon
-		 */
-		while (link) {
-		  ch3ptr = link->value.chptr;
-		  if (PubChannel(ch3ptr) || IsMember(sptr, ch3ptr))
-		    showflag = 1;
-		  if (SecretChannel(ch3ptr))
-		    secret = 1;
-		  link = link->next;
-		}
-		if (showflag) /* have we already shown them ? */
-		  continue;
-		if (secret) /* on any secret channels ? */
-		  continue;
-		strncat(buf, c2ptr->name, NICKLEN);
-		idx += strlen(c2ptr->name) + 1;
-		strcat(buf," ");
-		flag = 1;
-		if (idx + NICKLEN > BUFSIZE - 2)
-		    {
-			sendto_one(sptr, ":%s %d %s %s",
-				   me.name, RPL_NAMREPLY, parv[0], buf);
-			strcpy(buf, "* * :");
-			idx = strlen(buf);
-			flag = 0;
-		    }
-	    }
-	if (flag)
-		sendto_one(sptr, ":%s %d %s %s",
-			   me.name, RPL_NAMREPLY, parv[0], buf);
-	sendto_one(sptr, ":%s %d %s :* End of /NAMES list.", me.name,
-		   RPL_ENDOFNAMES, parv[0]);
-	return(1);
     }
 
 /*
@@ -3241,6 +2826,9 @@ int parc;
 char *parv[];
     {
 	aConfItem *aconf;
+
+	if (check_registered(sptr))
+		return 0;
 
 	if (hunt_server(cptr,sptr,":%s ADMIN :%s",1,parc,parv) != HUNTED_ISME)
 		return 0;
@@ -3282,6 +2870,9 @@ char *parv[];
 	Reg1 int i;
 	Reg2 aClient *acptr2;
 
+	if (check_registered(sptr))
+		return 0;
+
 	switch (hunt_server(cptr,sptr,":%s TRACE :%s", 1,parc,parv))
 	    {
 	    case HUNTED_PASS: /* note: gets here only if parv[1] exists */
@@ -3299,7 +2890,7 @@ char *parv[];
 	for (i = 0; i < MAXCONNECTIONS; i++)
 		link_s[i] = 0, link_u[i] = 0;
 
-	if (doall && IsOper(sptr))
+	if (doall)
 		for (acptr2 = client; acptr2; acptr2 = acptr2->next)
 			if (IsPerson(acptr2) &&
 			    (!IsInvisible(acptr2) || IsOper(sptr)))
@@ -3398,6 +2989,9 @@ char *parv[];
 	FILE *fptr;
 	char line[80], *tmp;
 
+	if (check_registered(sptr))
+		return 0;
+
 	if (hunt_server(cptr, sptr, ":%s MOTD :%s", 1,parc,parv)!=HUNTED_ISME)
 		return 0;
 #ifndef MOTD
@@ -3438,118 +3032,6 @@ char *parv[];
     }
 
 /*
-** m_service()
-** parv[0] - sender prefix
-** parv[1] - service name
-** parv[2] - service password
-*/
-m_service(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-{
-	aConfItem *aconf;
-	char *password, *info, *name, *mask;
-  
-	name = parc > 1 ? parv[1] : NULL;
-	password = parc > 2 ? parv[2] : NULL;
-	info = parc > 3 ? parv[3] : NULL;
-
-	if (IsRegistered(sptr))
-	    {
-		Reg1 aClient *acptr;
-
-		if (parc > 1)
-			mask = parv[1];
-		else
-			mask = NULL;
-		for (acptr = client; acptr; acptr = acptr->next)
-		    {
-			if (!IsService(acptr))
-				continue;
-			if (mask && matches(mask, acptr->name))
-				continue;
-			sendto_one(sptr,":%s %d %s %s %s",
-				   me.name, RPL_SERVICEINFO, parv[0],
-				   acptr->name, acptr->info);
-		    }
-		sendto_one(sptr, ":%s %d %s :End of service list",
-			   me.name, RPL_ENDOFSERVICES, parv[0]);
-		return 0;
-	    }
-
-	if (!IsUnknown(sptr) || (parc < 4 && MyConnect(sptr)) ||
-	    !sptr->name[0])
-	    {
-		sendto_one(sptr, ":%s %d %s :Change balls, please",
-			   me.name, ERR_NEEDMOREPARAMS, parv[0]);
-		return 0;
-	    }
-  
-	/* if message arrived from server, trust it, and set to service */
-
-	if (IsServer(cptr))
-	    {
-		sendto_serv_butone(cptr, ":%s NICK %s %d",
-				   parv[0],parv[0],sptr->hopcount+1);
-		sendto_serv_butone(cptr, ":%s SERVICE %s * :%s",
-				   parv[0],parv[1],info);
-		strncpy(sptr->info, info, REALLEN);
-		SetService(sptr);
-		return 0;
-	    }
-	if (!name || !(aconf = find_conf_name(name, CONF_SERVICE)))
-	    {
-		sendto_one(sptr,
-			   ":%s %d %s :Only few of mere robots %s",
-			   me.name, ERR_NOSERVICEHOST, parv[0],
-	       "may try to serve");
-		return 0;
-	    }
-	if ((aconf->status & CONF_SERVICE) && StrEq(password, aconf->passwd))
-	    {
-		attach_conf(aconf,sptr);
-		sendto_one(sptr, ":%s %d %s :Net. %s",
-			   me.name, RPL_YOURESERVICE, parv[0],
-			   "First service");
-		SetService(sptr);
-		strncpy(sptr->info, info, REALLEN);
-		sendto_serv_butone(cptr, ":%s NICK %s 1", parv[0], parv[0]);
-		sendto_serv_butone(cptr, ":%s SERVICE * * :%s",
-				   parv[0], info);
-	    }
-	else
-		sendto_one(sptr, ":%s %d %s :Only real players know how %s",
-			   me.name, ERR_PASSWDMISMATCH, parv[0],
-			   "to serve");
-	return 0;
-    }
-
-m_whoreply(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-{
-    return m_error(cptr, sptr, parc, parv);
-}
-
-m_namreply(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-{
-    return m_error(cptr, sptr, parc, parv);
-}
-
-m_linreply(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-{
-    return m_error(cptr, sptr, parc, parv);
-}
-
-/*
  * m_userhost added by Darren Reed 13/8/91 to aid clients and reduce
  * the need for complicated requests like WHOIS. It returns user/host
  * information only (no spurious AWAY labels or channels).
@@ -3564,7 +3046,8 @@ char *parv[];
 	register	char *s;
 	register	int i;
 
-	CheckRegistered(sptr);
+	if (check_registered(sptr))
+		return 0;
 
 	if (parc < 2) {
 		sendto_one(sptr, ":%s %d %s :USERHOST not enough parameters",
@@ -3609,7 +3092,8 @@ char *parv[];
 	register aClient *acptr;
 	register char *s;
 
-	CheckRegistered(sptr);
+	if (check_registered(sptr))
+		return 0;
 
 	if (parc != 2) {
 		sendto_one(sptr, ":%s %d %s :ISON not enough parameters",
@@ -3654,7 +3138,8 @@ char *parv[];
 	char flagbuf[20];
 	char **p, *m;
 
-	CheckRegisteredUser(sptr);
+	if (check_registered_user(sptr))
+		return 0;
 
 	what = MODE_ADD;
 	bzero(flagbuf, sizeof(flagbuf));
@@ -3810,31 +3295,4 @@ aClient *cptr, *acptr;
 	if (umode_buf[1])
 		sendto_one(cptr, ":%s MODE %s %s",
 			   acptr->name, acptr->name, umode_buf);
-}
-
-m_deop(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
-{
-	aConfItem *aconf;
-
-	CheckRegisteredUser(sptr);
-
-	if (!MyConnect(sptr))
-	    return 0;
-	aconf = find_conf_host(sptr->confs, sptr->sockhost,
-				CONF_OPERATOR|CONF_LOCOP);
-	if ((aconf == (aConfItem *)NULL) || !IsOper(sptr))
-	  {
-	    sendto_one(sptr,":%s %d %s :You cant go back a way you didnt come",
-			me.name, ERR_NOPRIVILEGES, parv[0]);
-	    return 0;
-	  }
-	detach_conf(sptr, aconf);
-	ClearOper(sptr);
-	sendto_one(sptr, ":%s %d %s :You're Nolonger an IRC Janitor",
-		   me.name, RPL_NOTOPERANYMORE, parv[0]);
-	sendto_serv_butone(cptr, ":%s OPER -", parv[0]);
-	return 0;
 }
