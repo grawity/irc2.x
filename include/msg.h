@@ -67,6 +67,7 @@
 #define MSG_USERHOST "USERHOST"
 #define MSG_ISON     "ISON"
 #define MSG_SERVICE  "SERVICE"
+#define MSG_NOTE     "NOTE"
 #define MSG_SQUERY   "SQUERY"
 #define MSG_SERVLIST "SERVLIST"
 #define MSG_SERVSET  "SERVSET"
@@ -85,7 +86,7 @@ extern int m_users(), m_nick(), m_error(), m_help();
 extern int m_squit(), m_restart(), m_away(), m_die(), m_connect();
 extern int m_ping(), m_pong(), m_oper(), m_pass(), m_trace();
 extern int m_time(), m_rehash(), m_names(), m_admin();
-extern int m_notice(), m_lusers(), m_umode();
+extern int m_notice(), m_lusers(), m_umode(), m_note();
 extern int m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
 extern int m_join(), m_part(), m_service(), m_userhost(), m_ison();
 extern int m_service(), m_servset(), m_servlist(), m_squery();
@@ -148,8 +149,11 @@ struct Message msgtab[] = {
   { MSG_HELP,    m_help,     0, 2, 1 },
   { MSG_INFO,    m_info,     0, 1, 1 },
   { MSG_MOTD,    m_motd,     0, 2, 1 },
-#undef USE_SERVICES
+#ifdef NPATH
+  { MSG_NOTE,    m_note,     0, 1, 1 },
+#endif
 
+#undef USE_SERVICES
 #ifdef USE_SERVICES
   { MSG_SERVICE, m_service,  0, 7, 1 },
   { MSG_SERVSET, m_servset,  0, 3, 1 },

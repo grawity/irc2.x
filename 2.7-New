@@ -83,7 +83,7 @@
 	  pair on connecting to achieve service status.
 
 	* JOIN/PART now accept a list of channels in the first parameter with
-	  each separated by a ",".
+	  each separated by a ",". eg "JOIN #foo,#bar,#foobar"
 
 	* A hopcount for the distance to nicknames and servers has been
 	  introduced (for better or worse). It is passed as the second
@@ -96,3 +96,33 @@
 
 	* ISON now returns nicknames with the actual case, i.e.
           ISON wiz will answer WiZ
+
+New into 2.7.1
+
+	* STATS u, r, z
+		u - uptime
+		r - CPU useage stats
+		z - counts and shows current memory useage
+	  r & z are only available if DEBUGMODE is defined in config.h
+
+	* GETHOST which forces all reverse lookups of ip#'s to also match
+	  when doing a forward lookup of the hostname returned.
+
+	* SENDQ_ALWAYS buffering policy for sending data over links.
+	  (Server tries to buffer as much data as possible before attempting
+	   a write).
+
+New into 2.7.2
+
+	* NOTE (once again appears and in much better state)
+
+	* WHOWAS gives a list of known users of the nick in question
+	  rather than just the most recent.
+
+	* Server can accept both server and client connections via a unix
+	  domain socket. This provides greater security and reliability for
+	  connections between the host and itself. (#define UNIXPORT)
+
+	* STATS C reports L-lines: New Numeric 241
+
+	* #define for showing all users the invisible count from LUSERS

@@ -442,15 +442,14 @@ struct Message *mptr;
 		  from->user->last = time(NULL);
 		return (*mptr->func)(cptr, from, i, para);
 	    }
-	return 0;
     }
 
 
-char *getfield(newline)
-char *newline;
-    {
-	static char *line = NULL;
-	char *end, *field;
+char	*getfield(newline)
+char	*newline;
+{
+	static	char *line = NULL;
+	char	*end, *field;
 	
 	if (newline)
 		line = newline;
@@ -468,4 +467,4 @@ char *newline;
 		line = end + 1;
 	*end = '\0';
 	return(field);
-    }
+}

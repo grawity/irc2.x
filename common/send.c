@@ -63,11 +63,10 @@ aClient *to;
 char	*notice;
     {
 	to->flags |= FLAGS_DEADSOCKET;
-	if (notice != NULL && !IsPerson(to) && !IsUnknown(to))
 #ifndef CLIENT_COMPILE
+	if (notice != (char *)NULL && !IsPerson(to) && !IsUnknown(to) &&
+	    !(to->flags & FLAGS_CLOSING))
 		sendto_ops(notice, get_client_name(to, FALSE));
-#else
-		;
 #endif
 	return 0;
     }
@@ -125,8 +124,15 @@ int	len;
 	*/
 	to->sendM += 1;
 	me.sendM += 1;
-
-	if (DBufLength(&to->sendQ) > 8192) /* bad magic for moment - avalon */
+	/*
+	** This little bit is to stop the sendQ from growing too large when
+	** there is no need for it to. Thus we call send_queued() every time
+	** 2k has been added to the queue since the last non-fatal write.
+	** Also stops us from deliberately building a large sendQ and then
+	** trying to flood that link with data (possible during the net
+	** relinking done by servers with a large load).
+	*/
+	if (DBufLength(&to->sendQ)/2048 > to->lastsq)
 		send_queued(to);
 	return 0;
     }
@@ -175,8 +181,8 @@ int	len;
 int	send_queued(to)
 aClient *to;
     {
-	char *msg;
-	int len, rlen;
+	char	*msg;
+	int	len, rlen;
 
 	/*
 	** Once socket is marked dead, we cannot start writing to it,
@@ -184,14 +190,16 @@ aClient *to;
 	*/
 	if (to->flags & FLAGS_DEADSOCKET)
 	    {
-		/* Actually, we should *NEVER* get here--something is
-		   not working correct if send_queued is called for a
-		   dead socket... --msa */
+		/*
+		** Actually, we should *NEVER* get here--something is
+		** not working correct if send_queued is called for a
+		** dead socket... --msa
+		*/
 #ifndef SENDQ_ALWAYS
 		dead_link(to, "send_queued called for a DEADSOCKET %s :-(");
 #endif
 		dbuf_delete(&to->sendQ, DBufLength(&to->sendQ));
-		return 0;
+		return -1;
 	    }
 	while (DBufLength(&to->sendQ) > 0)
 	    {
@@ -203,12 +211,14 @@ aClient *to;
 			break;
 		    }
 		dbuf_delete(&to->sendQ, rlen);
+		to->lastsq = DBufLength(&to->sendQ)/2048;
 		to->sendB += rlen;
 		me.sendB += rlen;
 		if (rlen < len) /* ..or should I continue until rlen==0? */
 			break;
 	    }
-	return 0;
+
+	return (to->flags & FLAGS_DEADSOCKET) ? -1 : 0;
     }
 
 /*
@@ -231,7 +241,6 @@ char	*par6, *par7, *par8, *par9, *par10, *par11;
 		par1, par2, par3, par4, par5, par6,
 		par7, par8, par9, par10, par11);
 	debug(DEBUG_SEND,"Sending [%s] to %s", sendbuf,to->name);
-	strcat(sendbuf, NEWLINE);
 
 	if (to->from)
 		to = to->from;
@@ -239,8 +248,14 @@ char	*par6, *par7, *par8, *par9, *par10, *par11;
 		debug(DEBUG_ERROR,
 		      "Local socket %s with negative fd... AARGH!",
 		      to->name);
+	else if (IsMe(to))
+		sendto_ops("Trying to send [%s] to myself!", sendbuf);
 	else
+	    {
+		sendbuf[510] = '\0';
+		strcat(sendbuf, NEWLINE);
 		send_message(to, sendbuf, strlen(sendbuf));
+	    }
 
 	return 0;
 }
@@ -294,6 +309,9 @@ char	*pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 	Reg1	int i;
 	Reg2	aClient *cptr;
 
+#ifdef NPATH
+        check_command(one, pattern, par1, par2, par3);
+#endif
 	for (i = 0; i <= highest_fd; i++)
 	    {
 		if (!(cptr = local[i]) || (one && cptr == one->from))

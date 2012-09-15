@@ -43,9 +43,11 @@
 /*
  * The following are additional symbols to define. If you are not
  * sure about them, leave them all defined as they are.
- */
-
-/*
+ *
+ * NOTE: *BEFORE* undefining NEED_STRERROR, check to see if your library
+ *	 version returns NULL on an unknown error. If so, then I strongly
+ *	 recommend you use this version as provided.
+ *
  * If you get loader errors about unreferenced function calls, you must
  * define the following accordingly:
  */
@@ -55,6 +57,7 @@
 #define	NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
 				/* no strerror() */
 #endif
+
 #define	NEED_STRTOKEN		/* Your libc.a does not have strtoken(3) */
 #undef	NEED_STRTOK		/* Your libc.a does not have strtok(3) */
 #undef	NEED_INET_ADDR  	/* You need inet_addr(3)	*/
@@ -93,6 +96,13 @@
 #define	HAVECURSES		/* If you have curses, and want to use it.  */
 #undef	HAVETERMCAP		/* If you have termcap, and want to use it. */
 
+/* Define NPATH if you want to run NOTE system. Be sure that this file is
+ * either not present or non empty (result of previous size). If it is empty,
+ * then remove it before starting the server.
+ * The file is for request save/backup.
+ */
+/* #define NPATH "/usr/lib/irc/.ircdnote" /* */
+
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
  * these are only the recommened names and paths. Change as needed.
@@ -113,9 +123,17 @@
  * this.
  */
 
-#undef	ENABLE_SUMMON /* local summon */
-#undef	ENABLE_USERS
- 
+#undef	ENABLE_SUMMON	/* local summon */
+#define	ENABLE_USERS	/* enables local /users (same as who/finger output) */
+
+/* SHOW_INVISIBLE_LUSERS
+ *
+ * As defined this will show the correct invisible count for anyone who does
+ * LUSERS on your server. On a large net this doesnt mean much, but on a
+ * small net it might be an advantage to undefine it.
+ */
+#define	SHOW_INVISIBLE_LUSERS
+
 /* MAXIMUM LINKS
  *
  * This define is useful for leaf nodes and gateways. It keeps you from
@@ -208,6 +226,7 @@
 #undef	SYSLOG_SQUIT	/* log all remote squits for all servers to syslog */
 #undef	SYSLOG_CONNECT	/* log remote connect messages for other all servs */
 #undef	SYSLOG_USERS	/* send userlog stuff to syslog */
+#undef	SYSLOG_OPER	/* log all users who successfully become an Op */
 
 /*
  * If you want your server to be paranoid about IP# lookup, define GETHOST
@@ -216,7 +235,7 @@
  * later) #undef this. The resolv and resolv+ libraries from Berkeley are
  * *NOT* paranoid about hostname lookups in this way.
  */
-#define GETHOST
+#undef	GETHOST
 
 /*
  * define this if you want to use crypted passwords for operators in your
@@ -255,6 +274,14 @@
  */
 
 #define USE_OUR_CTYPE
+
+/*
+ * use these to setup a Unix domain socket to connect clients/servers to.
+ */
+#undef	UNIXPORT
+#ifdef	UNIXPORT
+#define	UNIXPORTPATH	"/tmp/.ircd"
+#endif
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
@@ -361,12 +388,6 @@
  */
 #define	SENDQ_ALWAYS
 
-/*
- * use these to setup a Unix domain socket to connect clients/servers to.
- */
-#undef	UNIXPORT
-#define	UNIXPORTPATH	"/tmp/.ircd"
-
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #define MOTD MPATH
 #define	MYNAME SPATH
@@ -394,10 +415,6 @@
 
 #ifdef	CLIENT_COMPILE
 #undef	SENDQ_ALWAYS
-#endif
-
-#ifndef		VALLOC
-#define		valloc  malloc
 #endif
 
 #if defined(mips) || defined(PCS)

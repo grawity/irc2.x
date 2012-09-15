@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: struct.h,v 6.1 1991/07/04 21:04:36 gruner stable gruner $
- *
- * $Log: struct.h,v $
- * Revision 6.1  1991/07/04  21:04:36  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:06  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 #include "config.h"
 
 #include <sys/types.h>
@@ -174,17 +162,18 @@ typedef struct User anUser;
 #define IGNORE_PRIVATE  1
 #define IGNORE_PUBLIC   2
 
-#define FLAGS_PINGSENT   1	/* Unreplied ping sent */
-#define FLAGS_DEADSOCKET 2	/* Local socket is dead--Exiting soon */
-#define FLAGS_KILLED     4	/* Prevents "QUIT" from being sent for this */
-#define FLAGS_OPER       8      /* Operator */
-#define FLAGS_CHANOP     16     /* Channel operator */
-#define FLAGS_LOCOP      32     /* Local operator -- SRB */
-#define FLAGS_INVISIBLE  64     /* makes user invisible */
-#define FLAGS_WALLOP     128    /* send wallops to them */
-#define FLAGS_SERVNOTICE 256    /* server notices such as kill */
-#define	FLAGS_BLOCKED    512	/* socket is in a blocked condition */
-#define	FLAGS_UNIX	 1024	/* socket is in the unix domain, not inet */
+#define FLAGS_PINGSENT   0x0001	/* Unreplied ping sent */
+#define FLAGS_DEADSOCKET 0x0002	/* Local socket is dead--Exiting soon */
+#define FLAGS_KILLED     0x0004	/* Prevents "QUIT" from being sent for this */
+#define FLAGS_OPER       0x0008	/* Operator */
+#define FLAGS_CHANOP     0x0010 /* Channel operator */
+#define FLAGS_LOCOP      0x0020 /* Local operator -- SRB */
+#define FLAGS_INVISIBLE  0x0040 /* makes user invisible */
+#define FLAGS_WALLOP     0x0080 /* send wallops to them */
+#define FLAGS_SERVNOTICE 0x0100 /* server notices such as kill */
+#define	FLAGS_BLOCKED    0x0200	/* socket is in a blocked condition */
+#define	FLAGS_UNIX	 0x0400	/* socket is in the unix domain, not inet */
+#define	FLAGS_CLOSING    0x0800	/* set when closing to suppress errors */
 
 #define FLUSH_BUFFER   -2
 #define BUFSIZE		512
@@ -243,9 +232,8 @@ struct Client
 #endif
 	long	lasttime;	/* ...should be only LOCAL clients? --msa */
 	long	firsttime;
-	long	since;	/* When this client entry was created */
+	long	since;		/* When this client entry was created */
 	int	flags;
-	char	*history;	/* (controlled by whowas--module) */
 	struct	Client *from;	/* == self, if Local Client, *NEVER* NULL! */
 	int	fd;		/* >= 0, for local clients */
 	int	hopcount;	/* number of servers to this 0 = local */
@@ -258,6 +246,7 @@ struct Client
 	*/
 	int	count;		/* Amount of data in buffer */
 	char	buffer[512];	/* Incoming message buffer */
+	short	lastsq;		/* # of 2k blocks when sendqueued called last*/
 #ifndef VMSP
 	dbuf	sendQ;		/* Outgoing message queue--if socket full */
 #endif
@@ -267,6 +256,7 @@ struct Client
 	long	receiveB;	/* Statistics: total bytes received */
 	struct	SLink *confs;	/* Configuration record associated */
 	struct	in_addr	ip;	/* keep real ip# too */
+	short	port;		/* and the remote port# too :-) */
 	char	sockhost[HOSTLEN+1]; /* This is the host name from the socket
 				  ** and after which the connection was
 				  ** accepted.

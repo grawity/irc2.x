@@ -55,8 +55,13 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <utmp.h>
 #include <sys/errno.h>
 #include <sys/resource.h>
+#ifdef AIX
+#include <arpa/nameser.h>
+#include <resolv.h>
+#else
 #include "nameser.h"
 #include "resolv.h"
+#endif
 #include "sock.h"	/* If FD_ZERO isn't define up to this point,  */
 			/* define it (BSD4.2 needs this) */
 
@@ -94,6 +99,9 @@ int	highest_fd = 0, readcalls = 0;
 struct	sockaddr *connect_unix_server PROTO((aConfItem *, aClient *, int *));
 struct	sockaddr *connect_inet_server PROTO((aConfItem *, aClient *, int *));
 static	int	completed_connection PROTO((aClient *));
+#ifdef	UNIXPORT
+static	char	unixpath[256];
+#endif
 
 /*
 ** add_local_domain()
@@ -217,8 +225,9 @@ int	portnum;
 	  if (getsockname(sock, &server, &len))
 	  	exit(1);
 
+	  me.port = server.sin_port;
 	  sprintf(buf, ":%s %d %d :Port to local server is\n",
-		  me.name, RPL_MYPORTIS, server.sin_port);
+		  me.name, RPL_MYPORTIS, me.port);
 	  write(0, buf, strlen(buf));
 	}
 	if (sock > highest_fd)
@@ -235,31 +244,30 @@ int	port;
 aClient	*cptr;
 {
 	struct sockaddr_un un;
-	char	path[80];
 
 	cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	un.sun_family = AF_UNIX;
-	sprintf(path, "%s/%d", UNIXPORTPATH, port);
-	unlink(path);
-	strcpy(un.sun_path, path);
-	if (bind(cptr->fd, (struct sockaddr *) &un, strlen(path) + 2))
+	sprintf(unixpath, "%s/%d", UNIXPORTPATH, port);
+	unlink(unixpath);
+	strcpy(un.sun_path, unixpath);
+	if (bind(cptr->fd, (struct sockaddr *) &un, strlen(unixpath) + 2))
 	    {
 		perror("bind unix");
 		return -1;
 	    }
-	else
-	    {
-		if (cptr->fd > highest_fd)
-			highest_fd = cptr->fd;
-		listen(cptr->fd, 3);
-		SetMe(cptr);
-		cptr->flags |= FLAGS_UNIX;
-		cptr->from = cptr;
-		strcpy(cptr->sockhost, me.sockhost);
-		strcpy(cptr->name, me.name);
-		local[cptr->fd] = cptr;
-	    }
+	if (cptr->fd > highest_fd)
+		highest_fd = cptr->fd;
+	listen(cptr->fd, 3);
+	chmod(UNIXPORTPATH, 0755);
+	SetMe(cptr);
+	cptr->flags |= FLAGS_UNIX;
+	cptr->from = cptr;
+	cptr->port = 0;
+	strncpyzt(cptr->sockhost, unixpath, sizeof(cptr->sockhost));
+	strcpy(cptr->name, me.name);
+	local[cptr->fd] = cptr;
+
 	return 0;
 }
 #endif
@@ -296,6 +304,7 @@ int	bootopt;
 			exit(-1);
 		    }
 		limit.rlim_cur = MAXCONNECTIONS;
+		limit.rlim_max = MAXCONNECTIONS;
 		setrlimit(RLIMIT_FD_MAX, &limit);
 	    }
 #endif
@@ -383,9 +392,9 @@ Reg3	struct	sockaddr_in *socka;
 #ifdef	UNIXPORT
 	if (cptr->flags & FLAGS_UNIX)
 	    {
-		strcpy(full, me.sockhost);
-		strcpy(sockn, me.sockhost);
-		strcpy(cptr->sockhost, me.sockhost);
+		strncpyzt(full, unixpath, HOSTLEN+1);
+		strncpyzt(sockn, unixpath, HOSTLEN+1);
+		strncpyzt(cptr->sockhost, unixpath, HOSTLEN+1);
 		bcopy(&cptr->ip, &socka->sin_addr, sizeof(struct in_addr));
 		socka->sin_family = AF_INET;
 
@@ -410,16 +419,19 @@ Reg3	struct	sockaddr_in *socka;
 	else
 		strcpy(full, sockn);
 	bcopy(&socka->sin_addr, &cptr->ip, sizeof(struct in_addr));
+	cptr->port = socka->sin_port;
 
 	return 0;
 }
 
-#ifdef	CHECK_GETHOST
+#ifdef	GETHOST
 struct	hostent	*gethost(sp, len, fam)
 void	*sp;
 int	len, fam;
 {
-	struct	hostent	*hp = NULL, hps, *hp2 = NULL;
+	Reg1	int	i, j;
+	Reg2	struct	hostent	*hp = NULL, *hp2 = NULL;
+	struct	hostent	hps;
 	int	stop = 0;
 
 	hp = gethostbyaddr(sp, len, fam);
@@ -456,7 +468,7 @@ int	flags;
 	Reg1	char	*name;
 	Reg2	aConfItem *aconf;
 	char	sockname[16], fullname[HOSTLEN+1];
-	struct	hostent *hp;
+	struct	hostent *hp = NULL;
 	struct	sockaddr_in sk;
 	int	i = 0;
  
@@ -466,8 +478,9 @@ int	flags;
 	if (check_init(cptr, sockname, fullname, &sk))
 		return -2;
 
-	hp = gethostbyaddr(&(sk.sin_addr), sizeof(struct in_addr),
-			   sk.sin_family);
+	if (!(cptr->flags & FLAGS_UNIX))
+		hp = gethostbyaddr(&(sk.sin_addr), sizeof(struct in_addr),
+				   sk.sin_family);
 
 	/* attach I-lines using hostname first, then check ip#'s. */
 	if (hp)
@@ -526,7 +539,7 @@ aClient	*cptr;
 	char	sockname[16], fullname[HOSTLEN+1];
 	Reg2	aConfItem *c_conf = NULL, *n_conf = NULL;
 	Reg3	struct hostent *hp = NULL;
-	struct sockaddr_in sk;
+	struct	sockaddr_in sk;
 	Reg4	int i = 0;
 	Link	*links;
 
@@ -867,6 +880,9 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
   aConfItem *aconf = NULL;
   long tval, delay2 = delay, now;
 
+#ifdef NPATH
+  check_command(&delay, (char *)NULL);
+#endif
   now = time(NULL);
   for (res = 0;;)
     {
@@ -876,10 +892,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       for (i = 0; i <= highest_fd; i++)
 	if ((cptr = local[i]) && IsMe(cptr) && AcceptNewConnections &&
 	    (now > lastaccept))
-	{
-debug(DEBUG_DEBUG,"listen on fd %d",i);
 	  FD_SET(i, &read_set);
-}
       for (i = 0; i <= highest_fd; i++)
 	if (cptr = local[i])
 	  {
@@ -918,7 +931,7 @@ debug(DEBUG_DEBUG,"listen on fd %d",i);
   for (i = 0; i <= highest_fd; i++)
    if ((cptr = local[i]) && IsMe(cptr) && FD_ISSET(i, &read_set))
     {
-debug(DEBUG_DEBUG,"connect to fd %d\n",i);
+      FD_CLR(i, &read_set);
       nfds--;
       lastaccept = now;
       if ((fd = accept(i, (struct sockaddr *)0, (int *)0)) < 0)
@@ -964,16 +977,16 @@ debug(DEBUG_DEBUG,"connect to fd %d\n",i);
 	continue;
       if (FD_ISSET(i, &write_set))
 	{
-	  int writeerr = 0;
+	  int write_err = 0;
 	  nfds--;
-	  if (IsConnecting(cptr) && completed_connection(cptr))
-	    writeerr = 1;
 	  /*
 	   ** ...room for writing, empty some queue then...
 	   */
-	  if (!writeerr)
+	  if (IsConnecting(cptr))
+	    write_err = completed_connection(cptr);
+	  if (!write_err)
 	    send_queued(cptr);
-	  if (cptr->flags & FLAGS_DEADSOCKET || writeerr)
+	  if (cptr->flags & FLAGS_DEADSOCKET || write_err)
 	   {
 	    if (FD_ISSET(i, &read_set))
 	     {
@@ -1000,6 +1013,9 @@ debug(DEBUG_DEBUG,"connect to fd %d\n",i);
        ** here from quite valid reasons, although.. why
        ** would select report "data available" when there
        ** wasn't... so, this must be an error anyway...  --msa
+       ** actually, EOF occurs when read() returns 0 and
+       ** in due course, select() returns that fd as ready
+       ** for reading even though it ends up being an EOF. -avalon
        */
       if (IsServer(cptr) || IsHandshake(cptr))
 	{
@@ -1108,8 +1124,7 @@ aConfItem *aconf;
 	local[cptr->fd] = cptr;
 	SetConnecting(cptr);
 
-	if (!(cptr->flags & FLAGS_UNIX))
-		strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
+	strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
 	strncpyzt(cptr->name, aconf->name, sizeof(cptr->name));
 	add_client_to_list(cptr);
 	return 0;
@@ -1180,7 +1195,7 @@ int	*lenp;
 		return (struct sockaddr *)NULL;
 	    }
 
-	strncpyzt(cptr->sockhost, me.sockhost, sizeof(cptr->sockhost));
+	strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
 	strncpyzt(sock.sun_path, aconf->host, sizeof(sock.sun_path));
 	sock.sun_family = AF_UNIX;
 	*lenp = strlen(sock.sun_path) + 2;

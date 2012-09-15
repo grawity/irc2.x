@@ -196,8 +196,8 @@ int	showip;
 	if (MyConnect(sptr) && mycmp(sptr->name,sptr->sockhost))
 	    {
 		if (showip)
-			sprintf(nbuf, "%s[%s]",
-				sptr->name, inet_ntoa(sptr->ip));
+			sprintf(nbuf, "%s[%s.%d]",
+				sptr->name, inet_ntoa(sptr->ip), sptr->port);
 		else
 			sprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
 		return nbuf;
@@ -265,15 +265,19 @@ aClient *cptr;	/*
 		*/
 aClient *sptr;	/* Client exiting */
 aClient *from;	/* Client firing off this Exit, never NULL! */
-char *comment;	/* Reason for the exit */
+char	*comment;	/* Reason for the exit */
     {
 	Reg1	aClient	*acptr;
 	Reg2	aClient	*next;
 	static	int	exit_one_client();
+#ifdef	FNAME_USERLOG
 	long	on_for;
+#endif
+	char	comment1[HOSTLEN + HOSTLEN + 2];
 
 	if (MyConnect(sptr))
 	    {
+		sptr->flags |= FLAGS_CLOSING;
 #ifdef FNAME_USERLOG
 		on_for = time(NULL) - sptr->firsttime;
 # if defined(USE_SYSLOG) && defined(SYSLOG_USERS)
@@ -314,7 +318,8 @@ char *comment;	/* Reason for the exit */
 # endif
 #endif
 		if (sptr->fd >= 0)
-			sendto_one(sptr, "ERROR :Closing Link: %s", comment);
+			sendto_one(sptr, "ERROR :Closing Link: %s(%s)",
+				   get_client_name(sptr,FALSE), comment);
 		/*
 		** Currently only server connections can have
 		** depending remote clients here, but it does no
@@ -336,11 +341,21 @@ char *comment;	/* Reason for the exit */
 		**	the following loops. 'cptr' is a *local* client,
 		**	all dependants are *remote* clients.
 		*/
+
+		/* This next bit is a a bit ugly but all it does is take the
+		** name of us.. me.name and tack it together with the name of
+		** the server sptr->name that just broke off and puts this
+		** together into exit_one_client() to provide some useful
+		** information about where the net is broken.      Ian 
+		*/
+		strcpy(comment1, me.name);
+		strcat(comment1," ");
+		strcat(comment1, sptr->name);
 		for (acptr = client; acptr; acptr = next)
 		    {
 			next = acptr->next;
 			if (!IsServer(acptr) && acptr->from == sptr)
-				exit_one_client(NULL, acptr, &me, me.name);
+				exit_one_client(NULL, acptr, &me, comment1);
 		    }
 		/*
 		** Second SQUIT all servers behind this link
@@ -428,6 +443,8 @@ char *comment;
 		*/
 		if (sptr->user) {
 		  Link *tmp;
+		  add_history(sptr);
+		  off_history(sptr);
 		  sendto_common_channels(sptr, ":%s QUIT :%s",
 					 sptr->name, comment);
 		  for (link = sptr->user->channel; link; link = tmp) {

@@ -90,11 +90,20 @@ char *str, *fs;
 char *strerror(err_no)
 int err_no;
 {
-    extern char *sys_errlist[];	 /* Sigh... hopefully on all systems */
-    extern int sys_nerr;
+	extern	char	*sys_errlist[];	 /* Sigh... hopefully on all systems */
+	extern	int	sys_nerr;
 
-    return(err_no > sys_nerr ? 
-	"Undefined system error" : sys_errlist[err_no]);
+	char *errp, buff[40];
+
+	errp = (err_no > sys_nerr ? 
+		"Undefined system error" : sys_errlist[err_no]);
+
+	if (errp == (char *)NULL)
+	    {
+		errp = buff;
+		sprintf(errp, "Unknown Error %d", err_no);
+	    }
+	return errp;
 }
 
 #endif /* NEED_STRERROR */
@@ -196,6 +205,25 @@ int     x;
 		restart();
 #else
 		perror("malloc");
+		exit(-1);
+#endif
+	    }
+	return ret;
+    }
+
+char    *MyRealloc(x, y)
+char	*x;
+int	y;
+    {
+	char *ret = (char *)realloc(x, y);
+
+	if (!ret)
+	    {
+#ifndef	CLIENT_COMPILE
+		debug(0,"Out of memory: restarting server...");
+		restart();
+#else
+		perror("realloc");
 		exit(-1);
 #endif
 	    }

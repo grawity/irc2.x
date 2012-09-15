@@ -407,91 +407,95 @@ aChannel *chptr;
 int m_mode(cptr, sptr, parc, parv)
 aClient *cptr;
 aClient *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
 {
-  int mcount = 0, chanop;
-  char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
-  aChannel *chptr;
+	char	modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
+	int	mcount = 0, chanop;
+	aChannel *chptr;
 
-  if (check_registered(sptr))
-    return 0;
+	if (check_registered(sptr))
+		return 0;
 
-  /* Now, try to find the channel in question */
-  if (parc > 1)
-   {
-    chptr = find_channel(parv[1], NullChn);
-    if (chptr == NullChn)
-     {
-	m_umode(cptr, sptr, parc, parv);
-	return 0;
-     }
-   }
-  else
-   {
-    sendto_one(sptr, ":%s %d %s :No object name given",
-		me.name, ERR_NEEDMOREPARAMS, parv[0]);
-    return 0;
-   }
+	/* Now, try to find the channel in question */
+	if (parc > 1)
+	    {
+		chptr = find_channel(parv[1], NullChn);
+		if (chptr == NullChn)
+		    {
+			m_umode(cptr, sptr, parc, parv);
+			return 0;
+		    }
+	    }
+	else
+	    {
+		sendto_one(sptr, ":%s %d %s :No object name given",
+			   me.name, ERR_NEEDMOREPARAMS, parv[0]);
+ 	 	return 0;
+	    }
 
-  chanop = is_chan_op(sptr, chptr);
+	chanop = is_chan_op(sptr, chptr);
 
-  if (parc > 2)
-      mcount = set_mode(sptr, chptr, parc - 2, parv + 2, modebuf, parabuf);
-  else if (parc < 3)
-   {
-    *modebuf = *parabuf = '\0';
-    modebuf[1] = '\0';
-    channel_modes(modebuf, parabuf, chptr);
-    sendto_one(sptr, ":%s %d %s %s %s %s",
+	if (parc > 2)
+		mcount = set_mode(sptr, chptr, parc - 2, parv + 2,
+				  modebuf, parabuf);
+	else if (parc < 3)
+	    {
+		*modebuf = *parabuf = '\0';
+		modebuf[1] = '\0';
+		channel_modes(modebuf, parabuf, chptr);
+		sendto_one(sptr, ":%s %d %s %s %s %s",
 		me.name, RPL_CHANNELMODEIS, parv[0],
 		chptr->chname, modebuf, parabuf);
-    return 0;
-   }
+		return 0;
+	    }
 
-  if (strlen(modebuf) > 1)
-    {
-      if (MyConnect(sptr) && !IsServer(sptr) && !chanop)
-	{
-	  sendto_one(sptr, ":%s %d %s %s :You're not channel operator",
-		     me.name, ERR_CHANOPRIVSNEEDED, parv[0], chptr->chname);
-	  return 0;
-	}
-      if ((IsServer(cptr) && !IsServer(sptr) && !chanop) || mcount == -1)
-	  sendto_ops("Hack: %s MODE %s %s %s",
-		     parv[0], parv[1], modebuf, parabuf);
-      sendto_serv_butone(sptr, ":%s MODE %s %s %s", parv[0],
-			 chptr->chname, modebuf, parabuf);
-      sendto_channel_butserv(chptr, sptr,
-			     ":%s MODE %s %s %s", parv[0],
-			     chptr->chname, modebuf, parabuf);
-    }
-  return 0;
+	if (strlen(modebuf) > 1)
+	    {
+		if (MyConnect(sptr) && !IsServer(sptr) && !chanop)
+		    {
+			sendto_one(sptr,
+				   ":%s %d %s %s :You're not channel operator",
+				   me.name, ERR_CHANOPRIVSNEEDED,
+				   parv[0], chptr->chname);
+			return 0;
+		    }
+		if ((IsServer(cptr) && !IsServer(sptr) && !chanop) ||
+		    mcount == -1)
+			sendto_ops("Hack: %s MODE %s %s %s",
+				   parv[0], parv[1], modebuf, parabuf);
+		sendto_serv_butone(sptr, ":%s MODE %s %s %s", parv[0],
+				   chptr->chname, modebuf, parabuf);
+		sendto_channel_butserv(chptr, sptr,
+					":%s MODE %s %s %s", parv[0],
+					chptr->chname, modebuf, parabuf);
+	    }
+	return 0;
 }
 
-static int set_mode(cptr, chptr, parc, parv, modebuf, parabuf)
+static	int set_mode(cptr, chptr, parc, parv, modebuf, parabuf)
 aClient *cptr;
 aChannel *chptr;
-int parc;
-char *parv[];
-char *modebuf;
-char *parabuf;
+int	parc;
+char	*parv[];
+char	*modebuf;
+char	*parabuf;
 {
-  char *curr = parv[0];
-  char *tmp;
+  char	*curr = parv[0];
+  char	*tmp;
   unsigned char new, old;
-  int whatt = MODE_ADD;
-  int limitset = 0;
-  int nusers, ischop, count = 0;
-  int chasing = 0;
-  Link *addops = (Link *)NULL, *delops = (Link *)NULL, *tmplink;
-  Link *addban = (Link *)NULL, *delban = (Link *)NULL;
+  int	whatt = MODE_ADD;
+  int	limitset = 0;
+  int	nusers, ischop, count = 0;
+  int	chasing = 0;
+  Link	*addops = (Link *)NULL, *delops = (Link *)NULL, *tmplink;
+  Link	*addban = (Link *)NULL, *delban = (Link *)NULL;
   aClient *who;
   static char flags[] = {   MODE_PRIVATE,    'p', MODE_SECRET,     's',
 			    MODE_MODERATED,  'm', MODE_NOPRIVMSGS, 'n',
 			    MODE_TOPICLIMIT, 't', MODE_INVITEONLY, 'i',
 			    0x0, 0x0 };
-  Mode *mode;
+  Mode	*mode;
 
   *modebuf = *parabuf = '\0';
   if (!chptr)
@@ -753,6 +757,9 @@ char *parabuf;
       free(tmplink);
     }
   }
+  *modebuf++ = '\0';
+  *modebuf++ = '\0';
+  *modebuf++ = '\0';
   *modebuf = '\0';
   return ischop ? count : -1;
 }
@@ -935,9 +942,9 @@ int parc;
 char *parv[];
     {
 	aChannel *chptr;
-	int i, flags = 0;
-	Reg1 Link *link;
-	char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN], *name, *p = NULL;
+	int	i, flags = 0;
+	Reg1	Link	*link;
+	char	modebuf[MODEBUFLEN], parabuf[MODEBUFLEN], *name, *p = NULL;
 
 	if (check_registered(sptr))
 		return 0;
@@ -1019,6 +1026,8 @@ char *parv[];
 	    sendto_serv_butone(cptr, ":%s JOIN %s", parv[0], name);
 	    if (parc > 2)
 		set_mode(sptr, chptr, parc - 2, parv + 2, modebuf, parabuf);
+	    else
+		*modebuf = *parabuf = '\0';
 
 	    if (flags == FLAG_CHANOP)
 		sendto_serv_butone(cptr, ":%s MODE %s +o%s %s %s",
@@ -1057,8 +1066,6 @@ char *parv[];
 		       parv[0]);
 	    return 0;
 	  }
-	if ((parv[1][0] != '#') && IsServer(cptr)) /* drop these on the floor */
-	    return 0;
 
 	for (; (name = strtoken(&p, parv[1], ",")) != NULL; parv[1] = NULL)
 	  {
@@ -1111,15 +1118,7 @@ char *parv[];
 		       "*** Who do you want to kick off from which channel?");
 		return 0;
 	    }
-/* delete this later. here now to stop large error notice flow -avalon*/
-	if (*parv[1] == '+')
-	    {
-		if (MyClient(sptr))
-			sendto_one(sptr, ":%s %d %s %s :Not A Valid Channel",
-				   me.name, ERR_NOSUCHCHANNEL,
-				   parv[0], parv[1]);
-		return 0;
-	    }
+
 	chptr = get_channel(sptr, parv[1], !CREATE);
 	if (!chptr)
 	    {
@@ -1192,10 +1191,6 @@ char *parv[];
 	  return 0;
 	}
 	
-	if ((parv[1][0] == '+') || atoi(parv[1]) ||
-	    (parc < 3 && parv[1][0] != '#'))
-		return 0; /* stop whining to those on 2.6.* */
-
 	if (parc > 1 && IsChannelName(parv[1])) {
 	  chptr = find_channel(parv[1], NullChn);
 	  if (!chptr || !IsMember(sptr, chptr)) {
@@ -1277,47 +1272,62 @@ char *parv[];
 	    }
 	if (!(chptr = find_channel(parv[2], NullChn)))
 	    {
+
 		sendto_prefix_one(acptr, sptr, ":%s INVITE %s %s",
-			   parv[0], parv[1], parv[2]);
+				  parv[0], parv[1], parv[2]);
 		return 0;
 	    }
 
-	if (chptr && !IsMember(sptr, chptr)) {
-	  sendto_one(sptr, ":%s %d %s %s :You're not on channel %s",
-		     me.name, ERR_NOTONCHANNEL, parv[0], chptr->chname,
-		     chptr->chname);
-	  return -1;
-	}
+	if (chptr && !IsMember(sptr, chptr))
+	    {
+		sendto_one(sptr, ":%s %d %s %s :You're not on channel %s",
+			   me.name, ERR_NOTONCHANNEL, parv[0], chptr->chname,
+			   chptr->chname);
+		return -1;
+	    }
 
-	if (chptr && (chptr->mode.mode & MODE_INVITEONLY)) {
-	  if (!is_chan_op(sptr, chptr)) {
-	    sendto_one(sptr, ":%s %d %s %s :You're not channel operator",
-		       me.name, ERR_CHANOPRIVSNEEDED, parv[0],
-		       chptr->chname);
-	    return -1;
-	  } else if (!IsMember(sptr, chptr)) {
-	    sendto_one(sptr, ":%s %d %s %s :Channel is invite-only.",
-		       me.name, ERR_CHANOPRIVSNEEDED, parv[0],
-		       ((chptr) ? (chptr->chname) : parv[2]));
-	    return -1;
-	  }
-	}
+	if (IsMember(acptr, chptr))
+	    {
+		sendto_one(sptr,
+			   ":%s %d %s :%s is already on channel %s",
+			   me.name, ERR_USERONCHANNEL, parv[0],
+			   parv[1], parv[2]);
+		return 0;
+	    }
+	if (chptr && (chptr->mode.mode & MODE_INVITEONLY))
+	    {
+		if (!is_chan_op(sptr, chptr))
+		    {
+			sendto_one(sptr,
+				   ":%s %d %s %s :You're not channel operator",
+				   me.name, ERR_CHANOPRIVSNEEDED, parv[0],
+				   chptr->chname);
+			return -1;
+		    }
+		else if (!IsMember(sptr, chptr))
+		    {
+			sendto_one(sptr,
+				   ":%s %d %s %s :Channel is invite-only.",
+				   me.name, ERR_CHANOPRIVSNEEDED, parv[0],
+				   ((chptr) ? (chptr->chname) : parv[2]));
+			return -1;
+		    }
+	    }
 
 	if (MyConnect(sptr))
 	    {
 		sendto_one(sptr,":%s %d %s %s %s", me.name,
 			   RPL_INVITING, parv[0], acptr->name,
 			   ((chptr) ? (chptr->chname) : parv[2]));
-		/* 'find_person' does not guarantee 'acptr->user' --msa */
-		if (acptr->user && acptr->user->away)
+		if (acptr->user->away)
 			sendto_one(sptr,":%s %d %s %s :%s", me.name,
 				   RPL_AWAY, parv[0], acptr->name,
 				   acptr->user->away);
 	    }
 	if (MyConnect(acptr))
-	  if (chptr && (chptr->mode.mode & MODE_INVITEONLY) &&
-	      sptr->user && is_chan_op(sptr, chptr))
-	    add_invite(acptr, chptr);
+		if (chptr && (chptr->mode.mode & MODE_INVITEONLY) &&
+		    sptr->user && is_chan_op(sptr, chptr))
+			add_invite(acptr, chptr);
 	sendto_prefix_one(acptr, sptr, ":%s INVITE %s %s",parv[0],
 			  acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
 	return 0;
@@ -1339,26 +1349,31 @@ char	*parv[];
 	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
 		   me.name, RPL_LISTSTART, parv[0]);
 
-	if (parc < 2 || BadPtr(parv[1])) {
-	  for (chptr = channel; chptr; chptr = chptr->nextch) {
-	    if (sptr->user == NULL ||
-		(SecretChannel(chptr) && !IsMember(sptr, chptr)))
-	      continue;
-	    sendto_one(sptr,":%s %d %s %s %d :%s",
-			me.name, RPL_LIST, parv[0],
-		  	(ShowChannel(sptr, chptr) ? chptr->chname : "*"),
-			chptr->users,
-			(ShowChannel(sptr, chptr) ? chptr->topic : ""));
-	  }
-	} else {
-	  chptr = find_channel(parv[1], NullChn);
-	  if (chptr != NullChn && ShowChannel(sptr, chptr) &&
-	      sptr->user != NULL)
-	    sendto_one(sptr, ":%s %d %s %s %d :%s",
-			me.name, RPL_LIST, parv[0],
-			(ShowChannel(sptr, chptr) ? chptr->chname : "*"),
-			 chptr->users, chptr->topic ? chptr->topic : "*");
-	}
+	if (parc < 2 || BadPtr(parv[1]))
+	    {
+		for (chptr = channel; chptr; chptr = chptr->nextch)
+		    {
+			if (sptr->user == NULL ||
+			    (SecretChannel(chptr) && !IsMember(sptr, chptr)))
+				continue;
+			sendto_one(sptr,":%s %d %s %s %d :%s",
+				   me.name, RPL_LIST, parv[0],
+				   ShowChannel(sptr, chptr)?chptr->chname:"*",
+				   chptr->users,
+				   ShowChannel(sptr, chptr)?chptr->topic:"");
+		    }
+	    }
+	else
+	    {
+		chptr = find_channel(parv[1], NullChn);
+		if (chptr != NullChn && ShowChannel(sptr, chptr) &&
+		    sptr->user != NULL)
+			sendto_one(sptr, ":%s %d %s %s %d :%s",
+				   me.name, RPL_LIST, parv[0],
+				   ShowChannel(sptr,chptr)?chptr->chname : "*",
+				   chptr->users,
+				   chptr->topic ? chptr->topic : "*");
+	     }
 	sendto_one(sptr,":%s %d %s :End of /LIST",
 		   me.name, RPL_LISTEND, parv[0]);
 	return 0;
@@ -1376,14 +1391,18 @@ char	*parv[];
 */
 int m_names(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     { 
-	Reg1 aChannel *chptr;
-	Reg2 aClient *c2ptr;
-	Reg3 Link *link;
-	int idx, flag;
-	char *para = parc > 1 ? parv[1] : NULL;
+	Reg1	aChannel *chptr;
+	Reg2	aClient *c2ptr;
+	Reg3	Link	*link;
+	aChannel *ch2ptr = NULL;
+	int	idx, flag;
+	char	*para = parc > 1 ? parv[1] : NULL;
+
+	if (!BadPtr(para))
+		ch2ptr = find_channel(para, (aChannel *)NULL);
 
 	/* Allow NAMES without registering */
 
@@ -1391,7 +1410,7 @@ char *parv[];
 
 	for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
-		if (!BadPtr(para) && !ChanIs(chptr, para))
+		if (!BadPtr(para) && ch2ptr != chptr)
 			continue; /* -- wanted a specific channel */
 		if (!ShowChannel(sptr, chptr))
 			continue; /* -- users on this are not listed */
@@ -1410,9 +1429,9 @@ char *parv[];
 		    {
 			c2ptr = link->value.cptr;
 			if (IsInvisible(c2ptr) && !IsMember(sptr,chptr))
-			  continue;
+				continue;
 		        if (TestChanOpFlag(link->flags))
-			  strcat(buf, "@");
+				strcat(buf, "@");
 			strncat(buf, c2ptr->name, NICKLEN);
 			idx += strlen(c2ptr->name) + 1;
 			flag = 1;
@@ -1436,9 +1455,9 @@ char *parv[];
 				   me.name, RPL_NAMREPLY, parv[0], buf);
 	    }
 	if (!BadPtr(para)) {
-	  sendto_one(sptr, ":%s %d %s :* End of /NAMES list.", me.name,
-		     RPL_ENDOFNAMES,parv[0]);
-	  return(1);
+		sendto_one(sptr, ":%s %d %s :* End of /NAMES list.", me.name,
+			   RPL_ENDOFNAMES,parv[0]);
+		return(1);
 	}
 
 	/* Second, do all non-public, non-secret channels in one big sweep */
@@ -1452,7 +1471,7 @@ char *parv[];
 		int showflag = 0, secret = 0;
 
 		if (!IsPerson(c2ptr) || IsInvisible(c2ptr))
-		  continue;
+			continue;
 		link = c2ptr->user->channel;
 		/*
 		 * dont show a client if they are on a secret channel or
@@ -1460,12 +1479,12 @@ char *parv[];
 		 * been show earlier. -avalon
 		 */
 		while (link) {
-		  ch3ptr = link->value.chptr;
-		  if (PubChannel(ch3ptr) || IsMember(sptr, ch3ptr))
-		    showflag = 1;
-		  if (SecretChannel(ch3ptr))
-		    secret = 1;
-		  link = link->next;
+			ch3ptr = link->value.chptr;
+			if (PubChannel(ch3ptr) || IsMember(sptr, ch3ptr))
+				showflag = 1;
+			if (SecretChannel(ch3ptr))
+				secret = 1;
+			link = link->next;
 		}
 		if (showflag) /* have we already shown them ? */
 		  continue;

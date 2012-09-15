@@ -18,6 +18,12 @@
  */
 
 /*
+ * -- Avalon -- 13 May 1992
+ *
+ * Added RPL_STATSLLINE
+ */
+
+/*
  * -- Avalon -- 12 Jan 1992
  *
  * Added RPL_TRACELINK
@@ -89,6 +95,7 @@
 
 #define ERR_USERNOTINCHANNEL 441
 #define ERR_NOTONCHANNEL     442
+#define	ERR_USERONCHANNEL    443
 
 #define ERR_NOTREGISTERED    451
 
@@ -200,4 +207,4 @@
 #define RPL_SERVLIST         234
 #define RPL_SERVLISTEND      235
 
-
+#define	RPL_STATSLLINE       241

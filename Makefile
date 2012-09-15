@@ -26,7 +26,7 @@ INCLUDEDIR=../include
 # on NEXT use:
 # CFLAGS=-bsd -I$(INCLUDEDIR)
 #otherwise this:
-CFLAGS= -I$(INCLUDEDIR) -gx
+CFLAGS= -I$(INCLUDEDIR) -g
 
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
@@ -50,7 +50,7 @@ IRCDMODE = 4711
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}'\
 	'IRCDMODE=${IRCDMODE}'
 SHELL=/bin/sh
-SUBDIRS=common ircd res irc
+SUBDIRS=common ircd irc
 
 all:	build
 
@@ -77,6 +77,10 @@ clean:
 		cd $$i;\
 		${MAKE} clean; cd ..;\
 	done
+	@echo "Cleaning res"; cd res; make clean; cd ..;
+
+bindircd: server
+	cd ircd; ${MAKE} bindircd; cd ..;
 
 depend:
 	@for i in $(SUBDIRS); do \

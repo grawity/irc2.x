@@ -62,3 +62,10 @@ extern char *inet_ntoa();
 #endif
 
 extern VOIDSIG dummy(), restart();
+
+#ifdef	NO_U_TYPES
+typedef	u_char	unsigned char
+typedef	u_short	unsigned short
+typedef	u_long	unsigned long
+typedef	u_int	unsigned int
+#endif

@@ -44,10 +44,10 @@ CFLAGS= -g -I${INCLUDE}
 #IRCDLIBS=
 
 OBJS=channel.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o class.o hash.o s_misc.o
+     whowas.o s_debug.o class.o hash.o note.o s_misc.o
 
 SRC=channel.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c class.c hash.c s_misc.c
+     whowas.c s_debug.c class.c note.c hash.c s_misc.c
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
@@ -139,6 +139,7 @@ s_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_bsd.o: ../include/sys.h
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h
+note.o: ../include/struct.h ../include/numeric.h
 s_misc.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_msg.o: ../include/struct.h ../include/config.h
 s_msg.o: ../include/dbuf.h ../include/sys.h channel.h

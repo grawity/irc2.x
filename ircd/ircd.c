@@ -33,30 +33,30 @@ aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
 extern	aConfItem *conf, *find_me();
 extern	char	*get_client_name PROTO((aClient *, int));
-extern	aClient *find_server PROTO((char *, aClient *));
+extern	aClient *find_name PROTO((char *, aClient *));
 extern	aClient	*add_connection PROTO((int));
 extern	aClient	*local[];
-extern int find_kill PROTO((aClient *));
+extern	int find_kill PROTO((aClient *));
 #if defined(R_LINES) && defined(R_LINES_OFTEN)
-extern int find_restrict PROTO((aClient *));
+extern	int find_restrict PROTO((aClient *));
 #endif
-extern void clear_channel_hash_table();
-extern void clear_client_hash_table();
-extern void write_pidfile ();
+extern	void clear_channel_hash_table();
+extern	void clear_client_hash_table();
+extern	void write_pidfile ();
 
-char **myargv;
-int portnum = -1;               /* Server port number, listening this */
-char *configfile = CONFIGFILE;	/* Server configuration file */
-int debuglevel = -1;		/* Server debug level */
-int debugtty = 0;
-int autodie = 0;
-static int dorehash = 0;
-char *debugmode = "";		/*  -"-    -"-   -"-  */
+char	**myargv;
+int	portnum = -1;               /* Server port number, listening this */
+char	*configfile = CONFIGFILE;	/* Server configuration file */
+int	debuglevel = -1;		/* Server debug level */
+int	debugtty = 0;
+int	autodie = 0;
+static	int dorehash = 0;
+char	*debugmode = "";		/*  -"-    -"-   -"-  */
 
-int maxusersperchannel = MAXUSERSPERCHANNEL;
+int	maxusersperchannel = MAXUSERSPERCHANNEL;
 
-long nextconnect = -1;		/* time for next try_connections call */
-long nextping = -1;		/* same as above for check_pings() */
+long	nextconnect = -1;		/* time for next try_connections call */
+long	nextping = -1;		/* same as above for check_pings() */
 
 VOIDSIG terminate()
 {
@@ -157,7 +157,7 @@ long currenttime;
        ** scan clients and see if this server is already
        ** connected?
        */
-      cptr = find_server(aconf->name, (void *) 0);
+      cptr = find_name(aconf->name, (aClient *)NULL);
       
       if ((cptr == NULL) && 
 	  (!(connecting) || (Class(cltmp) > con_class)) &&
@@ -224,7 +224,8 @@ long currenttime;
 	 * If the client is a user and a KILL line was found
 	 * to be active, close this connection too.
 	 */
-	if (((currenttime - cptr->lasttime) > (2 * ping)) ||
+	if (((currenttime - cptr->lasttime) > (2 * ping) &&
+	     (cptr->flags & FLAGS_PINGSENT)) ||
 	    (IsUnknown(cptr) && (currenttime - cptr->since) > ping) ||
 	    killflag || rflag)
 	 {
@@ -420,6 +421,7 @@ char	*argv[];
 	clear_client_hash_table();
 	clear_channel_hash_table();
 	initclass();
+	res_init();
 	if (initconf(bootopt & 2) == -1)
 	  {
 	    debug(DEBUG_FATAL,
@@ -441,6 +443,7 @@ char	*argv[];
 		strncpyzt(me.name,me.sockhost,sizeof(me.name));
 	if (portnum < 0)
 	  portnum = PORTNUM;
+	me.port = portnum;
 	me.hopcount = 0;
 	me.next = NULL;
 	me.from = &me;
@@ -453,7 +456,8 @@ char	*argv[];
 
 #ifdef	UNIXPORT
 	cptr = make_client((aClient *)NULL);
-	unixport(portnum, cptr);
+	if (unixport(portnum, cptr))
+		free(cptr);
 #endif
 
 	check_class();

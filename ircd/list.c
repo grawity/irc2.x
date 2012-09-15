@@ -83,7 +83,6 @@ aClient *from;
 	cptr->prev = NULL;
 	cptr->hnext = NULL;
 	cptr->user = NULL;
-	cptr->history = NULL;
 	cptr->status = STAT_UNKNOWN;
 	cptr->fd = -1;
 	if (size == CLIENT_LOCAL_SIZE) {

@@ -41,6 +41,10 @@
 #include "dbuf.h"
 #include "sys.h"
 
+#if !defined(VALLOC) && !defined(valloc)
+#define	valloc malloc
+#endif
+
 int	dbufalloc = 0, dbufblocks = 0;
 static	dbufbuf	*freelist = NULL;
 

@@ -701,28 +701,19 @@ int notice;
 	/*
 	** nickname addressed?
 	*/
-	if ((acptr = find_client(nick, (aClient *)NULL)) != NULL)
+	if ((acptr = find_person(nick, (aClient *)NULL)) != NULL)
 	    {
-	    if (!notice
-		&& MyConnect(sptr)
-		&& acptr->user
-		&& acptr->user->away)
-		sendto_one(sptr,":%s %d %s %s :%s", me.name, RPL_AWAY,
-		       parv[0], acptr->name, acptr->user->away);
+		if (!notice
+		    && MyConnect(sptr)
+		    && acptr->user
+		    && acptr->user->away)
+			sendto_one(sptr,":%s %d %s %s :%s", me.name, RPL_AWAY,
+				   parv[0], acptr->name, acptr->user->away);
 
-	     sendto_prefix_one(acptr, sptr, ":%s %s %s :%s",
-				parv[0], cmd, nick, parv[2]);
-	    continue;
+		sendto_prefix_one(acptr, sptr, ":%s %s %s :%s",
+				  parv[0], cmd, nick, parv[2]);
+		continue;
 	    }
-	/*
-	** to me, from another server ?
-	*/
-	if (mycmp(me.name, nick)==0 && MyConnect(sptr) && IsServer(sptr))
-	    {
-	    sendto_ops(":%s %s :*** %s", parv[0], cmd, parv[2]);
-	    continue;
-	    }
-
 	/*
 	** channel msg?
 	*/
@@ -846,7 +837,7 @@ char *parv[];
 }
 
 static void
-DoWho(sptr, acptr, repchan)
+do_who(sptr, acptr, repchan)
 aClient *sptr, *acptr;
 aChannel *repchan;
 {
@@ -921,17 +912,20 @@ char *parv[];
 		    me.name, RPL_WHOREPLY, parv[0]);
 	if (channame && *channame == '#')
 	    {
-		/* List all users on a given channel */
-		chptr = find_channel(channame, NullChn);
-		if (chptr && (!SecretChannel(chptr) ||
-			      (member = IsMember(sptr, chptr)) ) )
+		/*
+		 * List all users on a given channel
+		 */
+		chptr = find_channel(channame, (aChannel *)NULL);
+		if (chptr != (aChannel *)NULL)
+		    if ((member = IsMember(sptr, chptr)) ||
+			  !SecretChannel(chptr))
 			for (link = chptr->members; link; link = link->next)
 			    {
 				if (oper && !IsAnOper(link->value.cptr))
 					continue;
 				if (IsInvisible(link->value.cptr) && !member)
 					continue;
-				DoWho(sptr, link->value.cptr, chptr);
+				do_who(sptr, link->value.cptr, chptr);
 			    }
 	    }
 	else for (acptr = client; acptr; acptr = acptr->next)
@@ -982,7 +976,7 @@ char *parv[];
 		if (!acptr->user->channel && !isinvis)
 			showperson = 1;
 		if (showperson)
-			DoWho(sptr, acptr, ch2ptr);
+			do_who(sptr, acptr, ch2ptr);
 	    }
 	sendto_one(sptr, ":%s %d %s %s :* End of /WHO list.", me.name,
 		   RPL_ENDOFWHO, parv[0], parv[1] ? parv[1] : "*");
@@ -1250,9 +1244,9 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	char *server;
+	char	*server;
 	aClient *acptr;
-	char *comment = (parc > 2 && parv[2]) ? parv[2] : cptr->name;
+	char	*comment = (parc > 2 && parv[2]) ? parv[2] : cptr->name;
 
 	if (!IsPrivileged(sptr) || IsLocOp(sptr))
 	    {
@@ -1342,10 +1336,10 @@ char *parv[];
 **	parv[2] = serverinfo/hopcount
 **      parv[3] = serverinfo
 */
-int m_server(cptr, sptr, parc, parv)
-     aClient *cptr, *sptr;
-     int parc;
-     char *parv[];
+int	m_server(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int	parc;
+char	*parv[];
 {
   char	*host, info[REALLEN+1], *inpath;
   aClient *acptr, *bcptr;
@@ -1456,12 +1450,14 @@ int m_server(cptr, sptr, parc, parv)
        ** See if the newly found server is behind a guaranteed
        ** leaf (L-line). If so, close the link.
        */
-      if (aconf = find_conf_name(sptr->name, CONF_LEAF)) {
-	sendto_ops("Leaf-only link %s issued second server command",
-		   get_client_name(sptr, FALSE) );
-	sendto_one(cptr, "ERROR :Leaf-only link, sorry." );
-	return exit_client(cptr, cptr, cptr, "Leaf Only");
-      }
+      if (aconf = find_conf_name(sptr->name, CONF_LEAF))
+	  if (aconf->port == 0 || hop >= aconf->port)
+	    {
+	      sendto_ops("Leaf-only link %s issued second server command",
+			 get_client_name(sptr, FALSE) );
+	      sendto_one(cptr, "ERROR :Leaf-only link, sorry." );
+	      return exit_client(cptr, cptr, cptr, "Leaf Only");
+	    }
       /*
        ** See if the newly found server has a Q line for it in
        ** our conf. If it does, lose the link that brought it
@@ -1538,13 +1534,13 @@ int m_server(cptr, sptr, parc, parv)
 		 inpath);
       sendto_ops("Access denied. No N field for server %s",
 		 inpath);
-      return exit_client(cptr, cptr, cptr, "");
+      return exit_client(cptr, cptr, cptr, "No N line for server");
     }
   if (!(bconf = find_conf(cptr->confs,host,CONF_CONNECT_SERVER)))
     {
       sendto_one(cptr, "ERROR :Only N (no C) field for server %s", inpath);
       sendto_ops("Only N (no C) field for server %s",inpath);
-      return exit_client(cptr, cptr, cptr, "");
+      return exit_client(cptr, cptr, cptr, "No C line for server");
     }
   if (*(aconf->passwd) && !StrEq(aconf->passwd, cptr->passwd))
     {
@@ -1703,9 +1699,11 @@ char *parv[];
 			   me.name, ERR_NEEDMOREPARAMS, parv[0]);
 		return 0;
 	    }
+
 	user = parv[1];
 	path = parv[2]; /* Either defined or NULL (parc >= 2!!) */
-	if (!IsLocOp(sptr) && !IsPrivileged(sptr) && !IsServer(cptr))
+
+	if (!IsPrivileged(sptr) && !IsServer(cptr))
 	    {
 		sendto_one(sptr,":%s %d %s :Death before dishonor ?",
 			   me.name, ERR_NOPRIVILEGES, parv[0]);
@@ -2020,12 +2018,13 @@ char *parv[];
 **            it--not reversed as in ircd.conf!
 */
 
-static int report_array[6][3] = {
+static int report_array[7][3] = {
 		{ CONF_CONNECT_SERVER,    (int)'C', RPL_STATSCLINE},
 		{ CONF_NOCONNECT_SERVER,  (int)'N', RPL_STATSNLINE},
 		{ CONF_CLIENT,            (int)'I', RPL_STATSILINE},
 		{ CONF_KILL,              (int)'K', RPL_STATSKLINE},
 		{ CONF_QUARANTINED_SERVER,(int)'Q', RPL_STATSQLINE},
+		{ CONF_LEAF,		  (int)'L', RPL_STATSLLINE},
 		{ 0, 0, 0}
 				};
 
@@ -2067,7 +2066,7 @@ char *parv[];
 	static	char	Lformat[]  = ":%s %d %s %s %u %u %u %u %u :%s";
 	struct	Message	*mptr;
 	aClient	*acptr;
-	char	*stat = parc > 1 ? parv[1] : "M";
+	char	stat = parc > 1 ? parv[1][0] : '\0';
 	Reg1	int	i;
 	int	doall;
 	char	*name = parc > 2 ? parv[2] : me.name;
@@ -2084,7 +2083,7 @@ char *parv[];
 		else
 			doall = 0;
 
-	switch (*stat)
+	switch (stat)
 	{
 	case 'L' : case 'l' :
 		/*
@@ -2104,7 +2103,7 @@ char *parv[];
 			     IsLocOp(sptr) && IsLocOp(acptr))) {
 				sendto_one(sptr,Lformat,
 					   me.name,RPL_STATSLINKINFO,parv[0],
-					   (isupper(*stat)) ?
+					   (isupper(stat)) ?
 					   get_client_name(acptr, TRUE) :
 					   get_client_name(acptr, FALSE),
 					   (int)DBufLength(&acptr->sendQ),
@@ -2117,7 +2116,7 @@ char *parv[];
 		break;
 	case 'C' : case 'c' :
                 report_configured_links(sptr, CONF_CONNECT_SERVER|
-				      CONF_NOCONNECT_SERVER);
+				      CONF_NOCONNECT_SERVER|CONF_LEAF);
 		break;
 	case 'Q' : case 'q' :
 		if (IsOper(sptr))
@@ -2150,12 +2149,12 @@ char *parv[];
 
 		now = time(0) - me.since;
 		sendto_one(sptr,
-			   ":%s NOTICE %s :Server Uptime: %d days, %d:%d:%d",
+			   ":%s NOTICE %s :Server Up %d days, %d:%02d:%02d",
 			   me.name, parv[0],
 			   now/86400, (now/3600)%24, (now/60)%60, now%60);
 		break;
 	    }
-	default :
+	case 'M' : case 'm' :
 		for (mptr = msgtab; mptr->cmd; mptr++)
 		   if (mptr->count)
 			sendto_one(sptr,
@@ -2351,34 +2350,47 @@ char *parv[];
 	    case STAT_CLIENT:
 	      if (IsOper(acptr))
 	        o_count++;
+#ifdef	SHOW_INVISIBLE_LUSERS
 	      if (MyConnect(acptr))
-	       {
-		if (IsInvisible(acptr))
-		 {
-		  if (IsOper(sptr))
-		    m_client++;
-		 }
-		else
 		  m_client++;
-	       }
 	      if (!IsInvisible(acptr))
 		c_count++;
 	      else
 		i_count++;
+#else
+	      if (MyConnect(acptr))
+		{
+		  if (IsInvisible(acptr))
+		    {
+		      if (IsAnOper(sptr))
+			  m_client++;
+		    }
+		  else
+		      m_client++;
+		}
+	      if (!IsInvisible(acptr))
+		c_count++;
+	      else
+		i_count++;
+#endif
 	      break;
 	    default:
 	      u_count++;
 	      break;
 	    }
 	 }
+#ifndef	SHOW_INVISIBLE_LUSERS
 	if (IsAnOper(sptr) && i_count)
-		sendto_one(sptr,
+#endif
+	sendto_one(sptr,
 	":%s NOTICE %s :There are %d users (%d invisible) on %d servers",
 			   me.name, parv[0], c_count, i_count, s_count);
+#ifndef	SHOW_INVISIBLE_LUSERS
 	else
 		sendto_one(sptr,
-			   ":%s NOTICE %s :There are %d users on %d servers",
-			   me.name, parv[0], c_count, s_count);
+			":%s NOTICE %s :There are %d users on %d servers",
+			   	me.name, parv[0], c_count, s_count);
+#endif
 	if (o_count)
 		sendto_one(sptr,
 		   ":%s NOTICE %s :%d user%s connection to the twilight zone",
@@ -2413,22 +2425,27 @@ char *parv[];
 **	parv[0] = sender prefix
 **	parv[1] = away message
 */
-int m_away(cptr, sptr, parc, parv)
+int	m_away(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
+	char	*away;
+
 	if (check_registered_user(sptr))
 		return 0;
-	if (sptr->user->away)
-	    {
-		free(sptr->user->away);
-		sptr->user->away = NULL;
-	    }
+
+	away = sptr->user->away;
+
 	if (parc < 2 || *parv[1] == '\0')
 	    {
 		/* Marking as not away */
 
+		if (away)
+		    {
+			free(away);
+			sptr->user->away = NULL;
+		    }
 		sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
 		if (MyConnect(sptr))
 			sendto_one(sptr,
@@ -2440,13 +2457,13 @@ char *parv[];
 	/* Marking as away */
 
 	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], parv[1]);
-	sptr->user->away = (char *)MyMalloc((unsigned int)(strlen(parv[1])+1));
-	if (sptr->user->away == NULL)
-	    {
-		sendto_one(sptr,
-		       "ERROR :Randomness of the world has proven its power!");
-		return 0;
-	    }
+
+	if (away)
+		away = (char *)MyRealloc(away, strlen(parv[1])+1);
+	else
+		away = (char *)MyMalloc(strlen(parv[1])+1);
+
+	sptr->user->away = away;
 	strcpy(sptr->user->away, parv[1]);
 	if (MyConnect(sptr))
 		sendto_one(sptr,
@@ -2767,6 +2784,11 @@ char *parv[];
  			   "You are now",
 			   IsOper(sptr) ? "a full time IRC Janitor." :
 					  "an apprentice IRC Janitor");
+#if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
+		syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",
+			name, encr,
+			parv[0], sptr->user->username, sptr->sockhost);
+#endif
 	    }
 	else
 		sendto_one(sptr, ":%s %d %s :Only real lusers know the %s",
@@ -3206,6 +3228,30 @@ static int user_modes[]	     = { FLAGS_OPER, 'o',
 				 FLAGS_SERVNOTICE, 's',
 				 0, 0 };
 
+#define	SEND_UMODES	(FLAGS_OPER|FLAGS_INVISIBLE|FLAGS_WALLOP)
+
+#ifndef NPATH
+int m_note(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int parc;
+char *parv[];
+{
+ int i = 0;
+ char *c, buf[100];
+ aClient *acptr;
+
+ if (parc < 2) return -1; else c = parv[1];
+ while (i < 99 && *c && *c != ' ') buf[i++] = *c++; 
+ buf[i] = 0;
+ for (i = 0; i <= highest_fd; i++) {
+      if (!(acptr = local[i])) continue;
+      if (IsServer(acptr) && acptr != cptr 
+          && matches(buf, acptr->name) == 0)
+          sendto_one(acptr, ":%s NOTE %s", sptr->name, parv[1]);
+  }
+}
+#endif
+
 /*
  * m_umode() added 15/10/91 By Darren Reed.
  * parv[0] - sender
@@ -3373,7 +3419,7 @@ aClient *cptr, *acptr;
 	*m++ = '+';
 	*m = '\0';
 	for (s = user_modes; *s; s += 2)
-		if (acptr->flags & *s)
+		if ((acptr->flags & *s) && (*s & SEND_UMODES))
 		    {
 			*m++ = (char)(*(s+1));
 			*m = '\0';

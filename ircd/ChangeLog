@@ -17,6 +17,42 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Wed May 13 00:07:24 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c	STATS C reports L-lines (numeric 241) as well as
+			N-Lines. STATS also defaults to *not* send any
+			replies as opposed to old bejaviour which made
+			STATS default to 'M'.
+
+Sun May 10 22:33:32 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, channel.c
+			fixed "WHO <channel>|*" bug and "JOIN #NEW-chan"
+			bug (later using patch from Daemon).
+
+	* s_msg.c	Added SHOW_INVISIBLE_LUSERS define which shows
+			invisible count to all users when defined (not just
+			operators)
+
+Sun May  3 01:01:07 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, note.c, Makefile
+			NOTE system from Jarlek (Wizible) added back into
+			the server. All the code related to the NOTE system
+			is conditionally compiled in according to the
+			setting in config.h.
+
+Tue Apr 21 23:12:34 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c, ircd.c
+			Added support for Unix domain sockets. Current setup
+			allows the server to listen on a unix socket and
+			accept both server and client connections. This was
+			done to get around some problems with TCP/IP.
+
+Sun Apr 19 21:32:12 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, channel.c
+			Included patchs from msa which seem to have solved the
+			main problems we had with servers core dumping. Care
+			should be used when calling exit_client() and the
+			return value checked to see if its 'FLUSHBUFFER'.
+
 Tue Apr  7 01:43:52 1992  Darren Reed <avalon@coombs.anu.edu.au>
 	* s_msg.c	fixed USER bug/vulnerability.
 

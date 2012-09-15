@@ -84,16 +84,14 @@ char	*parv[];
 	for (; nick = strtoken(&p, parv[1], ","); parv[1] = NULL)
 	    {
 		if (acptr = find_client(nick, (aClient *)NULL))
-		    {
-			if (IsMe(acptr))
-				continue; /*
-					  ** Drop to bit bucket if for me...
-					  ** ...one might consider sendto_ops
-					  ** here... --msa
-					  */
+			/*
+			** Drop to bit bucket if for me...
+			** ...one might consider sendto_ops
+			** here... --msa
+			** And so it was done. -avalon
+			*/
 			sendto_prefix_one(acptr, sptr,":%s %d %s%s", parv[0],
 					  numeric, nick, buffer);
-		    }
 		else if (chptr = find_channel(nick, (aChannel *)NULL))
 			sendto_channel_butone(cptr,sptr,chptr,":%s %d %s%s",
 					      parv[0],
