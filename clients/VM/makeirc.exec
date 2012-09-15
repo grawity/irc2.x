@@ -1,0 +1,52 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, VM/makeirc.exec
+ *   Copyright (C) 1990 Armin Gruner
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+ 
+address 'CMS'
+ 
+LIBOBJS= socket sys packet parse aetab match
+COBJS=   irc c_msg edit c_numeri help ignore
+ 
+ALL = COBJS LIBOBJS 
+ 
+do while all <> ''
+ parse var all file all
+ listf file 'TEXT (NOHEADER DATE STACK'
+ if rc <> 0 then objdate = '0'
+ else parse pull . . . . . . . objdate
+ listf file 'C (NOHEADER DATE STACK'
+ if rc <> 0 then do
+        say 'Error: Source file' file 'does not exist. Stop.'
+        exit -1
+        end
+ parse pull . . . . . . . srcdate
+ if srcdate > objdate then do
+   say 'compiling' file
+   cc file
+   end
+end
+ 
+ say 'compiling' 'c2pas'
+ vspascal c2pas '(lib (commmac'
+ 
+global txtlib clib vspascal commtxt amplang
+set ldrtbls 10
+say 'loading...'
+load COBJS LIBOBJS c2pas '(rld'
+say 'making module...'
+genmod irc '(system'

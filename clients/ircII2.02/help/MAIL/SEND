@@ -1,0 +1,23 @@
+Usage: MAIL [SEND] <passwd+-<FLAGS>> <tonick> <toname@host> <valid time> <msg>
+  With SEND you can queue a message in the server, and when the
+  recipient signs on/off IRC, change nick or join any channel,
+  mail checks for valid messages.  This works even if the sender
+  is not on IRC.  See HELP MAIL FLAGS for more info.  Password
+  can be up to ten characters long.  If a wildcard is specified,
+  no password is set.  See HELP MAIL FLAGS for info about flag
+  settings.  Toname can be specified without @host.  Do not use
+  wildcards in both tonick and toname if it's no need for it.
+  Valid time before the message is automatically removed from the
+  queue is specified with hours (or days if a '+' character is
+  specified before this timeout.
+    MAIL SEND secret+WN Wizible jarlek@ifi.uio.no +10 Freedom for everybody!",
+  - is an example of a message sent only to the specified recipient if",
+  this is an operator, and after this has received the message, the",
+  server sends a MAIL back to sender to inform about the delivery.",
+    MAIL SEND secret+XR Anybody * +30 <ctrl-G>",
+  - is an example which makes the server to tell when Anybody signs",
+  on/off irc, changes nick etc. This process repeats for 30 days.",
+    MAIL SEND secret+FL * * +9 *accout*",
+  - is an example which makes the server send a message back if any real-",
+  name of any user matches *account*. Message is sent back as MAIL from",
+  server, or directly as a notice if sender is on IRC at this time.",

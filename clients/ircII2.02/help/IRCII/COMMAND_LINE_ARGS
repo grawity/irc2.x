@@ -1,0 +1,58 @@
+The command line arguments to IRCII ar as follows:
+
+irc [nick [server list]] [-c chan] [-p port] 
+           [-l filename]  [-f] [-F] [-d] [-a] [-e program args]
+
+You may specify a nickname, which will supersede the IRCNICK
+environment variable.  The server list will be added to the
+server list found in the IRCSERVER variable.  However, the 
+servers specified on the command line will appear first in the
+server list and be the first to which connections are attempted.
+See HELP IRCII SERVER_LISTS for the format of a server list.
+See also HELP IRCII ENVIRONMENT_VARS.
+
+The -c switch allows you to select the channel on which you will
+enter irc.  If this switch is not used, you will start out on
+channel 0.
+
+The -p switch determines the default port number to connect to
+irc servers.  This default port number can be over-riden by
+specifying a port number in the server list (see below) or using
+the SERVER command (see HELP SERVER).
+
+The -l switch take a filename as an argument.  This will cause
+IRCII to use the specified filename as the user's .ircrc file
+rather than the default ~/.ircrc. 
+
+The -f switch tells IRCII that your terminal uses flow control
+and that IRCII shouldn't take over the flow control characters.
+You may want to rebind the flow control key functions to other
+keys (see HELP BIND).  Normally, flow control uses ^S and ^Q
+which are normally bound to TOGGLE_STOP_SCREEN and QUOTE_CHARACTER,
+respectively.
+
+The -F switch is just the opposite of the -f switch.  It tells
+IRCII to take over the flow control characters.
+
+The -d switch puts IRCII in "dumb" mode.  IRCII then uses no
+fancy screen stuff or any fancy input editting.  It sends all
+output to stdout and gets all input from stdin and only performs
+your tty's normal input editting (if any).  Also, no keybinding
+have any effect in this mode.
+
+The -a switch tells IRCII to add the default IRCII servers to
+your server list in addition to any servers you specify on the
+command line or in the IRCSERVER variable.  The order in which
+servers appear in you server list are as follows:
+  1. command line servers (from left to right)
+  2. IRCSERVER server (from left to right)
+  3. Default IRCII servers
+
+The -e switch allows you to use IRCII as an interface to creating
+your own irc automatons.  The first argument after the -e switch
+is the program to execute, while all following arguments are
+treated as arguments to that program.  Thus, the -e switch must
+be the last one on the command line.  All irc output is sent to
+stdin of the program and all output from the program is sent to
+irc as commands to be parsed.  IRCII forks itself into the
+background immediatly when the -e switch is used.

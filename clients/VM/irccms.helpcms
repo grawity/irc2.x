@@ -1,0 +1,39 @@
+.cm Last Change INFSOD01 at DM0TUI1S on Fri, 20 Apr 1990 16:54:51 CES
+NAME
+ 
+irc - User Interface to Internet Relay Chat Protocol
+ 
+SYNOPSIS
+   irc  <-c channel> <-p port> <nickname <server>>
+ 
+DESCRIPTION
+ 
+Irc is an user interface to Internet Relay Chat. It connects to
+host (if host is not given, default is the same host irc is running).
+if nickname is not given, default is your login name.
+If portnum is given, irc tries to connect that port on given host.
+ 
+Inside Irc you can get more help by writing /help in the beginning of
+line.
+ 
+EXAMPLE
+ 
+irc -c 745 -p 6667 Wizard tolsun
+ 
+connects you to irc server in host tolsun (port 6667) with nickname
+Wizard on channel 745
+ 
+COPYRIGHT
+Copyright (c) 1988 University of Oulu, Computing Center, Finland.
+All rights reserved.
+For full COPYRIGHT see COPYRIGHT file with IRC package.
+ 
+BUGS
+Sometimes users get logged off when some server dies. Reason unknown.
+Irc should never be stopped with CP switching (PA1 and IPL CMS) but
+only with /quit, if this hangs try a PA1 & #CP EXT.
+Your VM may hang !!
+ 
+AUTHOR
+Jarkko Oikarinen, currently jto@tolsun.oulu.fi
+VM/SP Client by Armin Gruner <Armin.Gruner@Informatik.TU-Muenchen.de>

@@ -1,0 +1,11 @@
+Usage: SAVE [filename]
+  This will save all of the settings of IRCII to a file.  It
+  saves all of the Key Bindings, Variables, and Aliases (in that
+  order) in a format such that they can be loaded into IRCII
+  using the LOAD command or the -l switch.  If not filename is
+  given, the your default .ircrc file will be used (unless
+  changed with the -l switch).
+
+  See also:
+    LOAD
+    IRCII COMMAND_LINE_ARGS

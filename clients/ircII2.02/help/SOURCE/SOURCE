@@ -1,0 +1,7 @@
+Usage: SOURCE <scriptname>
+  Source is an alias to /LOAD files into ircII from a specific
+  installation-dependent standard script directory. Usually
+  something like /usr/local/lib/ircII/script. Scripts may
+  contain ircII-specific command sequences. Some script files
+  have HELP-files to explain what they are good for, you can
+  choose one of those from the list below now.

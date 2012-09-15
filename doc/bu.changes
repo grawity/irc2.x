@@ -1,0 +1,71 @@
+Changes in irc2.5.1.bu.09a (from irc2.5.1.bu.09):
+
+   * Fixed a small problem with certain combinations of MODE parameters.
+     (Not nearly as bad as the original nasty problem, though.)
+
+Changes in irc2.5.1.bu.09 (from irc2.5.1.bu.08):
+
+   * NOTICE to a moderated or no-messages-to-channel channel now
+     properly respects such modes (following PRIVMSG's behavior).
+
+   * A particularly nasty problem with MODE is solved.
+
+   * CPU usage under conditions of heavy load is cut drastically (and
+     climbs more slowly).
+
+   * Fixed one typo in ircd.c.
+
+   * R: (restriction) lines added to ircd.conf; these allow execution of
+     a program to set arbitrary standards, kinda like time-limited kill
+     lines but much more versatile.
+
+Changes in irc2.5.1.bu.08 (from irc2.5.1):
+
+   * Added support for IRCDLIBS and IRCDMODE in Makefile; primarily
+     useful on Suns running NIS (nee YP).  Took out debugging in CFLAGS
+     for smaller executables.  Took the "old" C client out of the
+     default Makefile.
+
+   * Started including IRC II as an alternate client (both clients now
+     included with server package).
+
+   * Tweaked README to reflect the preceding changes and some others.
+
+   * Made changes to many of the files in doc.
+
+   * Added defines in config.h:
+
+	* WALLOPS_REMOTES : whether to WALLOPS remote SQUITs/CONNECTS;
+
+	* WALLOPS_QUARANTINE : whether to WALLOPS quarantine line
+	  activations (see below for more on Q: lines);
+
+	* CMDLINE_CONFIG : whether to allow configuration files to be
+	  specified on the command line (may be security hole if
+	  #defined); and
+
+	* FNAME_USERLOG : support for stealth's USERLOG patch.
+
+   * Fixed LIST and NAMES to allow specification of a channel.
+
+   * Added EPS's NeXT/GCC patches (CMDLINE_CONFIG is an extension of these).
+
+   * Added Q: (quarantine) lines to ircd.conf; these allow specification
+     of servers to "keep away."  Performs the same job as the "eris
+     patch" but is far more configurable ;-).
+
+   * Changes to improve consistency of error messages.
+
+   * Fixed a small bug in MAXLINKS.
+
+   * Fixed a small bug that leaked memory with every REHASH.
+
+   * Improved WHOIS responses for people "on the other side of the net"
+     (msa).
+
+   * Fixed INVITE so that a channel can be specified.
+
+   * Fixed INVITE so that it returns an error if you're trying to invite
+     to an invite-only channel and you aren't channel operator.
+
+   * Support for STATS C to report valid connection possibilities.

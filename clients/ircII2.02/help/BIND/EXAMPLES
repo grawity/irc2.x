@@ -1,0 +1,15 @@
+Here are some examples of the BIND function:
+    /BIND ^X META2_CHARACTER
+  Makes control X a meta key.
+    /BIND ^Xl PARSE_COMMAND /LIST
+  Binds the meta sequence control X followed by l to perform a
+  /LIST.  This binding is only valid if ^X was previously bound
+  to a meta function (as was done in the first example).
+    /BIND META1-u BACKWARD_HISTORY
+  by default, the escape key is bound to META1_CHARACTER, so this
+  binding makes the escape u key sequence show the last command
+  history entry.  Note that more than one key may be bound to
+  *any* function.
+    /BIND ! TYPE_TEXT Bang!
+  This binds the !  (exclamation mark) to type the word "Bang!"
+  into the input line whenever it is hit.

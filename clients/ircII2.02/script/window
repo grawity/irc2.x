@@ -1,0 +1,7 @@
+/bind meta2-2 parse /window new
+/bind meta2-z parse /window grow 1
+/bind meta2-^z parse /window shrink 1
+/bind meta2-^ parse /window grow 1
+/bind meta2-^^ parse /window grow 1
+/bind meta2-0 parse /window kill
+/comment gonzo90

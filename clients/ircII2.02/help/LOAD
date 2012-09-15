@@ -1,0 +1,7 @@
+Usage: LOAD <filename> [- arg0 arg1 ...]
+  Loads the given file into irc, treating each line as an irc
+  command, just as if it were typed into the command line.  This
+  is the command used automatically at irc startup to load the
+  .ircrc file.  If a - is specified after the filename, then each
+  line in the loaded file is treated as an alias with parameters
+  as given after the - on the command line.

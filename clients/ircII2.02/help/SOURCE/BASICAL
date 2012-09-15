@@ -1,0 +1,10 @@
+Usage: /SOURCE BASICAL
+  Basical aliases are defined here, so to make ircII compatible
+  to the old irc. Some additional standard aliases are defined:
+
+  /CHOP <nick>	    Make a person channel op of your current channel.
+  /K <nick>         Kick person from current channel.
+  /MO <modechange>  Make a mode change on the current channel.
+  /UNCHOP <nick>    Remove channel operator status from person.
+
+  This script should be sourced from the global ircrc.

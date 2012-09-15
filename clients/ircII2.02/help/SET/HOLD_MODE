@@ -1,0 +1,9 @@
+Usage: SET HOLD_MODE [ON|OFF|TOGGLE]
+  When ON, IRCII will pause at the end of each page of output.
+  Output will continue when the TOGGLE_STOP_SCREEN function is
+  activated (bound, by default, to cntl-S) or when the
+  SEND_LINE function is activate (bound, by default, to the
+  Return or Enter key).
+
+  See also:
+    SET STATUS_HOLD

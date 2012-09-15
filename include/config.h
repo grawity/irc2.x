@@ -107,16 +107,16 @@
  * these are only the reccommened names and paths. Change as needed.
  */
 
-#define SPATH "/home/kick/etc/irc2.5.1/ircd/ircd" /* Where the server lives.  */
-#define CPATH "/home/kick/etc/irc2.5.1/ircd/ircd.cf"	 /* IRC Configuration file.  */
-#define MPATH "/home/kick/etc/irc2.5.1/ircd/ircd.motd"     /* Message Of The Day file. */
-#define LPATH "/home/kick/etc/irc2.5.1/ircd/ircd.log"      /* Where the Logfile lives. */
+#define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
+#define CPATH "/usr/local/lib/irc/ircd.conf"	 /* IRC Configuration file.  */
+#define MPATH "/usr/local/lib/irc/ircd.motd"     /* Message Of The Day file. */
+#define LPATH "/usr/local/lib/irc/ircd.log"      /* Where the Logfile lives. */
 #ifdef MSG_MAIL
 /* Where MSGBASE saves its messages from time to time... */
-#define MAIL_SAVE_FILENAME "/home/kick/etc/irc2.5.1/ircd/.ircdmail"
+#define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
 #endif
 
-#define UPHOST "choshi.kaba.or.jp"           /* Default UPHOST for irc */
+#define UPHOST "garfield.mit.edu"              /* Default UPHOST for irc */
                                              /* standard client        */
 
 /* ENABLE_SUMMON

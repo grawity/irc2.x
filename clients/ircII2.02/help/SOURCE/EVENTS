@@ -1,0 +1,8 @@
+Usage: /SOURCE EVENTS
+  This script contains a collection of /ON commands. The effects are:
+  You will be informed about the time every full hour without beep.
+  The person's nickname that last sent you a message will appear in
+  your status-line. The output of /NAMES will look more compact.
+  The output of /WHO will look different, too. If you send a /NOTICE
+  it will not appear on your screen. When you type to a channel
+  your nickname will be displayed as prefix to the line.

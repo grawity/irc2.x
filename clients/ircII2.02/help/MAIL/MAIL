@@ -1,0 +1,19 @@
+Usages:
+  MAIL [SEND] <passwd+-<FLAGS>> <tonick> <toname@host> <valid time> <msg>
+  MAIL [LS|CAT|COUNT] <passwd+-FLAGS> <tonick>) <toname@host> <time> <id>
+  MAIL [RM] <password+-<FLAGS>> <tonick> <toname@host> <time> <id>
+  MAIL [FLAG] <pwd+-<FLG>> <tonick> <toname@host> +-<FLAGS> <id>
+-  MAIL [SENT] [NAME|COUNT]
+*  MAIL [SENT] [NAME|COUNT|USERS] <f.nick> <f.name@host> <time> [RM|RMAI]
+-  MAIL [WHOWAS] <nick> <name@host> <time1> <time2>
+*  MAIL [WHOWAS] <nick> <name@host> <time1> <time2> [RM|RMS]
+-  MAIL [STATS] [MSM|MSW|MUM|MUW|MST|MSF|USED]
+*  MAIL [STATS] [MSM|MSW|MUM|MUW|MST|MSF|USED|RESET] <value>
+*  MAIL [SAVE]
+  MAIL [HELP] <option>
+
+  The MAIL systems allows you to send "mail" messages to irc
+  users which they will get if and when they next sign on to irc.
+  If they are on irc already, they'll get the mail immediately.
+
+---- Send suggestions to jarlek@ifi.uio.no or Wizible jarlek@*.uio.no

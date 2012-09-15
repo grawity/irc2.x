@@ -1,0 +1,11 @@
+Usage: HELP [command]
+  Shows help on the given command.  If no command is specified,
+  the list of available commands is displayed.  If an ambiguous
+  portion of a command is entered, all matching commands will be
+  displayed.  Once the help command is given, you will be put in
+  help mode.  In this mode mode, you will be prompted for a help
+  topic.  Hitting return without entering a topic will exit help
+  mode.  Certain help topics, such as SET, leave you in a help
+  sublevel.  Hitting return on these levels brings you one help
+  level up.
+

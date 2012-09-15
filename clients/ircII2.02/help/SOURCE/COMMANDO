@@ -1,0 +1,33 @@
+Usage: /SOURCE COMMANDO
+  This file contains a big set of key bindings, one command for
+  almost every key you have on your keyboard, prefixed by ESC.
+  Both the ESCAPE and ` keys are defined as META1 control key,
+  so if you do not have ESCAPE you can use `.
+  To obtain a ` you must type ` twice. If you type ESCAPE twice
+  you'll get the command completition probably.
+  Here's the definition of the keys after pressing ESC or `:
+
+    A	You are no longer marked as being away.
+    B	Shows the list of all keybindings. (long, use HOLD_MODE)
+    C	Outputs some information about the channels you have joined.
+    D	Shows the Who-list of people of your country.
+    E	Shows a list of commands that you have launched with /EXEC.
+    F	Flushes the server output.
+    H	"Here" - Shows Who-list of users from your site.
+    I	Invite the user who last sent you a message.
+    J	Shows the WHOIS of the person who last joined your channel.
+    L	List of channels.
+    M	Mode of the current channel.
+    N	Names.
+    O	Who-list of operators online.
+    P	Make your channel private.
+    Q	Leave a query.
+    R	"Reply" - Enter a query with the person who last sent you a msg.
+    S	Shows current server and list of other servers.
+    T	Shows topic of current channel.
+    U	Tells you how many users and servers are on IRC.
+    W	Gives you the Who-list of the people on your channel.
+    X	"eXamine" - WHOIS of the person who last sent you a message.
+    Y	Toggles the SCROLL mode.
+    Z	Toggles the HOLD_MODE.
+    .	Clears the window.

@@ -1,0 +1,8 @@
+Usage: MAIL [RM] <password+-<FLAGS>> <tonick> <toname@host> <time> <id>
+  Deletes any messages sent from your nick and username which
+  matches with tonick and toname@host.  Use FLAGS for matching
+  all messages which have the specified flags set on or off.  
+
+  See also:
+    HELP MAIL FLAG     for more info about flag settings
+    HELP MAIL LS       for info about time.

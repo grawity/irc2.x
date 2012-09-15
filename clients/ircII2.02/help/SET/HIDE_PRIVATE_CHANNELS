@@ -1,0 +1,10 @@
+Usage: SET HIDE_PRIVATE_CHANNELS [ON|OFF|TOGGLE]
+  When ON, your channel number will show up as "Prv" in the
+  status line when you are on any negative channel or channel
+  greater than 999.  Other channels, including named channels,
+  show up as normal.  When OFF, your channel always shows up in
+  the status line.
+ 
+  NOTE: This command currently does not work properly for named
+  channels and for those whose status is changed with the MODE
+  command.

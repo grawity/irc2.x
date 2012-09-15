@@ -778,7 +778,7 @@ char *parv[];
 			sendto_one(acptr, ":%s NOTICE %s :%s",
 				   sptr->name, nick, parv[2]);
 		else if (chptr = find_channel(nick, (aChannel *)NULL)) {
-		  if (CanSend(sptr, chptr))
+		  if (CanSend(sptr, chptr) == 1)
 			sendto_channel_butone(cptr, chptr,
 					      ":%s NOTICE %s :%s", 
 					      sptr->name,

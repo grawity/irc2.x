@@ -1,0 +1,22 @@
+Usage:  JOIN [<channel>|-INVITE|-NICK <nickname>]
+  Changes your current channel to the channel specified.  If the
+  -INVITE switch is used, you will join the channel that you were
+  last INVITED to.  Or, if we wish to be grammatically correct,
+  you will join the channel to which you were last invited.  If
+  the -NICK format is used, you will join the channel that the
+  specified nickname is on.  If no parameters are given, your current
+  channel is displayed.
+
+  Information about the different channels:
+    Channel 0 is the limbo channel.
+    Channels 1 thru 999 are public.
+    Channels 1000 and up are private channels
+    Channels below 0 are private/invisible channels.
+    Channels with names may also be used Channel names must 
+      begin with + For example, +my_channel.  This only works
+      with servers 2.5.1 and beyond.
+      See HELP MODE for more about this.
+    Channels with names may also begin with a #, such as 
+      #mutli.  You can be on more than one # channel at once.
+
+  CHANNEL and JOIN are identical.

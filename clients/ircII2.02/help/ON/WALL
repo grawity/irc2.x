@@ -1,0 +1,6 @@
+Usage: ON [+|-|^]WALL [-|^]<nicknames> [action]
+  This is activated whenever you receive a WALL (a global
+  message from an irc operator).
+  The parameters for the action are as follows:
+    $0    nickname of person who sent the WALL
+    $1-   The message

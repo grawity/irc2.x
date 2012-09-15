@@ -1,0 +1,4 @@
+Usage: SET VERBOSE_QUERY [ON|OFF|TOGGLE]
+  When OFF, the "Starting conversationg with..." and 
+  "Ending conversationg with..." messages will not be shown
+  when you query someone.

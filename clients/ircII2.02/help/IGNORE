@@ -1,0 +1,49 @@
+Usages: 
+  IGNORE [[nick|user@host] [-][message type]
+  IGNORE [nick [-|+][message type]
+
+  The first form of IGNORE allows you to specify which type of
+  messages you wish to ignore from a user.  The message type
+  parameter can be one of the following:
+    MSGS            All MSGs received
+    NOTICES         All NOTICEs received
+    PUBLIC          All normal channel conversation
+    INVITES         All INVITEs received
+    WALLS           All WALLs received
+*    WALLOPS         All WALLOPS received
+    MAIL            ALL mail received
+    ALL             All of the above message types
+    NONE            No message types
+
+  You can ignore by nickname or by specifying a userid@hostname
+  format.  Wildcards may be used in all formats.  You can specify
+  multiple types of messages to ignore on the command line.
+  Preceeding a type with a - indicates removal of ignoring of
+  that type of message.  For example:
+     IGNORE BigCheese PRIVATE INVITES
+  ignores MSGs and INVITES from BigCheese.  
+     IGNORE *@*.cmu.edu ALL -WALLS
+  ignores all types of messages except WALLS from anyone from
+  CMU.  The user@host format is considerable slower than the
+  nickname format and doesn't function for PUBLIC messages.
+
+  The second form  allows you to specify nicknames which you
+  want highlighted when messages of that type from that nickname
+  are received.  For example:
+    IGNORE *Cheese* +PRIVATE
+  will cause all MSGs from anyone with Cheese in their nickname
+  to appear with their nickname highlighted.  
+    IGNORE * +WALLS +MAIL
+  will highlight all WALLS and MAIL received.
+
+  Both forms of IGNORE use the - to remove ignore attributes,
+  and the type NONE will remove the user from the list
+  completely.
+
+  Both forms of IGNORE will match against the nickname with the
+  most true matching characters.  What this means is if you have:
+    IGNORE BigCheese PRIVATE
+    IGNORE * +ALL
+  Then MSG's from BigCheese will be ignored, and all other types
+  of messages from BigCheese will be unaffected.  All messages
+  of all types from any other user will be highlighted.

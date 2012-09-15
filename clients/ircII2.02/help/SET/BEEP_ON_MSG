@@ -1,0 +1,5 @@
+Usage: SET BEEP_ON_MSG <number of beeps>
+  Much like BEEP_WHEN_AWAY, this will beep the specified number
+  of beeps whenever a MSG is received.  If you also have
+  BEEP_WHEN_AWAY set, it will take precedence over BEEP_ON_MSG
+  when you are away.

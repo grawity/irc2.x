@@ -1,0 +1,11 @@
+/on ^timer *:00 /echo *** The time is $0
+/on ^wallop * /echo === From $0 to all opers: "$1-"
+/on -msg * /set status_user last: $0$^
+/on ^names * /echo $[15]0 $1-
+/on ^names \* /echo * $1-
+/on ^who Channel /comment
+/on ^who * /echo $[9]1 is ($5-) on $0 [$2] $3@$4 
+/comment /on ^who * /echo $[9]1 is $3@$4 ($5-) on $0 [$2]
+/on ^send_notice * /comment
+/on ^send_public * /echo <$N> $1-
+/comment lynx90

@@ -1,0 +1,23 @@
+Usage: /SOURCE ACTION
+  Several Multi-User-Dungeon-like aliases are defined here.
+  The simple ones (without arguments) are:
+	APPLAUD		BOUNCE		BOW		BURP
+	CHUCKLE		CLAP		COUGH		CRY
+	GASP		GIGGLE		GRIN		GROAN
+	LAUGH		MOAN		NOD		PURR
+	SCREAM		SHIVER		SHRUG		SIGH
+	SING		SMILE		SNAP		SNEEZE
+	SNORE		WHISTLE		WIGGLE		WINK
+
+  These require a nickname as argument:
+	COMFORT		CUDDLE		DANCE		HUG
+	KISS		LOVE		POKE		SHAKE
+	SLAP		SPIT		THANK
+
+  You can also make up your own sentences with the /ME command,
+  e.g. "/ME is hungry." will send "BigCheese is hungry." if you
+  are the big cheese.
+  The messages are sent as CHANNEL_NOTICEs, are therefore only
+  received by the users on the current channel, and correctly
+  displayed only on the screens of those, who use IRCII set up with
+  this script.

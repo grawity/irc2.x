@@ -1,0 +1,72 @@
+Usage: WINDOW [<argument> [<argument> <argument> ...]]
+  The WINDOW command lets you manipulate multiple "windows" in
+  IRCII.  Windows are horizontally divided sections of the
+  screen in which different bits of irc information can be
+  displayed.  WINDOW lets you create, manipulate, and remove
+  such windows.  The <argument> parameter to WINDOW can be one
+  of the following:
+    NEW            Creates a new window by splitting the current
+                   window evenly.  
+    KILL           Removes the current window.  This does not
+                   remove you from any channel you were on in that
+                   window.
+    GROW <n>       Increases the size of the current window by n
+                   lines.
+    SHRINK <n>     Decreases the size of the current window by n
+                   lines.
+    CHANNEL <c>    Directs all conversation with channel <c> to the
+                   current window.  If you are not current on
+                   channel <c>, you will join it.  If you are on
+                   channel <c> it will be diverted to the current
+                   window, possibly removing channel <c> from
+                   another window.
+    BALANCE        Causes all windows to resize so they are as
+                   close as possible to evenly sized.
+    SCROLL <f>     Where <f> is ON, OFF, or TOGGLE.  This controls
+                   scrolling for the current window.  
+    HOLD_MODE <f>  Where <f> is ON, OFF, or TOGGLE.  This
+                   controls hold mode for the current window.
+    LEVEL <L>      Where <L> is a comma separated list of one of
+                   the following: CRAP, PUBLIC, MSG, NOTICE,
+                   WALL, WALLOP, MAIL, ALL, or NONE.  This controls 
+                   what types of messages will go to the current
+                   window.
+    LASTLOG_LEVEL <L>  Where <L> is the same as for LEVEL, this
+                       controls what types of messages displayed
+                       in the current window should be saved to
+                       the windows lastlog.
+  The <L> parameters for LEVEL and LASTLOG_LEVEL are described
+  more fully in SET LASTLOG_LEVEL.
+
+  The settings of the system variables SCROLL and HOLD_MODE are
+  used as defaults for new windows created.  Executing a 
+  SET SCROLL or SET HOLD_MODE will change the settings for the
+  current window as well.
+
+  The "current window" is denoted by "^^^^^^^^^^" in the status
+  line for that window.   You can switch the current window by
+  activating the key functions PREVIOUS_WINDOW or NEXT_WINDOW.
+  These are bound, by default, to ^Xp and ^Xn, respectively.
+
+  Each window can have the conversation of a channel going to
+  it, which can be specified by either using WINDOW CHANNEL <c>
+  or by executing the JOIN or CHANNEL commands in a window.
+  Each window can also have it's own QUERY user.  When QUERYing
+  someone in a window, all conversation with that person is
+  directed to that window.
+
+  No information is ever lost.  Anything that doesn't otherwise
+  have a specific window to go to (because it is a window's
+  current channel or QUERY user) will either go to the current
+  window, or the window who's LEVEL setting contains an
+  appropriate type for that message.  By default, the first
+  window created has a LEVEL of ALL, meaning that all messages
+  will go to that window unless otherwise specified.  This
+  includes all output from NAMES, LIST, WHO, etc.  These things
+  fall under the CRAP category for LEVEL.  If you want, for
+  example, these messages to go to your current window, you can
+  do this in the original window:
+    WINDOW LEVEL ALL,-CRAP
+  Now, all "crap" will go to your current window, while all
+  private messages, walls, wallops, mail, and notices will go to
+  the root window.

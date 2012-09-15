@@ -10,6 +10,9 @@ Mon Nov  5 19:32:09 1990  Tom Hopkins  (hoppie at buengf)
 	* s_msg.c
 	  changed m_rehash to make a call to TryConnections and
 	  check_pings immediately after rehash
+
+	  Fixed NOTICE to respect the +n mode on channels  
+
 	* ircd.c
 	  rewrote main loop to make it (hopefully) eat less CPU under bad
 	  conditions and not do too much under good ones.  made check_pings

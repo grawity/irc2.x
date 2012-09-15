@@ -1,0 +1,5 @@
+Usage: STATS [L|C]
+  Shows some irc server usage statistics.  If L is specified,
+  more specific information is displayed on the current irc
+  server connections.  If C is specified, the server's connections
+  as specified in it's config file are displayed.

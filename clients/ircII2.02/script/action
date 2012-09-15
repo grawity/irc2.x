@@ -1,0 +1,58 @@
+/comment Basically taken from LpMUD.
+/on ^public_notice * /echo $0 $2-
+/comment This covers all notices set to channels.
+/on ^send_notice +* /echo $N $1-
+/on ^send_notice #* /echo $N $1-
+/on ^send_notice 0* /echo $N $1-
+/on ^send_notice 1* /echo $N $1-
+/on ^send_notice 2* /echo $N $1-
+/on ^send_notice 3* /echo $N $1-
+/on ^send_notice 4* /echo $N $1-
+/on ^send_notice 5* /echo $N $1-
+/on ^send_notice 6* /echo $N $1-
+/on ^send_notice 7* /echo $N $1-
+/on ^send_notice 8* /echo $N $1-
+/on ^send_notice 9* /echo $N $1-
+/on ^send_notice -* /echo $N $1-
+/alias me /notice $+ $*
+/alias applaud /me applaudes wholeheartedly.
+/alias bounce /me bounces around.
+/alias bow /me bows gracefully.
+/alias burp /me burps rudely.
+/alias chuckle /me chuckles politely.
+/alias clap /me claps his hands.
+/alias cough /me coughs noisily.
+/alias cry /me bursts into tears. Waaaaah!
+/alias gasp /me gasps in astonishment!
+/alias giggle /me giggles inanely.
+/alias grin /me grins sarcastically.
+/alias groan /me groans loudly.
+/alias laugh /me falls down laughing.
+/alias moan /me starts moaning.
+/alias nod /me nods solemnly.
+/alias purr /me purrs contentedly.
+/alias scream /me screams loudly: Aaarrrgghh!!!
+/alias shiver /me shivers from the cold. Brrrr!
+/alias shrug /me shrugs helplessly.
+/alias sigh /me sighs deeply.
+/alias sing /me sings: O sole mio, sta'n fronte a te...
+/alias smile /me smiles happily.
+/alias snap /me snaps with the fingers.
+/alias sneeze /me sneezes. Gesundheit!
+/alias snore /me snores loudly. Zzzz...
+/alias whistle /me whistles a well known melody. 
+/alias wiggle /me wiggles the bottom.
+/alias wink /me winks suggestively.
+/comment These require a nickname as argument.
+/alias comfort /me comforts $*.
+/alias cuddle /me cuddles $*.
+/alias dance /me sweeps $* across the dance floor.
+/alias hug /me hugs $*.
+/alias kiss /me kisses $*.
+/alias love /me whispers sweet words of love to $*.
+/alias poke /me pokes $* in the ribs.
+/alias shake /me shakes hands with $*.
+/alias slap /me slaps $* in the face.
+/alias spit /me spits on $*.
+/alias thank /me thanks $* from the heart.
+/comment lynx90

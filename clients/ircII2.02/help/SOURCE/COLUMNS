@@ -1,0 +1,4 @@
+Usage: /SOURCE COLUMNS
+  A little script by BigCheese to demonstrate the usage of /echo $[].
+  It displays all in and outgoing channel talk formatted to the 11th
+  column.

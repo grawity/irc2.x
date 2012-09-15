@@ -1,0 +1,82 @@
+Internet Relay Chat Operator Etiquette Guide
+
+July, 1990.
+
+Welcome! You've either been selected to be an IRC Operator or you have set
+up your server and thus have taken on the dual task of IRC Server
+Administrator and IRC Operator. Your future days will be filled with hours
+of fun chatting on IRC, and then wondering why everyone you talked to went
+away, because the links had apparently broken. 
+
+Linking:
+========
+
+You will be assigned links from the IRC Routing Coordinators. Please use
+these links and these links ONLY. The links have been designed to maximize
+efficiency and make delays in chatting minimal. You will be given two
+links, one to each regional backbone site. Connect to the primary site
+first and then to the secondary site. You should not need to connect to any
+other sites. You will be informed if this policy changes.
+
+Kills and Walls:
+===============
+
+/kill and /wall are special operator commands. You should use them with
+care, and only if absolutely needed. The format are as follows:
+/kill USERNAME comment. comment can be a phrase of almost any length
+(within reason) and should be used for specifying the reason of the kill.
+example: /kill Trillian She's a Ghost
+IRC Ghosts are created after a net split has occured and the net has yet to
+relink. 
+
+/wall PHRASE. This is used for an emergency command like the net is about
+to split into little pieces, and everyone should reconfigure their links
+as soon as possible. You will see a WALL when it happens, an operators
+nickname will appear with # signs around it.
+#Trillian# Server bucse.bu.edu coming down for upgrade. Prepare to
+reconfigure links.
+
+/wallops PHRASE This is used to talk to ALL operators at once. It is not
+often warranted, but is useful. Often, when there is an important IRC
+situation that requires all the operators attention, /wallops is used. The
+form for wallops is a nickname with ! signs around it.
+!Trillian! Australia should leaf off of eris, not carry all the US traffic.
+
+
+/TRACE command
+/TRACE is useful to know what servers are connected to what. Sometimes
+/trace can be confusing, especially you are using it for the first time.
+Here is an example of a trace from bucse.bu.edu to beach.cis.ufl.edu:
+
+/TRACE beach.cis.ufl.edu
+*** Link bucse.bu.edu<2.5.1.bu.2> ==> beach.cis.ufl.edu
+*** Link sirius.ctr.columbia.edu<2.4.1> ==> beach.cis.ufl.edu
+*** Link tavi.rice.edu<2.5.1.bu.1> ==> beach.cis.ufl.edu
+*** Connection beach.cis.ufl.edu ==> shark.cis.ufl.edu
+*** Connection beach.cis.ufl.edu ==> tavi.rice.edu
+*** Connection beach.cis.ufl.edu ==> Ra.MsState.Edu
+
+This shows that from bucse.bu.edu (running version 2.5.1.bu.2) to
+beach.cis.ufl.edu, routing goes through sirius.ctr.columbia.edu and
+tavi.rice.edu before reaching beach. Beach is connected to
+shark.cis.ufl.edu and Ra.MsState.Edu, as well as tavi.rice.edu, which is
+called its "uplink" because this is where all of the traffic goes up
+through. 
+
+/SQUIT command
+/squit isolates a specified link from the next closest uplink server. 
+For the most part, it should not be used, except in the case of
+emergencies. SQUIT is often used to stop all US traffic from routing
+through Australia. If minyos is connected to eris and Coombs to betwixt,
+then you should SQUIT one of them. Also, if a server is choking, then you
+should immediately squit that connection and route around it. 
+
+Please let me know if there should be any additions to this guide. Again,
+this is not MANDATORY, this is just a GUIDE. Please conduct yourself as 
+an IRC Operator would...you are looked upon for assistance, both emotional
+and mental. 
+
+Helen Rose			Christopher Davis
+<hrose@cs.bu.edu>		<ckd@cs.bu.edu>
+
+July, 1990

@@ -1,0 +1,101 @@
+# IRC II
+# Written by Michael Sandrof (ms5n+@andrew.cmu.edu)
+# Copyright (c) 1990
+# All Rights Reserved
+
+# This file is modified by the Makefile in the top-level directory
+
+# The folloing _PROTO names are modified by sed from ../Makefile 
+LIBS = -ltermcap
+INSTALL_NAME = /afs/andrew/usr3/ms5n/bin/.irc
+INSTALL_HELP = /afs/andrew/usr3/ms5n/etc/irc
+INSTALL_IRCSERV = /afs/andrew/usr3/ms5n/etc/ircserv
+CFLAGS = -g
+RM = rm -f
+CP = cp -r
+INSTALL = install -s -m 755
+DEFINES = 
+
+OBJECTS = irc.o ircaux.o parse.o numbers.o edit.o history.o vars.o help.o\
+	lastlog.o alias.o output.o log.o ignore.o term.o input.o\
+	reg.o keys.o scandir.o crypt.o status.o exec.o server.o whois.o\
+	hook.o names.o window.o hold.o newio.o mail.o list.o notify.o
+
+SOURCES = irc.c ircaux.c parse.c numbers.c edit.c history.c vars.c help.c\
+	lastlog.c alias.c output.c log.c ignore.c term.c input.c\
+	reg.c keys.c scandir.c status.c exec.c server.c whois.c hook.c\
+	names.c window.c hold.c newio.c mail.c list.c notify.c
+
+IRCSERV_OBJECTS = ircserv.o
+
+IRCSERV_SOURCES = ircserv.c
+
+HEADERS = irc.h term.h
+
+all: irc
+
+irc: ${OBJECTS}
+	${CC} ${CFLAGS} ${DEFINES} -o irc ${OBJECTS} ${LIBS}
+
+.c.o:
+	${CC} ${CFLAGS} ${DEFINES} -c $<
+
+term.h: config.h
+	touch term.h
+
+window.h: hold.h lastlog.h
+	touch window.h
+
+flush: flush.c
+	${CC} ${CFLAGS} ${DEFINES} -o flush flush.c
+
+help.o: help.c irc.h vars.h ircaux.h input.h config.h term.h window.h Makefile
+	${CC} -DIRC_HELP_PATH=\"${INSTALL_HELP}\" ${CFLAGS} ${DEFINES} -c help.c
+
+server.o: server.c irc.h server.h ircaux.h Makefile
+	${CC} -DIRCSERV_PATH=\"${INSTALL_IRCSERV}\" ${CFLAGS} ${DEFINES} -c server.c
+
+# Dependencies
+irc.o: irc.c irc.h term.h vars.h input.h config.h output.h window.h server.h
+status.o: status.c irc.h term.h status.h vars.h hook.h input.h edit.h window.h mail.h
+numbers.o: numbers.c irc.h input.h ircaux.h vars.h lastlog.h hook.h
+ircaux.o: ircaux.c irc.h ircaux.h
+parse.o: parse.c irc.h term.h names.h vars.h hook.h ignore.h whois.h lastlog.h ircaux.h crypt.h edit.h
+edit.o: edit.c irc.h term.h names.h edit.h crypt.h vars.h ircaux.h lastlog.h whois.h hook.h input.h ignore.h keys.h alias.h history.h window.h
+history.o: history.c irc.h history.h vars.h ircaux.h
+vars.o: vars.c irc.h vars.h status.h window.h lastlog.h log.h crypt.h history.h input.h ircaux.h config.h
+lastlog.o: lastlog.c irc.h lastlog.h vars.h ircaux.h window.h
+alias.o: alias.c irc.h alias.h edit.h vars.h ircaux.h config.h server.h window.h
+output.o: output.c irc.h term.h output.h vars.h input.h lastlog.h window.h
+log.o: log.c irc.h log.h vars.h
+ignore.o: ignore.c irc.h ignore.h ircaux.h list.h
+term.o: term.c irc.h term.h config.h
+input.o: input.c irc.h term.h input.h alias.h vars.h
+display.o: display.c irc.h term.h
+reg.o: reg.c reg.h
+keys.o: keys.c irc.h names.h keys.h ircaux.h config.h window.h
+scandir.o: scandir.c irc.h config.h
+crypt.o: crypt.c irc.h crypt.h vars.h ircaux.h list.h
+exec.o: exec.c irc.h exec.h ircaux.h vars.h edit.h window.h exec.h
+whois.o: whois.c irc.h whois.h hook.h lastlog.h vars.h ignore.h ircaux.h notify.h config.h
+hook.o: hook.c irc.h hook.h vars.h ircaux.h alias.h list.h config.h
+hold.o: hold.c irc.h window.h vars.h
+names.o: names.c irc.h names.h lastlog.h window.h list.h
+window.o: window.c irc.h window.h vars.h names.h ircaux.h term.h
+newio.o: newio.c
+mail.o: mail.c irc.h config.h mail.h hook.h vars.h
+list.o: irc.h list.h
+notify.o: irc.h list.h notify.h ircaux.h whois.h hook.h config.h
+
+install: all
+	${INSTALL} irc ${INSTALL_NAME}
+	${INSTALL} ircserv ${INSTALL_IRCSERV}
+
+clean:
+	${RM} ${OBJECTS} ${IRCSERV_OBJECTS} irc ircserv core
+
+lint:
+	lint -abchx -DIRC_HELP_PATH=\"${INSTALL_HELP}\" ${SOURCES}
+
+ircserv: ircserv.o newio.o
+	${CC} ${CFLAGS} ${DEFINES} -o ircserv ircserv.o newio.o ${LIBS}

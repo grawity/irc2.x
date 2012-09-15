@@ -1,0 +1,23 @@
+Usage: SET LASTLOG_LEVEL [ALL|NONE|[-]<level> [-]<level> ...]
+  The setting of this variable determines which types of
+  messages are stored in the lastlog.  If ALL is specified,
+  everything that shows up on the screen is saved in the
+  lastlog.  If NONE is specified, nothing is saved in the
+  lastlog.  The <level> specification can be one of the
+  following: 
+    PUBLIC	    Channel conversation only
+    MSG		    MSGs only
+    NOTICE	    NOTICEs only
+    WALL	    WALLs only
+*    WALLOP         WALLOPs only
+    MAIL            MAIL only
+    CRAP            Anything not covered by the above categories.
+  You can combined these on a command line to make the lastlog
+  save just what you want.  Also, by putting a - before any
+  level, you remove that one from the list.  For example, if you
+  wish to save everything except MAIL and all that CRAP, you
+  could do:
+    SET LASTLOG_LEVEL ALL -MAIL -CRAP
+  which is the same as doing:
+-    SET LASTLOG_LEVEL PUBLIC MSG NOTICE WALL
+*    SET LASTLOG_LEVEL PUBLIC MSG NOTICE WALL WALLOP

@@ -1,0 +1,69 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, VM/READ.ME
+ *   Copyright (C) 1990 Armin Gruner
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+ This package is the adapted version of the original IRC client 2.6
+ for VM.
+
+ * It has been tested with following configuration:
+
+	* VM/SP
+		CMS Release 5 / 6
+	* VM/XA
+		CMS Release 5.5
+
+	* FAL (IBM's TCP/IP Implementation for VM) 1.2.0
+					           1.2.1
+					           1.2.2
+
+ * The client does not run yet with original WISCNET version of FAL.
+
+ * To make a MODULE, you need:
+
+   - a C copiler
+   - a VS PASCAL compiler
+   - TXTLIB's CLIB, VSPASCAL, COMMTXT, AMPLANG
+   - at least 1M disk space, it may be necessary to define
+     temporary disk space. The MODULE itself needs about 500K.
+
+   Make sure that you have linked all necessary disks and accessed the
+   source disk as "A". Copy all files out of this direcory into your
+   "A"-disk (i.e. via FTP).
+
+ * To configure to your own purposes, edit the file "config.h",
+   setup the correct UPHOST and, if necessary, the IRCPASS.
+
+ * If you have the MAKE package of Art Exner <EXNER@UREGINA1>,
+   you can simply type "make", otherwise you need to run the
+   REXX-script MAKEIRC.
+
+ * The file IRC.EXEC is necessary for correct loader table size, and
+   IRCCMS.EXEC for executing CP/CMS commands from inside the client.
+
+ * The files IRC.HELPTASK, IRCCMS.HELPCMS, ETIQUETT.HELPCMS and
+   MANUAL.HELPCMS are not necessary, but they provide an online help
+   when you type HELP IRC or IRC ?.
+
+ Please report me any bugs and problems with the VM version of the
+ client, otherwise enjoy IRC ... :)
+
+ * NOTE: There's no warranty for the program and no active support. That
+   means, you may send me bug reports, and I may try to fix, but don't
+   rely on it.
+
+   --Armin <Armin.Gruner@Informatik.Tu-Muenchen.DE>

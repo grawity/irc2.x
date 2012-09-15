@@ -1,0 +1,25 @@
+Sun Jan  6 06:07:58 1991  Helen Trillian Rose  (hrose at bucsd)
+
+	* Makefile
+
+	Added support for all of the different clients. 
+
+	* clients/*
+
+	Moved all of the clients to their own directory. Changed original
+	C client to reflect such. Indicated this in README.
+
+Sun Oct 21 18:39:32 1990  Christopher Davis  (ckd at bucsd)
+
+	* Makefile
+
+	Added IRCDLIBS variable to the Makefile (and ircd/Makefile).
+	Used to get around a bug in SunOS's NIS domain name resolver.
+	
+	Also added IRCDMODE to allow automatic chmod to use a different
+	mode (ours is 4750, default is 4711).
+
+	* README
+
+	Rewritten slightly to reflect changes in the distribution package
+	for this release.

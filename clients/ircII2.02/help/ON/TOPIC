@@ -1,0 +1,4 @@
+Usage: ON [+|-|^]TOPIC [-|^]<nicknames> [action]
+  This is activated whenever someone changes the topic    
+    $0    nickname of person who changed the topic
+    $1-   The new topic

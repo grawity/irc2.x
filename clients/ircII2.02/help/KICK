@@ -1,0 +1,6 @@
+Usage: KICK <channel> <user>
+  Kicks specified user off given channel Only channel operators
+  are privileged to use this command Channel operator privileges
+  can be given to other users of channel by command '/MODE
+  <channel> +o <user>' and taken away by command '/MODE <channel>
+  -o <user>'

@@ -1,0 +1,5 @@
+Usage: SET INPUT_PROMPT <input prompt string>
+  Allows you to change the prompt that will be displayed in the
+  input line before any text you type.  Normally, there is no
+  prompt, but you can specify any string.  To turn off a prompt,
+  set INPUT_PROMPT to <empty>.
