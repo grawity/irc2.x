@@ -343,13 +343,30 @@ char	*parv[];
 		** Rather than KILL the link which introduced it, KILL the
 		** youngest of the two links. -avalon
 		*/
-		acptr = acptr->from;
-		acptr = (cptr->firsttime > acptr->firsttime) ? cptr : acptr;
-		sendto_one(acptr,"ERROR :Server %s already exists", host);
-		sendto_flag(SCH_ERROR,
+                bcptr = (cptr->firsttime > acptr->from->firsttime) ? cptr :
+                        acptr->from;
+                sendto_one(bcptr, "ERROR :Server %s already exists", host);
+                /* in both cases the bcptr (the youngest is killed) */
+                if (bcptr == cptr)
+                    {   
+                        sendto_flag(SCH_ERROR,
 			    "Link %s cancelled, server %s already exists",
-			    get_client_name(acptr, TRUE), host);
-		return exit_client(acptr, acptr, &me, "Server Exists");
+                                    get_client_name(bcptr, TRUE), host);
+                        return exit_client(bcptr, bcptr, &me, "Server Exists");
+                    }
+                else
+                    {   
+                        /*
+                        ** in this case, we are not dropping the link from
+                        ** which we got the SERVER message.  Thus we canNOT
+                        ** `return' yet! -krys
+                        */
+                        sendto_flag(SCH_ERROR,
+			    "Link %s cancelled, server %s reintroduced by %s",
+                                    get_client_name(bcptr, TRUE), host,
+                                    get_client_name(cptr, TRUE));
+                        (void) exit_client(bcptr, bcptr, &me, "Server Exists");
+		    }
 	    }
 	if ((acptr = find_person(host, NULL)) && (acptr != cptr))
 	    {

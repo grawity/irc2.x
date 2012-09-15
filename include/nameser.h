@@ -55,7 +55,7 @@
 
 /*
  *      @(#)nameser.h	8.1 (Berkeley) 6/2/93
- *	$Id: nameser.h,v 8.3 1995/08/21 01:27:12 vixie Exp $
+ *	$Id: nameser.h,v 1.1.1.1 1997/04/14 13:25:03 kalt Exp $
  */
 
 #ifndef _NAMESER_H_
