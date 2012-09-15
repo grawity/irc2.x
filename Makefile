@@ -26,7 +26,7 @@ INCLUDEDIR=../include
 # on NEXT use:
 # CFLAGS=-bsd -I$(INCLUDEDIR)
 #otherwise this:
-CFLAGS=-I$(INCLUDEDIR)
+CFLAGS= -I$(INCLUDEDIR) -g
 
 #use the following on SUN OS without nameserver libraries inside libc
 # IRCDLIBS=-lresolv
@@ -34,7 +34,7 @@ CFLAGS=-I$(INCLUDEDIR)
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
 #
-# HPUX: (was IRCDLIBS= -lbsd but apparently its not needed)
+# HPUX: (was IRCDLIBS= -lBSD but apparently its not needed)
 # IRCDLIBS=
 #
 #and otherwise:
@@ -42,6 +42,9 @@ IRCDLIBS=
 
 # IRCDMODE is the mode you want the binary to be.
 # the 4 at the front is important (allows for setuidness)
+#
+# WARNING: if you are making ircd SUID or SGID, check config.h to make sure
+#          you are not defining CMDLINE_CONFIG 
 IRCDMODE = 4711
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' 'IRCDMODE=${IRCDMODE}'

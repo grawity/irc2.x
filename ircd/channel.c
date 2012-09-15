@@ -647,7 +647,7 @@ char *parv[];
 
 	if (atoi(parv[1]) == 0 && parv[1][0] != '+' && parv[1][0] != '#') {
 	  if (parv[1][0] == '0' && sptr->user->channel) {
-	    sendto_serv_butone(cptr, ":%s CHANNEL 0", parv[0]);
+	    sendto_serv_butone(cptr, ":%s JOIN 0", parv[0]);
 	    sendto_channel_butserv(sptr->user->channel,
 				   ":%s PART %s", parv[0],
 				   sptr->user->channel->chname);
@@ -684,7 +684,7 @@ char *parv[];
 	if (parv[1][0] == '#')
 	  sendto_serv_butone(cptr, ":%s JOIN %s", parv[0], chptr->chname);
 	else {
-	  sendto_serv_butone(cptr, ":%s CHANNEL %s", parv[0],
+	  sendto_serv_butone(cptr, ":%s JOIN %s", parv[0],
 			     chptr->chname);
 	  if (sptr->user->channel) {
 	    sendto_channel_butserv(sptr->user->channel,
@@ -754,9 +754,8 @@ char *parv[];
 	  return 0;
 	}
 	if (!IsMember(sptr, chptr)) {
-	  sendto_one(sptr, ":%s %d %s %s %s :You're not on channel",
-		     me.name, ERR_NOTONCHANNEL, parv[0], parv[1],
-		     chptr->chname);
+	  sendto_one(sptr, ":%s %d %s %s :You're not on channel",
+		     me.name, ERR_NOTONCHANNEL, parv[0], parv[1]);
 	  return 0;
 	}
 	/*
@@ -765,7 +764,7 @@ char *parv[];
 	if (parv[1][0] == '#') {
 	  sendto_serv_butone(cptr, ":%s PART %s", parv[0], chptr->chname);
 	} else {
-	  sendto_serv_butone(cptr, ":%s CHANNEL 0", parv[0],
+	  sendto_serv_butone(cptr, ":%s JOIN 0", parv[0],
 			     chptr->chname);
 	}
 	sendto_channel_butserv(chptr, ":%s PART %s", parv[0],
@@ -840,6 +839,164 @@ aClient	*sptr;
 			count++;
 	return (count);
 }
+
+/*
+** m_topic
+**	parv[0] = sender prefix
+**	parv[1] = topic text
+*/
+m_topic(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int parc;
+char *parv[];
+    {
+	aChannel *chptr = NullChn;
+	char *topic = (char *)NULL;
+	
+	CheckRegisteredUser(sptr);
+
+	if (parc > 1 &&
+	    (atoi(parv[1]) || *parv[1] == '+' || *parv[1] == '#')) {
+	  if (!(chptr = find_channel(parv[1], NullChn))) {
+	      chptr = sptr->user->channel;
+	      topic = parv[1];
+	  }
+	  if (!chptr || !IsMember(sptr, chptr)) {
+	      sendto_one(sptr,":%s %d %s %s :Not On Channel",
+			 me.name, ERR_NOTONCHANNEL, parv[0], parv[1]);
+	      return 0;
+	  }
+	  if (parc > 2)
+	    topic = parv[2];
+	}
+	else {
+	  chptr = sptr->user->channel;
+	  topic = parv[1];	/* will be NULL or points to string. */
+	}
+
+	if (!chptr)
+	    {
+		sendto_one(sptr, ":%s %d %s :Bad Craziness",
+			   me.name, RPL_NOTOPIC, parv[0]);
+		return 0;
+	    }
+	
+	if (!topic)  /* only asking  for topic  */
+	    {
+		if (chptr->topic[0] == '\0')
+			sendto_one(sptr, ":%s %d %s %s :No topic is set.", 
+				   me.name, RPL_NOTOPIC, parv[0],
+				   chptr->chname);
+		else
+			sendto_one(sptr, ":%s %d %s %s :%s",
+				   me.name, RPL_TOPIC, parv[0],
+				   chptr->chname, chptr->topic);
+	    } 
+	else if (((chptr->mode.mode & MODE_TOPICLIMIT) == 0 ||
+		  IsChanOp(sptr, chptr)) && topic)
+	    {
+		/* setting a topic */
+		strncpyzt(chptr->topic, topic, sizeof(chptr->topic));
+		if (*chptr->chname != '#')
+			sendto_serv_butone(cptr,":%s TOPIC :%s",
+					   parv[0], chptr->topic);
+		if (parc <= 2)
+			sendto_channel_butserv(chptr, ":%s TOPIC :%s",
+					       parv[0],
+					       chptr->topic);
+		else
+			sendto_channel_butserv(chptr, ":%s TOPIC %s :%s",
+					       parv[0],
+					       chptr->chname, chptr->topic);
+	    }
+	else
+	    {
+	      sendto_one(sptr, ":%s %d %s %s :Cannot set topic, %s",
+			 me.name, ERR_CHANOPRIVSNEEDED, parv[0],
+			 chptr->chname, "not channel OPER");
+	    }
+	return 0;
+    }
+
+/*
+** m_invite
+**	parv[0] - sender prefix
+**	parv[1] - user to invite
+**	parv[2] - channel number
+*/
+m_invite(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int parc;
+char *parv[];
+    {
+	aClient *acptr;
+	aChannel *chptr;
+
+	CheckRegisteredUser(sptr);
+	if (parc < 2 || *parv[1] == '\0')
+	    {
+		sendto_one(sptr,":%s %d %s :Not enough parameters", me.name,
+			   ERR_NEEDMOREPARAMS, parv[0]);
+		return -1;
+	    }
+	
+	if (parc < 3 || (parv[2][0] == '*' && parv[2][1] == '\0')) {
+	  chptr = sptr->user->channel;
+	  if (!chptr) {
+	    sendto_one(sptr, ":%s %d %s :You have not joined any channel",
+		       me.name, ERR_USERNOTINCHANNEL, parv[0]);
+	    return -1;
+	  }
+	} else 
+	  chptr = find_channel(parv[2], NullChn);
+
+	if (chptr && !IsMember(sptr, chptr)) {
+	  sendto_one(sptr, ":%s %d %s %s :You're not on channel %s",
+		     me.name, ERR_NOTONCHANNEL, parv[0], chptr->chname,
+		     chptr->chname);
+	  return -1;
+	}
+
+	if (chptr && (chptr->mode.mode & MODE_INVITEONLY)) {
+	  if (!IsChanOp(sptr, chptr)) {
+	    sendto_one(sptr, ":%s %d %s %s :You're not channel operator",
+		       me.name, ERR_CHANOPRIVSNEEDED, parv[0],
+		       chptr->chname);
+	    return -1;
+	  } else if (!IsMember(sptr, chptr)) {
+	    sendto_one(sptr, ":%s %d %s %s :Channel is invite-only.",
+		       me.name, ERR_CHANOPRIVSNEEDED, parv[0],
+		       ((chptr) ? (chptr->chname) : parv[2]));
+	    return -1;
+	  }
+	}
+
+	acptr = find_person(parv[1],(aClient *)NULL);
+	if (acptr == NULL)
+	    {
+		sendto_one(sptr,":%s %d %s %s :No such nickname",
+			   me.name, ERR_NOSUCHNICK, parv[0], parv[1]);
+		return 0;
+	    }
+	if (MyConnect(sptr))
+	    {
+		sendto_one(sptr,":%s %d %s %s %s", me.name,
+			   RPL_INVITING, parv[0], acptr->name,
+			   ((chptr) ? (chptr->chname) : parv[2]));
+		/* 'find_person' does not guarantee 'acptr->user' --msa */
+		if (acptr->user && acptr->user->away)
+			sendto_one(sptr,":%s %d %s %s :%s", me.name,
+				   RPL_AWAY, parv[0], acptr->name,
+				   acptr->user->away);
+	    }
+	if (MyConnect(acptr))
+	  if (chptr && (chptr->mode.mode & MODE_INVITEONLY) &&
+	      sptr->user && (IsMember(sptr, chptr)) && IsChanOp(sptr, chptr))
+	    AddInvite(acptr, chptr);
+	sendto_one(acptr,":%s INVITE %s %s",parv[0],
+		   acptr->name, ((chptr) ? (chptr->chname) : parv[2]));
+	return 0;
+    }
 
 ToNewJis(chan)
 char *chan;

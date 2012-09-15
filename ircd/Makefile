@@ -65,7 +65,7 @@ ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 	$(CC) $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
 	chmod $(IRCDMODE) ircd
 
-../common/parse.o:
+../common/parse.o: ../include/msg.h
 	(cd ../common; ${MAKE} build);
 
 ../common/bsd.o:
@@ -118,3 +118,4 @@ whowas.o: ../include/numeric.h
 whowas.o: ../include/whowas.h
 s_debug.o: ../include/struct.h
 class.o: ../include/struct.h ../include/class.h
+hash.o: ../include/struct.h ../include/sys.h ../include/hash.h

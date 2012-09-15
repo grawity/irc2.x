@@ -124,7 +124,7 @@ struct Message msgtab[] = {
   { MSG_SERVER,  m_server,   0, 2, 1 },
   { MSG_WALLOPS, m_wallops,  0, 1, 1 },
   { MSG_TOPIC,   m_topic,    0, 1, 1 },
-  { MSG_SQUIT,   m_squit,    0, 3, 0 },
+  { MSG_SQUIT,   m_squit,    0, 2, 0 },
   { MSG_OPER,    m_oper,     0, 3, 1 },
   { MSG_WHO,     m_who,      0, 1, 1 },
   { MSG_USERHOST,m_userhost, 0, 1, 1 },

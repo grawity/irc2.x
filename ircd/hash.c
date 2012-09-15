@@ -45,7 +45,7 @@ Reg1	char	*name;
 {
 	Reg2	char	ch;
 	Reg3	int	i = 0;
-	Reg4	int	hash = 0, *tab;
+	Reg4	int	hash = 7, *tab;
 
 	for (tab = hash_mult, i = 0; (ch = *name) && i < 10;
 	     name++, i++, tab++) {
@@ -273,7 +273,7 @@ aChannel	*chptr;
 	aHashLink	*prv;
 	aHashEntry	*tmp3;
 
-	ToNewJis(name);
+        ToNewJis(name);
 	hashv = HashChannelName(name);
 	tmp3 = &channelTable[hashv];
 

@@ -87,10 +87,13 @@
 #define HAVECURSES	1	/* If you have curses, and want to use it.  */
 #define HAVETERMCAP	0	/* If you have termcap, and want to use it. */
 
-  /* Define this if you want to use MSGBASE system                */
-  /* MSGBASE is a system which allows you to leave messages       */
-  /* for users and make them be sent to recipient when he/she     */
-  /* signs on IRC. This does not work on all systems !            */
+  /* Define this if you want to use NOTE system.                         */
+  /* The NOTE system let you send one line messages to irc users which   */
+  /* they will get if and when they next sign on to irc, change nick or  */
+  /* channel. If they are on irc already, they'll get the note message   */
+  /* immediately. NOTE has built in a lot of other features too as FIND, */
+  /* SPY with LOG and WAITFOR. See /HELP NOTE in IRCIIclient.            */
+
 /* #define MSG_NOTE     "NOTE" /* */
 
 /*
@@ -103,7 +106,7 @@
 #define MPATH "/usr/local/src/ircd/ircd.motd" /* Message Of The Day file. */
 #define LPATH "/tmp/ircd7.log"   /* Where the Logfile lives. */
 #ifdef MSG_NOTE
-/* Where MSGBASE saves its messages from time to time... */
+/* Where NOTE system saves its requests from time to time... */
 #define NOTE_SAVE_FILENAME "/usr/local/lib/irc/.ircdnote"
 #endif
 
@@ -179,7 +182,12 @@
 #define R_LINES_OFTEN  /* */
 #endif
 
-#define CMDLINE_CONFIG /* allow conf-file to be specified on command line */
+/*
+ * NOTE: defining CMDLINE_CONFIG and installing ircd SUID or SGID is a MAJOR
+ *       security problem - they can use the "-f" option to read any files
+ *       that the 'new' access lets them.
+ */
+/* #define CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
  * Define this filename to maintain a list of persons who log
@@ -305,7 +313,6 @@
 #if DEBUGMODE
 # define LOGFILE LPATH
 #else
-# define debug          dummy
 # if VMS
 #	define LOGFILE "NLA0:"
 # else

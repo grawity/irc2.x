@@ -32,6 +32,12 @@ typedef	struct	hashentry {
 	aHashLink	*list;
 	} aHashEntry;
 
-#define	HASHSIZE	293	/* prime number */
+#define	HASHSIZE	359	/* prime number */
+/*
+ * choose hashsize from these:
+ *
+ * 293, 313, 337, 359, 379, 401, 421, 443, 463, 487, 509, 541,
+ * 563, 587, 607, 631, 653, 673, 701, 721, 739, 761, 787, 809
+ */
 
 #define	CHANNELHASHSIZE	101	/* prime number */
