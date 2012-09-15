@@ -18,6 +18,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__struct_include__
+#define __struct_include__
+
 #include "config.h"
 
 #include <stdio.h>
@@ -25,11 +28,15 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #if defined(SGI) || defined(AIX)
-#include <stddef.h>
+# include <stddef.h>
 #endif
 
 #ifdef USE_SYSLOG
-#include <sys/syslog.h>
+# ifdef HPUX
+#  include <syslog.h>
+# else
+#  include <sys/syslog.h>
+# endif
 #endif
 
 typedef	struct	ConfItem aConfItem;
@@ -143,6 +150,8 @@ typedef	struct	SMode	Mode;
 #define	FLAGS_AUTH	 0x4000 /* client is waiting on rfc931 response */
 #define	FLAGS_WRAUTH	 0x8000	/* set if we havent writen to ident server */
 #define	FLAGS_LOCAL	0x10000 /* set for local clients */
+#define	FLAGS_GOTID	0x20000	/* successful ident lookup achieved */
+#define	FLAGS_DOID	0x40000	/* I-lines say must use ident return */
 
 #define	SEND_UMODES	(FLAGS_INVISIBLE|FLAGS_OPER|FLAGS_WALLOP)
 #define	ALL_UMODES	(SEND_UMODES|FLAGS_SERVNOTICE)
@@ -155,7 +164,7 @@ typedef	struct	SMode	Mode;
 #define	IsInvisible(x)		((x)->flags & FLAGS_INVISIBLE)
 #define	IsAnOper(x)		((x)->flags & (FLAGS_OPER|FLAGS_LOCOP))
 #define	IsPerson(x)		IsClient(x)
-#define	IsPrivileged(x)		(IsOper(x) || IsServer(x))
+#define	IsPrivileged(x)		(IsAnOper(x) || IsServer(x))
 #define	SendWallops(x)		((x)->flags & FLAGS_WALLOP)
 #define	SendServNotice(x)	((x)->flags & FLAGS_SERVNOTICE)
 #define	IsUnixSocket(x)		((x)->flags & FLAGS_UNIX)
@@ -268,6 +277,7 @@ struct	Server	{
 	anUser	*user;		/* who activated this connection */
 	char	up[HOSTLEN+1];	/* uplink for this server */
 	char	by[NICKLEN+1];
+	aConfItem *nline;	/* N-line pointer for this server */
 };
 
 struct Client	{
@@ -510,3 +520,5 @@ typedef	struct	Ignore {
 #define	HEADERLEN	200
 
 #endif
+
+#endif /* __struct_include__ */

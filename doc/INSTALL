@@ -207,13 +207,11 @@ Field: 1        2              3                4               5
 
     Field 2: Specifies the host name or IP address of the machine to connect
 	     to.  If "user@" prefixes the actual hostname or IP address
-	     and the IDENT option has been defined in the config.h file,
 	     the server will require that the remote username returned by
 	     the ident server be the same as the one given before the "@".
 
-    Field 3: The password of the other host.  Some hosts require passwords
-             before you can connect to them.  If no password is required
-	     this field can be left blank.
+    Field 3: The password of the other host.  A password must always be
+	     present for the line to be recognized.
 
     Field 4: The full hostname of the target machine. This is the name that 
 	     the TARGET server will identify itself with when you connect 

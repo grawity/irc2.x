@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.23 3/22/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.28 4/15/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -312,7 +312,7 @@ char	*comment;	/* Reason for the exit */
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
 				on_for % 60,
-				sptr->username, sptr->user->host);
+				sptr->user->username, sptr->user->host);
 # else
 	    {
 		char	linebuf[160];
@@ -328,14 +328,14 @@ char	*comment;	/* Reason for the exit */
 		 */
 		(void)alarm(3);
 		if (IsPerson(sptr) &&
-		    (logfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)))
+		    (logfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)) != -1)
 		    {
 			(void)alarm(0);
 			(void)sprintf(linebuf, "%s (%3d:%02d:%02d): %s@%s\n",
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
 				on_for % 60,
-				sptr->username, sptr->user->host);
+				sptr->user->username, sptr->user->host);
 			(void)alarm(3);
 			(void)write(logfile, linebuf, strlen(linebuf));
 			(void)alarm(0);
@@ -444,8 +444,7 @@ char	*comment;
 			if (!(acptr = local[i]) || !IsServer(acptr) ||
 			    acptr == cptr || IsMe(acptr))
 				continue;
-			if ((aconf = find_conf(acptr->confs, acptr->name,
-						CONF_NOCONNECT_SERVER)) &&
+			if ((aconf = acptr->serv->nline) &&
 			    (matches(my_name_for_link(me.name, aconf),
 				     sptr->name) == 0))
 				continue;
@@ -546,13 +545,8 @@ void	checklist()
 	Reg1	aClient	*acptr;
 	Reg2	int	i,j;
 
-#ifndef NO_AUTO_DIE
-	if ((me.since - time(NULL)) < (time_t)600)
-		return;
-#else
 	if (!(bootopt & BOOT_AUTODIE))
 		return;
-#endif
 	for (j = i = 0; i <= highest_fd; i++)
 		if (!(acptr = local[i]))
 			continue;
@@ -598,14 +592,16 @@ char	*name;
 			sp->is_cti += now - acptr->firsttime;
 			sp->is_cl++;
 		    }
-		else
+		else if (IsUnknown(acptr))
 			sp->is_ni++;
 	    }
 
 	sendto_one(cptr, "NOTICE %s :accepts %u refused %u", name,
 		   sp->is_ac, sp->is_ref);
-	sendto_one(cptr, "NOTICE %s :unknown: closes %u prefixes %u", name,
-		   sp->is_ni, sp->is_unpf);
+	sendto_one(cptr, "NOTICE %s :unknown commands %u prefixes %u", name,
+		   sp->is_unco, sp->is_unpf);
+	sendto_one(cptr, "NOTICE %s :nick collisions %u unknown closes %u",
+		   name, sp->is_kill, sp->is_ni);
 	sendto_one(cptr, "NOTICE %s :wrong direction %u empty %u", name,
 		   sp->is_wrdi, sp->is_empt);
 	sendto_one(cptr, "NOTICE %s :numerics seen %u mode fakes %u", name,

@@ -18,7 +18,7 @@
  */
 
 #ifndef	lint
-static char sccsid[] = "@(#)class.c	1.2 12/20/92 (C) 1990 Darren Reed";
+static char sccsid[] = "@(#)class.c	1.3 4/11/93 (C) 1990 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -211,7 +211,7 @@ aClient	*sptr;
 
 	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
 		sendto_one(sptr, rpl_str(RPL_STATSYLINE), me.name, sptr->name,
-			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
+			   'Y', Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
 			   MaxLinks(cltmp), MaxSendq(cltmp));
 }
 

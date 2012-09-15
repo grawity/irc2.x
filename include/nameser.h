@@ -121,7 +121,8 @@
 
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(MIPSEL) || \
     defined(BIT_ZERO_ON_RIGHT) || defined(sequent) || defined(i386) ||\
-    defined(___vax__) || defined(__ns32000__) || defined(__sun386__)
+    defined(___vax__) || defined(__ns32000__) || defined(__sun386__) ||\
+    defined(__alpha)
 #define BYTE_ORDER	LITTLE_ENDIAN
 
 #endif
@@ -192,13 +193,21 @@ struct rrec {
 	short	r_zone;			/* zone number */
 	short	r_class;		/* class number */
 	short	r_type;			/* type number */
+#ifdef	__alpha
+	u_int	r_ttl;			/* time to live */
+#else
 	u_long	r_ttl;			/* time to live */
+#endif
 	int	r_size;			/* size of data area */
 	char	*r_data;		/* pointer to data */
 };
 
 extern	u_short	_getshort();
+#ifdef __alpha
 extern	u_long	_getlong();
+#else
+extern	u_int	_getlong();
+#endif
 
 /*
  * Inline versions of get/put short/long.

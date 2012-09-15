@@ -29,8 +29,10 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <time.h>
+#include "common.h"
+#include "h.h"
 
-#define VERSION "v1.8"
+#define VERSION "v1.8.1"
 
 #define NOTE_SAVE_FREQUENCY 30 /* Frequency of save time in minutes */
 #define NOTE_MAXSERVER_TIME 120 /* Max days for a request in the server */
@@ -76,7 +78,6 @@
 #define FLAGS_NOT_QUEUE_REQUESTS (1<<29)
 #define FLAGS_NEWNICK_DISPLAYED (1<<30)
 
-#define DupString(x,y) do { x = MyMalloc(strlen(y)+1); strcpy(x,y); } while (0)
 #define DupNewString(x,y) if (!StrEq(x,y)) { free(x); DupString(x,y); }  
 #define MyEq(x,y) (!myncmp(x,y,strlen(x)))
 #define Usermycmp(x,y) mycmp(x,y)
@@ -1175,7 +1176,7 @@ aMsgClient *msgclient;
  if (!(msgclient->flags & FLAGS_ON_THIS_SERVER) 
        && msgclient->flags & FLAGS_SEND_ONLY_IF_THIS_SERVER
      || (msgclient->flags & FLAGS_SEND_ONLY_IF_NICK_NOT_NAME 
-         && mode == 'a' && StrEq(nick,sptr->user->username))
+         && mode == 'v' && StrEq(nick,sptr->user->username))
      || (!IsOper(sptr) &&
          msgclient->flags & FLAGS_SEND_ONLY_IF_DESTINATION_OPER)
      || (mode == 'v' || mode == 'j' || mode == 'l') && qptr == aptr) 
@@ -1820,9 +1821,9 @@ void check_command(info, command, par1, par2, par3)
 void *info;
 char *command, *par1, *par2, *par3;
 {
- char *arg, *c, mode;
+ char *arg, *c, mode, nick[50];
  int from_secret = 0, on = -1;
- long *delay, clock, last_call = 0;
+ long *delay, clock, last_call = 0, source;
  Link *link;
  aChannel *chptr = 0;
  aClient *sptr;
@@ -1836,24 +1837,22 @@ char *command, *par1, *par2, *par3;
         check_lastclient((aClient *)0, (char)'-', clock, (aChannel *)0);
         return;
   } 
- arg = split_string(command, 1, 1);
- if (StrEq(arg, "KILL")) mode = 'e';
-  else if (*command != ':') return;
+ source = (long) info;
  arg = split_string(command, 2, 1);
  if (StrEq(arg, "USER")) mode = 'a'; else
- if (StrEq(arg, "OPER")) mode = 'o'; else
+ if (source != 1) return; else 
  if (StrEq(arg, "NICK")) mode = 'n'; else
  if (StrEq(arg, "JOIN")) mode = 'j'; else
  if (StrEq(arg, "MODE")) mode = 'm'; else
- if (StrEq(arg, "QUIT")) mode = 'e'; else
- if (StrEq(arg, "PART") || StrEq(arg, "KICK")) mode = 'l'; else 
- if (StrEq(arg, "KILL")) { 
-     par1 = par2; /* Who kills before who's killed here... */
-     mode = 'e'; 
- } else return;
- sptr = find_person(par1, (aClient *)NULL);
+ if (StrEq(arg, ":Closing") || StrEq(arg, "QUIT")) mode = 'e'; else
+ if (StrEq(arg, "PART") || StrEq(arg, "KICK")) mode = 'l'; else return;
+ strcpy(nick, par1);
+ if ((c = (char *)index(nick, '!')) != NULL) *c = '\0';
+ if ((c = (char *)index(nick, '[')) != NULL) *c = '\0';
+ if (mode == 'm' && *par3 == '+' && par3[1] == 'o') mode = 'o';
+ sptr = find_person(nick, (aClient *)NULL);
  if (!sptr) for (sptr = client; sptr; sptr = sptr->next)
-                 if (StrEq(sptr->name, par1)) break;
+                 if (StrEq(sptr->name, nick)) break;
  if (!sptr || !sptr->user) return;
  if (mode != 'j' && mode != 'l' && mode != 'm') {
      if (check_lastclient(sptr, mode, clock, chptr) && mode != 'o')
@@ -2798,8 +2797,8 @@ char *parv[];
     if (name_len_error(sptr, name)) return 0;
     msg_sent(sptr, buf1, name, buf3, buf4);
   } else
- if (MyEq(option,"RM")) {
-     if (!*buf1 && !id && !flags) {
+ if (!mycmp(option,"RM")) {
+     if (!*buf1 && !id && !*flags) {
         sendto_one(sptr,
                    "NOTICE %s :#?# Please specify at least one argument", 
                    sptr->name);
@@ -2813,5 +2812,4 @@ char *parv[];
  return 0;
 }
 #endif
-
 

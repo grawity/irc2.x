@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.36 3/22/93 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.38 4/15/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -255,7 +255,7 @@ time_t	currenttime;
 	int	ping = 0, i, rflag = 0;
 	time_t	oldest = 0, timeout;
 
-	for (i = 0; i < MAXCONNECTIONS; i++)
+	for (i = 0; i <= highest_fd; i++)
 	    {
 		if (!(cptr = local[i]) || IsMe(cptr) || IsLog(cptr))
 			continue;
@@ -277,7 +277,7 @@ time_t	currenttime;
 #endif
 		ping = get_client_ping(cptr);
 		if (!IsRegistered(cptr))
-			ping = CONNECTTIMEOUT;
+			ping = CONNECTTIMEOUT - 10;
 		/*
 		 * Ok, so goto's are ugly and can be avoided here but this code
 		 * is already indented enough so I think its justified. -avalon
@@ -297,6 +297,22 @@ time_t	currenttime;
 		    (!IsRegistered(cptr) &&
 		     (currenttime - cptr->since) >= ping))
 		    {
+			if (!IsRegistered(cptr) &&
+			    (currenttime - cptr->lasttime) < CONNECTTIMEOUT)
+			    {
+				if (cptr->authfd >= 0)
+				    {
+					(void)close(cptr->authfd);
+					cptr->authfd = -1;
+					cptr->count = 0;
+					*cptr->buffer = '\0';
+				    }
+				del_queries(cptr);
+				ClearAuth(cptr);
+				ClearDNS(cptr);
+				SetAccess(cptr);
+				continue;
+			    }
 			if (IsServer(cptr) || IsConnecting(cptr) ||
 			    IsHandshake(cptr))
 				sendto_ops("No response from %s, closing link",
@@ -523,16 +539,16 @@ char	*argv[];
 	if (portnum < 0)
 		portnum = PORTNUM;
 	me.port = portnum;
-	(void)init_sys(bootopt);
-	me.flags = 0;
+	(void)init_sys();
+	me.flags = FLAGS_LISTEN;
 	if (bootopt & BOOT_INETD)
 	    {
 		me.fd = 0;
 		local[0] = &me;
 		me.flags = FLAGS_LISTEN;
 	    }
-	else if (!(bootopt & BOOT_OPER))
-		me.flags = FLAGS_LISTEN;
+	else
+		me.fd = -1;
 
 #ifdef USE_SYSLOG
 	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
@@ -555,6 +571,9 @@ char	*argv[];
 		if (inetport(&me, "*", portnum))
 			exit(1);
 	    }
+	else if (inetport(&me, "*", 0))
+		exit(1);
+		
 	(void)get_my_name(&me, me.sockhost, sizeof(me.sockhost)-1);
 	if (me.name[0] == '\0')
 		strncpyzt(me.name, me.sockhost, sizeof(me.name));

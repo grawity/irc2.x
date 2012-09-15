@@ -16,4 +16,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define PATCHLEVEL "2.8"
+#ifndef	PATCHLEVEL
+#define PATCHLEVEL "2.8.5"
+#endif

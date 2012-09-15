@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef __dbuf_include__
+#define __dbuf_include__
+
 #ifndef PROTO
 #ifdef __STDC__
 #	define PROTO(x)	x
@@ -25,6 +28,13 @@
 #endif /* __STDC__ */
 #endif /* ! PROTO */
 
+#ifdef	__alpha
+#define	Long	int
+#define	U_Long	u_int
+#else
+#define	Long	long
+#define	U_Long	u_long
+#endif
 /*
 ** dbuf is a collection of functions which can be used to
 ** maintain a dynamic buffering of a byte stream.
@@ -42,9 +52,9 @@
 */
 typedef struct dbuf
     {
-	long int length;	/* Current number of bytes stored */
-	long int offset;	/* Offset to the first byte */
-	struct dbufbuf *head;	/* First data buffer, if length > 0 */
+	U_Long	length;	/* Current number of bytes stored */
+	U_Long	offset;	/* Offset to the first byte */
+	struct	dbufbuf *head;	/* First data buffer, if length > 0 */
     } dbuf;
 
 /*
@@ -58,8 +68,8 @@ typedef struct dbuf
 */
 typedef struct dbufbuf
     {
-	struct dbufbuf *next;	/* Next data buffer, NULL if this is last */
-	char data[2032];	/* Actual data stored here */
+	struct	dbufbuf	*next;	/* Next data buffer, NULL if this is last */
+	char	data[2032];	/* Actual data stored here */
     } dbufbuf;
 
 /*
@@ -71,7 +81,7 @@ typedef struct dbufbuf
 **	returns	> 0, if operation successfull
 **		< 0, if failed (due memory allocation problem)
 */
-int dbuf_put PROTO((dbuf *, char *, long int));
+int	dbuf_put PROTO((dbuf *, char *, Long));
 					/* Dynamic buffer header */
 	     				/* Pointer to data to be stored */
 	     				/* Number of bytes to store */
@@ -91,7 +101,7 @@ int dbuf_put PROTO((dbuf *, char *, long int));
 **		Negative return values indicate some unspecified
 **		error condition, rather fatal...
 */
-long int dbuf_get PROTO(( dbuf *, char *, long int));
+Long	dbuf_get PROTO(( dbuf *, char *, Long));
 				/* Dynamic buffer header */
 	     			/* Pointer to buffer to receive the data */
 	     			/* Max amount of bytes that can be received */
@@ -124,7 +134,7 @@ char *dbuf_map PROTO((dbuf *, int *));
 	       				/* Dynamic buffer header */
 	       				/* Return number of bytes accessible */
 
-int dbuf_delete PROTO((dbuf *, long int));
+int dbuf_delete PROTO((dbuf *, int));
 					/* Dynamic buffer header */
 					/* Number of bytes to delete */
 
@@ -144,3 +154,5 @@ int dbuf_delete PROTO((dbuf *, long int));
 #define DBufClear(dyn)	dbuf_delete((dyn),DBufLength(dyn))
 
 extern	int	dbuf_getmsg PROTO((dbuf *, char *, int));
+
+#endif /* __dbuf_include__ */

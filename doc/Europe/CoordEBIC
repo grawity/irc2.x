@@ -1,4 +1,6 @@
 ############################################################################
+list updated the 15.4.1993
+############################################################################
 
 	If you like in future to establish a link inside the EBIC area,
 	please contact the coordinator of the affected toplevel domain.
@@ -10,7 +12,7 @@
 	These toplevel domains are currently participating EBIC:
 ############################################################################
 
- *.at	*.ch	*.de	*.fi	*.fr	*.it	*.nl	*.no	*.se
+  *.at  *.ch  *.de   *.fi   *.fr  *.it   *.nl   *.no   *.pl   *.se  *.uk
 
 ############################################################################
     The following national coordinators have been choosen for 92/93:
@@ -20,7 +22,7 @@
     1. Tom		Tom Kovar		<tom@itc.univie.ac.at>
 
 *.ch
-    1. berndf		Bernd Fleischmann	<berndf@suntrax1.cern.ch>
+    1. StarNet		Karim Saouli		<Karim.Saouli@epfl.ch>
 
 *.de
     1. YeggMan		Volker Paulsen		<paulsen@informatik.uni-kl.de>
@@ -34,7 +36,7 @@
     2. Visti		Hannu Visti		<visti@sauna.cs.hut.fi>
 
 *.fr
-    1. Nono		Arnaud Girsch		<ircadmin@fifi.univ-lyon1.fr>(?)
+    1. Nono		Arnaud Girsch		<Arnaud.Girsch@insa-lyon.fr>
 
 *.it
     1. Allanon		Riccardo Facchetti	<mez002@cdc835.cdc.polimi.it>
@@ -47,8 +49,15 @@
 *.no
     1. gnarfer		Ove Ruben R Olsen	<Ove.R.Olsen@uib.no>
 
+*.pl
+    1. Artur		Artur Jaroszek		<artur@vulcan.minuw.edu.pl>(?)
+
 *.se
     1. Black		Christer H. Jansson	<st90_cjn@manwe.sunet.se>
     2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
 
+*.uk
+    1.ScottM            Scott A. McIntyre       <scott@shrug.dur.ac.uk>
 (?) - not yet approved
+
+

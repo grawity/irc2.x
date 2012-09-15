@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_auth.c	1.12 3/27/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_auth.c	1.15 4/3/93 (C) 1992 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -162,7 +162,7 @@ Reg1	aClient	*cptr;
 {
 	Reg1	char	*s, *t;
 	Reg2	int	len;
-	char	ruser[USERLEN+1];
+	char	ruser[USERLEN+1], tuser[USERLEN+1];
 	u_short	remote = 0, local = 0;
 
 	*ruser = '\0';
@@ -183,8 +183,9 @@ Reg1	aClient	*cptr;
 	    }
 
 	if ((len > 0) && (cptr->count != sizeof(cptr->buffer) - 1) &&
-	    (sscanf(cptr->buffer, "%hd , %hd: USERID : %*[^:]:",
-		    &remote, &local) == 2) && (s = rindex(cptr->buffer, ':')))
+	    (sscanf(cptr->buffer, "%hd , %hd : USERID : %*[^:]: %10s",
+		    &remote, &local, tuser) == 3) &&
+	    (s = rindex(cptr->buffer, ':')))
 	    {
 		for (++s, t = ruser; *s && (t < ruser + sizeof(ruser)); s++)
 			if (!isspace(*s) && *s != ':')
@@ -194,10 +195,9 @@ Reg1	aClient	*cptr;
 	    }
 	else if (len != 0)
 	    {
-		ircstp->is_abad++;
 		Debug((DEBUG_ERROR,"local %d remote %d s %x",local,remote,s));
 		Debug((DEBUG_ERROR,"bad auth reply in [%s]", cptr->buffer));
-		return;
+		*ruser = '\0';
 	    }
 	(void)close(cptr->authfd);
 	cptr->count = 0;
@@ -210,15 +210,13 @@ Reg1	aClient	*cptr;
 
 	if (!local || !remote || !*ruser)
 	    {
-		sendto_ops("ident reply error for %s",
-			   get_client_name(cptr, TRUE));
 		ircstp->is_abad++;
+		(void)strcpy(cptr->username, "unknown");
+		return;
 	    }
-	else
-		ircstp->is_asuc++;
-
-	if (*ruser)
-		strncpyzt(cptr->username, ruser, USERLEN+1);
+	ircstp->is_asuc++;
+	strncpyzt(cptr->username, ruser, USERLEN+1);
+	cptr->flags |= FLAGS_GOTID;
 	Debug((DEBUG_INFO, "got username [%s]", ruser));
 	return;
 }

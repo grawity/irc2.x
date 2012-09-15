@@ -33,14 +33,14 @@ extern int debuglevel;
 struct	stats	ircst, *ircstp = &ircst;
 
 #ifdef DEBUGMODE
-void debug(level, form, para1, para2, para3, para4, para5, para6)
+void debug(level, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
 int level;
-char *form, *para1, *para2, *para3, *para4, *para5, *para6;
+char *form, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
 {
   if (debuglevel >= 0)
     if (level <= debuglevel) {
       char buf[512];
-      sprintf(buf, form, para1, para2, para3, para4, para5, para6);
+      sprintf(buf, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
       putline(buf);
     }
 }

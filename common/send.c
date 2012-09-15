@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.18 3/9/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.23 4/15/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -33,11 +33,7 @@ Computing Center and Jarkko Oikarinen";
 #include "h.h"
 #include <stdio.h>
 
-#ifdef	RFC
 #define NEWLINE	"\r\n"
-#else
-#define	NEWLINE	"\n"
-#endif
 
 static	char	sendbuf[2048];
 static	int	send_message PROTO((aClient *, char *, int));
@@ -255,6 +251,11 @@ va_dcl
 {
 	va_list	vl;
 #endif
+
+# ifdef NPATH
+        check_command((long)1, pattern, p1, p2, p3);
+# endif
+
 #ifdef VMS
 	extern int goodbye;
 	
@@ -288,9 +289,7 @@ va_dcl
 	    }
 #endif
 	(void)strcat(sendbuf, NEWLINE);
-#ifdef	RFC
 	sendbuf[510] = '\r';
-#endif
 	sendbuf[511] = '\n';
 	sendbuf[512] = '\0';
 	(void)send_message(to, sendbuf, strlen(sendbuf));
@@ -387,9 +386,11 @@ va_dcl
 # ifdef	USE_VARARGS
 	va_start(vl);
 # endif
+
 # ifdef NPATH
-        check_command(one, pattern, p1, p2, p3);
+        check_command((long)2, pattern, p1, p2, p3);
 # endif
+
 	for (i = 0; i <= highest_fd; i++)
 	    {
 		if (!(cptr = local[i]) || (one && cptr == one->from))
@@ -560,6 +561,10 @@ va_dcl
 #ifdef	USE_VARARGS
 	va_start(vl);
 #endif
+
+# ifdef NPATH
+        check_command((long)3, format, p1, p2, p3);
+# endif
 	if (chptr)
 	    {
 		if (*chptr->chname == '&')
@@ -717,7 +722,8 @@ va_dcl
 	va_start(vl);
 #endif
 	for (i = 0; i <= highest_fd; i++)
-		if ((cptr = local[i]) && SendServNotice(cptr))
+		if ((cptr = local[i]) && !IsServer(cptr) && !IsMe(cptr) &&
+		    SendServNotice(cptr))
 		    {
 			(void)sprintf(nbuf, "NOTICE %s :*** Notice -- ",
 					cptr->name);

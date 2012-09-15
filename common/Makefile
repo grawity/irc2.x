@@ -24,7 +24,7 @@ INCLUDE=../include
 # For MIPS, use:
 # CFLAGS=-O -systype bsd43 -I${INCLUDE}
 # and otherwise:
-CFLAGS=-O -I${INCLUDE} -DUSE_VARARGS
+CFLAGS=-O -I${INCLUDE}
 
 
 OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o

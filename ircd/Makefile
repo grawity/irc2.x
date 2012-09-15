@@ -22,14 +22,14 @@ RM=/bin/rm
 CP=/bin/cp
 TOUCH=/bin/touch
 SHELL=/bin/sh
-BINDIR=/home/sorokin/avalon/ircd
+BINDIR=/usr/local/lib/ircd
 INSTALL=/usr/bin/install
 
 # IRCDMODE given in top level Makefile, but added here to make sure
 # compilation works if started in ircd subdirectory
 
 IRCDMODE=711
-IRCDDIR=/home/sorokin/avalon/ircd
+IRCDDIR=/usr/local/lib/ircd
 INCLUDE=../include
 
 # For MIPS, use the following:
@@ -70,7 +70,7 @@ LINTFLAGS=-hba
 # are not part of your system libraries.  In all cases you should try your
 # system libraries before these.
 #
-RES=res_init.o res_comp.o res_mkquery.o
+#RES=res_init.o res_comp.o res_mkquery.o
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
@@ -78,7 +78,7 @@ COMMONOBJS=../common/bsd.o ../common/dbuf.o \
 
 OBJS=channel.o class.o hash.o ircd.o list.o res.o s_auth.o s_bsd.o s_conf.o \
 	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_user.o whowas.o \
-	$(RES) $(COMMONOBJS)
+	note.o $(RES) $(COMMONOBJS)
 
 SRC=$(OBJS:%.o=%.c)
 

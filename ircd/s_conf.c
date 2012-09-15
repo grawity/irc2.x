@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.27 3/12/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.39 4/19/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -63,6 +63,9 @@ Computing Center and Jarkko Oikarinen";
 #endif
 #ifdef PCS
 #include <time.h>
+#endif
+#ifdef	R_LINES
+#include <signal.h>
 #endif
 
 #ifdef DYNIXPTX
@@ -105,7 +108,7 @@ char	*sockhost;
 {
 	Reg1	aConfItem	*aconf;
 	Reg3	char	*hname;
-	Reg4	int	i = 0;
+	Reg4	int	i;
 	static	char	uhost[HOSTLEN+USERLEN+3];
 	static	char	fullname[HOSTLEN+1];
 
@@ -118,7 +121,7 @@ char	*sockhost;
 		if (!aconf->host || !aconf->name)
 			goto attach_iline;
 		if (hp)
-			for (hname = hp->h_name; hname;
+			for (i = 0, hname = hp->h_name; hname;
 			     hname = hp->h_aliases[i++])
 			    {
 				(void)strncpy(fullname, hname,
@@ -152,6 +155,8 @@ char	*sockhost;
 			goto attach_iline;
 		continue;
 attach_iline:
+		if (index(uhost, '@'))
+			cptr->flags |= FLAGS_DOID;
 		if (attach_conf(cptr, aconf) == -1)
 			continue;
 		get_sockhost(cptr, uhost);
@@ -364,33 +369,38 @@ int	statmask;
 /*
  * find a conf entry which matches the hostname and has the same name.
  */
-aConfItem *find_conf_exact(name, host, statmask)
-char	*name, *host;
+aConfItem *find_conf_exact(name, user, host, statmask)
+char	*name, *host, *user;
 int	statmask;
 {
 	Reg1	aConfItem *tmp;
+	Reg2	char	*s, *t;
+	char	userhost[USERLEN+HOSTLEN+3];
+
+	(void)sprintf(userhost, "%s@%s", user, host);
 
 	for (tmp = conf; tmp; tmp = tmp->next)
-		if ((tmp->status & statmask) &&
-		    (mycmp(tmp->name, name) == 0) &&
-		    (!tmp->host || matches(tmp->host, host)==0))
+	    {
+		if (!(tmp->status & statmask) || !tmp->name || !tmp->host ||
+		    mycmp(tmp->name, name))
+			continue;
+		/*
+		** Accept if the *real* hostname (usually sockecthost)
+		** socket host) matches *either* host or name field
+		** of the configuration.
+		*/
+		if (matches(tmp->host, userhost))
+			continue;
+		if (tmp->status & (CONF_OPERATOR|CONF_LOCOP))
 		    {
-			/*
-			** Accept if the *real* hostname (usually sockecthost)
-			** socket host) matches *either* host or name field
-			** of the configuration.
-			*/
-			if (tmp->status & (CONF_OPERATOR|CONF_LOCOP))
-			    {
-				if (tmp->clients < MaxLinks(Class(tmp)))
-					return tmp;
-				else
-					return NULL;
-			    }
-			else
+			if (tmp->clients < MaxLinks(Class(tmp)))
 				return tmp;
+			else
+				continue;
 		    }
-
+		else
+			return tmp;
+	    }
 	return NULL;
 }
 
@@ -428,10 +438,10 @@ int	statmask;
 	    {
 		tmp = lp->value.aconf;
 		if ((tmp->status & statmask) &&
-		    ((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) &&
+		    (((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) &&
 	 	     tmp->name && !mycmp(tmp->name, name)) ||
-		    ((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) == 0 &&
-		     tmp->name && !matches(tmp->name, name)))
+		     ((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) == 0 &&
+		     tmp->name && !matches(tmp->name, name))))
 			return tmp;
 	    }
 	return NULL;
@@ -454,10 +464,8 @@ Reg3	int	statmask;
 	    {
 		tmp = lp->value.aconf;
 		if (tmp->status & statmask &&
-		    ((!(tmp->status & CONF_SERVER_MASK) &&
-	 	      (!tmp->host || !matches(tmp->host, host))) ||
-		     (tmp->status & CONF_SERVER_MASK &&
-	 	      tmp->host && !mycmp(tmp->host, host))) )
+		    (!(tmp->status & CONF_SERVER_MASK || tmp->host) ||
+	 	     (tmp->host && !matches(tmp->host, host))))
 			return tmp;
 	    }
 	return NULL;
@@ -505,7 +513,14 @@ int	sig;
 	int	ret = 0;
 
 	if (sig)
+	    {
 		sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
+#ifdef	ULTRIX
+		if (fork() > 0)
+			exit(0);
+		write_pidfile();
+#endif
+	    }
 
 	for (i = 0; i <= highest_fd; i++)
 		if ((acptr = local[i]) && !IsMe(acptr))
@@ -631,6 +646,7 @@ int	opt;
 #endif
 		return -1;
 	    }
+	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
 	while (dgets(fd, line, sizeof(line) - 1) > 0)
 	    {
 		if (line[0] == '#' || line[0] == '\n' ||
@@ -783,28 +799,27 @@ int	opt;
 			continue;
 		    }
 		if (aconf->status & CONF_SERVER_MASK)
-		    {
 			if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
-			    (aconf->host && index(aconf->host, '*')) ||
-			    !aconf->host || !aconf->name)
+			    !aconf->host || index(aconf->host, '*') ||
+			     index(aconf->host,'?') || !aconf->name)
 			    {
 				conf = aconf->next;
 				free_conf(aconf);
 				continue;
 			    }
+		if (aconf->status &
+		    (CONF_SERVER_MASK|CONF_LOCOP|CONF_OPERATOR))
 			if (!index(aconf->host, '@'))
 			    {
 				char	*newhost;
-				int	len = 9;
+				int	len = 3;	/* *@\0 = 3 */
 
 				len += strlen(aconf->host);
 				newhost = (char *)MyMalloc(len);
-				(void)sprintf(newhost, "unknown@%s",
-					aconf->host);
+				(void)sprintf(newhost, "*@%s", aconf->host);
 				(void)free(aconf->host);
 				aconf->host = newhost;
 			    }
-		    }
 		/*
                 ** associate each conf line with a class by using a pointer
                 ** to the correct class record. -avalon
@@ -848,6 +863,7 @@ int	opt;
 		      aconf->status, aconf->host, aconf->passwd,
 		      aconf->name, aconf->port, Class(aconf)));
 	    }
+	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
 	(void)close(fd);
 #ifdef	M4_PREPROC
 	(void)wait(0);
@@ -869,7 +885,6 @@ Reg1	aConfItem	*aconf;
 	Reg3	struct	hostent *hp;
 	Link	ln;
 
-	bzero((char *)&aconf->ipnum, sizeof(struct in_addr));
 	if (BadPtr(aconf->host) || BadPtr(aconf->name))
 		goto badlookup;
 	if (s = index(aconf->host, '@'))
@@ -957,18 +972,16 @@ int	find_restrict(cptr)
 aClient	*cptr;
 {
 	aConfItem *tmp;
-	char	cmdline[132], reply[80], temprpl[80];
+	char	reply[80], temprpl[80];
 	char	*rplhold = reply, *host, *name, *s;
 	char	rplchar='Y';
-	FILE	*fp;
-	int	hlen, nlen, rc = 0;
+	int	pi[2], rc = 0;
 
 	if (!cptr->user)
 		return 0;
 	name = cptr->username;
 	host = cptr->sockhost;
-	hlen = strlen(host);
-	nlen = strlen(name);
+	Debug((DEBUG_INFO, "R-line check for %s[%s]", name, host));
 
 	for (tmp = conf; tmp; tmp = tmp->next)
 	    {
@@ -983,34 +996,60 @@ aClient	*cptr;
 				   name, host);
 			continue;
 		    }
-		if (strlen(tmp->passwd) + hlen + nlen > sizeof(cmdline))
-		    {
-			sendto_ops("R-line command Too Long! %s %s %s",
-				   tmp->passwd, name, host);
-			continue;
-		    }
-		(void)sprintf(cmdline, "%s %s %s", tmp->passwd, name, host);
 
-		if (!(fp = popen(cmdline,"r")))
+		if (pipe(pi) == -1)
 		    {
-			sendto_ops("Couldn't run '%s' for R-line %s/%s",
-				   tmp->passwd, name, host);
-			continue;
+			report_error("Error creating pipe for R-line %s:%s",
+				     &me);
+			return 0;
 		    }
-		reply[0] = '\0';
-		while (fgets(temprpl, sizeof(temprpl)-1, fp))
+		switch (rc = fork())
+		{
+		case -1 :
+			report_error("Error forking for R-line %s:%s", &me);
+			return 0;
+		case 0 :
+		    {
+			Reg1	int	i;
+
+			(void)close(pi[0]);
+			for (i = 2; i < MAXCONNECTIONS; i++)
+				if (i != pi[1])
+					(void)close(i);
+			if (pi[1] != 2)
+				(void)dup2(pi[1], 2);
+			(void)dup2(2, 1);
+			if (pi[1] != 2 && pi[1] != 1)
+				(void)close(pi[1]);
+			(void)execlp(tmp->passwd, name, host, 0);
+			exit(-1);
+		    }
+		default :
+			(void)close(pi[1]);
+			break;
+		}
+		*reply = '\0';
+		(void)dgets(-1, NULL, 0); /* make sure buffer marked empty */
+		while (dgets(pi[0], temprpl, sizeof(temprpl)-1) > 0)
 		    {
 			if (s = (char *)index(temprpl, '\n'))
 			      *s = '\0';
-			if (strlen(temprpl) + strlen(reply) < 80)
+			if (strlen(temprpl) + strlen(reply) < sizeof(reply)-2)
 				(void)sprintf(rplhold, "%s %s", rplhold,
 					temprpl);
 			else
+			    {
 				sendto_ops("R-line %s/%s: reply too long!",
-					   name,host);
+					   name, host);
+				break;
+			    }
 		    }
-		pclose(fp);
+		(void)dgets(-1, NULL, 0); /* make sure buffer marked empty */
+		(void)close(pi[0]);
+		(void)kill(rc, SIGKILL); /* cleanup time */
+		(void)wait(0);
 
+		rc = 0;
 		while (*rplhold == ' ')
 			rplhold++;
 		rplchar = *rplhold; /* Pull out the yes or no */
@@ -1032,7 +1071,7 @@ aClient	*cptr;
 		return -1;
 	    }
 	return 0;
-      }
+}
 #endif
 
 

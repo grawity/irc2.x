@@ -18,6 +18,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__msg_include__
+#define __msg_include__
+
 #define MSG_PRIVATE  "PRIVMSG"	/* PRIV */
 #define MSG_WHO      "WHO"	/* WHO  -> WHOC */
 #define MSG_WHOIS    "WHOIS"	/* WHOI */
@@ -67,6 +70,7 @@
 #define	MSG_REHASH   "REHASH"	/* REHA */
 #define	MSG_RESTART  "RESTART"	/* REST */
 #define	MSG_CLOSE    "CLOSE"	/* CLOS */
+#define	MSG_DIE	     "DIE"
 #ifndef CLIENT_COMPILE
 #define	MSG_HASH     "HASH"	/* HASH */
 #define	MSG_DNS      "DNS"	/* DNS  -> DNSS */
@@ -85,11 +89,14 @@ extern int m_notice(), m_lusers(), m_umode(), m_note(), m_close();
 extern int m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
 extern int m_join(), m_part(), m_service(), m_userhost(), m_ison();
 extern int m_service(), m_servset(), m_servlist(), m_squery();
-#ifdef	OPER_REHASH
+#if defined(OPER_REHASH) || defined(LOCOP_REHASH)
 extern	int	m_rehash();
 #endif
-#ifdef	OPER_RESTART
+#if defined(OPER_RESTART) || defined(LOCOP_RESTART)
 extern	int	m_restart();
+#endif
+#if defined(OPER_DIE) || defined(LOCOP_DIE)
+extern	int	m_die();
 #endif
 #ifndef CLIENT_COMPILE
 extern int m_hash(), m_dns();
@@ -102,33 +109,33 @@ struct Message msgtab[] = {
   { MSG_NOTICE,  m_notice,   0, MAXPARA, 1 ,0L },
   { MSG_USER,    m_user,     0, MAXPARA, 1 ,0L },
   { MSG_JOIN,    m_join,     0, 6, 1 ,0L },
-  { MSG_QUIT,    m_quit,     0, MAXPARA, 1 ,0L },
   { MSG_MODE,    m_mode,     0, 6, 1 },
+  { MSG_QUIT,    m_quit,     0, MAXPARA, 1 ,0L },
   { MSG_PART,    m_part,     0, MAXPARA, 1 ,0L },
   { MSG_AWAY,    m_away,     0, MAXPARA, 1 ,0L },
-  { MSG_SERVER,  m_server,   0, MAXPARA, 1 ,0L },
-  { MSG_PONG,    m_pong,     0, MAXPARA, 1 ,0L },
-  { MSG_WHOIS,   m_whois,    0, MAXPARA, 1 ,0L },
-  { MSG_WALLOPS, m_wallops,  0, MAXPARA, 1 ,0L },
   { MSG_TOPIC,   m_topic,    0, MAXPARA, 1 ,0L },
-  { MSG_SQUIT,   m_squit,    0, MAXPARA, 1 ,0L },
-  { MSG_OPER,    m_oper,     0, MAXPARA, 1 ,0L },
-  { MSG_WHO,     m_who,      0, MAXPARA, 1 ,0L },
-  { MSG_USERHOST,m_userhost, 0, 1, 1 ,0L },
+  { MSG_INVITE,  m_invite,   0, MAXPARA, 1 ,0L },
   { MSG_KICK,    m_kick,     0, MAXPARA, 1 ,0L },
+  { MSG_ISON,    m_ison,     0, 1, 1 ,0L },
+  { MSG_SERVER,  m_server,   0, MAXPARA, 1 ,0L },
+  { MSG_SQUIT,   m_squit,    0, MAXPARA, 1 ,0L },
+  { MSG_WHOIS,   m_whois,    0, MAXPARA, 1 ,0L },
+  { MSG_WHO,     m_who,      0, MAXPARA, 1 ,0L },
   { MSG_WHOWAS,  m_whowas,   0, MAXPARA, 1 ,0L },
   { MSG_LIST,    m_list,     0, MAXPARA, 1 ,0L },
   { MSG_NAMES,   m_names,    0, MAXPARA, 1 ,0L },
-  { MSG_INVITE,  m_invite,   0, MAXPARA, 1 ,0L },
-  { MSG_PING,    m_ping,     0, MAXPARA, 1 ,0L },
-  { MSG_ISON,    m_ison,     0, 1, 1 ,0L },
   { MSG_KILL,    m_kill,     0, MAXPARA, 1 ,0L },
+  { MSG_PING,    m_ping,     0, MAXPARA, 1 ,0L },
+  { MSG_USERHOST,m_userhost, 0, 1, 1 ,0L },
   { MSG_TRACE,   m_trace,    0, MAXPARA, 1 ,0L },
   { MSG_PASS,    m_pass,     0, MAXPARA, 1 ,0L },
   { MSG_LUSERS,  m_lusers,   0, MAXPARA, 1 ,0L },
   { MSG_TIME,    m_time,     0, MAXPARA, 1 ,0L },
+  { MSG_OPER,    m_oper,     0, MAXPARA, 1 ,0L },
   { MSG_CONNECT, m_connect,  0, MAXPARA, 1 ,0L },
+  { MSG_WALLOPS, m_wallops,  0, MAXPARA, 1 ,0L },
   { MSG_VERSION, m_version,  0, MAXPARA, 1 ,0L },
+  { MSG_PONG,    m_pong,     0, MAXPARA, 1 ,0L },
   { MSG_STATS,   m_stats,    0, MAXPARA, 1 ,0L },
   { MSG_LINKS,   m_links,    0, MAXPARA, 1 ,0L },
   { MSG_ADMIN,   m_admin,    0, MAXPARA, 1 ,0L },
@@ -153,14 +160,18 @@ struct Message msgtab[] = {
   { MSG_HASH,    m_hash,     0, MAXPARA, 1 ,0L },
   { MSG_DNS,     m_dns,      0, MAXPARA, 1 ,0L },
 #endif
-#ifdef	OPER_REHASH
+#if defined(OPER_REHASH) || defined(LOCOP_RESTART)
   { MSG_REHASH,  m_rehash,   0, MAXPARA, 1 ,0L },
 #endif
-#ifdef	OPER_RESTART
+#if defined(OPER_RESTART) || defined(LOCOP_RESTART)
   { MSG_RESTART, m_restart,  0, MAXPARA, 1 ,0L },
+#endif
+#if defined(OPER_DIE) || defined(LOCOP_RESTART)
+  { MSG_DIE, m_die,  0, MAXPARA, 1 ,0L },
 #endif
   { (char *) 0, (int (*)()) 0 , 0, 0, 0, 0L}
 };
 #else
 extern struct Message msgtab[];
 #endif
+#endif /* __msg_include__ */

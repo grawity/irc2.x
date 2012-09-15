@@ -29,6 +29,9 @@
  *
  */
 
+#ifndef	__whowas_include__
+#define __whowas_include__
+
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x
@@ -66,3 +69,5 @@ aClient *get_history PROTO((char *, time_t));
 					/* Time limit in seconds */
 
 int m_whowas PROTO((aClient *, aClient *, int, char *[]));
+
+#endif /* __whowas_include__ */

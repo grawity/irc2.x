@@ -75,7 +75,7 @@ struct Command commands[] = {
 #endif
   { (int (*)()) 0, "AWAY",    SERVER_CMD, "\0\0", MSG_AWAY },
   { do_mypriv,     "MSG",     LOCAL_FUNC, "\0\0", MSG_PRIVATE },
-  { (int (*)()) 0, "TOPIC",   SERVER_CMD, "\0\0", MSG_TOPIC },
+  { do_kill,       "TOPIC",   LOCAL_FUNC, "\0\0", MSG_TOPIC },
   { do_cmdch,      "CMDCH",   LOCAL_FUNC, "\0\0", "CMDCH" },
   { (int (*)()) 0, "INVITE",  SERVER_CMD, "\0\0", MSG_INVITE },
   { (int (*)()) 0, "INFO",    SERVER_CMD, "\0\0", MSG_INFO },

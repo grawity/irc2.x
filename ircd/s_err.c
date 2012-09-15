@@ -21,7 +21,7 @@
 #include "numeric.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_err.c	1.8 3/21/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_err.c	1.9 4/10/93 (C) 1992 Darren Reed";
 #endif
 
 typedef	struct	{
@@ -220,12 +220,12 @@ static	Numeric	numeric_replies[] = {
 		0, (char *)NULL,
 /* 211 */	RPL_STATSLINKINFO, (char *)NULL,
 /* 212 */	RPL_STATSCOMMANDS, "%s %u %u",
-/* 213 */	RPL_STATSCLINE, "C %s * %s %d %d",
-/* 214 */	RPL_STATSNLINE, "N %s * %s %d %d",
-/* 215 */	RPL_STATSILINE, "I %s * %s %d %d",
-/* 216 */	RPL_STATSKLINE, "K %s %s %s %d %d",
-/* 217 */	RPL_STATSQLINE, "Q %s * %s %d %d",
-/* 218 */	RPL_STATSYLINE, "Y %d %d %d %d %ld",
+/* 213 */	RPL_STATSCLINE, "%c %s * %s %d %d",
+/* 214 */	RPL_STATSNLINE, "%c %s * %s %d %d",
+/* 215 */	RPL_STATSILINE, "%c %s * %s %d %d",
+/* 216 */	RPL_STATSKLINE, "%c %s %s %s %d %d",
+/* 217 */	RPL_STATSQLINE, "%c %s * %s %d %d",
+/* 218 */	RPL_STATSYLINE, "%c %d %d %d %d %ld",
 /* 219 */	RPL_ENDOFSTATS, "%c :End of /STATS report",
 		0, (char *)NULL,
 /* 221 */	RPL_UMODEIS, "%s",
@@ -239,10 +239,10 @@ static	Numeric	numeric_replies[] = {
 /* 235 */	RPL_SERVLISTEND, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL,
-/* 241 */	RPL_STATSLLINE, "L %s * %s %d %d",
+/* 241 */	RPL_STATSLLINE, "%c %s * %s %d %d",
 /* 242 */	RPL_STATSUPTIME, ":Server Up %d days, %d:%02d:%02d",
-/* 243 */	RPL_STATSOLINE, "O %s * %s %d %d",
-/* 244 */	RPL_STATSHLINE, "H %s * %s %d %d", 
+/* 243 */	RPL_STATSOLINE, "%c %s * %s %d %d",
+/* 244 */	RPL_STATSHLINE, "%c %s * %s %d %d", 
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 /* 251 */	RPL_LUSERCLIENT,

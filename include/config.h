@@ -21,7 +21,8 @@
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
 /*	HPUX			Nothing needed (A.08.07) */
-/*	ULTRIX			Nothing needed (4.2) */
+/*	ULTRIX			Nothing needed (4.2) *
+/*	OSF			Nothing needed (1.2) *
 #undef	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
 /*	SGI			Nothing needed (IRIX 4.0.4) */
@@ -147,8 +148,8 @@
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
-#define	DPATH	"/home/soft/src/irc/ircd"	/* dir where all ircd stuff is */
-#define	SPATH	"/home/disuns2/usr/public/bin/ircd/ircd"	/* path to server executeable */
+#define	DPATH	"/usr/local/lib/irc"	/* dir where all ircd stuff is */
+#define	SPATH	"/usr/local/bin/ircd"	/* path to server executeable */
 #define	CPATH	"ircd.conf"	/* server configuration file */
 #define	MPATH	"ircd.motd"	/* server MOTD file */
 #define	LPATH	"/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
@@ -189,7 +190,7 @@
  * mode "i" (i == invisible). Invisibility means people dont showup in
  * WHO or NAMES unless they are on the same channel as you.
  */
-#define	NO_DEFAULT_INVISIBLE
+#undef	NO_DEFAULT_INVISIBLE
 
 /* OPER_KILL
  *
@@ -199,11 +200,16 @@
  * commands however.  OPER_REHASH and OPER_RESTART allow operators to
  * issue the REHASH and RESTART commands when connected to your server.
  * Left undefined they increase the security of your server from wayward
- * operators and accidents.
+ * operators and accidents.  The 'LOCOP_' #defines are for making the
+ * respective commands available to 'local' operators.
  */
-#define	OPER_KILL
-#define	OPER_REHASH
-#define	OPER_RESTART
+#undef	OPER_KILL
+#undef	OPER_REHASH
+#undef	OPER_RESTART
+#undef	OPER_DIE
+#undef	LOCOP_REHASH
+#undef	LOCOP_RESTART
+#undef	LOCOP_DIE
 
 /* MAXIMUM LINKS
  *
@@ -232,7 +238,7 @@
  * a server is in class 0 (the default class if none is set).
  *
  */
-#define MAXIMUM_LINKS 100
+#define MAXIMUM_LINKS 1
 
 /*
  * If your server is running as a a HUB Server then define this.
@@ -240,7 +246,7 @@
  * to a leaf which just has 1 server (typically the uplink). Define this
  * correctly for performance reasons.
  */
-#define	HUB
+#undef	HUB
 
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
@@ -287,8 +293,11 @@
  * Define this filename to maintain a list of persons who log
  * into this server. Logging will stop when the file does not exist.
  * Logging will be disable also if you do not define this.
+ * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
+ * successful use of /oper
  */
-/* #define FNAME_USERLOG "/usr/local/lib/irc/users" */
+/* #define FNAME_USERLOG "/usr/local/lib/irc/users" /* */
+/* #define FNAME_OPERLOG "/usr/local/lib/irc/users" /* */
 
 /*
  * If you wish to have the server send 'vital' messages about server
@@ -322,7 +331,7 @@
  * define this if you want to use crypted passwords for operators in your
  * ircd.conf file. See ircd/crypt/README for more details on this.
  */
-#define	CRYPT_OPER_PASSWORD
+#undef	CRYPT_OPER_PASSWORD
 
 /*
  * If you want to store encrypted passwords in N-lines for server links,
@@ -330,7 +339,7 @@
  * need not be the same for both, as long as hte opposite end has the
  * right password in the opposite line.  See INSTALL doc for more details.
  */
-#define	CRYPT_LINK_PASSWORD
+#undef	CRYPT_LINK_PASSWORD
 
 /*
  * define this if you enable summon and if you want summon to look for the
@@ -350,8 +359,8 @@
 /*
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
-#define MAXSENDQLENGTH 2000000    /* Recommended value: 100000 for leaves */
-                                 /*                    200000 for backbones */
+#define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
+                                 /*                    300000 for backbones */
 
 /*
  * Use our "ctype.h" defines (islower(),isupper(),tolower(),toupper(), etc).
@@ -384,16 +393,16 @@
  * define IRC_UID to that UID.  This should only be defined if you are running
  * as root and even then perhaps not.
  */
-#define	IRC_UID
-#define	IRC_GID
+#undef	IRC_UID
+#undef	IRC_GID
 
 #ifdef	notdef
-#define	IRC_UID	115	/* eg for what to do to enable this feature */
-#define	IRC_GID	115
+#define	IRC_UID	65534	/* eg for what to do to enable this feature */
+#define	IRC_GID	65534
 #endif
 
 /* Default server for standard client */
-#define	UPHOST	"disuns2.epfl.ch"
+#define	UPHOST	"coombs.anu.edu.au"
 
 /* Define this if you want the server to accomplish ircII standard */
 /* Sends an extra NOTICE in the beginning of client connection     */
@@ -451,7 +460,7 @@
  *	 resident and running - it hardly ever gets swapped to disk! You can
  *	 ignore these recommendations- they only are meant to serve as a guide
  */
-#define NICKNAMEHISTORYLENGTH 1000
+#define NICKNAMEHISTORYLENGTH 800
 
 /*
  * Time interval to wait and if no messages have been received, then check for
@@ -483,7 +492,7 @@
  * other end of the connection has time to notice it broke too.
  */
 #define HANGONRETRYDELAY 10	/* Recommended value: 10 seconds */
-#define HANGONGOODLINK 300	/* Recommended value: 10 minutes */
+#define HANGONGOODLINK 300	/* Recommended value: 5 minutes */
 
 /*
  * Number of seconds to wait for write to complete if stuck.
@@ -492,6 +501,9 @@
 
 /*
  * Number of seconds to wait for a connect(2) call to complete.
+ * NOTE: this must be at *LEAST* 10.  When a client connects, it has
+ * CONNECTTIMEOUT - 10 seconds for its host to respond to an ident lookup
+ * query and for a DNS answer to be retrieved.
  */
 #define	CONNECTTIMEOUT     30	/* Recommended value: 30 */
 
@@ -521,6 +533,16 @@
 #define	CONFIGFILE CPATH
 #define	IRCD_PIDFILE PPATH
 
+#ifdef	__osf__
+#define	OSF
+/* OSF defines BSD to be its version of BSD */
+#undef BSD
+#include <sys/param.h>
+#ifndef BSD
+#define BSD
+#endif
+#endif
+
 #ifdef	ultrix
 #define	ULTRIX
 #endif
@@ -542,11 +564,7 @@ extern	void	debug();
 # define Debug(x) debug x
 # define LOGFILE LPATH
 #else
-# ifdef HPUX
-#  define Debug(x) ;
-# else
-#  define Debug(x) (void)
-# endif
+# define Debug(x) ;
 # if VMS
 #	define LOGFILE "NLA0:"
 # else
@@ -604,6 +622,8 @@ error You stuffed up config.h signals #defines use only one.
 
 #ifndef	HUB
 #define	MAXIMUM_LINKS	1
+#undef	MAXSENDQLENGTH
+#define	MAXSENDQLENGTH	100000
 #endif
 
 #ifdef HAVECURSES

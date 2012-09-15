@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__class_include__
+#define __class_include__
+
 #ifndef PROTO
 #if __STDC__
 #       define PROTO(x) x
@@ -62,3 +65,5 @@ extern	int	GetConFreq PROTO((aClass *));
 extern	void	AddClass PROTO((int, int, int, int, long));
 extern	void	check_class PROTO((void));
 extern	void	initclass PROTO((void));
+
+#endif /* __class_include__ */

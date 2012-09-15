@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__common_include__
+#define __common_include__
+
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x
@@ -78,10 +81,11 @@ extern char *inet_ntoa PROTO((struct in_addr));
 extern int inet_netof PROTO((struct in_addr));
 #endif
 
-extern char *myctime PROTO((long));
+extern char *myctime PROTO((time_t));
 extern char *strtoken PROTO((char **, char *, char *));
 
-#if defined(ULTRIX) || defined(SGI) || defined(sequent) || defined(hpux)
+#if defined(ULTRIX) || defined(SGI) || defined(sequent) || defined(HPUX) || \
+    defined(OSF)
 #include <sys/param.h>
 #else
 # ifndef MAX
@@ -144,3 +148,5 @@ extern unsigned char char_atribs[];
 extern char *MyMalloc();
 extern void flush_connections();
 extern struct SLink *find_user_link(/* struct SLink *, struct Client * */);
+
+#endif /* __common_include__ */

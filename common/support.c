@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.9 3/27/93 (C) 1990, 1991 Armin Gruner";
+static  char sccsid[] = "@(#)support.c	2.12 4/3/93 (C) 1990, 1991 Armin Gruner";
 #endif
 
 #include "struct.h"
@@ -244,6 +244,13 @@ int	y;
 ** read a string terminated by \r or \n in from a fd
 **
 ** Created: Sat Dec 12 06:29:58 EST 1992 by avalon
+** Returns:
+**	0 - EOF
+**	-1 - error on read
+**     >0 - number of bytes returned (<=num)
+** After opening a fd, it is necessary to init dgets() by calling it as
+**	dgets(x,y,0);
+** to mark the buffer as being empty.
 */
 int	dgets(fd, buf, num)
 int	fd, num;
@@ -257,11 +264,24 @@ char	*buf;
 	/*
 	** Sanity checks.
 	*/
+	if (head == tail)
+		*head = '\0';
 	if (!num)
+	    {
+		head = tail = dgbuf;
+		*head = '\0';
 		return 0;
+	    }
 	if (num > sizeof(dgbuf) - 1)
 		num = sizeof(dgbuf) - 1;
 dgetsagain:
+	if (head > dgbuf)
+	    {
+		for (nr = tail - head, s = head, t = dgbuf; nr > 0; nr--)
+			*t++ = *s++;
+		tail = t;
+		head = dgbuf;
+	    }
 	/*
 	** check input buffer for EOL and if present return string.
 	*/
@@ -283,16 +303,13 @@ dgetsreturnbuf:
 		goto dgetsreturnbuf;
 	    }
 
-	if (head != dgbuf)
-	    {
-		for (nr = head - dgbuf, s = head, t = dgbuf; nr > 0; nr--)
-			*t++ = *s++;
-		tail = --t;
-	    }
 	n = sizeof(dgbuf) - (tail - dgbuf) - 1;
 	nr = read(fd, tail, n);
 	if (nr == -1)
+	    {
+		head = tail = dgbuf;
 		return -1;
+	    }
 	if (!nr)
 	    {
 		if (head < tail)
@@ -300,6 +317,7 @@ dgetsreturnbuf:
 			n = MIN(head - tail, num);
 			goto dgetsreturnbuf;
 		    }
+		head = tail = dgbuf;
 		return 0;
 	    }
 	tail += nr;

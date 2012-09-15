@@ -223,7 +223,8 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf, "*** %s changed the topic to %s", parv[0], parv[1]);
+  sprintf(mybuf, "*** %s changed the topic on %s to: %s",
+	  parv[0], parv[1], parv[2]);
   putline(mybuf);
 }
 

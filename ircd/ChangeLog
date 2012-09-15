@@ -17,6 +17,12 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sun Apr 11 02:28:56 1993
+	* s_serv.c, s_user.c
+			Local Operator (o-lines) 'power' is now more flexible
+			and automatically invoked on those the server deems
+			that are non-local to it.
+
 Sat Mar  6 14:08:30 1993
 	* s_conf.c	Added m4 preprocessing option to reading the server
 			configuration file.

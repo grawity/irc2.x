@@ -36,13 +36,12 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.6 2/2/93 (C) 1990 Markku Savela";
+static  char sccsid[] = "@(#)dbuf.c	2.11 4/16/93 (C) 1990 Markku Savela";
 #endif
 
 #include <stdio.h>
-#include "config.h"
+#include "struct.h"
 #include "common.h"
-#include "dbuf.h"
 #include "sys.h"
 
 #if !defined(VALLOC) && !defined(valloc)
@@ -81,7 +80,11 @@ static dbufbuf *dbuf_alloc()
 	    }
 
 #ifdef	VALLOC
+# if defined(SOL20) || defined(_SC_PAGESIZE)
+	num = sysconf(_SC_PAGESIZE)/sizeof(dbufbuf);
+# else
 	num = getpagesize()/sizeof(dbufbuf);
+# endif
 	if (num < 0)
 		num = 1;
 
@@ -139,7 +142,7 @@ dbuf *dyn;
 int	dbuf_put(dyn, buf, length)
 dbuf	*dyn;
 char	*buf;
-long	length;
+Long	length;
 {
 	Reg1	dbufbuf	**h, *d;
 	Reg2	int	nbr, off;
@@ -197,7 +200,7 @@ int	*length;
 
 int	dbuf_delete(dyn,length)
 dbuf	*dyn;
-long	length;
+Long	length;
     {
 	dbufbuf *d;
 	int chunk;
@@ -226,10 +229,10 @@ long	length;
 	return 0;
     }
 
-long	dbuf_get(dyn, buf, length)
+Long	dbuf_get(dyn, buf, length)
 dbuf	*dyn;
 char	*buf;
-long	length;
+Long	length;
     {
 	int	moved = 0;
 	int	chunk;
@@ -249,10 +252,10 @@ long	length;
     }
 
 /*
-long	dbuf_copy(dyn, buf, length)
+Long	dbuf_copy(dyn, buf, length)
 dbuf	*dyn;
 register char	*buf;
-long	length;
+Long	length;
 {
 	register dbufbuf	*d = dyn->head;
 	register char	*s;

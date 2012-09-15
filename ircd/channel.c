@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.27 3/22/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.32 4/20/93 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -828,6 +828,8 @@ char	*parv[], *mbuf, *pbuf;
 			*mbuf++ = '-';
 			whatt = -1;
 		    }
+		mode->mode &= ~MODE_LIMIT;
+		mode->limit = 0;
 		*mbuf++ = 'l';
 	    }
 
@@ -1178,6 +1180,7 @@ Reg2	aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
 {
+	static	char	jbuf[BUFSIZE];
 	Reg1	Link	*lp;
 	Reg3	aChannel *chptr;
 	Reg4	char	*name, *key = NULL;
@@ -1196,19 +1199,19 @@ char	*parv[];
 
 	if (parv[2])
 		key = strtoken(&p2, parv[2], ",");
-	*buf = '\0';
+	*jbuf = '\0';
 	/*
 	** Rebuild list of channels joined to be the actual result of the
 	** JOIN.  Note that "JOIN 0" is the destructive problem.
 	*/
-	for (name = strtoken(&p, parv[1], ","); name;
+	for (i = 0, name = strtoken(&p, parv[1], ","); name;
 	     name = strtoken(&p, NULL, ","))
 	    {
 		clean_channelname(name);
 		if (check_channelmask(sptr, cptr, name)==-1)
 			continue;
 		if (*name == '0')
-			*buf = '\0';
+			*jbuf = '\0';
 		else if (!IsChannelName(name))
 		    {
 			if (MyClient(sptr))
@@ -1216,13 +1219,14 @@ char	*parv[];
 					   me.name, parv[0], name);
 			continue;
 		    }
-		if (*buf)
-			(void)strcat(buf, ",");
-		(void)strncat(buf, name, sizeof(buf)-strlen(buf)-1);
+		if (*jbuf)
+			(void)strcat(jbuf, ",");
+		(void)strncat(jbuf, name, sizeof(jbuf) - i - 1);
+		i += strlen(name);
 	    }
-	(void)strcpy(parv[1], buf);
+	(void)strcpy(parv[1], jbuf);
 
-	for (name = strtoken(&p, buf, ","); name;
+	for (name = strtoken(&p, jbuf, ","); name;
 	     key = (key) ? strtoken(&p2, NULL, ",") : NULL,
 	     name = strtoken(&p, NULL, ","))
 	    {
@@ -1295,6 +1299,7 @@ char	*parv[];
 			if (chptr->topic[0] != '\0')
 				sendto_one(sptr, rpl_str(RPL_TOPIC), me.name,
 					   parv[0], name, chptr->topic);
+			parv[1] = name;
 			(void)m_names(cptr, sptr, 2, parv);
 		    }
 	    }
@@ -1873,7 +1878,7 @@ aClient	*cptr, *user;
 		if (strlen(chptr->chname) > BUFSIZE - 2 - strlen(buf))
 		    {
 			if (cnt)
-				sendto_one(cptr, buf);
+				sendto_one(cptr, "%s", buf);
 			*buf = ':';
 			(void)strcpy(buf+1, user->name);
 			(void)strcat(buf, " JOIN ");
@@ -1885,7 +1890,7 @@ aClient	*cptr, *user;
 			(void)strcat(buf, ",");
 	    }
 	if (*buf && cnt)
-		sendto_one(cptr, buf);
+		sendto_one(cptr, "%s", buf);
 
 	return;
 }

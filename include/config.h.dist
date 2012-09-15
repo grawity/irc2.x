@@ -21,7 +21,8 @@
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
 /*	HPUX			Nothing needed (A.08.07) */
-/*	ULTRIX			Nothing needed (4.2) */
+/*	ULTRIX			Nothing needed (4.2) *
+/*	OSF			Nothing needed (1.2) *
 #undef	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
 /*	SGI			Nothing needed (IRIX 4.0.4) */
@@ -199,11 +200,16 @@
  * commands however.  OPER_REHASH and OPER_RESTART allow operators to
  * issue the REHASH and RESTART commands when connected to your server.
  * Left undefined they increase the security of your server from wayward
- * operators and accidents.
+ * operators and accidents.  The 'LOCOP_' #defines are for making the
+ * respective commands available to 'local' operators.
  */
 #undef	OPER_KILL
 #undef	OPER_REHASH
 #undef	OPER_RESTART
+#undef	OPER_DIE
+#undef	LOCOP_REHASH
+#undef	LOCOP_RESTART
+#undef	LOCOP_DIE
 
 /* MAXIMUM LINKS
  *
@@ -287,8 +293,11 @@
  * Define this filename to maintain a list of persons who log
  * into this server. Logging will stop when the file does not exist.
  * Logging will be disable also if you do not define this.
+ * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
+ * successful use of /oper
  */
-/* #define FNAME_USERLOG "/usr/local/lib/irc/users" */
+/* #define FNAME_USERLOG "/usr/local/lib/irc/users" /* */
+/* #define FNAME_OPERLOG "/usr/local/lib/irc/users" /* */
 
 /*
  * If you wish to have the server send 'vital' messages about server
@@ -351,7 +360,7 @@
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
 #define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
-                                 /*                    200000 for backbones */
+                                 /*                    300000 for backbones */
 
 /*
  * Use our "ctype.h" defines (islower(),isupper(),tolower(),toupper(), etc).
@@ -483,7 +492,7 @@
  * other end of the connection has time to notice it broke too.
  */
 #define HANGONRETRYDELAY 10	/* Recommended value: 10 seconds */
-#define HANGONGOODLINK 300	/* Recommended value: 10 minutes */
+#define HANGONGOODLINK 300	/* Recommended value: 5 minutes */
 
 /*
  * Number of seconds to wait for write to complete if stuck.
@@ -492,6 +501,9 @@
 
 /*
  * Number of seconds to wait for a connect(2) call to complete.
+ * NOTE: this must be at *LEAST* 10.  When a client connects, it has
+ * CONNECTTIMEOUT - 10 seconds for its host to respond to an ident lookup
+ * query and for a DNS answer to be retrieved.
  */
 #define	CONNECTTIMEOUT     30	/* Recommended value: 30 */
 
@@ -521,6 +533,16 @@
 #define	CONFIGFILE CPATH
 #define	IRCD_PIDFILE PPATH
 
+#ifdef	__osf__
+#define	OSF
+/* OSF defines BSD to be its version of BSD */
+#undef BSD
+#include <sys/param.h>
+#ifndef BSD
+#define BSD
+#endif
+#endif
+
 #ifdef	ultrix
 #define	ULTRIX
 #endif
@@ -542,11 +564,7 @@ extern	void	debug();
 # define Debug(x) debug x
 # define LOGFILE LPATH
 #else
-# ifdef HPUX
-#  define Debug(x) ;
-# else
-#  define Debug(x) (void)
-# endif
+# define Debug(x) ;
 # if VMS
 #	define LOGFILE "NLA0:"
 # else
@@ -604,6 +622,8 @@ error You stuffed up config.h signals #defines use only one.
 
 #ifndef	HUB
 #define	MAXIMUM_LINKS	1
+#undef	MAXSENDQLENGTH
+#define	MAXSENDQLENGTH	100000
 #endif
 
 #ifdef HAVECURSES

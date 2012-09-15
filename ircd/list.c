@@ -37,7 +37,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)list.c	2.16 3/22/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)list.c	2.17 3/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -329,7 +329,7 @@ aConfItem	*make_conf()
 #ifdef	DEBUGMODE
 	aconfs.inuse++;
 #endif
-
+	bzero((char *)&aconf->ipnum, sizeof(struct in_addr));
 	aconf->next = NULL;
 	aconf->host = aconf->passwd = aconf->name = NULL;
 	aconf->status = CONF_ILLEGAL;

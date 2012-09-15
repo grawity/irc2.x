@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.17 3/27/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.20 4/16/93 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -502,13 +502,13 @@ HEADER	*hptr;
 {
 	char	*cp, **alias;
 	int	class, type, dlen, len, ans = 0, n;
-	u_long	dr, *adr;
+	struct	in_addr	dr, *adr;
 	struct	hent	*hp;
 
 	cp = buf + sizeof(HEADER);
 	hp = (struct hent *)&(rptr->he);
-	adr = (u_long *)&hp->h_addr;
-	while (*adr)
+	adr = &hp->h_addr;
+	while (adr->s_addr)
 		adr++;
 	alias = hp->h_aliases;
 	while (*alias)
@@ -529,8 +529,8 @@ HEADER	*hptr;
 		cp += sizeof(short);
 		class = (int)_getshort(cp);
 		cp += sizeof(short);
-		rptr->ttl = (u_long)_getlong(cp);
-		cp += sizeof(u_long);
+		rptr->ttl = _getlong(cp);
+		cp += sizeof(rptr->ttl);
 		dlen =  (int)_getshort(cp);
 		cp += sizeof(short);
 		rptr->type = type;
@@ -550,7 +550,7 @@ HEADER	*hptr;
 				hp->h_addrtype =  (class == C_IN) ?
 							AF_INET : AF_UNSPEC;
 			bcopy(cp, (char *)&dr, dlen);
-			*adr = dr;
+			adr->s_addr = dr.s_addr;
 			Debug((DEBUG_INFO,"got ip # %s for %s",
 				inetntoa((char *)adr), hostbuf));
 			len = strlen(hostbuf);
@@ -559,7 +559,8 @@ HEADER	*hptr;
 				hp->h_name =(char *)MyMalloc(len+1);
 				(void)strcpy(hp->h_name, hostbuf);
 			    }
-			*++adr = 0;
+			adr++;
+			bzero((char *)adr, sizeof(*adr));
 			cp += dlen;
  			break;
 		case T_PTR :
@@ -927,7 +928,7 @@ aCache	*cachep;
 	/*
 	 * Do the same again for IP#'s.
 	 */
-	for (s = (char *)&(rptr->he.h_addr_list[0].s_addr); *(u_long *)s;
+	for (s = (char *)&rptr->he.h_addr; ((struct in_addr *)s)->s_addr;
 	     s += sizeof(struct in_addr))
 	    {
 		for (i = 0; (t = cp->he.h_addr_list[i]) && i < MAXADDRS; i++)
@@ -953,7 +954,8 @@ aCache	*cachep;
 			cp->he.h_addr_list = base;
 #ifdef	DEBUG
 			Debug((DEBUG_DNS,"u_l:add IP %x hal %x ac %d",
-				*(u_long *)s, cp->he.h_addr_list,
+				ntohl(((struct in_addr *)s)->s_addr),
+				cp->he.h_addr_list,
 				addrcount));
 #endif
 			for (; addrcount; addrcount--)
@@ -1023,13 +1025,16 @@ char	*numb;
 {
 	Reg1	aCache	*cp;
 	Reg2	int	hashv,i;
+#ifdef	DEBUG
+	struct	in_addr	*ip = (struct in_addr *)numb;
+#endif
 
 	hashv = hash_number(numb);
 
 	cp = hashtable[hashv].num_list;
 #ifdef DEBUG
 	Debug((DEBUG_DNS,"find_cache_number:find %s[%08x]: hashv = %d",
-		inetntoa(numb), ntohl(*(u_long *)numb), hashv));
+		inetntoa(numb), ntohl(ip->s_addr), hashv));
 #endif
 
 	for (; cp; cp = cp->hnum_next)
@@ -1065,7 +1070,6 @@ char	*numb;
 				return cp;
 			    }
 	    }
-
 	return NULL;
 }
 
@@ -1215,11 +1219,11 @@ aCache	*ocp;
  * removes entries from the cache which are older than their expirey times.
  * returns the time at which the server should next poll the cache.
  */
-long	expire_cache(now)
-long	now;
+time_t	expire_cache(now)
+time_t	now;
 {
 	Reg1	aCache	*cp, *cp2;
-	Reg2	u_long	next = 0;
+	Reg2	time_t	next = 0;
 
 	for (cp = cachetop; cp; cp = cp2)
 	    {

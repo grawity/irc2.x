@@ -1,5 +1,5 @@
 #!/bin/sh
-trap "" 1 2 3 13 14 15 18 21 22
+trap "" 1 2 3 13 14 15 21 22
 /bin/cp hash.c hash.c.old 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
 csum=`sum s_bsd.c 2>/dev/null`

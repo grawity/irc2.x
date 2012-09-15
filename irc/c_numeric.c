@@ -265,7 +265,7 @@ char	*parv[];
 		sprintf(mybuf, "*** %s: No Topic is set", parv[0]);
 		break;
 	    case RPL_TOPIC:
-		sprintf(mybuf, "*** %s: Topic is %s:%s", parv[0], parv[2],
+		sprintf(mybuf, "*** %s: Topic on %s is: %s", parv[0], parv[2],
 			parv[3]);
 		break;
 	    case RPL_INVITING:
@@ -366,8 +366,8 @@ char	*parv[];
 			parv[6], parv[7], tmp);
 		break;
 	    case RPL_STATSCOMMANDS:
-		sprintf(mybuf, "*** %s: %s has been used %d times",
-			parv[0], parv[3], parv[4]);
+		sprintf(mybuf, "*** %s: %s has been used %s times (%s bytes)",
+			parv[0], parv[2], parv[3], parv[4]);
 		break;
 	    case RPL_STATSCLINE:
 	    case RPL_STATSNLINE:
@@ -393,6 +393,10 @@ char	*parv[];
 		break;
 	    case RPL_ENDOFWHO:
 	    case RPL_ENDOFWHOIS:
+	    case RPL_ENDOFWHOWAS:
+	    case RPL_ENDOFINFO:
+	    case RPL_ENDOFMOTD:
+	    case RPL_ENDOFUSERS:
 	    case RPL_ENDOFLINKS:
 	    case RPL_ENDOFNAMES:
 	    case RPL_ENDOFSTATS:

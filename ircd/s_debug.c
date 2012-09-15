@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.17 3/13/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.20 4/14/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -132,6 +132,9 @@ char	serveropts[] = {
 #endif
 #include "h.h"
 
+#ifndef ssize_t
+#define ssize_t int
+#endif
 
 extern	etext;
 
@@ -164,7 +167,7 @@ va_dcl
 			(void)vsprintf(debugbuf, form, vl);
 #endif
 			local[2]->sendB += strlen(debugbuf);
-			(void)fprintf(stderr, debugbuf);
+			(void)fprintf(stderr, "%s", debugbuf);
 			(void)fputc('\n', stderr);
 		    }
 }
@@ -229,7 +232,7 @@ char	*nick;
 #else
 # ifdef TIMES_2
 	struct	tms	tmsbuf;
-	u_long	secs, mins;
+	time_t	secs, mins;
 	int	hzz = 1, ticpermin;
 	int	umin, smin, usec, ssec;
 
@@ -415,9 +418,9 @@ char	*nick;
 	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
 		   me.name, nick, tot,
 #if !defined(AIX) && !defined(NEXT)
-		   (int)sbrk(0)-(int)etext);
+		   (int)sbrk((ssize_t)0)-(int)etext);
 #else
-		   (int)sbrk(0));
+		   (int)sbrk((ssize_t)0));
 #endif
 	return;
 }

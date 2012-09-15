@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__hash_include__
+#define __hash_include__
+
 typedef	struct	hashentry {
 	int	hits;
 	int	links;
@@ -24,7 +27,7 @@ typedef	struct	hashentry {
 	} aHashEntry;
 
 #ifndef	DEBUGMODE
-#define	HASHSIZE	839	/* prime number */
+#define	HASHSIZE	2003	/* prime number */
 /*
  * choose hashsize from these:
  *
@@ -35,9 +38,10 @@ typedef	struct	hashentry {
  *1801,1867,1889,1933,1987,2003
  */
 
-#define	CHANNELHASHSIZE	293	/* prime number */
+#define	CHANNELHASHSIZE	607	/* prime number */
 #else
-int	HASHSIZE = 839;
-int	CHANNELHASHSIZE = 293;
+int	HASHSIZE = 2003;
+int	CHANNELHASHSIZE = 607;
 #endif
 
+#endif	/* __hash_include__ */

@@ -21,20 +21,27 @@
 
 /* External definitions for functions in inet(3) */
 
-#ifdef __STDC__
-extern unsigned long inet_addr(char *);
-extern char *inet_ntoa(char *);
-extern struct in_addr inet_makeaddr(int , int);
-extern unsigned long inet_network(char *);
-extern unsigned long inet_lnaof(struct in_addr);
-extern unsigned long inet_netof(struct in_addr);
+#ifdef	__alpha
+#define	__u_l	unsigned int
 #else
-extern unsigned long inet_addr();
+#define	__u_l	unsigned long
+#endif
+
+#ifdef __STDC__
+extern __u_l inet_addr(char *);
+extern char *inet_ntoa(char *);
+extern __u_l inet_makeaddr(int , int);
+extern __u_l inet_network(char *);
+extern __u_l inet_lnaof(struct in_addr);
+extern __u_l inet_netof(struct in_addr);
+#else
+extern __u_l inet_addr();
 extern char *inet_ntoa();
-extern struct in_addr inet_makeaddr();
+extern __u_l inet_makeaddr();
 #endif
 #ifndef  HPUX
-extern unsigned long inet_network();
-extern unsigned long inet_lnaof();
-extern unsigned long inet_netof();
+extern __u_l inet_network();
+extern __u_l inet_lnaof();
+extern __u_l inet_netof();
 #endif
+#undef __u_l

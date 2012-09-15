@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.39 3/27/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.47 4/15/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -78,22 +78,31 @@ int	highest_fd = 0, readcalls = 0, udpfd = -1, resfd = -1;
 static	struct	sockaddr_in	mysk;
 static	void	polludp();
 
-struct	sockaddr *connect_unix_server PROTO((aConfItem *, aClient *, int *));
-struct	sockaddr *connect_inet_server PROTO((aConfItem *, aClient *, int *));
+static	struct	sockaddr *connect_unix PROTO((aConfItem *, aClient *, int *));
+static	struct	sockaddr *connect_inet PROTO((aConfItem *, aClient *, int *));
 static	int	completed_connection PROTO((aClient *));
-static	void	do_dns_async PROTO(());
+static	void	do_dns_async PROTO(()), set_sock_opts PROTO((int, aClient *));
+static	void	add_unixconnection PROTO((aClient *, int));
 #ifdef	UNIXPORT
 static	char	unixpath[256];
 #endif
 static	char	readbuf[8192];
 
+/*
+ * Try and find the correct name to use with getrlimit() for setting the max.
+ * number of files allowed to be open by this process.
+ */
 #ifdef RLIMIT_FDMAX
-#define RLIMIT_FD_MAX   RLIMIT_FDMAX
+# define RLIMIT_FD_MAX   RLIMIT_FDMAX
 #else
 # ifdef RLIMIT_NOFILE
 #  define RLIMIT_FD_MAX RLIMIT_NOFILE
 # else
-#  undef RLIMIT_FD_MAX
+#  ifdef RLIMIT_OPEN_MAX
+#   define RLIMIT_FD_MAX RLIMIT_OPEN_MAX
+#  else
+#   undef RLIMIT_FD_MAX
+#  endif
 # endif
 #endif
 
@@ -174,7 +183,7 @@ aClient *cptr;
 	 * This may only work when SO_DEBUG is enabled but its worth the
 	 * gamble anyway.
 	 */
-	if (cptr->fd >= 0)
+	if (!IsMe(cptr) && cptr->fd >= 0)
 		if (!getsockopt(cptr->fd, SOL_SOCKET, SO_ERROR, &err, &len))
 			errtmp = err;
 
@@ -199,7 +208,7 @@ char	*name;
 int	port;
 {
 	static	struct sockaddr_in server;
-	int	length, ad[4];
+	int	length, ad[4], len = sizeof(server);
 	char	ipname[20];
 
 	ad[0] = ad[1] = ad[2] = ad[3] = 0;
@@ -221,7 +230,8 @@ int	port;
 	/*
 	 * At first, open a new socket
 	 */
-	cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (cptr->fd == -1)
+		cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (cptr->fd < 0)
 	    {
 		report_error("opening stream socket %s:%s", cptr);
@@ -230,44 +240,44 @@ int	port;
 	else if (cptr->fd >= MAXCONNECTIONS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
+		(void)close(cptr->fd);
 		return -1;
 	    }
 	set_sock_opts(cptr->fd, cptr);
 	/*
-	 * Bind a port to listen for new connections
+	 * Bind a port to listen for new connections if port is non-null,
+	 * else assume it is already open and try get something from it.
 	 */
-	cptr->ip.s_addr = inet_addr(ipname);
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(port);
-
-	/*
-	 * Try 10 times to bind the socket with an interval of 20 seconds.
-	 * Do this so we dont have to keepp trying manually to bind. Why ?
-	 * Because a port that has closed often lingers around for a short
-	 * time.
-	 */
-	for (length = 0; length < 10; length++)
+	if (port)
+	    {
+		server.sin_family = AF_INET;
+		server.sin_addr.s_addr = INADDR_ANY;
+		server.sin_port = htons(port);
+		/*
+		 * Try 10 times to bind the socket with an interval of 20
+		 * seconds. Do this so we dont have to keepp trying manually
+		 * to bind. Why ? Because a port that has closed often lingers
+		 * around for a short time.
+		 * This used to be the case.  Now it no longer is.
+		 * Could cause the server to hang for too long - avalon
+		 */
 		if (bind(cptr->fd, &server, sizeof(server)) == -1)
 		    {
 			report_error("binding stream socket %s:%s", cptr);
-			if (length >= 9)
-			    {
-				(void)close(cptr->fd);
-				return -1;
-			    }
-			(void)sleep(20);
+			(void)close(cptr->fd);
+			return -1;
 		    }
-		else
-			break;
+	    }
+	if (getsockname(cptr->fd, (struct sockaddr *)&server, &len))
+	    {
+		report_error("getsockname failed for %s:%s",cptr);
+		(void)close(cptr->fd);
+		return -1;
+	    }
 
 	if (cptr == &me) /* KLUDGE to get it work... */
 	    {
-		char buf[1024];
-		int len = sizeof(server);
-
-		if (getsockname(cptr->fd, &server, &len))
-	  		exit(1);
+		char	buf[1024];
 
 		(void)sprintf(buf, rpl_str(RPL_MYPORTIS), me.name, "*",
 			ntohs(server.sin_port));
@@ -276,6 +286,7 @@ int	port;
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
 	SetMe(cptr);
+	cptr->ip.s_addr = inet_addr(ipname);
 	cptr->port = (int)ntohs(server.sin_port);
 	cptr->from = cptr;
 	(void)listen(cptr->fd, 1);
@@ -334,12 +345,13 @@ int	port;
 
 	if ((cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 	    {
-		report_error("error opening unix domain socket %s:%s", NULL);
+		report_error("error opening unix domain socket %s:%s", cptr);
 		return -1;
 	    }
 	else if (cptr->fd >= MAXCONNECTIONS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
+		(void)close(cptr->fd);
 		return -1;
 	    }
 
@@ -355,7 +367,7 @@ int	port;
 	if (bind(cptr->fd, (struct sockaddr *)&un, strlen(unixpath)+2) == -1)
 	    {
 		report_error("error binding unix socket %s:%s", cptr);
-		close(cptr->fd);
+		(void)close(cptr->fd);
 		return -1;
 	    }
 	if (cptr->fd > highest_fd)
@@ -418,26 +430,42 @@ void	close_listeners()
 	    }
 }
 
-void	init_sys(bootopt)
-int	bootopt;
+void	init_sys()
 {
 	Reg1	int	fd;
 #ifdef RLIMIT_FD_MAX
 	struct rlimit limit;
 
-        if (!getrlimit(RLIMIT_FD_MAX, &limit))
-                if (limit.rlim_max < MAXCONNECTIONS)
-                    {
-                        (void)fprintf(stderr,"ircd fd table too big\n");
-                        (void)fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
-                                limit.rlim_max, MAXCONNECTIONS);
-                        (void)fprintf(stderr,"Fix MAXCONNECTIONS\n");
-                        exit(-1);
-                    }
+	if (!getrlimit(RLIMIT_FD_MAX, &limit))
+	    {
+		if (limit.rlim_max < MAXCONNECTIONS)
+		    {
+			(void)fprintf(stderr,"ircd fd table too big\n");
+			(void)fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
+				limit.rlim_max, MAXCONNECTIONS);
+			(void)fprintf(stderr,"Fix MAXCONNECTIONS\n");
+			exit(-1);
+		    }
+		limit.rlim_cur = limit.rlim_max; /* make soft limit the max */
+		if (setrlimit(RLIMIT_FD_MAX, &limit) == -1)
+		    {
+			(void)fprintf(stderr,"error setting max fd's to %d\n",
+					limit.rlim_cur);
+			exit(-1);
+		    }
+	    }
 #endif
 #ifdef sequent
 # ifndef	DYNIXPTX
 	(void)setdtablesize(SEQ_NOFILE);
+	if (SEQ_NOFILE < MAXCONNECTIONS)
+	    {
+		(void)fprintf(stderr,"ircd fd table too big\n");
+		(void)fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
+			limit.rlim_max, MAXCONNECTIONS);
+		(void)fprintf(stderr,"Fix MAXCONNECTIONS\n");
+		exit(-1);
+	    }
 # endif
 #endif
 #if defined(PCS) || defined(DYNIXPTX)
@@ -876,7 +904,7 @@ aClient	*cptr;
 		   my_name_for_link(me.name, aconf), me.info);
 	if (!(cptr->flags & FLAGS_DEADSOCKET))
 		start_auth(cptr);
-Debug((DEBUG_DEBUG,"cptr->flags = %x",cptr->flags));
+
 	return (cptr->flags & FLAGS_DEADSOCKET) ? -1 : 0;
 }
 
@@ -917,8 +945,8 @@ aClient *cptr;
 	 * If the connection has been up for a long amount of time, schedule
 	 * a 'quick' reconnect, else reset the next-connect cycle.
 	 */
-	if (aconf = find_conf_exact(cptr->name, cptr->sockhost,
-				    CONF_CONNECT_SERVER))
+	if (aconf = find_conf_exact(cptr->name, cptr->username,
+				    cptr->sockhost, CONF_CONNECT_SERVER))
 	    {
 		/*
 		 * Reschedule a faster reconnect, if this was a automaticly
@@ -976,7 +1004,7 @@ aClient *cptr;
 /*
 ** set_sock_opts
 */
-void	set_sock_opts(fd, cptr)
+static	void	set_sock_opts(fd, cptr)
 int	fd;
 aClient	*cptr;
 {
@@ -984,54 +1012,34 @@ aClient	*cptr;
 #ifdef SO_REUSEADDR
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-	    {
 		report_error("setsockopt(SO_REUSEADDR) %s:%s", cptr);
-		(void)close(fd);
-		return;
-	    }
 #endif
 #ifdef	SO_DEBUG
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_DEBUG, &opt, sizeof(opt)) < 0)
-	    {
 		report_error("setsockopt(SO_DEBUG) %s:%s", cptr);
-		(void)close(fd);
-		return;
-	    }
 #endif
 #ifdef	SO_USELOOPBACK
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_USELOOPBACK, &opt, sizeof(opt)) < 0)
-	    {
 		report_error("setsockopt(SO_USELOOPBACK) %s:%s", cptr);
-		(void)close(fd);
-		return;
-	    }
 #endif
 #ifdef	SO_RCVBUF
 	opt = 8192;
 	if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt)) < 0)
-	    {
 		report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
-		(void)close(fd);
-		return;
-	    }
 #endif
 #ifdef	SO_SNDBUF
 	opt = 8192;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
-	    {
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
-		(void)close(fd);
-		return;
-	    }
 #endif
 }
 
 int	get_sockerr(cptr)
 aClient	*cptr;
 {
-	int errtmp = errno, err, len = sizeof(err);
+	int errtmp = errno, err = 0, len = sizeof(err);
 
 	if (cptr->fd >= 0)
 		if (!getsockopt(cptr->fd, SOL_SOCKET, SO_ERROR, &err, &len))
@@ -1106,8 +1114,9 @@ int	fd;
 		if (getpeername(fd, (struct sockaddr *) &addr, &len) == -1)
 		    {
 			report_error("Failed in connecting to %s :%s", cptr);
+add_con_refuse:
 			ircstp->is_ref++;
-			(void)free((char *)cptr);
+			(void)free((char *)acptr);
 			(void)close(fd);
 			return NULL;
 		    }
@@ -1133,12 +1142,7 @@ int	fd;
 		    }
 
 		if (len)
-		    {
-			ircstp->is_ref++;
-			(void)free((char *)acptr);
-			(void)close(fd);
-			return NULL;
-		    }
+			goto add_con_refuse;
 
 		lin.flags = ASYNC_CLIENT;
 		lin.value.cptr = acptr;
@@ -1164,7 +1168,7 @@ int	fd;
 }
 
 #ifdef	UNIXPORT
-void	add_unixconnection(cptr, fd)
+static	void	add_unixconnection(cptr, fd)
 aClient	*cptr;
 int	fd;
 {
@@ -1205,7 +1209,7 @@ static	int	read_packet(cptr, rfd)
 Reg1	aClient *cptr;
 fd_set	*rfd;
 {
-	Reg1	int	dolen, length = 0, done;
+	Reg1	int	dolen = 0, length = 0, done;
 	Reg2	char	*readptr;
 
 	if (FD_ISSET(cptr->fd, rfd) &&
@@ -1453,10 +1457,8 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			if (IsUnixSocket(cptr))
 				add_unixconnection(cptr, fd);
 			else
-				(void)add_connection(cptr, fd);
-#else
-			(void)add_connection(cptr, fd);
 #endif
+				(void)add_connection(cptr, fd);
 			nextping = time(NULL);
 		    }
 
@@ -1540,9 +1542,10 @@ struct	hostent	*hp;
 	Debug((DEBUG_NOTICE,"Connect to %s[%s] @%s",
 		aconf->name,aconf->host,inetntoa((char *)&aconf->ipnum)));
 
-	if (c2ptr = find_server(aconf->name, NULL)) {
+	if (c2ptr = find_server(aconf->name, NULL))
+	    {
 		sendto_ops("Server %s already present from %s",
-			   aconf->name, c2ptr->name);
+			   aconf->name, get_client_name(c2ptr, TRUE));
 		return -1;
 	    }
 
@@ -1550,18 +1553,15 @@ struct	hostent	*hp;
 	 * If we dont know the IP# for this host and itis a hostname and
 	 * not a ip# string, then try and find the appropriate host record.
 	 */
-	if (!isdigit(*aconf->host) && isalpha(*aconf->host) &&
-	    aconf->ipnum.s_addr == 0)
+	if (!aconf->ipnum.s_addr)
 	    {
 	        Link    lin;
 
 		lin.flags = ASYNC_CONNECT;
 		lin.value.aconf = aconf;
 		nextdnscheck = -1;
-		if (s = (char *)index(aconf->host, '@'))
-			s++;
-		else
-			s = aconf->host;
+		s = (char *)index(aconf->host, '@');
+		s++; /* should NEVER be NULL */
 		hp = gethost_byname(s, &lin);
 		Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
 			hp, aconf, aconf->name, s));
@@ -1583,31 +1583,36 @@ struct	hostent	*hp;
 
 #ifdef	UNIXPORT
 	if (aconf->host[0] == '/')
-		svp = connect_unix_server(aconf, cptr, &len);
+		svp = connect_unix(aconf, cptr, &len);
 	else
-		svp = connect_inet_server(aconf, cptr, &len);
+		svp = connect_inet(aconf, cptr, &len);
 #else
-	svp = connect_inet_server(aconf, cptr, &len);
+	svp = connect_inet(aconf, cptr, &len);
 #endif
 
 	if (!svp)
+	    {
+		if (cptr->fd != -1)
+			(void)close(cptr->fd);
+		(void)free((char *)cptr);
 		return -1;
+	    }
 
 	set_non_blocking(cptr->fd, cptr);
 	set_sock_opts(cptr->fd, cptr);
 	(void)signal(SIGALRM, dummy);
 	(void)alarm(4);
-	if (connect(cptr->fd, svp, len) < 0
-	    && errno != EINPROGRESS)
+	if (connect(cptr->fd, svp, len) < 0 && errno != EINPROGRESS)
 	    {
+		errtmp = errno; /* other system calls may eat errno */
 		(void)alarm(0);
-		errtmp = errno; /* sendto_ops may eat errno */
 		report_error("Connect to host %s failed: %s",cptr);
 		(void)close(cptr->fd);
 		(void)free((char *)cptr);
-		if (errtmp == EINTR)
-			errtmp = ETIMEDOUT;
-		return(errtmp);
+		errno = errtmp;
+		if (errno == EINTR)
+			errno = ETIMEDOUT;
+		return -1;
 	    }
 	(void)alarm(0);
 
@@ -1655,7 +1660,7 @@ struct	hostent	*hp;
 	return 0;
 }
 
-struct	sockaddr *connect_inet_server(aconf, cptr, lenp)
+static	struct	sockaddr *connect_inet(aconf, cptr, lenp)
 Reg1	aConfItem	*aconf;
 Reg2	aClient	*cptr;
 int	*lenp;
@@ -1678,10 +1683,9 @@ int	*lenp;
 	server.sin_family = AF_INET;
 	get_sockhost(cptr, aconf->host);
 
-	if (cptr->fd < 0)
+	if (cptr->fd == -1)
 	    {
 		report_error("opening stream socket to server %s:%s", cptr);
-		(void)free((char *)cptr);
 		return NULL;
 	    }
 	/*
@@ -1692,8 +1696,6 @@ int	*lenp;
 	if (bind(cptr->fd, (struct sockaddr *)&mysk, sizeof(mysk)) == -1)
 	    {
 		report_error("error binding to local port for %s:%s", cptr);
-		(void)close(cptr->fd);
-		(void)free((char *)cptr);
 		return NULL;
 	    }
 	/*
@@ -1708,8 +1710,6 @@ int	*lenp;
 		hp = cptr->hostp;
 		if (!hp)
 		    {
-			(void)close(cptr->fd);
-			(void)free((char *)cptr);
 			Debug((DEBUG_FATAL, "%s: unknown host", aconf->host));
 			return NULL;
 		    }
@@ -1726,12 +1726,12 @@ int	*lenp;
 }
 
 #ifdef	UNIXPORT
-/* connect_unix_server
+/* connect_unix
  *
  * Build a socket structure for cptr so that it can connet to the unix
  * socket defined by the conf structure aconf.
  */
-struct	sockaddr *connect_unix_server(aconf, cptr, lenp)
+static	struct	sockaddr *connect_unix(aconf, cptr, lenp)
 aConfItem	*aconf;
 aClient	*cptr;
 int	*lenp;
@@ -1741,7 +1741,6 @@ int	*lenp;
 	if ((cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 	    {
 		report_error("Connect to host %s failed: %s", cptr);
-		(void)free((char *)cptr);
 		return NULL;
 	    }
 	else if (cptr->fd >= MAXCONNECTIONS)
@@ -1929,7 +1928,7 @@ aClient	*cptr;
 char	*name;
 int	len;
 {
-	static	char tmp[HOSTLEN];
+	static	char tmp[HOSTLEN+1];
 	struct	hostent	*hp;
 	char	*cname = cptr->name;
 
@@ -1939,7 +1938,7 @@ int	len;
 	bzero((char *)&mysk, sizeof(mysk));
 	mysk.sin_family = AF_INET;
 
-	if (gethostname(name,len) < 0)
+	if (gethostname(name,len) == -1)
 		return;
 	name[len] = '\0';
 
@@ -1959,28 +1958,28 @@ int	len;
 		char	*hname;
 		int	i = 0;
 
-		for (hname = hp->h_name; hname;
-		     hname = hp->h_aliases[i++])
+		for (hname = hp->h_name; hname; hname = hp->h_aliases[i++])
   		    {
 			strncpyzt(tmp, hname, sizeof(tmp));
 			add_local_domain(tmp, sizeof(tmp) - strlen(tmp));
 
-			if (!mycmp(tmp, cname))
-			    {
-				/*
-				** Copy the matching name over and store the
-				** 'primary' IP# as 'myip' which is used
-				** later for making the right one is used
-				** for connecting to other hosts.
-				*/
-				strncpyzt(name, cname, len);
-				bcopy(hp->h_addr, (char *)&mysk.sin_addr,
-					sizeof(struct in_addr));
-				Debug((DEBUG_DEBUG,"local name is %s",
-					get_client_name(&me,TRUE)));
-				return;
-			    }
+			/*
+			** Copy the matching name over and store the
+			** 'primary' IP# as 'myip' which is used
+			** later for making the right one is used
+			** for connecting to other hosts.
+			*/
+			if (!mycmp(me.name, tmp))
+				break;
  		    }
+		if (mycmp(me.name, tmp))
+			strncpyzt(name, hp->h_name, len);
+		else
+			strncpyzt(name, tmp, len);
+		bcopy(hp->h_addr, (char *)&mysk.sin_addr,
+			sizeof(struct in_addr));
+		Debug((DEBUG_DEBUG,"local name is %s",
+				get_client_name(&me,TRUE)));
 	    }
 	return;
 }
@@ -2061,7 +2060,7 @@ static	void	polludp()
 			return;
 		else
 		    {
-			report_error("udp port recvfrom : %s");
+			report_error("udp port recvfrom : %s", &me);
 			return;
 		    }
 	    }
