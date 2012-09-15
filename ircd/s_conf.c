@@ -179,7 +179,7 @@ aClient *cptr;
 aConfItem *aconf;
 {
   Reg1 Link **link, *tmp;
-  int status;
+  int status, illegal;
 
   link = &(cptr->confs);
 
@@ -187,12 +187,13 @@ aConfItem *aconf;
     if ((*link)->value.aconf == aconf) {
       if ((aconf) && (Class(aconf))) {
 	status = aconf->status;
-	if (IsIllegal(aconf))
-	  aconf->status *= CONF_ILLEGAL;
+	illegal = IsIllegal(aconf) ? -1 : 1;
+	aconf->status *= illegal;
 	if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER | CONF_LOCOP |
 	    CONF_OPERATOR | CONF_NOCONNECT_SERVER))
 	  if (ConfLinks(aconf) > 0)
 	     --ConfLinks(aconf);
+	aconf->status *= illegal;
         if (ConfMaxLinks(aconf) == -1 && ConfLinks(aconf) == 0)
 	  free(Class(aconf));
       }
@@ -207,8 +208,7 @@ aConfItem *aconf;
   }
 }
 
-static int
-IsAttached(aconf, cptr)
+static int IsAttached(aconf, cptr)
 aConfItem *aconf;
 aClient *cptr;
 {
@@ -236,7 +236,7 @@ aClient *cptr;
   if (IsAttached(aconf, cptr))
     return 1;
   if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR)) &&
-      ConfLinks(aconf) >= ConfMaxLinks(aconf))
+      ConfLinks(aconf) >= ConfMaxLinks(aconf) && ConfMaxLinks(aconf) > 0)
     return 0;
   link = (Link *) MyMalloc(sizeof(Link));
   link->next = cptr->confs;
@@ -280,7 +280,7 @@ int statmask;
   aConfItem *first = (aConfItem *) 0;
   int len = strlen(name);
   
-  if (len > HOSTLEN)
+  if (!name || len > HOSTLEN)
     return (aConfItem *) 0;
 
   for (tmp = conf; tmp; tmp = tmp->next) {
@@ -313,7 +313,7 @@ int statmask;
   aConfItem *first = (aConfItem *) 0;
   int len = strlen(host);
   
-  if (len > HOSTLEN)
+  if (!host || len > HOSTLEN)
     return (aConfItem *) 0;
 
   for (tmp = conf; tmp; tmp = tmp->next) {
@@ -394,9 +394,9 @@ int statmask;
     tmp = link->value.aconf;
     if ((tmp->status & statmask) &&
 	(((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER))
-	 && (!name || mycmp(tmp->name, name) == 0)) ||
+	 && mycmp(tmp->name, name) == 0) ||
 	((tmp->status & (CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER)) == 0
-	 && (!name || matches(tmp->name, name) == 0))))
+	 && matches(tmp->name, name) == 0)))
       break;
   }
   return(link ? tmp : (aConfItem *) 0);
@@ -606,10 +606,13 @@ int rehashing;
 		if (aconf->status & CONF_CLASS) {
 		  add_class(atoi(aconf->host), atoi(aconf->passwd),
 			   atoi(aconf->name), aconf->port);
+		  conf = conf->next;
+		  free(aconf);
+		  continue;
 		}
 
 		if (aconf->status & (CONF_CONNECT_SERVER |
-		    CONF_NOCONNECT_SERVER | CONF_CLASS)) {
+		    CONF_NOCONNECT_SERVER)) {
 		  if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
 		      aconf->host && index(aconf->host, '*')) {
 		    if (aconf->host)
@@ -629,7 +632,8 @@ int rehashing;
                 ** to the correct class record. -avalon
                 */
 		if (aconf->status & (CONF_CONNECT_SERVER | CONF_CLIENT |
-		    CONF_NOCONNECT_SERVER | CONF_OPERATOR | CONF_LOCOP)) {
+		    CONF_NOCONNECT_SERVER | CONF_OPERATOR | CONF_LOCOP |
+		    CONF_SERVICE )) {
 		  if (Class(aconf) == 0)
 		    Class(aconf) = find_class(0);
 		  if (MaxLinks(Class(aconf)) < 0)

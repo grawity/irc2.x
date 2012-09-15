@@ -298,7 +298,9 @@ char *hname;
 int flags;
 {
   aConfItem *aconf = NULL;
-  debug(DEBUG_NOTICE,"Checking access for (%s) host", hname);
+  debug(DEBUG_NOTICE,"Checking access for host: %s", hname);
+  if (cptr->confs)
+      det_confs_butmask(cptr, 0);
   aconf = attach_confs_host(cptr, hname, flags);
   if (aconf)
     {
@@ -307,10 +309,16 @@ int flags;
        ** accepting the connection into 'sockhost'
        */
       strncpyzt(cptr->sockhost, hname, elementsof(cptr->sockhost));
-      debug(DEBUG_NOTICE,"Access ok, host (%s)", hname);
+      if (!find_conf(cptr->confs, cptr->name, CONF_CONNECT_SERVER |
+		     CONF_NOCONNECT_SERVER))
+	{
+	  det_confs_butmask(cptr, 0);
+	  aconf = (aConfItem *)NULL;
+	}
+      debug(DEBUG_NOTICE,"Access ok, host: %s", hname);
     }
-    else
-      debug(DEBUG_NOTICE,"Access checked");
+  if (aconf == (aConfItem *)NULL)
+      debug(DEBUG_NOTICE,"Access check failed, host: %s", hname);
   return (aconf) ? 0 : -1;
 }
 
@@ -373,7 +381,7 @@ int flags, do_server;
   ** that function or #if this out for ULTRIX..  --msa
   */
   if ( (inet_netof(addr.sin_addr) == IN_LOOPBACKNET) &&
-       check_name(cptr, me.sockhost, flags))
+	check_name(cptr, me.sockhost, flags))
     return 0;
 
   /* To be able to fully utilize the benefits of having an special alias
@@ -387,8 +395,9 @@ int flags, do_server;
         for(i = 0; host->h_addr_list[i]; i++)
 	 {
 	  debug(DEBUG_DNS,"Found host %s for %s",
-		inet_ntoa(&host->h_addr_list[i]), cptr->name);
-	  if(!bcmp(host->h_addr_list[i], &(addr.sin_addr), host->h_length))
+		inet_ntoa(host->h_addr_list[i]), cptr->name);
+	  if(!bcmp(host->h_addr_list[i], &(addr.sin_addr.s_addr),
+		   sizeof(struct in_addr)))
 	    {
 	      strncpyzt(cptr->sockhost, cptr->name, sizeof(cptr->sockhost));
 	      return 0;
@@ -438,9 +447,17 @@ int flags, do_server;
   debug(DEBUG_DNS,"Last Check For Host %s", cptr->sockhost);
   if (!check_name(cptr,cptr->sockhost,flags))
     return 0;
+  if (!isdigit(*cptr->sockhost) && do_server)
+   {
+     strncpyzt(cptr->sockhost, inet_ntoa(addr.sin_addr),
+	       sizeof(cptr->sockhost));
+     if (!check_name(cptr,cptr->sockhost,flags))
+       return 0;
+   }
   if (!do_server)
     attach_confs(cptr,cptr->sockhost,flags);
-
+  else
+    det_confs_butmask(cptr,0);
   return (cptr->confs) ? 0 : -1;
 }
 
@@ -462,11 +479,11 @@ aClient *cptr;
    * This routine "can't" fail anymore...   meLazy
    */
 
-  aconf = find_conf(cptr->confs, (char *) 0, CONF_CONNECT_SERVER);
+  aconf = find_conf(cptr->confs, cptr->name, CONF_CONNECT_SERVER);
   if (!BadPtr(aconf->passwd))
     sendto_one(cptr, "PASS %s", aconf->passwd);
 
-  aconf = find_conf(cptr->confs, (char *) 0, CONF_NOCONNECT_SERVER);
+  aconf = find_conf(cptr->confs, cptr->name, CONF_NOCONNECT_SERVER);
   sendto_one(cptr, ":%s SERVER %s 1 :%s",
 		me.name, my_name_for_link(me.name, aconf), me.info);
 
@@ -766,9 +783,15 @@ aConfItem *aconf;
     {
 	struct sockaddr_in server;
 	struct hostent *hp;
-	aClient *cptr = make_client((aClient *)NULL);
+	aClient *cptr = make_client((aClient *)NULL), *c2ptr;
 	int errtmp;
 
+	if (c2ptr = (aClient *)find_server(aconf->name, NULL))
+	    {
+		sendto_ops("Server %s already present from %s",
+			   aconf->name, c2ptr->name);
+		return -1;
+	    }
 	/* might as well get sockhost from here, the connection is attempted
 	** with it so if it fails its useless.
 	*/
@@ -830,7 +853,7 @@ aConfItem *aconf;
         attach_confs_host(cptr, aconf->host,
 		       CONF_NOCONNECT_SERVER | CONF_CONNECT_SERVER);
 
-	if (! find_conf(cptr->confs, (char *) 0, CONF_NOCONNECT_SERVER))
+	if (!find_conf_host(cptr->confs, aconf->host, CONF_NOCONNECT_SERVER))
 	    {
       		sendto_ops("Host %s is not enabled for connecting (N-line)",
 			   aconf->host);
@@ -980,42 +1003,39 @@ char *conf_name, *name;
 int len;
 {
   struct hostent *hp;
-	
+
   if (gethostname(name,len) < 0)
     return -1;
   name[len] = '\0';
 
   /* assume that a name containing '.' is a fully qualified domain name */
-  if (!index(name, '.'))
-    {
-      add_local_domain(name, len - strlen(name));
-      return 0;
-    }
-
+  if (!index(name,'.'))
+    add_local_domain(name, len-strlen(name));
 
   /* If hostname gives another name than conf_name, then check if there is
    * a CNAME record for conf_name pointing to hostname. If so accept conf_name
    * as our name.   meLazy
    */
-  if (*conf_name && mycmp(conf_name, name))
+  if (!BadPtr(conf_name) && mycmp(conf_name, name))
     {
-    if (hp = gethostbyname(conf_name))
-      {
-        char tmp[HOSTLEN];
-        char *hname;
-        int i=0;
+      if (hp = gethostbyname(conf_name))
+	{
+	  char tmp[HOSTLEN];
+	  char *hname;
+	  int i=0;
 
-        for (hname = hp->h_name; hname; hname = hp->h_aliases[i++])
-	  {
-	    strncpy(tmp, hname, sizeof(tmp));
-	    add_local_domain(tmp, sizeof(tmp) - strlen(tmp));
-	    if (!mycmp(tmp, name))
-	      {
-	      strncpy(name, conf_name, len);
-	      break;
-	      }
-	  }
-      }
+	  for (hname = hp->h_name; hname; hname = hp->h_aliases[i++])
+	    {
+	      strncpy(tmp, hname, sizeof(tmp));
+	      add_local_domain(tmp, sizeof(tmp) - strlen(tmp));
+	      if (!mycmp(tmp, conf_name))
+		{
+		  strncpy(name, conf_name, len);
+		  break;
+		}
+	    }
+	}
     }
+
   return (0);
 }

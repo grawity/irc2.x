@@ -393,6 +393,11 @@ aChannel *chptr;
 			   me.name, chptr->chname, modebuf, parabuf);
     }
 
+/*
+ * m_mode
+ * parv[0] - sender
+ * parv[1] - channel
+ */
 
 m_mode(cptr, sptr, parc, parv)
 aClient *cptr;
@@ -429,7 +434,8 @@ char *parv[];
       mcount = set_mode(sptr, chptr, parc - 2, parv + 2, modebuf, parabuf);
   else if (parc < 3)
    {
-    *parabuf = '\0';
+    *modebuf = *parabuf = '\0';
+    modebuf[1] = '\0';
     channel_modes(modebuf, parabuf, chptr);
     sendto_one(sptr, ":%s %d %s %s %s %s",
 		me.name, RPL_CHANNELMODEIS, parv[0],
@@ -437,7 +443,7 @@ char *parv[];
     return 0;
    }
 
-  if (modebuf[0])
+  if (strlen(modebuf) > 1)
     {
       if (MyConnect(sptr) && !IsServer(sptr) && !chanop)
 	{
@@ -891,15 +897,16 @@ aChannel *xchptr;
     {
 	Reg1 aChannel *chptr = xchptr;
 	Reg2 Link *btmp;
+	Link *oldinv = (Link *)NULL, *inv = (Link *)NULL;
 	Link *obtmp;
 
 	if (--chptr->users <= 0) {
-	  Link *oldinv = (Link *)NULL, *inv = chptr->invites;
-	  /* Now, find all invite links from channel structure */
-	  while (inv != (Link *)NULL) {
-	    oldinv = inv;
-	    inv = inv->next;
-	    free(oldinv);
+	  /*
+	   * Now, find all invite links from channel structure
+	   */
+	  for (inv = chptr->invites; inv; inv = oldinv) {
+	    oldinv = inv->next;
+	    del_invite(inv->value.cptr, xchptr);
 	  }
 	  btmp = chptr->banlist;
 	  while (btmp != (Link *)NULL) {

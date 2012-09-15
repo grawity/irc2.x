@@ -41,7 +41,7 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
 
 extern aClient *client, me, *local[];
 extern aClient *find_server(), *find_person(), *find_service();
-extern aClient *find_userhost(), *find_client();
+extern aClient *find_userhost(), *find_client(), *find_name();
 extern aConfItem *find_conf(), *find_conf_name(), *find_admin();
 extern aConfItem *conf, *find_conf_exact(), *find_conf_host();
 extern int connect_server();
@@ -360,7 +360,7 @@ char *nick;
 	      {
 		sendto_ops("Received unauthorized connection from %s.",
 			   get_client_name(cptr,FALSE));
-		return exit_client(sptr, sptr, sptr, "");
+		return exit_client(sptr, sptr, sptr, "No Authorization");
 	      } 
 	    det_confs_butmask(cptr, CONF_CLIENT);
 	    det_I_lines_butfirst(cptr);
@@ -369,7 +369,7 @@ char *nick;
 		sendto_one(sptr, ":%s %d * :%s",
 			   me.name, ERR_NOPERMFORHOST,
 			   "Your host isn't among the privileged..");
-		return exit_client(sptr, sptr, sptr, "");
+		return exit_client(sptr, sptr, sptr, "Unpriveledged Host");
 	      }
 	    aconf = cptr->confs->value.aconf;
 	    if (!StrEq(sptr->passwd, aconf->passwd))
@@ -377,18 +377,13 @@ char *nick;
 		sendto_one(sptr, ":%s %d * :%s",
 			   me.name, ERR_PASSWDMISMATCH,
 			   "Only correct words will open this gate..");
-		return exit_client(sptr, sptr, sptr, "");
+		return exit_client(sptr, sptr, sptr, "Bad Password");
 	      }
 	    strncpyzt(sptr->user->host, sptr->sockhost, HOSTLEN);
 	    if (oldstatus == STAT_MASTER && MyConnect(sptr))
 		m_oper(&me, sptr, 1, parv);
 	  }
 	SetClient(sptr);
-	sendto_serv_butone(cptr, "NICK %s %d", nick, sptr->hopcount+1);
-	user = sptr->user;
-	sendto_serv_butone(cptr, ":%s USER %s %s %s %s", nick,
-			   user->username, user->host,
-			   user->server, sptr->info);
 	if (MyConnect(sptr))
 	  {
 	    sendto_one(sptr, "NOTICE %s :%s %s",
@@ -403,6 +398,11 @@ char *nick;
 	    m_lusers(sptr, sptr, 1, parv);
 	    m_motd(sptr, sptr, 1, parv);
 	  }
+	sendto_serv_butone(cptr, "NICK %s %d", nick, sptr->hopcount+1);
+	user = sptr->user;
+	sendto_serv_butone(cptr, ":%s USER %s %s %s %s", nick,
+			   user->username, user->host,
+			   user->server, sptr->info);
 	return 0;
     }
 
@@ -957,11 +957,11 @@ char *parv[];
 		 * Show user if they are on the same channel, or not
 		 * invisible and on a non secret channel (if any).
 		 */
+		isinvis = IsInvisible(acptr);
 		for (link = acptr->user->channel; link; link = link->next)
 		    {
 			chptr = link->value.chptr;
 			member = IsMember(sptr, chptr);
-			isinvis = IsInvisible(acptr);
 			if (isinvis && !member)
 				continue;
 			if (member || !isinvis && PubChannel(chptr))
@@ -1094,10 +1094,10 @@ char *parv[];
 			   me.name, RPL_WHOISCHANNELS,
 			   parv[0], acptr->name,
 			   buf);
-	      sendto_one(sptr,":%s %d %s %s :%s",
+	      sendto_one(sptr,":%s %d %s %s %s :%s",
 			 me.name, 
 			 RPL_WHOISSERVER,
-			 parv[0],
+			 parv[0], acptr->name,
 			 user->server,
 			 a2cptr ? a2cptr->info : "*Not On This Net*");
 	      if (user->away)
@@ -1393,7 +1393,7 @@ m_server(cptr, sptr, parc, parv)
   Reg2 int i;
   int hop, split;
 
-  info[0] == '\0';
+  info[0] = '\0';
   inpath = get_client_name(cptr,FALSE);
   if (parc < 2 || *parv[1] == '\0')
     {
@@ -1407,7 +1407,7 @@ m_server(cptr, sptr, parc, parv)
       hop = atoi(parv[2]);
       strncpy(info, parv[3], REALLEN);
     }
-  else
+  else if (parc > 2)
     {
       strncpy(info, parv[2], REALLEN);
       if (parc > 3)
@@ -1450,7 +1450,7 @@ m_server(cptr, sptr, parc, parv)
     }
   /* *WHEN* can it be that "cptr != sptr" ????? --msa */
   
-  if ((acptr = find_server(host, (aClient *)NULL)) != NULL)
+  if ((acptr = find_name(host, (aClient *)NULL)) != NULL)
     {
       /*
        ** This link is trying feed me a server that I
@@ -2574,7 +2574,7 @@ char *parv[];
 			":%s NOTICE %s :There are %d yet unknown connections",
 			   me.name, parv[0], u_count);
 	if ((c_count = count_channels(sptr))>0)
-		sendto_one(sptr, ":%s NOTICE %s :*** There are %d channels.",
+		sendto_one(sptr, ":%s NOTICE %s :There are %d channels.",
 			   me.name, parv[0], count_channels(sptr));
 	sendto_one(sptr, ":%s NOTICE %s :I have %d clients and %d servers",
 		   me.name, parv[0], m_client, m_server);
@@ -2743,7 +2743,7 @@ char *parv[];
 	    case -1:
 		sendto_one(sptr,
 			   ":%s NOTICE %s :*** Couldn't connect to %s.",
-			   me.name, parv[0], conf->host);
+			   me.name, parv[0], aconf->host);
 		break;
 	    case -2:
 		sendto_one(sptr,
@@ -3301,7 +3301,8 @@ char *parv[];
 
 	if (doall && IsOper(sptr))
 		for (acptr2 = client; acptr2; acptr2 = acptr2->next)
-			if (IsPerson(acptr2))
+			if (IsPerson(acptr2) &&
+			    (!IsInvisible(acptr2) || IsOper(sptr)))
 				link_u[acptr2->from->fd]++;
 			else if (IsServer(acptr2))
 				link_s[acptr2->from->fd]++;
@@ -3353,21 +3354,16 @@ char *parv[];
 		 }
 		break;
 	      case STAT_SERVER:
-		if (IsAnOper(sptr))
-		    sendto_one(sptr,
-		  	       ":%s %d %s Serv %d %dS %dC %s", me.name,
-				RPL_TRACESERVER, parv[0], class,
-			        link_s[i], link_u[i], name);
-		else
-		    sendto_one(sptr,
-				":%s %d %s Serv %d %s", me.name,
-				RPL_TRACESERVER, parv[0], class, name);
+		sendto_one(sptr,
+	 		   ":%s %d %s Serv %d %dS %dC %s", me.name,
+			   RPL_TRACESERVER, parv[0], class,
+			   link_s[i], link_u[i], name);
 		break;
 	      case STAT_SERVICE:
 		if (IsAnOper(sptr))
 		    sendto_one(sptr,
 				":%s %d %s Service %d %s", me.name,
-				RPL_TRACESERVER, parv[0], class, name);
+				RPL_TRACESERVICE, parv[0], class, name);
 		break;
 	      default: /* ...we actually shouldn't come here... --msa */
 		sendto_one(sptr,

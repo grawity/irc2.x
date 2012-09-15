@@ -203,10 +203,10 @@ char *parv[];
 				   next->home->user->username,
 				   next->home->user->host,
 				   next->home->info);
-			sendto_one(sptr,":%s %d %s %s :%s",
+			sendto_one(sptr,":%s %d %s %s %s :%s",
 				   me.name, 
 				   RPL_WHOISSERVER,
-				   sptr->name,
+				   sptr->name, next->name,
 				   next->home->user->server,
 				   myctime(next->time));
 			if (next->home->user->away)

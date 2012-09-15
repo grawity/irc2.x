@@ -268,6 +268,10 @@ long currenttime;
       if (killflag == ERR_YOUWILLBEBANNED && IsPerson(cptr))
 	sendto_one(cptr, reply, me.name, killflag, cptr->name);
     }
+    if (!oldest)
+      oldest = currenttime;
+    if (!smallp)
+      smallp = PINGFREQUENCY;
     debug(DEBUG_NOTICE,"Next check_ping() call at: %s, %d %d %d",
 	  myctime(oldest + smallp),smallp,oldest,currenttime);
   return (oldest);

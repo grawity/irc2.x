@@ -107,6 +107,8 @@ aClient	*acptr;
 		ping = PINGFREQUENCY;
 		debug(DEBUG_DEBUG,"No Attached Confs");
 	}
+	if (ping <= 0)
+		ping = PINGFREQUENCY;
 	debug(DEBUG_DEBUG,"Client %s Ping %d", acptr->name, ping);
 	return (ping);
 }
