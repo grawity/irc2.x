@@ -49,7 +49,7 @@
  * If you get loader errors about unreferenced function calls, you must
  * define the following accordingly:
  */
-#if NEXT
+#if NEXT || HPUX
 #define NEED_STRERROR   0
 #else
 #define NEED_STRERROR	1	/* Your libc.a is no ANSI-library and has */
@@ -305,7 +305,7 @@
 #if DEBUGMODE
 # define LOGFILE LPATH
 #else
-# define debug          (void)          /* anybody have a better idea? --SRB */
+# define debug          dummy
 # if VMS
 #	define LOGFILE "NLA0:"
 # else

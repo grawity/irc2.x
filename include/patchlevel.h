@@ -28,4 +28,4 @@
  *
  */
 
-#define PATCHLEVEL "2.6.2jp"
+#define PATCHLEVEL "2.6.2ajp"

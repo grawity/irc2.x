@@ -390,13 +390,14 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 	Reg2 aClient *cptr;
 	int sent[MAXCONNECTIONS];
 
-	for (i=0; i<highest_fd; i++)
+	for (i=0; i <= highest_fd; i++)
 		sent[i] = 0;
 	for (cptr = client; cptr; cptr = cptr->next)
 	    {
 		if (!IsOper(cptr))
 			continue;
-		if (sent[i = cptr->from->fd])
+		i = cptr->from->fd;	/* find connection oper is on */
+		if (sent[i])		/* sent message along it already ? */
 			continue;
 		if (cptr == one)
 			continue;	/* ...was the one I should skip */
