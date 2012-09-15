@@ -19,8 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	1.1 1/21/95 (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id: ircd.c,v 1.7 1997/07/07 21:23:43 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -35,6 +34,8 @@ Computing Center and Jarkko Oikarinen";
 #include <fcntl.h>
 #include <math.h>
 #include "h.h"
+
+extern	char	serveropts[];
 
 aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
@@ -143,7 +144,6 @@ VOIDSIG s_restart()
 void	server_reboot()
 {
 	Reg	int	i;
-	char	*myname;
 
 	sendto_flag(SCH_NOTICE, "Aieeeee!!!  Restarting server...");
 	Debug((DEBUG_NOTICE,"Restarting server..."));
@@ -163,18 +163,20 @@ void	server_reboot()
 	if ((bootopt & BOOT_CONSOLE) || isatty(0))
 		(void)close(0);
 	ircd_writetune(tunefile);
-	myname = (char *)malloc(strlen(MYNAME) + 6);
-	(void)strcpy(myname, MYNAME);
 	if (!(bootopt & (BOOT_INETD|BOOT_OPER)))
-		(void)execv(myname, myargv);
+	    {
+		(void)execv(MYNAME, myargv);
 #ifdef USE_SYSLOG
-	/* Have to reopen since it has been closed above */
-
-	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
-	syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", myname, myargv[0]);
-	closelog();
+		/* Have to reopen since it has been closed above */
+		
+		openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
+		syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", MYNAME,
+		       myargv[0]);
+		closelog();
 #endif
-	Debug((DEBUG_FATAL,"Couldn't restart server: %s", strerror(errno)));
+		Debug((DEBUG_FATAL,"Couldn't restart server: %s",
+		       strerror(errno)));
+	    }
 	exit(-1);
 }
 
@@ -206,7 +208,7 @@ time_t	currenttime;
 	for (aconf = conf; aconf; aconf = aconf->next )
 	    {
 		/* Also when already connecting! (update holdtimes) --SRB */
-		if (!(aconf->status & CONF_CONNECT_SERVER))
+		if (!(aconf->status & (CONF_CONNECT_SERVER|CONF_ZCONNECT_SERVER)))
 			continue;
 		/*
 		** Skip this entry if the use of it is still on hold until
@@ -320,6 +322,7 @@ time_t	currenttime;
 	Reg	int	kflag = 0;
 	int	ping = 0, i, rflag = 0;
 	time_t	oldest = 0, timeout;
+	char	*reason;
 
 	for (i = highest_fd; i >= 0; i--)
 	    {
@@ -335,13 +338,16 @@ time_t	currenttime;
 		    {
 			if (IsPerson(cptr))
 			    {
-				kflag = find_kill(cptr, rehashed);
+				kflag = find_kill(cptr, rehashed, &reason);
 #ifdef R_LINES_OFTEN
 				rflag = find_restrict(cptr);
 #endif
 			    }
 			else
+			    {
 				kflag = rflag = 0;
+				reason = NULL;
+			    }
 		    }
 		ping = IsRegistered(cptr) ? get_client_ping(cptr) :
 					    CONNECTTIMEOUT;
@@ -407,12 +413,17 @@ time_t	currenttime;
 			 */
 			if (kflag && IsPerson(cptr))
 			    {
+				char buf[100];
+
 				sendto_flag(SCH_NOTICE,
 					    "Kill line active for %s",
 					    get_client_name(cptr, FALSE));
 				cptr->exitc = EXITC_KLINE;
-				(void)exit_client(cptr, cptr, &me,
-						  "Kill line active");
+				if (reason)
+					sprintf(buf, "Kill line active: %.80s",
+						reason);
+				(void)exit_client(cptr, cptr, &me, (reason) ?
+						  buf : "Kill line active");
 			    }
 
 #if defined(R_LINES) && defined(R_LINES_OFTEN)
@@ -479,6 +490,7 @@ aClient	*mp;
 	mp->lasttime = mp->since = mp->firsttime = time(NULL);
 	mp->hopcount = 0;
 	mp->authfd = -1;
+	mp->auth = mp->username;
 	mp->confs = NULL;
 	mp->flags = 0;
 	mp->acpt = mp->from = mp;
@@ -487,19 +499,13 @@ aClient	*mp;
 	mp->fd = -1;
 	SetMe(mp);
 	(void) make_server(mp);
-#ifdef KRYS
 	mp->serv->snum = find_server_num (ME);
-#endif
 	(void) make_user(mp);
 	istat.is_users++;	/* here, cptr->next is NULL, see make_user() */
 	usrtop = mp->user;
 	mp->user->flags |= FLAGS_OPER;
 	mp->serv->up = mp->name;
-#ifdef KRYS
 	mp->user->server = find_server_string(mp->serv->snum);
-#else
-	(void) strcpy(mp->user->server, mp->name);
-#endif
 	strncpyzt(mp->user->username, p->pw_name, sizeof(mp->user->username));
 	(void) strcpy(mp->user->host, mp->name);
 
@@ -516,7 +522,7 @@ aClient	*mp;
 static	int	bad_command()
 {
   (void)printf(
-	 "Usage: ircd [-a] [-c] [-d path]%s [-h servername] [-q] [-o] [-i] [-T tunefile] [-v]%s\n",
+	 "Usage: ircd [-a] [-b] [-c] [-d path]%s [-h servername] [-q] [-o] [-i] [-T tunefile] [-v] %s\n",
 #ifdef CMDLINE_CONFIG
 	 " [-f config]",
 #else
@@ -557,7 +563,7 @@ char	*argv[];
 			      SPATH, dpath);
 		exit(-1);
 	    }
-	res_init();
+	ircd_res_init();
 	if (chroot(DPATH))
 	    {
 		perror("chroot");
@@ -565,6 +571,23 @@ char	*argv[];
 		exit(5);
 	    }
 #endif /*CHROOTDIR*/
+
+#ifdef	ZIP_LINKS
+	if (zlib_version[0] == '0')
+	    {
+		fprintf(stderr, "zlib version 1.0 or higher required\n");
+		exit(1);
+	    }
+	if (zlib_version[0] != ZLIB_VERSION[0])
+	    {
+        	fprintf(stderr, "incompatible zlib version\n");
+		exit(1);
+	    }
+	if (strcmp(zlib_version, ZLIB_VERSION) != 0)
+	    {
+		fprintf(stderr, "warning: different zlib version\n");
+	    }
+#endif
 
 	myargv = argv;
 	(void)umask(077);                /* better safe than sorry --SRB */
@@ -597,6 +620,9 @@ char	*argv[];
 		    {
                     case 'a':
 			bootopt |= BOOT_AUTODIE;
+			break;
+		    case 'b':
+			bootopt |= BOOT_BADTUNE;
 			break;
 		    case 'c':
 			bootopt |= BOOT_CONSOLE;
@@ -639,8 +665,15 @@ char	*argv[];
 			tunefile = p;
 			break;
 		    case 'v':
-			(void)printf("ircd %s\n", version);
-			exit(0);
+			(void)printf("ircd %s %s\n\tzlib %s\n\t%s #%s\n",
+				     version, serveropts,
+#ifndef	ZIP_LINKS
+				     "not used",
+#else
+				     zlib_version,
+#endif
+				     creation, generation);
+			  exit(0);
 		    case 'x':
 #ifdef	DEBUGMODE
                         (void)setuid((uid_t)uid);
@@ -659,7 +692,7 @@ char	*argv[];
 		    }
 	    }
 
-#ifndef	CHROOT
+#ifndef	CHROOTDIR
 	if (chdir(dpath))
 	    {
 		perror("chdir");
@@ -708,6 +741,10 @@ char	*argv[];
 
 	ircd_readtune(tunefile);
 	timeofday = time(NULL);
+#ifdef	CACHED_MOTD
+	motd = NULL;
+	read_motd(MPATH);
+#endif
 	initstats();
 	inithashtables();
 	initlists();
@@ -748,7 +785,7 @@ char	*argv[];
 		tmp->from = tmp;
 		SetMe(tmp);
 		(void)strcpy(tmp->name, "*");
-		(void)inetport(tmp, "*", 0);
+		(void)inetport(tmp, "", "*", 0);
 		local[0] = tmp;
 	    }
 */
@@ -1012,6 +1049,7 @@ char *filename;
 	int fd;
 	char buf[100];
 
+	(void)truncate(filename, 0);
 	if ((fd = open(filename, O_CREAT|O_WRONLY, 0600)) >= 0)
 	    {
 		(void)sprintf(buf, "%d\n%d\n%d\n%d\n%d\n%d\n", ww_size,
@@ -1036,21 +1074,40 @@ char *filename;
 void ircd_readtune(filename)
 char *filename;
 {
-	int fd;
+	int fd, t_data[6];
 	char buf[100];
 
+	buf[0] = '\0';
 	if ((fd = open(filename, O_RDONLY)) != -1)
 	    {
 		read(fd, buf, 100);	/* no panic if this fails.. */
-		if (sscanf(buf, "%d\n%d\n%d\n%d\n%d\n%d\n", &ww_size,
-			    &lk_size, &_HASHSIZE, &_CHANNELHASHSIZE,
-			    &_SERVERSIZE, &poolsize) != 6)
+		if (sscanf(buf, "%d\n%d\n%d\n%d\n%d\n%d\n", &t_data[0],
+                           &t_data[1], &t_data[2], &t_data[3],
+                           &t_data[4], &t_data[5]) != 6)
 		    {
-			fprintf(stderr, "ircd tune file %s: bad format\n",
-				filename);
 			close(fd);
-			exit(1);
+			if (bootopt & BOOT_BADTUNE)
+				return;
+			else
+			    {
+				fprintf(stderr,
+					"ircd tune file %s: bad format\n",
+					filename);
+				exit(1);
+			    }
 		    }
+
+		/*
+		** Initiate the tune-values after successfully
+		** reading the tune-file.
+		*/
+		ww_size = t_data[0];
+		lk_size = t_data[1];
+		_HASHSIZE = t_data[2];
+		_CHANNELHASHSIZE = t_data[3];
+		_SERVERSIZE = t_data[4];
+		poolsize = t_data[5];
+
 		/*
 		** the lock array only grows if the whowas array grows,
 		** I don't think it should be initialized with a lower

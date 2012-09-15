@@ -49,6 +49,10 @@
 #endif
 #include <sys/time.h>
 
+#ifdef	ZIP_LINKS
+#include <zlib.h>
+#endif
+
 typedef	struct	ConfItem aConfItem;
 typedef	struct 	Client	aClient;
 typedef	struct	Channel	aChannel;
@@ -59,6 +63,10 @@ typedef	struct	SLink	Link;
 typedef	struct	SMode	Mode;
 typedef	struct	fdarray	FdAry;
 typedef	struct	CPing	aCPing;
+typedef	struct	Zdata	aZdata;
+#ifdef CACHED_MOTD
+typedef struct        MotdItem aMotd;
+#endif
 
 #include "service.h"
 
@@ -86,16 +94,22 @@ typedef	struct	CPing	aCPing;
 #define	MAXBANS		20
 #define	MAXBANLENGTH	1024
 #define	BANLEN		(USERLEN + NICKLEN + HOSTLEN + 3)
+#define MAXPENALTY	10
 
+#define	READBUF_SIZE	16384	/* used in s_bsd.c *AND* s_zip.c ! */
+ 
 /*
  * Make up some numbers which should reflect average leaf server connect
  * queue max size.
+ * queue=(<# of channels> * <channel size> + <user size> * <# of users>) * 2
+ * pool=<queue per client> * <avg. # of clients having data in queue>
  */
-#define	QUEUELEN	(((MAXCONNECTIONS / 16) * (CHANNELLEN + BANLEN + 16) +\
+#define	QUEUELEN	(((MAXCONNECTIONS / 10) * (CHANNELLEN + BANLEN + 16) +\
 			  (HOSTLEN * 4 + REALLEN + NICKLEN + USERLEN + 24) *\
-			  (MAXCONNECTIONS / 16)) * 2)
+			  (MAXCONNECTIONS / 2)) * 2)
 
-#define	BUFFERPOOL	(QUEUELEN * MAXCONNECTIONS / 16)
+#define	BUFFERPOOL	(DBUFSIZ * MAXCONNECTIONS * 2) + \
+			(QUEUELEN * MAXSERVERS)
 
 #define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)
 
@@ -114,13 +128,14 @@ typedef	struct	CPing	aCPing;
 /*
 ** flags for bootup options (command line flags)
 */
-#define	BOOT_CONSOLE	1
-#define	BOOT_QUICK	2
-#define	BOOT_DEBUG	4
-#define	BOOT_INETD	8
-#define	BOOT_TTY	16
-#define	BOOT_OPER	32
-#define	BOOT_AUTODIE	64
+#define	BOOT_CONSOLE	0x001
+#define	BOOT_QUICK	0x002
+#define	BOOT_DEBUG	0x004
+#define	BOOT_INETD	0x008
+#define	BOOT_TTY	0x010
+#define	BOOT_OPER	0x020
+#define	BOOT_AUTODIE	0x040
+#define BOOT_BADTUNE	0x080
 
 #define	STAT_RECONNECT	-7	/* Reconnect attempt for server connections */
 #define	STAT_LOG	-6	/* logfile for -x */
@@ -167,7 +182,7 @@ typedef	struct	CPing	aCPing;
 #define	FLAGS_UNIX	 0x0010	/* socket is in the unix domain, not inet */
 #define	FLAGS_CLOSING    0x0020	/* set when closing to suppress errors */
 #define	FLAGS_LISTEN     0x0040 /* used to mark clients which we listen() on */
-#define	FLAGS_CHKACCESS  0x0080 /* ok to check clients access if set */
+#define	FLAGS_CHKACCESS  0x0080 /* ok to check clients access if set [unused]*/
 #define	FLAGS_DOINGDNS	 0x0100 /* client is waiting for a DNS response */
 #define	FLAGS_AUTH	 0x0200 /* client is waiting on rfc931 response */
 #define	FLAGS_WRAUTH	 0x0400	/* set if we havent writen to ident server */
@@ -182,6 +197,8 @@ typedef	struct	CPing	aCPing;
 #define FLAGS_SPLIT     0x80000 /* client QUITting because of a netsplit */
 #define FLAGS_HIDDEN   0x100000 /* netsplit is behind a hostmask */
 #define	FLAGS_UNKCMD   0x200000	/* has sent an unknown command */
+#define	FLAGS_ZIP      0x400000 /* link is zipped */
+#define	FLAGS_ZIPRQ    0x800000 /* zip requested */
 
 #define	FLAGS_OPER       0x0001	/* Operator */
 #define	FLAGS_LOCOP      0x0002 /* Local operator -- SRB */
@@ -263,10 +280,10 @@ struct	CPing	{
 	u_short	port;		/* port to send pings to */
 	u_long	rtt;		/* average RTT */
 	u_long	ping;
-	u_long	seq;		/* sequence # of last sent */
-	u_long	lseq;
-	u_long	recv;		/* # received */
-	u_long	lrecv;
+	u_long	seq;		/* # sent still in the "window" */
+	u_long	lseq;		/* sequence # of last sent */
+	u_long	recv;		/* # received still in the "window" */
+	u_long	lrecv;		/* # received */
 };
 
 struct	ConfItem	{
@@ -288,27 +305,32 @@ struct	ConfItem	{
 
 #define	CONF_ILLEGAL		0x80000000
 #define	CONF_MATCH		0x40000000
-#define	CONF_QUARANTINED_SERVER	0x0001
-#define	CONF_CLIENT		0x0002
-#define CONF_RCLIENT            0x0004
-#define	CONF_CONNECT_SERVER	0x0008
-#define	CONF_NOCONNECT_SERVER	0x0010
-#define	CONF_LOCOP		0x0020
-#define	CONF_OPERATOR		0x0040
-#define	CONF_ME			0x0080
-#define	CONF_KILL		0x0100
-#define	CONF_ADMIN		0x0200
+#define	CONF_QUARANTINED_SERVER	0x00001
+#define	CONF_CLIENT		0x00002
+#define CONF_RCLIENT            0x00004
+#define	CONF_CONNECT_SERVER	0x00008
+#define	CONF_NOCONNECT_SERVER	0x00010
+#define	CONF_ZCONNECT_SERVER	0x00020
+#define	CONF_LOCOP		0x00040
+#define	CONF_OPERATOR		0x00080
+#define	CONF_ME			0x00100
+#define	CONF_KILL		0x00200
+#define	CONF_ADMIN		0x00400
 #ifdef 	R_LINES
-#define	CONF_RESTRICT		0x0400
+#define	CONF_RESTRICT		0x00800
 #endif
-#define	CONF_CLASS		0x0800
-#define	CONF_SERVICE		0x1000
-#define	CONF_LEAF		0x2000
-#define	CONF_LISTEN_PORT	0x4000
-#define	CONF_HUB		0x8000
+#define	CONF_CLASS		0x01000
+#define	CONF_SERVICE		0x02000
+#define	CONF_LEAF		0x04000
+#define	CONF_LISTEN_PORT	0x08000
+#define	CONF_HUB		0x10000
+#define	CONF_VER		0x20000
+#define	CONF_BOUNCE		0x40000
+#define	CONF_OTHERKILL		0x80000
 
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
-#define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
+#define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER |\
+				 CONF_ZCONNECT_SERVER)
 #define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_RCLIENT | CONF_SERVICE | CONF_OPS | \
 				 CONF_SERVER_MASK)
 
@@ -324,6 +346,31 @@ typedef	struct	{
 
 #define	PING_REPLY	0x01
 #define	PING_CPING	0x02
+
+#ifdef	ZIP_LINKS
+/* the minimum amount of data needed to trigger compression */
+# define	ZIP_MINIMUM	4096
+
+/* the maximum amount of data to be compressed (can actually be a bit more) */
+# define	ZIP_MAXIMUM	8192	/* WARNING: *DON'T* CHANGE THIS!!!! */
+
+struct Zdata {
+	z_stream	*in;		/* input zip stream data */
+	z_stream	*out;		/* output zip stream data */
+	char		inbuf[ZIP_MAXIMUM]; /* incoming zipped buffer */
+	char		outbuf[ZIP_MAXIMUM]; /* outgoing (unzipped) buffer */
+	int		incount;	/* size of inbuf content */
+	int		outcount;	/* size of outbuf content */
+};
+#endif
+
+#ifdef CACHED_MOTD
+struct  MotdItem
+{ 
+    char    *line;
+    struct  MotdItem *next;
+};
+#endif
 
 /*
  * Client structures
@@ -353,11 +400,7 @@ struct	User	{
 	aClient	*bcptr;
 	char	username[USERLEN+1];
 	char	host[HOSTLEN+1];
-#ifdef KRYS
 	char	*server;
-#else
-	char	server[HOSTLEN+1];
-#endif
 };
 
 struct	Server	{
@@ -366,9 +409,7 @@ struct	Server	{
 	char	*up;	/* uplink for this server */
 	aConfItem *nline;	/* N-line pointer for this server */
 	int	version;        /* version id for local client */
-#ifdef KRYS
 	int	snum;
-#endif
 	int	stok,
 		ltok;
 	int	refcnt;		/* Number of times this block is referenced
@@ -396,12 +437,7 @@ struct Client	{
 	anUser	*user;		/* ...defined, if this is a User */
 	aServer	*serv;		/* ...defined, if this is a server */
 	aService *service;
-	int	hashv;		/* raw hash value */
-#ifndef KRYS
-	time_t	lasttime;	/* ...should be only LOCAL clients? --msa */
-	time_t	firsttime;	/* time client was created */
-	time_t	since;		/* last time we parsed something */
-#endif
+	u_int	hashv;		/* raw hash value */
 	long	flags;		/* client flags */
 	aClient	*from;		/* == self, if Local Client, *NEVER* NULL! */
 	int	fd;		/* >= 0, for local clients */
@@ -419,6 +455,9 @@ struct Client	{
 	*/
 	int	count;		/* Amount of data in buffer */
 	char	buffer[BUFSIZE]; /* Incoming message buffer */
+#ifdef	ZIP_LINKS
+	aZdata	*zip;		/* zip data */
+#endif
 	short	lastsq;		/* # of 2k blocks when sendqueued called last*/
 	dbuf	sendQ;		/* Outgoing message queue--if socket full */
 	dbuf	recvQ;		/* Hold for data incoming yet to be parsed */
@@ -428,15 +467,14 @@ struct Client	{
 	long	receiveK;	/* Statistics: total k-bytes received */
 	u_short	sendB;		/* counters to count upto 1-k lots of bytes */
 	u_short	receiveB;	/* sent and received. */
-#ifdef KRYS
 	time_t	lasttime;
 	time_t	firsttime;	/* time client was created */
 	time_t	since;		/* last time we parsed something */
-#endif
 	u_int	sact;		/* could conceivably grow large...*/
 	aClient	*acpt;		/* listening client which we accepted from */
 	Link	*confs;		/* Configuration record associated */
 	int	authfd;		/* fd for rfc931 authentication */
+	char	*auth;
 	int	priority;	/* priority for selection as active */
 	u_short	ract;		/* no fear about this. */
 	u_short	port;		/* and the remote port# too :-) */
@@ -462,7 +500,8 @@ struct Client	{
 struct	stats {
 	u_int	is_cl;	/* number of client connections */
 	u_int	is_sv;	/* number of server connections */
-	u_int	is_ni;	/* connection but no idea who it was */
+	u_int	is_ni;	/* connection but no idea who it was
+			 * (can be a P: line that has been removed -krys) */
 	u_short	is_cbs;	/* bytes sent to clients */
 	u_short	is_cbr;	/* bytes received to clients */
 	u_short	is_sbs;	/* bytes sent to servers */
@@ -484,7 +523,9 @@ struct	stats {
 	u_int	is_fake; /* MODE 'fakes' */
 	u_int	is_asuc; /* successful auth requests */
 	u_int	is_abad; /* bad auth requests */
-	u_int	is_udp;	/* packets recv'd on udp port */
+	u_int	is_udpok;	/* packets recv'd on udp port */
+	u_int	is_udperr;	/* packets recvfrom errors on udp port */
+	u_int	is_udpdrop;	/* packets recv'd but dropped on udp port */
 	u_int	is_loc;	/* local connections made */
 	u_int	is_ghost; /* ghost dropped */
 	u_int	is_nosrv; /* user without server */
@@ -525,8 +566,8 @@ struct	Message	{
 #define	MSG_NOUK	0x0008	/* Not available to unknowns */
 #define	MSG_REG		0x0010	/* Must be registered */
 #define	MSG_REGU	0x0020	/* Must be a registered user */
-#define	MSG_PP		0x0040
-#define	MSG_FRZ		0x0080
+/*#define	MSG_PP		0x0040*/
+/*#define	MSG_FRZ		0x0080*/
 #define	MSG_OP		0x0100	/* opers only */
 #define	MSG_LOP		0x0200	/* locops only */
 
@@ -555,7 +596,7 @@ struct	SLink	{
 
 struct Channel	{
 	struct	Channel *nextch, *prevch, *hnextch;
-	int	hashv;		/* raw hash value */
+	u_int	hashv;		/* raw hash value */
 	Mode	mode;
 	char	topic[TOPICLEN+1];
 	int	users;		/* current membership total */
@@ -615,8 +656,12 @@ struct Channel	{
 #define	PubChannel(x)		((!x) || ((x)->mode.mode &\
 				 (MODE_PRIVATE | MODE_SECRET)) == 0)
 
-/* #define	IsMember(u, c)		(assert(*(c)->chname != '\0'), find_user_link((c)->members, u) ? 1 : 0) */
+/*
+#define	IsMember(u, c)		(assert(*(c)->chname != '\0'), find_user_link((c)->members, u) ? 1 : 0)
 #define	IsMember(u, c)		(find_user_link((c)->members, u) ? 1 : 0)
+*/
+#define       IsMember(u, c)          (u && (u)->user && \
+		       find_channel_link((u)->user->channel, c) ? 1 : 0)
 #define	IsChannelName(n)	((n) && (*(n) == '#' || *(n) == '&' || \
 					*(n) == '+'))
 #define	IsQuiet(x)		((x)->mode.mode & MODE_QUIET)
@@ -666,6 +711,14 @@ typedef	struct	{
 	u_long	is_users;	/* user structs */
 	u_long	is_useri;	/* user invites */
 	u_long	is_userc;	/* user links to channels */
+	u_long	is_auth;	/* OTHER ident reply block */
+	u_long	is_authmem;
+	u_int	is_dbuf;	/* number of dbuf allocated (originally) */
+	u_int	is_dbufnow;	/* number of dbuf allocated */
+	u_int	is_dbufuse;	/* number of dbuf in use */
+	u_int	is_dbufmin;	/* min number of dbuf in use */
+	u_int	is_dbufmax;	/* max number of dbuf in use */
+	u_int	is_dbufmore;	/* how many times we increased the bufferpool*/
 } istat_t;
 
 /* String manipulation macros */
@@ -713,7 +766,9 @@ typedef	struct	{
 #define	SCH_SERVER	6
 #define	SCH_HASH	7
 #define	SCH_LOCAL	8
-#define	SCH_MAX		8
+#define	SCH_SERVICE	9
+#define	SCH_DEBUG	10
+#define	SCH_MAX		10
 
 /* used for async dns values */
 

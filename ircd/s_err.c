@@ -17,15 +17,15 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef lint
+static  char rcsid[] = "@(#)$Id: s_err.c,v 1.5 1997/06/02 13:17:16 kalt Exp $";
+#endif
+
 #include "sys.h"
 #include "struct.h"
 #include "numeric.h"
 #include "common.h"
 #include "h.h"
-
-#ifndef lint
-static  char sccsid[] = "@(#)s_err.c	1.1 1/21/95 (C) 1992 Darren Reed";
-#endif
 
 typedef	struct	{
 	int	num_val;
@@ -41,6 +41,7 @@ static	Numeric	local_replies[] = {
 /* 002 */	RPL_YOURHOST, ":Your host is %s, running version %s",
 /* 003 */	RPL_CREATED, ":This server was created %s",
 /* 004 */	RPL_MYINFO, "%s %s oirw abiklmnopqstv",
+/* 005 */	RPL_BOUNCE, ":Try server %s, port %d",
 		0, (char *)NULL
 };
 
@@ -52,11 +53,10 @@ static	Numeric	numeric_errors[] = {
 /* 405 */	ERR_TOOMANYCHANNELS, "%s :You have joined too many channels",
 /* 406 */	ERR_WASNOSUCHNICK, "%s :There was no such nickname",
 /* 407 */	ERR_TOOMANYTARGETS,
-		"%s :Duplicate recipients. No message delivered",
+		"%s :%s recipients. No message delivered",
 /* 408 */	ERR_NOSUCHSERVICE, "%s :No such service",
 /* 409 */	ERR_NOORIGIN, ":No origin specified",
-/* 410 */	ERR_TOOMANYDESTS,
-		"%s :Too many recipients. No message delivered",
+		0, (char *)NULL,
 /* 411 */	ERR_NORECIPIENT, ":No recipient given (%s)",
 /* 412 */	ERR_NOTEXTTOSEND, ":No text to send",
 /* 413 */	ERR_NOTOPLEVEL, "%s :No toplevel domain specified",
@@ -198,7 +198,7 @@ static	Numeric	numeric_replies[] = {
 		0, (char *)NULL,
 /* 381 */	RPL_YOUREOPER, ":You are now an IRC Operator",
 /* 382 */	RPL_REHASHING, "%s :Rehashing",
-/* 383 */	RPL_YOURESERVICE, (char *)NULL,
+/* 383 */	RPL_YOURESERVICE, ":You are service %s",
 /* 384 */	RPL_MYPORTIS, "%d :Port to local server is\r\n",
 /* 385 */	RPL_NOTOPERANYMORE, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
@@ -215,24 +215,24 @@ static	Numeric	numeric_replies[] = {
 #endif
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL,
-/* 200 */	RPL_TRACELINK, "Link %s%s %s %s",
+/* 200 */	RPL_TRACELINK, "Link %s%s %s %s V%d%s %d %d %d",
 /* 201 */	RPL_TRACECONNECTING, "Try. %d %s",
 /* 202 */	RPL_TRACEHANDSHAKE, "H.S. %d %s",
 /* 203 */	RPL_TRACEUNKNOWN, "???? %d %s",
 /* 204 */	RPL_TRACEOPERATOR, "Oper %d %s",
 /* 205 */	RPL_TRACEUSER, "User %d %s",
-/* 206 */	RPL_TRACESERVER, "Serv %d %dS %dC %s %s!%s@%s V%d",
+/* 206 */	RPL_TRACESERVER, "Serv %d %dS %dC %s %s!%s@%s V%d%s",
 /* 207 */	RPL_TRACESERVICE, "Service %d %s %d %d",
 /* 208 */	RPL_TRACENEWTYPE, "<newtype> 0 %s",
 /* 209 */	RPL_TRACECLASS, "Class %d %d",
 /* 210 */	RPL_TRACERECONNECT, "Retry. %d %s",
 /* 211 */	RPL_STATSLINKINFO, (char *)NULL,
 /* 212 */	RPL_STATSCOMMANDS, "%s %u %u",
-/* 213 */	RPL_STATSCLINE, "%c %s * %s %d %d",
-/* 214 */	RPL_STATSNLINE, "%c %s * %s %d %d",
-/* 215 */	RPL_STATSILINE, "%c %s * %s %d %d",
+/* 213 */	RPL_STATSCLINE, "%c %s %s %s %d %d",
+/* 214 */	RPL_STATSNLINE, "%c %s %s %s %d %d",
+/* 215 */	RPL_STATSILINE, "%c %s %s %s %d %d",
 /* 216 */	RPL_STATSKLINE, "%c %s %s %s %d %d",
-/* 217 */	RPL_STATSQLINE, "%c %s * %s %d %d",
+/* 217 */	RPL_STATSQLINE, "%c %s %s %s %d %d",
 /* 218 */	RPL_STATSYLINE, "%c %d %d %d %d %ld",
 /* 219 */	RPL_ENDOFSTATS, "%c :End of /STATS report",
 		0, (char *)NULL,
@@ -246,15 +246,16 @@ static	Numeric	numeric_replies[] = {
 /* 234 */	RPL_SERVLIST, "%s %s %s %d %d :%s",
 /* 235 */	RPL_SERVLISTEND, "%s %d :End of service listing",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL, 0, (char *)NULL,
-/* 241 */	RPL_STATSLLINE, "%c %s * %s %d %d",
-/* 242 */	RPL_STATSUPTIME, ":Server Up %d days, %d:%02d:%02d",
-/* 243 */	RPL_STATSOLINE, "%c %s * %s %d %d",
-/* 244 */	RPL_STATSHLINE, "%c %s * %s %d %d", 
-/* 245 */	RPL_STATSSLINE, "%c %s * %s %d %d", 
-/* 246 */	RPL_STATSPING, "%s %d %d %d %d",
-		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL,
+/* 240 */	RPL_STATSVLINE, "%c %s %s %s %d %d",
+/* 241 */	RPL_STATSLLINE, "%c %s %s %s %d %d",
+/* 242 */	RPL_STATSUPTIME, ":Server Up %d days, %d:%02d:%02d",
+/* 243 */	RPL_STATSOLINE, "%c %s %s %s %d %d",
+/* 244 */	RPL_STATSHLINE, "%c %s %s %s %d %d", 
+/* 245 */	RPL_STATSSLINE, "%c %s %s %s 0x%X %d", 
+/* 246 */	RPL_STATSPING, "%s %d %d %d %d",
+/* 247 */	RPL_STATSBLINE, "%c %s %s %s %d %d",
+		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 /* 251 */	RPL_LUSERCLIENT,
 		":There are %d users and %d services on %d servers",
 /* 252 */	RPL_LUSEROP, "%d :operators online",
@@ -311,7 +312,7 @@ char	*to;
 	Reg	Numeric	*nptr;
 	Reg	int	num = numeric;
 
-	if (num > 4)
+	if (num > 5)
 		num -= (num > 300) ? 300 : 100;
 
 	if (BadPtr(to))		/* for unregistered clients */

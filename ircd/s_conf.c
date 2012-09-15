@@ -48,8 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	1.1 1/21/95 (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.10 1997/07/15 04:35:47 kalt Exp $";
 #endif
 
 #include "struct.h"
@@ -62,8 +61,6 @@ Computing Center and Jarkko Oikarinen";
 #ifdef __hpux
 # ifdef HAVE_ARPA_INET_H
 #  include <arpa/inet.h>
-# else
-#  include "inet.h"
 # endif
 #endif
 #if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
@@ -160,7 +157,9 @@ attach_iline:
 		if (aconf->status & CONF_RCLIENT)
 			SetRestricted(cptr);
 		get_sockhost(cptr, uhost);
-		return attach_conf(cptr, aconf);
+		if ((i = attach_conf(cptr, aconf)) < -1)
+			find_bounce(cptr, ConfClass(aconf));
+		return i;
 	    }
 	return -1;
 }
@@ -179,7 +178,8 @@ Reg	Link	*lp;
 		aconf = lp->value.aconf;
 		if (!(aconf->status & CONF_SERVER_MASK))
 			continue;
-		if (aconf->status == CONF_CONNECT_SERVER && !cline)
+		if ((aconf->status == CONF_CONNECT_SERVER ||
+		     aconf->status == CONF_ZCONNECT_SERVER) && !cline)
 			cline = aconf;
 		else if (aconf->status == CONF_NOCONNECT_SERVER && !nline)
 			nline = aconf;
@@ -288,8 +288,8 @@ aClient *cptr;
 				if ((acptr = local[i]) && (cptr != acptr) &&
 				    !bcmp((char *)&cptr->ip,(char *)&acptr->ip,
 					  sizeof(cptr->ip))
-				    && !strncasecmp(acptr->username,
-						    cptr->username, USERLEN))
+				    && !strncasecmp(acptr->auth,
+						    cptr->auth, USERLEN))
 					cnt--;
 			if (cnt <= ConfConFreq(aconf))
 				return -5;      /* for error message */
@@ -597,7 +597,7 @@ int	sig;
 	if (sig == 1)
 	    {
 		sendto_flag(SCH_NOTICE,
-			    "Got signal SIGHUP, reloading ircd conf. file");
+			    "Got signal SIGHUP, reloading ircd.conf file");
 #ifdef	ULTRIX
 		if (fork() > 0)
 			exit(0);
@@ -678,6 +678,9 @@ int	sig;
 			if (!tmp2->clients)
 				free_conf(tmp2);
 		    }
+#ifdef CACHED_MOTD
+	read_motd(MPATH);
+#endif
 	rehashed = 1;
 	return ret;
 }
@@ -823,10 +826,18 @@ int	opt;
 			case 'a': /* of this server. */
 				aconf->status = CONF_ADMIN;
 				break;
+			case 'B': /* Name of alternate servers */
+			case 'b':
+				aconf->status = CONF_BOUNCE;
+				break;
 			case 'C': /* Server where I should try to connect */
-			case 'c': /* in case of lp failures             */
+			  	  /* in case of lp failures             */
 				ccount++;
 				aconf->status = CONF_CONNECT_SERVER;
+				break;
+			case 'c':
+				ccount++;
+				aconf->status = CONF_ZCONNECT_SERVER;
 				break;
 			case 'H': /* Hub server line */
 			case 'h':
@@ -840,8 +851,10 @@ int	opt;
 				aconf->status = CONF_RCLIENT;
 				break;
 			case 'K': /* Kill user line on irc.conf           */
-			case 'k':
 				aconf->status = CONF_KILL;
+				break;
+			case 'k':
+				aconf->status = CONF_OTHERKILL;
 				break;
 			/* Operator. Line should contain at least */
 			/* password and host where connection is  */
@@ -886,10 +899,15 @@ int	opt;
 			case 's': /* CONF_OPERATOR                */
 				aconf->status = CONF_SERVICE;
 				break;
+#if 0
 			case 'U': /* Uphost, ie. host where client reading */
 			case 'u': /* this should connect.                  */
 			/* This is for client only, I must ignore this */
 			/* ...U-line should be removed... --msa */
+				break;
+#endif
+			case 'V': /* Server link version requirements */
+				aconf->status = CONF_VER;
 				break;
 			case 'Y':
 			case 'y':
@@ -918,6 +936,8 @@ int	opt;
 			aconf->port = atoi(tmp);
 			if (aconf->status == CONF_CONNECT_SERVER)
 				DupString(tmp2, tmp);
+			if (aconf->status == CONF_ZCONNECT_SERVER)
+				DupString(tmp2, tmp);
 			if ((tmp = getfield(NULL)) == NULL)
 				break;
 			Class(aconf) = find_class(atoi(tmp));
@@ -927,6 +947,11 @@ int	opt;
 		istat.is_confmem += aconf->passwd ? strlen(aconf->passwd)+1 :0;
 		istat.is_confmem += aconf->name ? strlen(aconf->name)+1 : 0;
 
+		/*
+		** Bounce line fields are mandatory
+		*/
+		if (aconf->status == CONF_BOUNCE && aconf->port == 0)
+			continue;
 		/*
                 ** If conf line is a class definition, create a class entry
                 ** for it and make the conf_line illegal and delete it.
@@ -997,7 +1022,7 @@ int	opt;
 			else if (!(opt & BOOT_QUICK))
 				(void)lookup_confhost(aconf);
 		    }
-		if (aconf->status & CONF_CONNECT_SERVER)
+		if (aconf->status & (CONF_CONNECT_SERVER | CONF_ZCONNECT_SERVER))
 		    {
 			aconf->ping = (aCPing *)MyMalloc(sizeof(aCPing));
 			bzero((char *)aconf->ping, sizeof(*aconf->ping));
@@ -1027,6 +1052,8 @@ int	opt;
 			if (ME[0] == '\0' && aconf->host[0])
 				strncpyzt(ME, aconf->host,
 					  sizeof(ME));
+			if (aconf->port)
+				setup_ping(aconf);
 		    }
 		(void)collapse(aconf->host);
 		(void)collapse(aconf->name);
@@ -1085,7 +1112,7 @@ Reg	aConfItem	*aconf;
 	ln.flags = ASYNC_CONF;
 
 	if (isdigit(*s))
-		aconf->ipnum.s_addr = inet_addr(s);
+		aconf->ipnum.s_addr = inetaddr(s);
 	else if ((hp = gethost_byname(s, &ln)))
 		bcopy(hp->h_addr, (char *)&(aconf->ipnum),
 			sizeof(struct in_addr));
@@ -1101,18 +1128,22 @@ badlookup:
 	return -1;
 }
 
-int	find_kill(cptr, doall)
+int	find_kill(cptr, doall, comment)
 aClient	*cptr;
 int	doall;
+char	**comment;
 {
-	char	reply[256], *host, *name;
+	static char	reply[256];
+	char *host, *name, *ident, *check;
 	aConfItem *tmp;
+	int	now;
 
 	if (!cptr->user)
 		return 0;
 
 	host = cptr->sockhost;
 	name = cptr->user->username;
+	ident = cptr->auth;
 
 	if (strlen(host)  > (size_t) HOSTLEN ||
             (name ? strlen(name) : 0) > (size_t) HOSTLEN)
@@ -1124,29 +1155,77 @@ int	doall;
 	    {
 		if (!doall && (BadPtr(tmp->passwd) || !isdigit(*tmp->passwd)))
 			continue;
- 		if ((tmp->status == CONF_KILL) && tmp->host && tmp->name &&
+		if (!(tmp->status & (CONF_KILL | CONF_OTHERKILL)))
+			continue;
+		if (tmp->status == CONF_KILL)
+			check = name;
+		else
+			check = ident;
+ 		if (tmp->host && tmp->name &&
 		    (match(tmp->host, host) == 0) &&
- 		    (!name || match(tmp->name, name) == 0) &&
+ 		    (!check || match(tmp->name, check) == 0) &&
 		    (!tmp->port || (tmp->port == cptr->acpt->port)))
 		    {
+			now = 0;
 			if (!BadPtr(tmp->passwd) && isdigit(*tmp->passwd) &&
-			    !check_time_interval(tmp->passwd, reply))
+			    !(now = check_time_interval(tmp->passwd, reply)))
 				continue;
+			if (now == ERR_YOUWILLBEBANNED)
+				tmp = NULL;
 			break;
 		    }
 	    }
 
 	if (*reply)
-		sendto_one(cptr, reply,
-			   ME, ERR_YOUREBANNEDCREEP, cptr->name);
+		sendto_one(cptr, reply, ME, now, cptr->name);
 	else if (tmp)
-		sendto_one(cptr, ":%s %d %s :*** %s", ME,
+		sendto_one(cptr, ":%s %d %s :%s", ME,
 			   ERR_YOUREBANNEDCREEP, cptr->name,
 			   BadPtr(tmp->passwd) ?
 			   "You are not welcome to this server" : tmp->passwd);
 
+	if (tmp && !BadPtr(tmp->passwd))
+		*comment = tmp->passwd;
+
  	return (tmp ? -1 : 0);
- }
+}
+
+/*
+ * For type stat, check if both name and host masks match.
+ * Return -1 for match, 0 for no-match.
+ */
+int	find_two_masks(name, host, stat)
+char	*name, *host;
+int	stat;
+{
+	aConfItem *tmp;
+
+	for (tmp = conf; tmp; tmp = tmp->next)
+ 		if ((tmp->status == stat) && tmp->host && tmp->name &&
+		    (match(tmp->host, host) == 0) &&
+ 		    (match(tmp->name, name) == 0))
+			break;
+ 	return (tmp ? -1 : 0);
+}
+
+/*
+ * For type stat, check if name matches and any char from key matches
+ * to chars in passwd field.
+ * Return -1 for match, 0 for no-match.
+ */
+int	find_conf_flags(name, key, stat)
+char	*name, *key;
+int	stat;
+{
+	aConfItem *tmp;
+
+	for (tmp = conf; tmp; tmp = tmp->next)
+ 		if ((tmp->status == stat) && tmp->passwd && tmp->name &&
+ 		    (match(tmp->name, name) == 0) &&
+		    strpbrk(key, tmp->passwd))
+			break;
+ 	return (tmp ? -1 : 0);
+}
 
 #ifdef R_LINES
 /* find_restrict works against host/name and calls an outside program 
@@ -1322,3 +1401,60 @@ char	*interval, *reply;
 	    }
 	return(0);
 }
+
+/*
+** find_bounce
+**	send a bounce numeric to a client.
+**	if cptr is NULL, class is considered to be a fd (ugly, isn't it?)
+*/
+void	find_bounce(cptr, class)
+aClient *cptr;
+int	class;
+    {
+	Reg	aConfItem	*aconf;
+
+	for (aconf = conf; aconf; aconf = aconf->next)
+	    {
+		if (aconf->status != CONF_BOUNCE)
+			continue;
+
+		if (cptr == NULL)
+			/*
+			** early rejection,
+			** connection class and hostname are unknown
+			*/
+			if (atoi(aconf->host) == -1)
+			    {
+				char rpl[BUFSIZE];
+				
+				SPRINTF(rpl, rpl_str(RPL_BOUNCE,"unknown"),
+					aconf->name, aconf->port);
+				strcat(rpl, "\r\n");
+				send(class, rpl, strlen(rpl), 0);
+				return;
+			    }
+			else
+				continue;
+
+		/* cptr != NULL */
+		/*
+		** "too many" type rejection, class is known.
+		** check if B line is for a class #,
+		** and if it is for a hostname.
+		*/
+		if (isdigit(*aconf->host))
+		    {
+			if (class != atoi(aconf->host))
+				continue;
+		    }
+		else
+			if (match(aconf->host, cptr->sockhost))
+				continue;
+
+		sendto_one(cptr, rpl_str(RPL_BOUNCE, cptr->name), aconf->name,
+			   aconf->port);
+		return;
+	    }
+	
+    }
+

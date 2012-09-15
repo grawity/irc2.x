@@ -18,15 +18,16 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
-1992, 1993 Darren Reed";
+static  char rcsid[] = "@(#)$Id: support.c,v 1.7 1997/07/16 19:27:40 kalt Exp $";
 #endif
 
+#include "setup.h"
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "h.h"
 #include "patchlevel.h"
+#include <signal.h>
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
 #ifndef	CLIENT_COMPILE
@@ -52,7 +53,7 @@ char	*s;
 **			of separators
 **			argv 9/90
 **
-**	$Id: support.c,v 1.1.1.1 1997/04/14 13:25:02 kalt Exp $
+**	$Id: support.c,v 1.7 1997/07/16 19:27:40 kalt Exp $
 */
 
 char *strtoken(save, str, fs)
@@ -106,7 +107,7 @@ char *str, *fs;
 **	strerror - return an appropriate system error string to a given errno
 **
 **		   argv 11/90
-**	$Id: support.c,v 1.1.1.1 1997/04/14 13:25:02 kalt Exp $
+**	$Id: support.c,v 1.7 1997/07/16 19:27:40 kalt Exp $
 */
 
 char *strerror(err_no)
@@ -132,6 +133,7 @@ int err_no;
 
 #endif /* NEED_STRERROR */
 
+#ifdef	NEED_INET_NTOA
 /*
 **	inetntoa  --	changed name to remove collision possibility and
 **			so behaviour is gaurunteed to take a pointer arg.
@@ -140,7 +142,7 @@ int err_no;
 **			internet number (some ULTRIX don't have this)
 **			argv 11/90).
 **	inet_ntoa --	its broken on some Ultrix/Dynix too. -avalon
-**	$Id: support.c,v 1.1.1.1 1997/04/14 13:25:02 kalt Exp $
+**	$Id: support.c,v 1.7 1997/07/16 19:27:40 kalt Exp $
 */
 
 char	*inetntoa(in)
@@ -153,39 +155,158 @@ char	*in;
 	a = (int)*s++;
 	b = (int)*s++;
 	c = (int)*s++;
-	d = (int)*s++;
+	d = (int)*s;
 	(void)sprintf(buf, "%d.%d.%d.%d", a,b,c,d );
 
 	return buf;
 }
+#endif
 
-#ifdef NEED_INET_NETOF
+#ifdef	NEED_INET_NETOF
 /*
 **	inet_netof --	return the net portion of an internet number
 **			argv 11/90
-**	$Id: support.c,v 1.1.1.1 1997/04/14 13:25:02 kalt Exp $
-**
 */
-
-int inet_netof(in)
+int inetnetof(in)
 struct in_addr in;
 {
-    int addr = in.s_net;
-
-    if (addr & 0x80 == 0)
-	return ((int) in.s_net);
-
-    if (addr & 0x40 == 0)
-	return ((int) in.s_net * 256 + in.s_host);
-
-    return ((int) in.s_net * 256 + in.s_host * 256 + in.s_lh);
+    register u_long i = ntohl(in.s_addr);
+    
+    if (IN_CLASSA(i))
+	    return (((i)&IN_CLASSA_NET) >> IN_CLASSA_NSHIFT);
+    else if (IN_CLASSB(i))
+	    return (((i)&IN_CLASSB_NET) >> IN_CLASSB_NSHIFT);
+    else
+	    return (((i)&IN_CLASSC_NET) >> IN_CLASSC_NSHIFT);
 }
-#endif /* NEED_INET_NETOF */
+#endif
 
+#ifdef NEED_INET_ADDR
+# ifndef INADDR_NONE
+#  define INADDR_NONE   0xffffffff
+# endif
+/*
+ * Ascii internet address interpretation routine.
+ * The value returned is in network order.
+ */
+u_long
+inetaddr(cp)
+	register const char *cp;
+{
+	struct in_addr val;
+
+	if (inetaton(cp, &val))
+		return (val.s_addr);
+	return (INADDR_NONE);
+}
+#endif
+
+#ifdef	NEED_INET_ATON
+/* 
+ * Check whether "cp" is a valid ascii representation
+ * of an Internet address and convert to a binary address.
+ * Returns 1 if the address is valid, 0 if not.
+ * This replaces inet_addr, the return value from which
+ * cannot distinguish between failure and a local broadcast address.
+ */
+int
+inetaton(cp, addr)
+	register const char *cp;
+	struct in_addr *addr;
+{
+	register u_long val;
+	register int base, n;
+	register char c;
+	u_int parts[4];
+	register u_int *pp = parts;
+
+	c = *cp;
+	for (;;) {
+		/*
+		 * Collect number up to ``.''.
+		 * Values are specified as for C:
+		 * 0x=hex, 0=octal, isdigit=decimal.
+		 */
+		if (!isdigit(c))
+			return (0);
+		val = 0; base = 10;
+		if (c == '0') {
+			c = *++cp;
+			if (c == 'x' || c == 'X')
+				base = 16, c = *++cp;
+			else
+				base = 8;
+		}
+		for (;;) {
+			if (isascii(c) && isdigit(c)) {
+				val = (val * base) + (c - '0');
+				c = *++cp;
+			} else if (base == 16 && isascii(c) && isxdigit(c)) {
+				val = (val << 4) |
+					(c + 10 - (islower(c) ? 'a' : 'A'));
+				c = *++cp;
+			} else
+				break;
+		}
+		if (c == '.') {
+			/*
+			 * Internet format:
+			 *	a.b.c.d
+			 *	a.b.c	(with c treated as 16 bits)
+			 *	a.b	(with b treated as 24 bits)
+			 */
+			if (pp >= parts + 3)
+				return (0);
+			*pp++ = val;
+			c = *++cp;
+		} else
+			break;
+	}
+	/*
+	 * Check for trailing characters.
+	 */
+	if (c != '\0' && (!isascii(c) || !isspace(c)))
+		return (0);
+	/*
+	 * Concoct the address according to
+	 * the number of parts specified.
+	 */
+	n = pp - parts + 1;
+	switch (n) {
+
+	case 0:
+		return (0);		/* initial nondigit */
+
+	case 1:				/* a -- 32 bits */
+		break;
+
+	case 2:				/* a.b -- 8.24 bits */
+		if (val > 0xffffff)
+			return (0);
+		val |= parts[0] << 24;
+		break;
+
+	case 3:				/* a.b.c -- 8.8.16 bits */
+		if (val > 0xffff)
+			return (0);
+		val |= (parts[0] << 24) | (parts[1] << 16);
+		break;
+
+	case 4:				/* a.b.c.d -- 8.8.8.8 bits */
+		if (val > 0xff)
+			return (0);
+		val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
+		break;
+	}
+	if (addr)
+		addr->s_addr = htonl(val);
+	return (1);
+}
+#endif
 
 #if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
-void	dumpcore(msg, p1, p2, p3, p4, p5, p6, p7, p8, p9)
-char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
+void	dumpcore(msg, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)
+char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
 {
 	static	time_t	lastd = 0;
 	static	int	dumps = 0;
@@ -216,8 +337,8 @@ char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 	(void)rename("core", corename);
 	Debug((DEBUG_FATAL, "Dumped core : core.%d", p));
 	sendto_flag(SCH_ERROR, "Dumped core : core.%d", p);
-	Debug((DEBUG_FATAL, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9));
-	sendto_flag(SCH_ERROR, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+	Debug((DEBUG_FATAL, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,p11));
+	sendto_flag(SCH_ERROR, msg, p1, p2, p3, p4, p5, p6, p7, p8,p9,p10,p11);
 	(void)s_die();
 }
 #endif
@@ -498,17 +619,19 @@ dgetsreturnbuf:
 	goto dgetsagain;
 }
 
+#ifndef USE_STDARG
 /*
  * By Mika
  */
-int	irc_sprintf(outp, formp, i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10)
+int	irc_sprintf(outp, formp,
+		    i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11)
 char	*outp;
 char	*formp;
-char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
+char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10, *i11;
 {
 	/* rp for Reading, wp for Writing, fp for the Format string */
 	/* we could hack this if we know the format of the stack */
-	char	*inp[11];
+	char	*inp[12];
 	Reg	char	*rp, *fp, *wp, **pp = inp;
 	Reg	char	f;
 	Reg	long	myi;
@@ -525,6 +648,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 	inp[8] = i8;
 	inp[9] = i9;
 	inp[10] = i10;
+	inp[11] = i11;
 
 	/*
 	 * just scan the format string and puke out whatever is necessary
@@ -556,7 +680,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 				    {
 					(void)sprintf(outp, formp, i0, i1, i2,
 						      i3, i4, i5, i6, i7, i8,
-						      i9, i10);
+						      i9, i10, i11);
 					return -1;
 				    }
 
@@ -574,28 +698,29 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 				break;
 			default :
 				(void)sprintf(outp, formp, i0, i1, i2, i3, i4,
-					      i5, i6, i7, i8, i9, i10);
+					      i5, i6, i7, i8, i9, i10, i11);
 				return -1;
 			}
 	*wp = '\0';
 	return wp - outp;
 }
+#endif
 
 /*
  * Make 'readable' version string.
  */
 char *make_version()
 {
-	int ve, re, pl, be, al;
+	int ve, re, mi, dv, pl;
 	char ver[15];
 
-	sscanf(PATCHLEVEL, "%2d%2d%2d%2d%2d", &ve, &re, &pl, &be, &al);
+	sscanf(PATCHLEVEL, "%2d%2d%2d%2d%2d", &ve, &re, &mi, &dv, &pl);
 	sprintf(ver, "%d.%d", ve, re);	/* version & revision */
+	if (mi)	/* minor revision */
+		sprintf(ver + strlen(ver), ".%d", dv ? mi+1 : mi);
+	if (dv)	/* alpha/beta, note how visual patchlevel is raised above */
+		sprintf(ver + strlen(ver), "%c%d", DEVLEVEL, dv);
 	if (pl)	/* patchlevel */
-		sprintf(ver + strlen(ver), ".%d", be ? pl+1 : pl);
-	if (be)	/* beta, note how visual patchlevel is raised above */
-		sprintf(ver + strlen(ver), "b%d", be);
-	if (al)	/* patch */
-		sprintf(ver + strlen(ver), "p%d", al);
+		sprintf(ver + strlen(ver), "p%d", pl);
 	return mystrdup(ver);
 }

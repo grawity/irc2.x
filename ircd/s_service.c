@@ -1,3 +1,30 @@
+/************************************************************************
+ *   IRC - Internet Relay Chat, ircd/s_service.c
+ *   Copyright (C) 1990 Jarkko Oikarinen and
+ *                      University of Oulu, Computing Center
+ *
+ *   See file AUTHORS in IRC package for additional names of
+ *   the programmers. 
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 1, or (at your option)
+ *   any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#ifndef lint
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.12 1997/06/27 13:46:36 kalt Exp $";
+#endif
+
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
@@ -5,6 +32,9 @@
 #include "msg.h"
 #include "numeric.h"
 #include "h.h"
+#include "channel.h"
+
+void	channel_modes __P((aClient *, char *, char *, aChannel *));
 
 static	aService	*svctop = NULL;
 
@@ -18,11 +48,11 @@ aClient	*cptr;
 
 	cptr->service = svc = (aService *)MyMalloc(sizeof(*svc));
 	bzero((char *)svc, sizeof(*svc));
+	svc->bcptr = cptr;
 	if (svctop)
 		svctop->prevs = svc;
 	svc->nexts = svctop;
-	svc->prevs = NULL;
-	svc->bcptr = cptr;
+	svc->prevs = NULL; /* useless */
 	svctop = svc;
 	return svc;
 }
@@ -40,16 +70,12 @@ aClient	*cptr;
 		if (serv->prevs)
 			serv->prevs->nexts = serv->nexts;
 		if (svctop == serv)
-		    {
 			svctop = serv->nexts;
-			serv->prevs = NULL;
-		    }
-		serv->prevs = NULL;
-		serv->nexts = NULL;
 		if (serv->servp)
 			free_server(serv->servp, cptr);
-
-		MyFree(serv);
+		if (serv->server)
+			MyFree(serv->server);
+		MyFree((char *)serv);
 		cptr->service = NULL;
 	    }
 }
@@ -62,8 +88,7 @@ aClient *cptr;
 	Reg	aClient	*acptr = NULL;
 	Reg	aClient	*bcptr;
 	Reg	aService *sp;
-	int	metric = -1;
-	int	type = -1, len = strlen(name);
+	int	len = strlen(name);
 
 	if (!index(name, '@') || !(acptr = find_service(name, cptr)))
 		for (sp = svctop; sp; sp = sp->nexts)
@@ -73,24 +98,29 @@ aClient *cptr;
 				acptr = bcptr;
 				break;
 			    }
-	if (acptr && acptr->hopcount > 1)
-		for (type = acptr->service->type, metric = acptr->hopcount,
-		     sp = svctop; sp; sp = sp->nexts)
-			if (sp->type == type && (bcptr = sp->bcptr) &&
-			    bcptr->hopcount < metric)
-				acptr = bcptr;
 	return (acptr ? acptr : cptr);
 }
  
 
 #ifdef	USE_SERVICES
+/*
+** check_services_butone
+**	check all local services except `cptr', and send `fmt' according to:
+**	action	type on notice
+**	server	origin
+*/
+#ifndef USE_STDARG
 void	check_services_butone(action, server, cptr, fmt, p1, p2, p3, p4,
 			      p5, p6, p7, p8)
 long	action;
-aClient	*cptr;
+aClient	*cptr; /* shouldn't this be named sptr? */
 char	*fmt, *server;
 void	*p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
+#else
+void	check_services_butone(long action, char *server, aClient *cptr, char *fmt, ...)
+#endif
 {
+	char nbuf[NICKLEN + USERLEN + HOSTLEN + 3] = "";
 	Reg	aClient	*acptr;
 	Reg	int	i;
 
@@ -104,10 +134,125 @@ void	*p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 		** wanted AND if it comes from a server matching the dist
 		*/
 		if ((acptr->service->wants & action)
-		    && (!server || !matches(acptr->service->dist, server)))
-			sendto_one(acptr, fmt, p1, p2, p3, p4, p5, p6, p7, p8);
+		    && (!server || !match(acptr->service->dist, server)))
+			if ((acptr->service->wants & SERVICE_WANT_PREFIX) && 
+			    cptr && IsRegisteredUser(cptr) &&
+			    (action & SERVICE_MASK_PREFIX))
+			    {
+#ifdef USE_STDARG
+				char	buf[2048];
+				va_list	va;
+				va_start(va, fmt);
+				vsprintf(buf, fmt+3, va);
+				va_end(va);
+#endif
+				sprintf(nbuf, "%s!%s@%s", cptr->name,
+					cptr->user->username,cptr->user->host);
+
+#ifndef USE_STDARG
+				sendto_one(acptr, fmt, nbuf, p2, p3, p4, p5,
+					   p6, p7, p8);
+#else
+				sendto_one(acptr, ":%s%s", nbuf, buf);
+#endif
+			    }
+			else
+			    {
+#ifndef USE_STDARG
+				sendto_one(acptr, fmt, p1, p2, p3, p4, p5,
+					   p6, p7, p8);
+#else
+				va_list	va;
+				va_start(va, fmt);
+				vsendto_one(acptr, fmt, va);
+				va_end(va);
+#endif
+			    }
 	    }
 	return;
+}
+
+/*
+** sendnum_toone
+**	send the NICK + USER + UMODE for sptr to cptr according to wants
+*/
+static void	sendnum_toone (cptr, wants, sptr, umode)
+aClient *cptr, *sptr;
+char   *umode;
+int	wants;
+{
+
+	if (!*umode)
+		umode = "+";
+
+	if (wants & SERVICE_WANT_EXTNICK)
+		/* extended NICK syntax */
+		sendto_one(cptr, "NICK %s %d %s %s %s %s :%s",
+			   (wants & SERVICE_WANT_NICK) ? sptr->name : ".",
+			   sptr->hopcount + 1,
+			   (wants & SERVICE_WANT_USER) ? sptr->user->username
+			   : ".",
+			   (wants & SERVICE_WANT_USER) ? sptr->user->host :".",
+			   (wants & SERVICE_WANT_USER) ?
+			   ((wants & SERVICE_WANT_TOKEN) ?
+			    sptr->user->servp->tok : sptr->user->server) : ".",
+			   (wants & SERVICE_WANT_UMODE) ? umode : "+",
+			   (wants & SERVICE_WANT_USER) ? sptr->info : "");
+	else
+		/* old style NICK + USER + UMODE */
+	    {
+		char    nbuf[NICKLEN + USERLEN + HOSTLEN + 3];
+		char    *prefix;
+
+		if (wants & SERVICE_WANT_PREFIX)
+		    {
+			sprintf(nbuf, "%s!%s@%s", sptr->name,
+				sptr->user->username, sptr->user->host);
+			prefix = nbuf;
+		    }
+		else
+			prefix = sptr->name;
+
+		if (wants & SERVICE_WANT_NICK)
+			sendto_one(cptr, "NICK %s :%d", sptr->name,
+				   sptr->hopcount+1);
+		if (wants & SERVICE_WANT_USER)
+			sendto_one(cptr, ":%s USER %s %s %s :%s", prefix, 
+				   sptr->user->username, sptr->user->host,
+				   (wants & SERVICE_WANT_TOKEN)?
+				   sptr->user->servp->tok : sptr->user->server,
+				   sptr->info);
+		if (wants & SERVICE_WANT_UMODE)
+			sendto_one(cptr, ":%s MODE %s %s", prefix, sptr->name,
+				   umode);
+	    }
+}
+
+/*
+** check_services_num
+**	check all local services to eventually send NICK + USER + UMODE
+**	for new client sptr
+*/
+void	check_services_num(sptr, umode)
+aClient *sptr;
+char   *umode;
+{
+	Reg	aClient	*acptr;
+	Reg	int	i;
+
+	for (i = 0; i <= highest_fd; i++)
+	    {
+		if (!(acptr = local[i]) || !IsService(acptr))
+			continue;
+		/*
+		** found a (local) service, check if action matches what's
+		** wanted AND if it comes from a server matching the dist
+		*/
+		if ((acptr->service->wants & SERVICE_MASK_NUM)
+		    && !match(acptr->service->dist, sptr->user->server))
+			sendnum_toone(acptr, acptr->service->wants, sptr,
+				      umode);
+	    }
 }
 
 
@@ -143,11 +288,11 @@ int	type;
 			for (s = hp->h_name, i = 0; s; s = hp->h_aliases[i++])
 			    {
 				SPRINTF(uhost, "%s@%s", cptr->username, s);
-				if (matches(tmp->host, uhost) == 0)
+				if (match(tmp->host, uhost) == 0)
 					return tmp;
 			    }
 		SPRINTF(uhost, "%s@%s", cptr->username, cptr->sockhost);
-		if (matches(tmp->host, uhost) == 0)
+		if (match(tmp->host, uhost) == 0)
 			return tmp;
 	    }
 	return aconf;
@@ -160,8 +305,8 @@ int	type;
 **
 **	parv[0] = sender prefix
 **	parv[1] = service name
-**	parv[2] = server name
-**	parv[3] = distution code
+**	parv[2] = server token
+**	parv[3] = distribution code
 **	parv[4] = service type
 **	parv[5] = hopcount
 **	parv[6] = info
@@ -177,8 +322,9 @@ char	*parv[];
 	Reg	aConfItem *aconf;
 #endif
 	aServer	*sp = NULL;
-	char	*dist, *server = NULL, *info;
-	int	type, metric = 0, i/*, tok = 1*/;
+	char	*dist, *server = NULL, *info, *stok;
+	int	type, metric = 0, i;
+	char	*mlname;
 
 	if (sptr->user)
 	    {
@@ -208,14 +354,34 @@ char	*parv[];
 		metric = atoi(parv[5]);
 		if (cptr->serv->version != SV_OLD)
 			sp = find_tokserver(atoi(server), cptr, NULL);
-		else if ((acptr = find_server(server, NULL))) /* uhh.. */
-			sp = acptr->serv;
-/*
-		if (sp)
-			tok = sp->ltok;
-*/
+		/* The following is to plug a hole in 2.9.1 & 2.9.2 */
+		if (!sp && (acptr = find_server(server, NULL)))
+		    {
+			sendto_flag(SCH_DEBUG,
+				    "%s uses wrong syntax for SERVICE (%s)",
+				    get_client_name(cptr, TRUE), sptr->name);
+                        sp = acptr->serv;
+		    }
+		/* it should be removed sometime in the future.. */
+		if (!sp)
+		    {
+			sendto_flag(SCH_ERROR,
+                       	    "ERROR: SERVICE:%s without SERVER:%s from %s",
+				    sptr->name, server,
+				    get_client_name(cptr, FALSE));
+			return exit_client(NULL, sptr, &me, "No Such Server");
+		    }
+		if (match(parv[3], ME))
+		    {
+			sendto_flag(SCH_ERROR,
+                       	    "ERROR: SERVICE:%s DIST:%s from %s", sptr->name,
+				    parv[3], get_client_name(cptr, FALSE));
+			return exit_client(NULL, sptr, &me,
+					   "Distribution code mismatch");
+		    }
 	    }
 #ifndef	USE_SERVICES
+	else
 	    {
 		sendto_one(cptr, "ERROR :Server doesn't support services");
 		return 1;
@@ -247,7 +413,7 @@ char	*parv[];
 			return exit_client(cptr, sptr, &me, "Name too long");
 		    }
 
-		(void)strcpy(sptr->name, parv[1]);
+		strncpyzt(sptr->name, parv[1], sizeof(sptr->name));
 		if (!(aconf = find_conf_service(sptr, type, NULL)))
 		    {
 			sendto_one(sptr,
@@ -276,10 +442,14 @@ char	*parv[];
 			return exit_client(cptr, sptr, &me, "Service Exists");
 		    }
 		attach_conf(sptr, aconf);
-		sendto_one(sptr, rpl_str(RPL_WELCOME, sptr->name), sptr->name);
+		sendto_one(sptr, rpl_str(RPL_YOURESERVICE, sptr->name),
+			   sptr->name);
+		sendto_one(sptr, rpl_str(RPL_YOURHOST, sptr->name),
+                           get_client_name(&me, FALSE), version);
 		sendto_one(sptr, rpl_str(RPL_MYINFO, sptr->name), ME, version);
 		sendto_flag(SCH_NOTICE, "Service %s connected",
 			    get_client_name(sptr, TRUE));
+		istat.is_unknown--;
 		istat.is_myservice++;
 	    }
 #endif
@@ -287,34 +457,41 @@ char	*parv[];
 	istat.is_service++;
 	svc = make_service(sptr);
 	SetService(sptr);
-	svc->server = mystrdup(server);
+	svc->servp = sp;
+	sp->refcnt++;
+	svc->server = mystrdup(sp->bcptr->name);
 	strncpyzt(svc->dist, dist, HOSTLEN);
 	strncpyzt(sptr->info, info, REALLEN);
 	svc->wants = 0;
 	svc->type = type;
 	sptr->hopcount = metric;
-/*	SPRINTF(svc->tok, "%d", tok);*/
-	if ((svc->servp = sp)) /* why if ? */
-		sp->refcnt++;
 	(void)add_to_client_hash_table(sptr->name, sptr);
 
 #ifdef	USE_SERVICES
 	check_services_butone(SERVICE_WANT_SERVICE, NULL, sptr,
-				"SERVICE %s %s %s %d %d :%s", sptr->name,
-				server, dist, type, metric, info);
+			      "SERVICE %s %s %s %d %d :%s", sptr->name,
+			      server, dist, type, metric, info);
 #endif
+	sendto_flag(SCH_SERVICE, "Received SERVICE %s from %s (%s %d %s)",
+		    sptr->name, get_client_name(cptr, TRUE), dist, metric,
+		    info);
 
 	for (i = fdas.highest; i >= 0; i--)
-	{
+	    {
 		if (!(acptr = local[fdas.fd[i]]) || !IsServer(acptr) ||
 		    acptr == cptr)
 			continue;
-		if (matches(dist, acptr->name))
+		if (match(dist, acptr->name))
 			continue;
 		if (acptr->serv->version == SV_OLD)
 			continue;
+		mlname = my_name_for_link(ME, acptr->serv->nline->port);
+		if (*mlname == '*' && match(mlname, sptr->service->server)== 0)
+			stok = me.serv->tok;
+		else
+			stok = sp->tok;
 		sendto_one(acptr, "SERVICE %s %s %s %d %d :%s", sptr->name,
-			   server, dist, type, metric+1, info);
+			   stok, dist, type, metric+1, info);
 	    }
 	return 0;
 }
@@ -339,21 +516,37 @@ char	*parv[];
 		type = BadPtr(parv[2]) ? 0 : atoi(parv[2]);
 	for (sp = svctop; sp; sp = sp->nexts)
 		if  ((acptr = sp->bcptr) && (!type || type == sp->type) &&
-		     (matches(mask, acptr->name) == 0))
+		     (match(mask, acptr->name) == 0))
 			sendto_one(sptr, rpl_str(RPL_SERVLIST, parv[0]),
 				   acptr->name, sp->server, sp->dist,
 				   sp->type, acptr->hopcount, acptr->info);
 	sendto_one(sptr, rpl_str(RPL_SERVLISTEND, parv[0]), mask, type);
-	return 1;
+	return 2;
 }
 
 
 #ifdef	USE_SERVICES
+/*
+** m_servset
+**
+**      parv[0] = sender prefix
+**      parv[1] = data requested
+**      parv[2] = burst requested (optional)
+*/
 int	m_servset(cptr, sptr, parc, parv)
 aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
 {
+	aClient *acptr;
+	int burst = 0;
+
+	if (!MyConnect(sptr))
+	    {
+		sendto_flag(SCH_ERROR, "%s issued a SERVSET (from %s)",
+			    sptr->name, get_client_name(cptr, TRUE));
+		return 1;
+	    }
 	if (!IsService(sptr) || (IsService(sptr) && sptr->service->wants))
 	    {
 		sendto_one(sptr, err_str(ERR_NOPRIVILEGES, parv[0]));
@@ -365,8 +558,117 @@ char	*parv[];
 			   "SERVSET");
 		return 1;
 	    }
-	if (!sptr->service->wants)
-		sptr->service->wants = atoi(parv[1]) & sptr->service->type;
+	if (sptr->service->wants)
+		return 1;
+
+	/* check against configuration */
+	sptr->service->wants = atoi(parv[1]) & sptr->service->type;
+	/* check that service is global for some requests */
+	if (strcmp(sptr->service->dist, "*"))
+		sptr->service->wants &= ~SERVICE_MASK_GLOBAL;
+	/* allow options */
+	sptr->service->wants |= (atoi(parv[1]) & ~SERVICE_MASK_ALL);
+	/* send accepted SERVSET */
+	sendto_one(sptr, ":%s SERVSET %s :%d", sptr->name, sptr->name,
+		   sptr->service->wants);
+
+	if (parc < 3 ||
+	    ((burst = sptr->service->wants & atoi(parv[2])) == 0))
+		return 0;
+
+	/*
+	** services can request a connect burst.
+	** it is optional, because most services should not need it,
+	** so let's save some bandwidth.
+	**
+	** tokens are NOT used. (2.8.x like burst)
+	** distribution code is respected.
+	** service type also respected.
+	*/
+	if (burst & SERVICE_WANT_SERVER)
+	    {
+		int	split;
+		
+		for (acptr = &me; acptr; acptr = acptr->prev)
+		    {
+			if (!IsServer(acptr) && !IsMe(acptr))
+				continue;
+			if (match(sptr->service->dist, acptr->name))
+				continue;
+			split = (MyConnect(acptr) &&
+				 mycmp(acptr->name, acptr->sockhost));
+			if (split)
+				sendto_one(sptr,":%s SERVER %s %d %s :[%s] %s",
+					   acptr->serv->up, acptr->name,
+					   acptr->hopcount+1,
+					   acptr->serv->tok,
+					   acptr->sockhost, acptr->info);
+			else
+				sendto_one(sptr, ":%s SERVER %s %d %s :%s",
+					   acptr->serv->up, acptr->name,
+					   acptr->hopcount+1,
+					   acptr->serv->tok,
+					   acptr->info);
+		    }
+	    }
+
+	if (burst & (SERVICE_WANT_NICK|SERVICE_WANT_USER|SERVICE_WANT_SERVICE))
+	    {
+		char	buf[BUFSIZE] = "+";
+		
+		for (acptr = &me; acptr; acptr = acptr->prev)
+		    {
+			/* acptr->from == acptr for acptr == cptr */
+			if (acptr->from == cptr)
+				continue;
+			if (IsPerson(acptr))
+			    {
+				if (match(sptr->service->dist,
+					  acptr->user->server))
+					continue;
+				if (burst & SERVICE_WANT_UMODE)
+					send_umode(NULL, acptr, 0, SEND_UMODES,
+						   buf);
+				sendnum_toone(sptr, burst, acptr, buf);
+			    }
+			else if (IsService(acptr))
+			    {
+				if (!(burst & SERVICE_WANT_SERVICE))
+					continue;
+				if (match(sptr->service->dist,
+					  acptr->service->server))
+					continue;
+				sendto_one(sptr, "SERVICE %s %s %s %d %d :%s",
+					   acptr->name, acptr->service->server,
+					   acptr->service->dist,
+					   acptr->service->type,
+					   acptr->hopcount + 1, acptr->info);
+			    }
+		    }
+	    }
+	
+	if (burst & (SERVICE_WANT_CHANNEL|SERVICE_WANT_MODE))
+	    {
+		char    modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
+		aChannel	*chptr;
+		
+		for (chptr = channel; chptr; chptr = chptr->nextch)
+		    {
+			if (chptr->users == 0)
+				continue;
+			if (burst & SERVICE_WANT_CHANNEL)
+				sendto_one(sptr, "CHANNEL %s %d",
+					   chptr->chname, chptr->users);
+			if (burst & SERVICE_WANT_MODE)
+			    {
+				*modebuf = *parabuf = '\0';
+				modebuf[1] = '\0';
+				channel_modes(&me, modebuf, parabuf, chptr);
+				sendto_one(sptr, "MODE %s %s", chptr->chname,
+					   modebuf);
+			    }
+		    }
+	    }
 	return 0;
 }
 #endif
@@ -399,5 +701,5 @@ char	*parv[];
 			   parv[0], acptr->name, parv[2]);
 	else
 		sendto_one(sptr, err_str(ERR_NOSUCHSERVICE, parv[0]), parv[1]);
-	return 1;
+	return 2;
 }

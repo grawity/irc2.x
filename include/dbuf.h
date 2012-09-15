@@ -20,6 +20,8 @@
 #ifndef __dbuf_include__
 #define __dbuf_include__
 
+#define	DBUF_TAIL
+
 /*
 ** dbuf is a collection of functions which can be used to
 ** maintain a dynamic buffering of a byte stream.
@@ -163,5 +165,13 @@ extern	int	dbuf_getmsg __P((dbuf *, char *, int));
  * mika@cs.caltech.edu 6/24/95
  */
 extern	void	dbuf_init __P(());
+
+/* This is a dangerous define because a broken compiler will set DBUFSIZ
+** to 4, which will work but will be very inefficient. However, there
+** are other places where the code breaks badly if this is screwed
+** up, so... -- Wumpus
+*/
+
+#define DBUFSIZ sizeof(((dbufbuf *)0)->data)
 
 #endif /* __dbuf_include__ */

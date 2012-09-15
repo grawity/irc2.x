@@ -19,23 +19,20 @@
  */
 
 /*
- * $Id: sock.h,v 1.1.1.1 1997/04/14 13:25:03 kalt Exp $
- *
- * $Log: sock.h,v $
- * Revision 1.1.1.1  1997/04/14 13:25:03  kalt
- * ircd version 2.9.2
- *
- * Revision 6.1  1991/07/04  21:04:35  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:04  gruner
- * frozen beta revision 2.6.1
- *
+ * $Id: sock.h,v 1.3 1997/05/27 13:59:22 kalt Exp $
  */
 
-#ifndef FD_ZERO
-#define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
-#define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))
-#define FD_ISSET(s1, set) (((set)->fds_bits[0]) & (1 << (s1)))
-#define FD_SETSIZE        30
-#endif
+#ifndef	_DO_POLL_
+
+# ifndef FD_ZERO
+#  define FD_ZERO(set)      (((set)->fds_bits[0]) = 0)
+#  define FD_SET(s1, set)   (((set)->fds_bits[0]) |= 1 << (s1))
+#  define FD_ISSET(s1, set) (((set)->fds_bits[0]) & (1 << (s1)))
+#  define FD_SETSIZE        30
+# endif
+
+# if (MAXCONNECTIONS > FD_SETSIZE)
+error FD_SETSIZE must be bigger than MAXCONNECTIONS
+# endif
+
+#endif /* _DO_POLL_ */

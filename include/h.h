@@ -24,6 +24,16 @@
  * -avalon
  */
 
+#ifdef USE_STDARG
+#include <stdarg.h>
+#endif
+
+#ifdef CACHED_MOTD
+extern aMotd *motd;
+extern struct tm motd_tm;
+extern void read_motd __P((char *));
+#endif
+
 extern	time_t	nextconnect, nextdnscheck, nextping, timeofday;
 extern	aClient	*client, me, *local[];
 extern	aChannel *channel;
@@ -58,6 +68,7 @@ extern	aServer	*find_tokserver __P((int, aClient *, aClient *));
 extern	aClient	*find_nickserv __P((char *, aClient *));
 extern	aClient	*find_service __P((char *, aClient *));
 extern	aClient	*find_userhost __P((char *, char *, aClient *, int *));
+extern	void	find_bounce __P((aClient *, int));
 
 extern	int	attach_conf __P((aClient *, aConfItem *));
 extern	aConfItem *attach_confs __P((aClient*, char *, int));
@@ -73,27 +84,54 @@ extern	aConfItem *find_conf_exact __P((char *, char *, char *, int));
 extern	aConfItem *find_conf_host __P((Link *, char *, int));
 extern	aConfItem *find_conf_ip __P((Link *, char *, char *, int));
 extern	aConfItem *find_conf_name __P((char *, int));
-extern	int	find_kill __P((aClient *, int));
+extern	int	find_kill __P((aClient *, int, char **));
+extern	int	find_two_masks __P((char *, char *, int));
+extern	int	find_conf_flags __P((char *, char *, int));
 extern	int	find_restrict __P((aClient *));
 extern	int	rehash __P((aClient *, aClient *, int));
 extern	int	initconf __P((int));
 extern	int	rehashed;
 
 extern	char	*MyMalloc __P((size_t)), *MyRealloc __P((char *, size_t));
+#if defined(DEBUGMODE) && !defined(CLIENT_COMPILE) && defined(DO_DEBUG_MALLOC)
+extern	void	MyFree __P((char *));
+#endif
 extern	char	*debugmode, *configfile, *sbrk0;
 extern	char	*getfield __P((char *));
 extern	void	get_sockhost __P((aClient *, char *));
 extern	char	*rpl_str __P((int, char *)), *err_str __P((int, char *));
 extern	char	*strerror __P((int));
 extern	int	dgets __P((int, char *, int));
-extern	void	ircsprintf __P(());
-extern	char	*inetntoa __P((char *)), *mystrdup __P((char *));
+extern	char	*mystrdup __P((char *));
 
-extern	int	dbufalloc, dbufblocks, debuglevel, errno, h_errno, poolsize;
+#ifdef	NEED_INET_NTOA
+extern	char	*inetntoa __P((char *));
+#else
+# define inetntoa(x) inet_ntoa(*(struct in_addr *)(x))
+#endif
+#ifdef	NEED_INET_ADDR
+extern	u_long	inetaddr __P((const char *));
+#else
+# define inetaddr inet_addr
+#endif
+#ifdef	NEED_INET_ATON
+extern	int	inetaton __P((const char *, struct in_addr *));
+#else
+# define inetaton inet_aton
+#endif
+#ifdef	NEED_INET_NETOF
+extern	int	inetnetof __P((struct in_addr));
+#else
+# define inetnetof inet_netof
+#endif
+
+extern	u_int	poolsize;
+extern	int	debuglevel, errno, h_errno;
 extern	int	highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
 extern	int	readcalls, udpfd, resfd;
 extern	aClient	*add_connection __P((aClient *, int));
 extern	int	add_listener __P((aConfItem *));
+extern	int	setup_ping __P((aConfItem *));
 extern	void	add_local_domain __P((char *, int));
 extern	int	check_client __P((aClient *));
 extern	int	check_server __P((aClient *, struct hostent *, \
@@ -105,7 +143,7 @@ extern	void	close_listeners __P(());
 extern	int	connect_server __P((aConfItem *, aClient *, struct hostent *));
 extern	void	get_my_name __P((aClient *, char *, int));
 extern	int	get_sockerr __P((aClient *));
-extern	int	inetport __P((aClient *, char *, int));
+extern	int	inetport __P((aClient *, char *, char *, int));
 extern	void	init_sys __P(());
 extern	int	read_message __P((time_t, FdAry *));
 extern	void	report_error __P((char *, aClient *));
@@ -129,14 +167,18 @@ extern	void	server_reboot __P(());
 extern	void	terminate __P(()), write_pidfile __P(());
 
 extern	int	send_queued __P((aClient *));
+
+#ifndef USE_STDARG
 /*VARARGS2*/
 extern	int	sendto_one();
 /*VARARGS4*/
 extern	void	sendto_channel_butone();
 /*VARARGS2*/
 extern	void	sendto_serv_butone();
+#ifndef NoV28Links
 /*VARARGS2*/
 extern	void	sendto_serv_v();
+#endif
 /*VARARGS2*/
 extern	void	sendto_common_channels();
 /*VARARGS3*/
@@ -146,20 +188,31 @@ extern	void	sendto_match_servs();
 /*VARARGS5*/
 extern	void	sendto_match_butone();
 /*VARARGS3*/
-extern	void	sendto_all_butone();
-/*VARARGS1*/
-extern	void	sendto_ops();
-/*VARARGS3*/
 extern	void	sendto_ops_butone();
 /*VARARGS3*/
 extern	void	sendto_prefix_one();
 /*VARARGS2*/
 extern	void	sendto_flag();
+#else
+extern	int	sendto_one(aClient *, char *, ...);
+extern	int	vsendto_one(aClient *, char *, va_list);
+extern	void	sendto_channel_butone(aClient *, aClient *, aChannel *, char *, ...);
+extern	void	sendto_serv_butone(aClient *, char *, ...);
+#ifndef NoV28Links
+extern	void	sendto_serv_v(aClient *, int, char *, ...);
+#endif
+extern	void	sendto_common_channels(aClient *, char *, ...);
+extern	void	sendto_channel_butserv(aChannel *, aClient *, char *, ...);
+extern	void	sendto_match_servs(aChannel *, aClient	*, char *, ...);
+extern	void	sendto_match_butone(aClient *, aClient *, char *, int, char *, ...);
+extern	void	sendto_ops_butone(aClient *, aClient *, char *, ...);
+extern	void	sendto_prefix_one(aClient *, aClient *, char *, ...);
+extern	void	sendto_flag(u_int, char *, ...);
+#endif
 
 extern	void	setup_svchans __P(());
 
-extern	void	sendto_flog __P((char *, char *, time_t, char *, char *,
-				 char *, char *));
+extern	void	sendto_flog __P((aClient *, char *, time_t, char *, char *));
 extern	int	writecalls, writeb[];
 extern	int	deliver_it __P((aClient *, char *, int));
 
@@ -203,6 +256,7 @@ extern	aClass	*make_class __P(());
 extern	aServer	*make_server __P(());
 extern	aClient	*make_client __P((aClient *));
 extern	Link	*find_user_link __P((Link *, aClient *));
+extern	Link	*find_channel_link __P((Link *, aChannel *));
 extern	void	add_client_to_list __P((aClient *));
 extern	void	checklist __P(());
 extern	void	remove_client_from_list __P((aClient *));
@@ -232,6 +286,7 @@ extern	struct	hostent	*gethost_byname __P((char *, Link *));
 extern	void	flush_cache __P(());
 extern	u_long	cres_mem __P((aClient *, char *));
 extern	int	init_resolver __P((int));
+extern	int	ircd_res_init __P(());
 extern	time_t	timeout_query_list __P((time_t));
 extern	time_t	expire_cache __P((time_t));
 extern	void    del_queries __P((char *));
@@ -262,8 +317,12 @@ extern	int	dopacket __P((aClient *, char *, int));
 extern	char	*mycncmp __P((char *, char *));
 #endif
 
+#ifndef USE_STDARG
 /*VARARGS2*/
 extern	void	debug();
+#else
+extern	void	debug(int, char *, ...);
+#endif
 #if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
 extern	void	send_usage __P((aClient *, char *));
 extern	void	send_listinfo __P((aClient *, char *));
@@ -277,9 +336,14 @@ extern	void	count_memory __P((aClient *, char *, int));
 extern	void	send_defines __P((aClient *, char *));
 #endif
 
-#ifdef KRYS
 extern	char	*find_server_string __P((int));
 extern	int	find_server_num __P((char *));
-#endif
 
 extern	char	*make_version();
+
+#ifdef	ZIP_LINKS
+extern	int	zip_init __P((aClient *));
+extern	char	*unzip_packet __P((aClient *, char *, int *));
+extern	char	*zip_buffer __P((aClient *, char *, int *, int));
+extern	void	zip_free __P((aClient *));
+#endif

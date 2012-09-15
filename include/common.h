@@ -20,6 +20,10 @@
 #ifndef	__common_include__
 #define __common_include__
 
+#ifdef _AIX
+#include <sys/types.h>
+#endif
+
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #else
@@ -53,9 +57,8 @@ char	*malloc(), *calloc();
 #endif
 #endif
 
-extern	char	*collapse __P((char *));
-extern	int	matches __P((char *, char *));
 extern	int	match __P((char *, char *));
+extern	char	*collapse __P((char *));
 extern	int	mycmp __P((char *, char *));
 extern	int	myncmp __P((char *, char *, int));
 #ifdef NEED_STRTOK
@@ -88,7 +91,11 @@ extern char *strtoken __P((char **, char *, char *));
 #ifdef	SPRINTF
 #undef	SPRINTF
 #endif
+#ifndef USE_STDARG
 #define	SPRINTF	(void) irc_sprintf
+#else
+#define SPRINTF (void) sprintf
+#endif
 
 #define DupString(x,y) do {x = (char *)MyMalloc(strlen((char *)y) + 1);\
 			   (void)strcpy((char *)x, (char *)y);\
@@ -144,7 +151,10 @@ extern unsigned char char_atribs[];
 #define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
 
 extern void	flush_connections __P((int));
+#ifndef USE_STDARG
 extern int	irc_sprintf();
+#endif
+
 /*VARARGS?*/
 
 #endif /* __common_include__ */

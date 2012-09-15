@@ -55,28 +55,33 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static char rcsid[] = "$Id: res_init.c,v 1.1.1.1 1997/04/14 13:25:04 kalt Exp $";
+static char rcsid[] = "$Id: res_init.c,v 1.5 1997/07/18 03:04:34 kalt Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include "config.h"
-
+#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
-#include "inet.h"
+/*#include "inet.h"*/
 #include "nameser.h"
 
 #include <stdio.h>
 #include <ctype.h>
 #include "resolv.h"
-
 #if defined(BSD) && (BSD >= 199103)
-/* This cannot hurt.. OSF has BSD < 199103, but needs these.. */
-#endif
 # include <unistd.h>
 # include <stdlib.h>
 # include <string.h>
+#else
+# include "portability.h"
+#endif
+#include "setup.h"
+#ifdef  NEED_INET_ATON
+extern  int     inetaton __P((const char *, struct in_addr *));
+#else
+# define inetaton inet_aton
+#endif
 
 /*-------------------------------------- info about "sortlist" --------------
  * Marc Majka		1994/04/16
@@ -104,19 +109,19 @@ static char rcsid[] = "$Id: res_init.c,v 1.1.1.1 1997/04/14 13:25:04 kalt Exp $"
 #  include <netinfo/ni.h>
 #  define NI_PATH_RESCONF "/locations/resolver"
 #  define NI_TIMEOUT 10
-static int netinfo_res_init __P((int *haveenv, int *havesearch));
+static int ircd_netinfo_res_init __P((int *haveenv, int *havesearch));
 #endif
 
 #if defined(USE_OPTIONS_H)
 # include "../conf/options.h"
 #endif
 
-static void res_setoptions __P((char *, char *));
+static void ircd_res_setoptions __P((char *, char *));
 
 #ifdef RESOLVSORT
 static const char sort_mask[] = "/&";
 #define ISSORTMASK(ch) (strchr(sort_mask, ch) != NULL)
-static u_int32_t net_mask __P((struct in_addr));
+static u_int32_t ircd_net_mask __P((struct in_addr));
 #endif
 
 #if !defined(isascii)	/* XXX - could be a function */
@@ -127,7 +132,11 @@ static u_int32_t net_mask __P((struct in_addr));
  * Resolver state default settings.
  */
 
-struct __res_state ircd_res;
+struct __res_state ircd_res
+# if defined(__BIND_RES_TEXT)
+	= { RES_TIMEOUT, }	/* Motorola, et al. */
+# endif
+	;
 
 /*
  * Set up default settings.  If the configuration file exist, the values
@@ -151,7 +160,7 @@ struct __res_state ircd_res;
  * Return 0 if completes successfully, -1 on error
  */
 int
-res_init()
+ircd_res_init()
 {
 	register FILE *fp;
 	register char *cp, **pp;
@@ -173,7 +182,7 @@ res_init()
 	 * it hard to use this code in a shared library.  It is necessary,
 	 * now that we're doing dynamic initialization here, that we preserve
 	 * the old semantics: if an application modifies one of these three
-	 * fields of ircd_res before res_init() is called, res_init() will not
+	 * fields of _res before res_init() is called, res_init() will not
 	 * alter them.  Of course, if an application is setting them to
 	 * _zero_ before calling res_init(), hoping to override what used
 	 * to be the static default, we can't detect it and unexpected results
@@ -181,12 +190,11 @@ res_init()
 	 * so one can safely assume that the applications were already getting
 	 * unexpected results.
 	 *
-	 * ircd_res.options is tricky since some apps were known to diddle the 
-	 * bits before res_init() was first called. We can't replicate that 
-	 * semantic with dynamic initialization (they may have turned bits off 
-	 * that are set in RES_DEFAULT).  Our solution is to declare such 
-	 * applications "broken".  They could fool us by setting RES_INIT but 
-	 * none do (yet).
+	 * _res.options is tricky since some apps were known to diddle the bits
+	 * before res_init() was first called. We can't replicate that semantic
+	 * with dynamic initialization (they may have turned bits off that are
+	 * set in RES_DEFAULT).  Our solution is to declare such applications
+	 * "broken".  They could fool us by setting RES_INIT but none do (yet).
 	 */
 	if (!ircd_res.retrans)
 		ircd_res.retrans = RES_TIMEOUT;
@@ -200,7 +208,7 @@ res_init()
 	 * has set it to something in particular, we can randomize it now.
 	 */
 	if (!ircd_res.id)
-		ircd_res.id = res_randomid();
+		ircd_res.id = ircd_res_randomid();
 
 #ifdef USELOOPBACK
 	ircd_res.nsaddr.sin_addr = inet_makeaddr(IN_LOOPBACKNET, 1);
@@ -214,9 +222,8 @@ res_init()
 	ircd_res.pfcode = 0;
 
 	/* Allow user to override the local domain definition */
-	if ((cp = (char *) getenv("LOCALDOMAIN")) != NULL) {
-		(void)strncpy(ircd_res.defdname, cp, 
-			sizeof(ircd_res.defdname) - 1);
+	if ((cp = getenv("LOCALDOMAIN")) != NULL) {
+		(void)strncpy(ircd_res.defdname, cp, sizeof(ircd_res.defdname) - 1);
 		haveenv++;
 
 		/*
@@ -254,7 +261,7 @@ res_init()
 	 line[sizeof(name) - 1] == '\t'))
 
 #ifdef	NeXT
-	if (netinfo_res_init(&haveenv, &havesearch) == 0)
+	if (ircd_netinfo_res_init(&haveenv, &havesearch) == 0)
 #endif
 	if ((fp = fopen(_PATH_RESCONF, "r")) != NULL) {
 	    /* read the config file */
@@ -271,9 +278,8 @@ res_init()
 			    cp++;
 		    if ((*cp == '\0') || (*cp == '\n'))
 			    continue;
-		    strncpy(ircd_res.defdname, cp, 
-			sizeof(ircd_res.defdname) - 1);
-		    if ((cp = (char *) strpbrk(ircd_res.defdname, " \t\n")) != NULL)
+		    strncpy(ircd_res.defdname, cp, sizeof(ircd_res.defdname) - 1);
+		    if ((cp = strpbrk(ircd_res.defdname, " \t\n")) != NULL)
 			    *cp = '\0';
 		    havesearch = 0;
 		    continue;
@@ -287,9 +293,8 @@ res_init()
 			    cp++;
 		    if ((*cp == '\0') || (*cp == '\n'))
 			    continue;
-		    strncpy(ircd_res.defdname, cp, 
-				sizeof(ircd_res.defdname) - 1);
-		    if ((cp = (char *) strchr(ircd_res.defdname, '\n')) != NULL)
+		    strncpy(ircd_res.defdname, cp, sizeof(ircd_res.defdname) - 1);
+		    if ((cp = strchr(ircd_res.defdname, '\n')) != NULL)
 			    *cp = '\0';
 		    /*
 		     * Set search list to be blank-separated strings
@@ -322,7 +327,7 @@ res_init()
 		    cp = buf + sizeof("nameserver") - 1;
 		    while (*cp == ' ' || *cp == '\t')
 			cp++;
-		    if ((*cp != '\0') && (*cp != '\n') && inet_aton(cp, &a)) {
+		    if ((*cp != '\0') && (*cp != '\n') && inetaton(cp, &a)) {
 			ircd_res.nsaddr_list[nserv].sin_addr = a;
 			ircd_res.nsaddr_list[nserv].sin_family = AF_INET;
 			ircd_res.nsaddr_list[nserv].sin_port =
@@ -347,7 +352,7 @@ res_init()
 				cp++;
 			n = *cp;
 			*cp = 0;
-			if (inet_aton(net, &a)) {
+			if (inetaton(net, &a)) {
 			    ircd_res.sort_list[nsort].addr = a;
 			    if (ISSORTMASK(n)) {
 				*cp++ = n;
@@ -357,15 +362,15 @@ res_init()
 				    cp++;
 				n = *cp;
 				*cp = 0;
-				if (inet_aton(net, &a)) {
+				if (inetaton(net, &a)) {
 				    ircd_res.sort_list[nsort].mask = a.s_addr;
 				} else {
 				    ircd_res.sort_list[nsort].mask = 
-					net_mask(ircd_res.sort_list[nsort].addr);
+					ircd_net_mask(ircd_res.sort_list[nsort].addr);
 				}
 			    } else {
 				ircd_res.sort_list[nsort].mask = 
-				    net_mask(ircd_res.sort_list[nsort].addr);
+				    ircd_net_mask(ircd_res.sort_list[nsort].addr);
 			    }
 			    nsort++;
 			}
@@ -375,7 +380,7 @@ res_init()
 		}
 #endif
 		if (MATCH(buf, "options")) {
-		    res_setoptions(buf + sizeof("options") - 1, "conf");
+		    ircd_res_setoptions(buf + sizeof("options") - 1, "conf");
 		    continue;
 		}
 	    }
@@ -388,7 +393,7 @@ res_init()
 	}
 	if (ircd_res.defdname[0] == 0 &&
 	    gethostname(buf, sizeof(ircd_res.defdname) - 1) == 0 &&
-	    (cp = (char *) strchr(buf, '.')) != NULL)
+	    (cp = strchr(buf, '.')) != NULL)
 		strcpy(ircd_res.defdname, cp + 1);
 
 	/* find components of local domain that might be searched */
@@ -406,7 +411,7 @@ res_init()
 		while (pp < ircd_res.dnsrch + MAXDFLSRCH) {
 			if (dots < LOCALDOMAINPARTS)
 				break;
-			cp = (char *) strchr(cp, '.') + 1;    /* we know there is one */
+			cp = strchr(cp, '.') + 1;    /* we know there is one */
 			*pp++ = cp;
 			dots--;
 		}
@@ -422,14 +427,14 @@ res_init()
 #endif /* !RFC1535 */
 	}
 
-	if ((cp = (char *) getenv("RES_OPTIONS")) != NULL)
-		res_setoptions(cp, "env");
+	if ((cp = getenv("RES_OPTIONS")) != NULL)
+		ircd_res_setoptions(cp, "env");
 	ircd_res.options |= RES_INIT;
 	return (0);
 }
 
 static void
-res_setoptions(options, source)
+ircd_res_setoptions(options, source)
 	char *options, *source;
 {
 	char *cp = options;
@@ -437,7 +442,7 @@ res_setoptions(options, source)
 
 #ifdef DEBUG
 	if (ircd_res.options & RES_DEBUG)
-		printf(";; res_setoptions(\"%s\", \"%s\")...\n",
+		printf(";; ircd_res_setoptions(\"%s\", \"%s\")...\n",
 		       options, source);
 #endif
 	while (*cp) {
@@ -458,12 +463,14 @@ res_setoptions(options, source)
 		} else if (!strncmp(cp, "debug", sizeof("debug") - 1)) {
 #ifdef DEBUG
 			if (!(ircd_res.options & RES_DEBUG)) {
-				printf(";; res_setoptions(\"%s\", \"%s\")..\n",
+				printf(";; ircd_res_setoptions(\"%s\", \"%s\")..\n",
 				       options, source);
 				ircd_res.options |= RES_DEBUG;
 			}
 			printf(";;\tdebug\n");
 #endif
+		} else if (!strncmp(cp, "inet6", sizeof("inet6") - 1)) {
+			ircd_res.options |= RES_USE_INET6;
 		} else {
 			/* XXX - print a warning here? */
 		}
@@ -476,7 +483,7 @@ res_setoptions(options, source)
 #ifdef RESOLVSORT
 /* XXX - should really support CIDR which means explicit masks always. */
 static u_int32_t
-net_mask(in)		/* XXX - should really use system's version of this */
+ircd_net_mask(in)		/* XXX - should really use system's version of this */
 	struct in_addr in;
 {
 	register u_int32_t i = ntohl(in.s_addr);
@@ -491,7 +498,7 @@ net_mask(in)		/* XXX - should really use system's version of this */
 
 #ifdef	NeXT
 static int
-netinfo_res_init(haveenv, havesearch)
+ircd_netinfo_res_init(haveenv, havesearch)
 	int *haveenv;
 	int *havesearch;
 {
@@ -558,7 +565,7 @@ netinfo_res_init(haveenv, havesearch)
 			 n++) {
 			struct in_addr a;
 
-			if (inet_aton(nl.ni_namelist_val[n], &a)) {
+			if (inetaton(nl.ni_namelist_val[n], &a)) {
 			    ircd_res.nsaddr_list[nserv].sin_addr = a;
 			    ircd_res.nsaddr_list[nserv].sin_family = AF_INET;
 			    ircd_res.nsaddr_list[nserv].sin_port =
@@ -600,19 +607,19 @@ netinfo_res_init(haveenv, havesearch)
 				*cp = '\0';
 				break;
 			}
-			if (inet_aton(nl.ni_namelist_val[n], &a)) {
+			if (inetaton(nl.ni_namelist_val[n], &a)) {
 			    ircd_res.sort_list[nsort].addr = a;
 			    if (*cp && ISSORTMASK(ch)) {
 			    	*cp++ = ch;
-			        if (inet_aton(cp, &a)) {
+			        if (inetaton(cp, &a)) {
 				    ircd_res.sort_list[nsort].mask = a.s_addr;
 				} else {
 				    ircd_res.sort_list[nsort].mask =
-					net_mask(ircd_res.sort_list[nsort].addr);
+					ircd_net_mask(ircd_res.sort_list[nsort].addr);
 				}
 			    } else {
 				ircd_res.sort_list[nsort].mask =
-				    net_mask(ircd_res.sort_list[nsort].addr);
+				    ircd_net_mask(ircd_res.sort_list[nsort].addr);
 			    }
 			    nsort++;
 			}
@@ -626,7 +633,7 @@ netinfo_res_init(haveenv, havesearch)
 		/* get resolver options */
 		status = ni_lookupprop(domain, &dir, "options", &nl);
 		if (status == NI_OK && nl.ni_namelist_len > 0) {
-		    res_setoptions(nl.ni_namelist_val[0], "conf");
+		    ircd_res_setoptions(nl.ni_namelist_val[0], "conf");
 		    ni_namelist_free(&nl);
 		}
 
@@ -644,8 +651,8 @@ netinfo_res_init(haveenv, havesearch)
 }
 #endif	/* NeXT */
 
-u_int16_t
-res_randomid()
+u_int
+ircd_res_randomid()
 {
 	struct timeval now;
 

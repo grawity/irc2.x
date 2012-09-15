@@ -19,17 +19,20 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.8 1997/07/15 04:35:47 kalt Exp $";
 #endif
 
 #include "struct.h"
 /*
  * Option string.  Must be before #ifdef DEBUGMODE.
+ * spaces are not allowed.
  */
 char	serveropts[] = {
 #ifdef	SENDQ_ALWAYS
 'A',
+#endif
+#ifndef	NO_IDENT
+'a',
 #endif
 #ifdef	CHROOTDIR
 'c',
@@ -41,13 +44,19 @@ char	serveropts[] = {
 'D',
 #endif
 #ifdef	RANDOM_NDELAY
-'D',
+'d',
 #endif
 #ifdef	LOCOP_REHASH
 'e',
 #endif
 #ifdef	OPER_REHASH
 'E',
+#endif
+#ifdef	SLOW_ACCEPT
+'f',
+#endif
+#ifdef	CLONE_CHECK
+'F',
 #endif
 #ifdef	SUN_GSO_BUG
 'g',
@@ -107,6 +116,9 @@ char	serveropts[] = {
 #ifdef	OPER_REMOTE
 't',
 #endif
+#ifndef	NO_PREFIX
+'u',
+#endif
 #ifdef	ENABLE_USERS
 'U',
 #endif
@@ -122,13 +134,13 @@ char	serveropts[] = {
 #ifdef	USE_SYSLOG
 'Y',
 #endif
-#ifdef	V28PlusOnly
-'8',
+#ifdef	ZIP_LINKS
+'Z',
 #endif
 #ifdef MIRC_KLUDGE
 '$',
 #endif
-' ',
+'_',
 'V',
 #ifndef NoV28Links
 '0',
@@ -152,7 +164,6 @@ char	serveropts[] = {
 #ifdef GETRUSAGE_2
 # ifdef SVR4
 #  include <sys/time.h>
-#  include <sys/rusage.h>
 # endif
 # include <sys/resource.h>
 #else
@@ -179,35 +190,39 @@ char	serveropts[] = {
 #ifdef DEBUGMODE
 static	char	debugbuf[1024];
 
-#ifndef	USE_VARARGS
-/*VARARGS2*/
+#ifndef	USE_STDARG
 void	debug(level, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
 int	level;
 char	*form, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
-{
 #else
-void	debug(level, form, va_alist)
-int	level;
-char	*form;
-va_dcl
-{
-	va_list	vl;
-
-	va_start(vl);
+void	debug(int level, char *form, ...)
 #endif
+{
 	int	err = errno;
 
 #ifdef	USE_SYSLOG
 	if (level == DEBUG_ERROR)
+	    {
+#ifndef	USE_STDARG
 		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+#else
+		va_list va;
+		va_start(va, form);
+		vsyslog(LOG_ERR, form, va);
+		va_end(va);
+#endif
+	    }
 #endif
 	if ((debuglevel >= 0) && (level <= debuglevel))
 	    {
-#ifndef	USE_VARARGS
+#ifndef	USE_STDARG
 		(void)sprintf(debugbuf, form,
 				p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
-		(void)vsprintf(debugbuf, form, vl);
+		va_list va;
+		va_start(va, form);
+		(void)vsprintf(debugbuf, form, va);
+		va_end(va);
 #endif
 		if (local[2])
 		    {
@@ -320,7 +335,8 @@ char	*nick;
 	sendto_one(cptr, ":%s %d %s :Reads %d Writes %d",
 		   me.name, RPL_STATSDEBUG, nick, readcalls, writecalls);
 	sendto_one(cptr, ":%s %d %s :DBUF alloc %d blocks %d",
-		   me.name, RPL_STATSDEBUG, nick, dbufalloc, dbufblocks);
+		   me.name, RPL_STATSDEBUG, nick, istat.is_dbufuse,
+		   istat.is_dbufnow);
 	sendto_one(cptr,
 		   ":%s %d %s :Writes:  <0 %d 0 %d <16 %d <32 %d <64 %d",
 		   me.name, RPL_STATSDEBUG, nick,
@@ -356,9 +372,22 @@ char	*nick;
 	sendto_one(cptr, ":%s %d %s :H:%d N:%d U:%d R:%d T:%d C:%d P:%d K:%d",
 		   ME, RPL_STATSDEFINE, nick, HOSTLEN, NICKLEN, USERLEN,
 		   REALLEN, TOPICLEN, CHANNELLEN, PASSWDLEN, KEYLEN);
-	sendto_one(cptr, ":%s %d %s :BS:%d MXR:%d MXB:%d MXBL:%d",
+	sendto_one(cptr, ":%s %d %s :BS:%d MXR:%d MXB:%d MXBL:%d PY:%d",
 		   ME, RPL_STATSDEFINE, nick, BUFSIZE, MAXRECIPIENTS, MAXBANS,
-		   MAXBANLENGTH);
+		   MAXBANLENGTH, MAXPENALTY);
+	sendto_one(cptr, ":%s %d %s :ZL:%d CM:%d CP:%d",
+		   ME, RPL_STATSDEFINE, nick,
+#ifdef	ZIP_LINKS
+		   ZIP_LEVEL,
+#else
+		   -1,
+#endif
+#ifdef	CLONE_CHECK
+		   CLONE_MAX, CLONE_PERIOD
+#else
+		   -1, -1
+#endif
+		   );
 }
 
 void	count_memory(cptr, nick, debug)
@@ -530,8 +559,10 @@ int	debug;
 		sendto_one(cptr, ":%s %d %s :Request processed in %u seconds",
 			   me.name, RPL_STATSDEBUG, nick, time(NULL) - start);
 
-	sendto_one(cptr, ":%s %d %s :Client Local %d(%d) Remote %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, lc, lcm, rc, rcm);
+	sendto_one(cptr,
+		   ":%s %d %s :Client Local %d(%d) Remote %d(%d) Auth %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, lc, lcm, rc, rcm,
+		   istat.is_auth, istat.is_authmem);
 	if (debug
 	    && (lc != d_lc || lcm != d_lcm || rc != d_rc || rcm != d_rcm))
 		sendto_one(cptr,
@@ -628,10 +659,12 @@ int	debug;
 		   me.name, RPL_STATSDEBUG, nick, _HASHSIZE,
 		   sizeof(aHashEntry) * _HASHSIZE,
 		   _CHANNELHASHSIZE, sizeof(aHashEntry) * _CHANNELHASHSIZE);
-	d_db = db = dbufblocks * sizeof(dbufbuf);
-	db = dbufblocks * sizeof(dbufbuf);
-	sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
+	d_db = db = istat.is_dbufnow * sizeof(dbufbuf);
+	db = istat.is_dbufnow * sizeof(dbufbuf);
+	sendto_one(cptr, ":%s %d %s :Dbuf blocks %u(%d) (> %u) (%u < %u) [%u]",
+		   me.name, RPL_STATSDEBUG, nick, istat.is_dbufnow, db,
+		   istat.is_dbuf, istat.is_dbufuse, istat.is_dbufmax,
+		   istat.is_dbufmore);
 
 	d_rm = rm = cres_mem(cptr, nick);
 

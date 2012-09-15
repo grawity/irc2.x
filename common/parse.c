@@ -23,8 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.5 1997/06/26 15:40:47 kalt Exp $";
 #endif
 #include "struct.h"
 #include "common.h"
@@ -65,7 +64,7 @@ Reg	aClient *cptr;
     {
 	aClient *acptr = cptr;
 
-	if (name)
+	if (name && *name)
 		acptr = hash_find_client(name, cptr);
 
 	return acptr;
@@ -77,32 +76,20 @@ Reg	aClient *cptr;
     {
 	aClient *acptr = cptr;
 
-	if (name)
+	if (index(name, '@'))
 		acptr = hash_find_client(name, cptr);
-	/* This needs support for multiple services.. */
 	return acptr;
     }
 
-aClient	*find_nickserv(name, cptr)
-char	*name;
-Reg	aClient *cptr;
-    {
-	aClient *acptr = cptr;
+#else /* CLIENT_COMPILE */
 
-	if (name)
-		acptr = hash_find_nickserv(name, cptr);
-
-	return acptr;
-    }
-
-#else
 aClient *find_client(name, cptr)
 char *name;
 aClient *cptr;
     {
 	Reg	aClient	*c2ptr = cptr;
 
-	if (!name)
+	if (!name || !*name)
 		return c2ptr;
 
 	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
@@ -110,7 +97,7 @@ aClient *cptr;
 			return c2ptr;
 	return cptr;
     }
-#endif
+#endif /* CLIENT_COMPILE */
 
 /*
 **  Find a user@host (server or user).
@@ -134,7 +121,7 @@ int	*count;
 		    {
 			if (!MyClient(c2ptr)) /* implies mine and a user */
 				continue;
-			if ((!host || !matches(host, c2ptr->user->host)) &&
+			if ((!host || !match(host, c2ptr->user->host)) &&
 			     mycmp(user, c2ptr->user->username) == 0)
 			    {
 				(*count)++;
@@ -167,7 +154,7 @@ Reg	aClient *cptr;
 {
 	aClient *acptr = cptr;
 
-	if (name)
+	if (name && *name)
 		acptr = hash_find_server(name, cptr);
 	return acptr;
 }
@@ -184,7 +171,7 @@ aClient *cptr;
 	Reg	aClient	*c2ptr = cptr;
 	Reg	char	*mask = servermask;
 
-	if (!name)
+	if (!name || !*name)
 		return c2ptr;
 	if ((c2ptr = hash_find_server(name, cptr)))
 		return (c2ptr);
@@ -225,7 +212,7 @@ aClient *cptr;
 	Reg	aClient	*c2ptr = cptr;
 	Reg	aServer	*sp = NULL;
 
-	if (!name)
+	if (!name || !*name)
 		return c2ptr;
 
 	if ((c2ptr = hash_find_server(name, cptr)))
@@ -238,10 +225,10 @@ aClient *cptr;
 		** A server present in the list necessarily has a non NULL
 		** bcptr pointer.
 		*/
-		if (matches(name, sp->bcptr->name) == 0)
+		if (match(name, sp->bcptr->name) == 0)
 			break;
 		if (index(sp->bcptr->name, '*'))
-			if (matches(sp->bcptr->name, name) == 0)
+			if (match(sp->bcptr->name, name) == 0)
 					break;
 	    }
 	return (sp ? sp->bcptr : cptr);
@@ -253,15 +240,15 @@ aClient	*cptr;
 {
 	Reg	aClient *c2ptr = cptr;
 
-	if (!name)
+	if (!name || !*name)
 		return c2ptr;
 
 	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next)
 	    {
 		if (!IsServer(c2ptr) && !IsMe(c2ptr))
 			continue;
-		if (matches(c2ptr->name, name) == 0 ||
-		    matches(name, c2ptr->name) == 0)
+		if (match(c2ptr->name, name) == 0 ||
+		    match(name, c2ptr->name) == 0)
 			break;
 	    }
 	return (c2ptr ? c2ptr : cptr);
@@ -350,11 +337,12 @@ char	*buffer, *bufend;
 		if (*sender && IsServer(cptr))
 		    {
  			from = find_client(sender, (aClient *) NULL);
-			if (!from || matches(from->name, sender))
+			if (!from || match(from->name, sender))
 				from = find_server(sender, (aClient *)NULL);
 #ifndef	CLIENT_COMPILE
-			else if (!from && index(sender, '@') &&
-				 !(from = find_nickserv(sender, NULL)))
+			/* Is there svc@server prefix ever? -Vesa */
+			/* every time a service talks -krys */
+			if (!from && index(sender, '@'))
 				from = find_service(sender, (aClient *)NULL);
 			if (!from)
 				from = find_mask(sender, (aClient *) NULL);
@@ -543,11 +531,6 @@ char	*buffer, *bufend;
 	Debug((DEBUG_DEBUG, "Function: %#x = %s parc %d parv %#x",
 		mptr->func, mptr->cmd, i, para));
 #ifndef	CLIENT_COMPILE
-/* replaced by penalty
-	if ((mptr->flags & MSG_PP) && !(IsServer(cptr) || IsService(cptr)) &&
-	    i > 2)
-		cptr->since += (i - 2);
-*/
 	if ((mptr->flags & MSG_REGU) && check_registered_user(from))
 		return -1;
 	if ((mptr->flags & MSG_SVC) && check_registered_service(from))
@@ -673,20 +656,25 @@ char	*sender;
 	if (!IsServer(cptr))
 		return;
 	/*
-	 * Do kill if it came from a server because it means there is a ghost
-	 * user on the other server which needs to be removed. -avalon
-	 * it can simply be caused by lag (among other things), so just
-	 * drop it if it is not a server. -krys
-	 */
-	sendto_flag(SCH_LOCAL, "Dropping unknown %s brought by %s.",
-		    sender, get_client_name(cptr, FALSE));
-	/*
 	 * squit if it is a server because it means something is really
 	 * wrong.
 	 */
 	if (index(sender, '.') /* <- buggy, it could be a service! */
 	    && !index(sender, '@')) /* better.. */
+	    {
+		sendto_flag(SCH_LOCAL, "Squitting unknown %s brought by %s.",
+			    sender, get_client_name(cptr, FALSE));
 		sendto_one(cptr, ":%s SQUIT %s :(Unknown from %s)",
 			   me.name, sender, get_client_name(cptr, FALSE));
+	    }
+	else
+	/*
+	 * Do kill if it came from a server because it means there is a ghost
+	 * user on the other server which needs to be removed. -avalon
+	 * it can simply be caused by lag (among other things), so just
+	 * drop it if it is not a server. -krys
+	 */
+		sendto_flag(SCH_LOCAL, "Dropping unknown %s brought by %s.",
+			    sender, get_client_name(cptr, FALSE));
 }
 #endif

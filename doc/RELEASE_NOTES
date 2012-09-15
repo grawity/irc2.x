@@ -1,0 +1,28 @@
+# @(#)$Id: RELEASE_NOTES,v 1.9 1997/07/24 12:37:33 kalt Exp $
+
+This is version 2.9.3 of the IRC software.
+
+---
+
+2.9.3 doesn't support 2.7 protocol anymore.  Don't run 2.9.3
+and 2.7 servers on the same network.
+
+---
+
+New features:
+
+	* compression of server links.
+	* virtual IP support.
+	* B lines created. (client redirection)
+	* k lines created. (OTHER ident)
+	* V lines created. (restrict peers' compile time options)
+	* new type of client: services.
+
+---
+
+Important configuration changes:
+
+	* M and P lines format has changed since 2.9.2, it is important
+	  to update your ircd.conf !
+	* kill lines are now case sensitive (K: and k: are different)
+

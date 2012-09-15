@@ -22,8 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
-Computing Center and Jarkko Oikarinen";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.7 1997/06/27 13:38:38 kalt Exp $";
 #endif
 
 #include <sys/time.h>
@@ -223,21 +222,22 @@ int	showip;
 		else
 		    {
 			if (showip)
-				(void)sprintf(nbuf, "%s[%s@%s]",
-					sptr->name,
+				(void)sprintf(nbuf, "%s[%.*s@%s]",
+					sptr->name, USERLEN,
 					(!(sptr->flags & FLAGS_GOTID)) ? "" :
-					sptr->username,
-					inetntoa((char *)&sptr->ip));
+					sptr->auth,
+					      inetntoa((char *)&sptr->ip));
 			else
 			    {
 				if (mycmp(sptr->name, sptr->sockhost))
 					/* Show username for clients and
 					 * ident for others.
 					 */
-					SPRINTF(nbuf, "%s[%s@%s]", sptr->name,
+					SPRINTF(nbuf, "%s[%.*s@%s]",
+						sptr->name, USERLEN,
 						IsPerson(sptr) ?
 							sptr->user->username :
-							sptr->username,
+							sptr->auth,
 						sptr->sockhost);
 				else
 					return sptr->name;
@@ -262,7 +262,7 @@ aClient	*cptr;
 	else
 		(void)sprintf(nbuf, "%s[%-.*s@%-.*s]",
 			cptr->name, USERLEN,
-			(!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
+			(!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->auth,
 			HOSTLEN, cptr->hostp->h_name);
 	return nbuf;
 }
@@ -337,7 +337,7 @@ char	*name;
 			continue;
 		}
 		if ((aconf = acptr->serv->nline) &&
-		    (matches(my_name_for_link(ME, aconf->port), name) == 0))
+		    (match(my_name_for_link(ME, aconf->port), name) == 0))
 		{
 			acptr->flags |= FLAGS_HIDDEN;
 			j++;
@@ -409,12 +409,11 @@ char	*comment;	/* Reason for the exit */
 			       on_for / 3600, (on_for % 3600)/60,
 			       on_for % 60,
 			       sptr->user->username, sptr->user->host,
-			       sptr->username, sptr->exitc);
+			       sptr->auth, sptr->exitc);
 # endif
 # ifdef FNAME_USERLOG
-			sendto_flog(myctime(sptr->firsttime), NULL, on_for,
-				    sptr->user->username, sptr->user->host,
-				    sptr->username, &sptr->exitc);
+			sendto_flog(sptr, NULL, on_for, sptr->user->username,
+				    sptr->user->host);
 # endif
 		    }
 		else if (sptr->exitc != EXITC_REF)
@@ -425,15 +424,13 @@ char	*comment;	/* Reason for the exit */
 			       myctime(sptr->firsttime),
 			       (IsUnixSocket(sptr)) ? me.sockhost :
 			       ((sptr->hostp) ? sptr->hostp->h_name :
-				sptr->sockhost), sptr->username, sptr->exitc);
+				sptr->sockhost), sptr->auth, sptr->exitc);
 # endif
 # ifdef FNAME_CONNLOG
-			sendto_flog(myctime(sptr->firsttime), " Unknown ", 0,
-				    "<none>", 
+			sendto_flog(sptr, " Unknown ", 0, "<none>", 
 				    (IsUnixSocket(sptr)) ? me.sockhost :
 				    ((sptr->hostp) ? sptr->hostp->h_name :
-				     sptr->sockhost),
-				    sptr->username, &sptr->exitc);
+				     sptr->sockhost));
 # endif
 		    }
 #endif
@@ -455,6 +452,14 @@ char	*comment;	/* Reason for the exit */
 		      else
 			sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
 				   get_client_name(sptr,FALSE), comment);
+
+		      if (sptr->auth != sptr->username)
+			  {
+			    istat.is_authmem -= sizeof(sptr->auth);
+			    istat.is_auth -= 1;
+			    MyFree(sptr->auth);
+			    sptr->auth = sptr->username;
+			  }
 		    }
 		/*
 		** Currently only server connections can have
@@ -462,6 +467,7 @@ char	*comment;	/* Reason for the exit */
 		** harm to check for all local clients. In
 		** future some other clients than servers might
 		** have remotes too...
+		** now, I think it harms big client servers... - krys
 		**
 		** Close the Client connection first and mark it
 		** so that no messages are attempted to send to it.
@@ -470,6 +476,9 @@ char	*comment;	/* Reason for the exit */
 		** to test whether "sptr != acptr" in the following loops.
 		*/
 		close_connection(sptr);
+
+		if (IsServer(sptr))
+		    {
 		/*
 		** First QUIT all NON-servers which are behind this link
 		**
@@ -484,70 +493,89 @@ char	*comment;	/* Reason for the exit */
 		** together into exit_one_client() to provide some useful
 		** information about where the net is broken.      Ian 
 		*/
-		(void)strcpy(comment1, ME);
-		(void)strcat(comment1," ");
-		(void)strcat(comment1, sptr->name);
- 
- 		/* This will quit all the *users*, without checking the
-		** whole list of clients. I like it, unfortunately,
-		** there's more below..
- 		*/
- 		for (asptr = svrtop; asptr; asptr = (aServer *)next)
-		{
- 			next = (aClient *)asptr->nexts;
- 			if ((asptr->userlist == NULL)
- 			    || (asptr->bcptr == NULL)
- 			    || (asptr->bcptr->from != sptr
- 				&& asptr->bcptr != sptr))
- 				continue;
- 			/* This version doesn't need QUITs to be propagaged
-			** unless the remote server is hidden (by a hostmask)
+			(void)strcpy(comment1, ME);
+			(void)strcat(comment1," ");
+			(void)strcat(comment1, sptr->name);
+
+			/* This will quit all the *users*, without checking the
+			** whole list of clients. I like it, unfortunately,
+			** there's more below..
 			*/
- 			if (mark_blind_servers(NULL, asptr->bcptr->name))
- 				flags |= FLAGS_SPLIT | FLAGS_HIDDEN;
- 			else
- 				flags |= FLAGS_SPLIT;
- 			do
- 			{
- 				acptr = asptr->userlist->bcptr;
- 				acptr->flags |= flags;
- 				exit_one_client(NULL, acptr, &me, comment1);
- 			}
- 			while (asptr->userlist);
- 		}
- 		/* Here is more..
-		** I don't know what use this can have for now, but
-		** the above breaks the old code, which I just pasted
-		** below.
- 		** Nothing should happen here, unless there is another
- 		** remote entity than "user" (and servers) depending
- 		** on remote servers: services, it would be much smarter
-		** to only check services instead of wasting CPU - krys
- 		*/
-		for (acptr = client; acptr; acptr = next)
-		    {
-			next = acptr->next;
-			if (!IsServer(acptr) && acptr->from == sptr)
+			for (asptr = svrtop; asptr; asptr = (aServer *)next)
 			    {
-				exit_one_client(NULL, acptr, &me, comment1);
+				next = (aClient *)asptr->nexts;
+				if ((asptr->userlist == NULL)
+				    || (asptr->bcptr == NULL)
+				    || (asptr->bcptr->from != sptr
+					&& asptr->bcptr != sptr))
+					continue;
+				/* This version doesn't need QUITs to be
+				** propagaged unless the remote server is
+				** hidden (by a hostmask)
+				*/
+				if (mark_blind_servers(NULL,
+						       asptr->bcptr->name))
+					flags |= FLAGS_SPLIT | FLAGS_HIDDEN;
+				else
+					flags |= FLAGS_SPLIT;
+				do
+				    {
+					acptr = asptr->userlist->bcptr;
+					acptr->flags |= flags;
+					exit_one_client(NULL, acptr, &me,
+							comment1);
+				    }
+				while (asptr->userlist);
 			    }
-		    }
-		/*
-		** Second SQUIT all servers behind this link
-		*/
-		for (asptr = svrtop; asptr; asptr = (aServer *)next)
-		    {
-			next = (aClient *)asptr->nexts;
-			if ((acptr = asptr->bcptr) &&
-			    acptr->from == sptr)
+			/* Here is more..
+			** I don't know what use this can have for now, but
+			** the above breaks the old code, which I just pasted
+			** below.
+			** Nothing should happen here, unless there is another
+			** remote entity than "user" (and servers) depending
+			** on remote servers: services,it would be much smarter
+			** to only check services instead of wasting CPU - krys
+			*/
+			for (acptr = client; acptr; acptr = next)
 			    {
-				sendto_flag(SCH_SERVER,
-					    "Sending SQUIT %s (%s)",
-					    acptr->name, comment);
-				exit_one_client(NULL, acptr, &me, ME);
+				next = acptr->next;
+				if (!IsServer(acptr) && acptr->from == sptr)
+				    {
+					/*
+					** Let's see if things are ever wrong.
+					** Second step would be finally change
+					** this loop to go through the services
+					** list. -krys
+					*/
+					if (!IsService(acptr))
+						sendto_flag(SCH_ERROR,
+			    "lists seem corrupted: %s %#x %#x %#x (%s)",
+							    acptr->name,
+							    acptr->user,
+							    acptr->serv,
+							    acptr->service,
+							    sptr->name);
+					exit_one_client(NULL, acptr, &me,
+							comment1);
+				    }
 			    }
-		    }
-	    }
+			/*
+			** Second SQUIT all servers behind this link
+			*/
+			for (asptr = svrtop; asptr; asptr = (aServer *)next)
+			    {
+				next = (aClient *)asptr->nexts;
+				if ((acptr = asptr->bcptr) &&
+				    acptr->from == sptr)
+				    {
+					sendto_flag(SCH_SERVER,
+						    "Sending SQUIT %s (%s)",
+						    acptr->name, comment);
+					exit_one_client(NULL, acptr, &me, ME);
+				    }
+			    }
+		    } /* If (IsServer(sptr)) */
+	    } /* if (MyConnect(sptr) || (sptr->flags & FLAGS_HELD)) */
 
  	if (IsServer(sptr) && sptr->serv->userlist)
  	{
@@ -566,7 +594,7 @@ char	*comment;	/* Reason for the exit */
 		else
 			/* this is right */
 			(void)strcpy(comment1, sptr->serv->up);
- 		(void)strcat(comment1," ");
+ 		(void)strcat(comment1, " ");
  		(void)strcat(comment1, sptr->name);
 
  		do
@@ -678,41 +706,17 @@ char	*comment;
 			    acptr == cptr || IsMe(acptr))
 				continue;
 			if ((aconf = acptr->serv->nline) &&
-			    (matches(my_name_for_link(ME, aconf->port),
+			    (match(my_name_for_link(ME, aconf->port),
 				     sptr->name) == 0))
 				continue;
-			/*
-			** SQUIT going "upstream". This is the remote
-			** squit still hunting for the target. Use prefixed
-			** form. "from" will be either the oper that issued
-			** the squit or some server along the path that
-			** didn't have this fix installed. --msa
-			*/
-			if (sptr->from == acptr)
-			    {
-				sendto_one(acptr, ":%s SQUIT %s :%s",
-					   from->name, sptr->name, comment);
-#ifdef	USE_SERVICES
-				check_services_butone(SERVICE_WANT_SQUIT, 
-						      sptr->name, sptr,
-						      ":%s SQUIT %s :%s",
-						      from->name,
-						      sptr->name, comment);
-#endif
-			    }
-			else
-			    {
-				sendto_one(acptr, ":%s SQUIT %s :%s",
-					   from->name, sptr->name, comment);
-#ifdef	USE_SERVICES
-				check_services_butone(SERVICE_WANT_SQUIT, 
-						      sptr->name, sptr,
-						      ":%s SQUIT %s :%s",
-						      from->name, sptr->name,
-						      comment);
-#endif
-			    }
+			sendto_one(acptr, ":%s SQUIT %s :%s",
+				   from->name, sptr->name, comment);
 		    }
+#ifdef	USE_SERVICES
+		check_services_butone(SERVICE_WANT_SQUIT, sptr->name, sptr,
+				      ":%s SQUIT %s :%s", from->name,
+				      sptr->name, comment);
+#endif
 		(void) del_from_server_hash_table(sptr->serv, cptr ? cptr :
 						  sptr->from);
 	} else if (!IsPerson(sptr) && !IsService(sptr))
@@ -731,10 +735,21 @@ char	*comment;
 		if ((sptr->flags & FLAGS_KILLED) == 0)
 		    {
 			if ((sptr->flags & FLAGS_SPLIT) == 0)
+			    {
 				sendto_serv_butone(cptr, ":%s QUIT :%s",
-					   sptr->name, comment);
+						   sptr->name, comment);
+#ifdef	USE_SERVICES
+				check_services_butone(SERVICE_WANT_QUIT|
+						      SERVICE_WANT_RQUIT, 
+						      (sptr->user) ?
+						      sptr->user->server
+						      : NULL, cptr,
+						      ":%s QUIT :%s",
+						      sptr->name, comment);
+#endif
+			    }
 			else
-			{
+			    {
 #ifndef NoV28Links
 				sendto_serv_v(cptr, SV_OLD, ":%s QUIT :%s",
 					   sptr->name, comment);
@@ -754,14 +769,14 @@ char	*comment;
 								   sptr->name,
 								   comment);
 					}
-			}
 #ifdef	USE_SERVICES
-			check_services_butone(SERVICE_WANT_QUIT, 
+				check_services_butone(SERVICE_WANT_QUIT, 
 					      (sptr->user) ? sptr->user->server
-					      : NULL, cptr,
-					      ":%s QUIT :%s", sptr->name,
-					      comment);
+						      : NULL, cptr,
+						      ":%s QUIT :%s",
+						      sptr->name, comment);
 #endif
+			    }
 		    }
 		/*
 		** If a person is on a channel, send a QUIT notice
@@ -838,20 +853,22 @@ char	*comment;
 				    || !IsServer(acptr) || acptr == cptr
 				    || IsMe(acptr))
 					continue;
-				if (matches(sptr->service->dist, acptr->name))
+				if (match(sptr->service->dist, acptr->name))
 					continue;
 				sendto_one(acptr, ":%s QUIT :%s", sptr->name,
 					   comment);
 			    }
 		    }
 #ifdef	USE_SERVICES
-		check_services_butone(SERVICE_WANT_SERVICE, NULL,
+		check_services_butone(SERVICE_WANT_SERVICE, NULL, NULL,
 				      ":%s QUIT :%s", sptr->name, comment);
 #endif
 		/* MyConnect(sptr) is always FALSE here */
 		if (cptr == sptr)
 			sendto_flag(SCH_NOTICE, "Service %s disconnected",
 				    get_client_name(sptr, TRUE));
+		sendto_flag(SCH_SERVICE, "Received QUIT %s from %s (%s)",
+			    sptr->name, from->name, comment);
 		istat.is_service--;
 	    }
 
@@ -967,8 +984,10 @@ char	*name;
 		   ME, RPL_STATSDEBUG, name, sp->is_num, sp->is_fake);
 	sendto_one(cptr, ":%s %d %s :auth: successes %u fails %u",
 		   ME, RPL_STATSDEBUG, name, sp->is_asuc, sp->is_abad);
-	sendto_one(cptr, ":%s %d %s :local connections %u udp packets %u",
-		   ME, RPL_STATSDEBUG, name, sp->is_loc, sp->is_udp);
+	sendto_one(cptr,":%s %d %s :local connections %u udp packets %u",
+		   ME, RPL_STATSDEBUG, name, sp->is_loc, sp->is_udpok);
+	sendto_one(cptr,":%s %d %s :udp errors %u udp dropped %u",
+		   ME, RPL_STATSDEBUG, name, sp->is_udperr, sp->is_udpdrop);
 	if (sp->is_wwcnt)
 		sendto_one(cptr, ":%s %d %s :whowas turnover %u/%u/%u [%u]",
 			   ME, RPL_STATSDEBUG, name, sp->is_wwmt,
@@ -992,3 +1011,54 @@ char	*name;
 	sendto_one(cptr, ":%s %d %s :time connected %u %u",
 		   ME, RPL_STATSDEBUG, name, sp->is_cti, sp->is_sti);
 }
+
+#ifdef CACHED_MOTD
+aMotd		*motd = NULL;
+struct tm	motd_tm;
+
+void read_motd(filename)
+char *filename;
+{
+	int fd;
+	register aMotd *temp, *last;
+	struct stat Sb;
+	char line[80];
+	register char *tmp;
+	
+	if ((fd = open(filename, O_RDONLY)) == -1)
+		return;
+	if (fstat(fd, &Sb) == -1)
+	    {
+		close(fd);
+		return;
+	    }
+	for(;motd != NULL;motd=last)
+	    {
+		last = motd->next;
+		MyFree(motd->line);
+		MyFree(motd);
+	    }
+	motd_tm = *localtime(&Sb.st_mtime);
+	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
+	last = NULL;
+	while (dgets(fd, line, sizeof(line)-1) > 0)
+	    {
+		if ((tmp = strchr(line, '\n')) != NULL)
+			*tmp = (char) 0;
+		if ((tmp = strchr(line, '\r')) != NULL)
+			*tmp = (char) 0;
+		temp = (aMotd *)MyMalloc(sizeof(aMotd));
+		if (!temp)
+			outofmemory();
+		temp->line = mystrdup(line);
+		temp->next = NULL;
+		       if (!motd)
+			motd = temp;
+		else
+			last->next = temp;
+		last = temp;
+	    }
+	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
+	close(fd);
+}     
+#endif

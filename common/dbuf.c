@@ -36,12 +36,8 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
+static  char rcsid[] = "@(#)$Id: dbuf.c,v 1.7 1997/06/30 20:21:15 kalt Exp $";
 #endif
-
-/* Do not define until it is fixed. -krys
-#define	DBUF_TAIL
- */
 
 #include <stdio.h>
 #include "struct.h"
@@ -56,18 +52,13 @@ static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
 #define	valloc malloc
 #endif
 
-int	dbufalloc = 0, dbufblocks = 0;
-int	poolsize = (BUFFERPOOL > 1500000) ? BUFFERPOOL : 1500000;
+#ifdef	CLIENT_COMPILE
+/* kind of ugly, eh? */
+u_int	dbufalloc = 0;
+#endif
+
+u_int	poolsize = (BUFFERPOOL > 1500000) ? BUFFERPOOL : 1500000;
 dbufbuf	*freelist = NULL;
-
-
-/* This is a dangerous define because a broken compiler will set DBUFSIZ
-** to 4, which will work but will be very inefficient. However, there
-** are other places where the code breaks badly if this is screwed
-** up, so... -- Wumpus
-*/
-
-#define DBUFSIZ sizeof(((dbufbuf *)0)->data)
 
 #ifdef DBUF_INIT
 
@@ -88,10 +79,17 @@ void dbuf_init()
 	if (!freelist)
 		return; /* screw this if it doesn't work */
 	dbp = freelist;
-	for( ; i < (nb - 1); i++, dbp++, dbufblocks++)
+#ifndef	CLIENT_COMPILE
+	for( ; i < (nb - 1); i++, dbp++, istat.is_dbufnow++)
+#else
+	for( ; i < (nb - 1); i++, dbp++)
+#endif
 		dbp->next = (dbp + 1);
 	dbp->next = NULL;
-	dbufblocks++;
+#ifndef	CLIENT_COMPILE
+	istat.is_dbufnow++;
+	istat.is_dbuf = istat.is_dbufnow;
+#endif
 }
 
 #endif /* DBUF_INIT */
@@ -109,15 +107,28 @@ dbufbuf **dbptr;
 	Reg	int	num;
 #endif
 
+#ifndef	CLIENT_COMPILE
+	if (istat.is_dbufuse++ == istat.is_dbufmax)
+		istat.is_dbufmax = istat.is_dbufuse;
+#else
 	dbufalloc++;
+#endif
 	if ((*dbptr = freelist))
 	    {
 		freelist = freelist->next;
 		return 0;
 	    }
+#ifndef	CLIENT_COMPILE
+	if (istat.is_dbufuse * DBUFSIZ > poolsize)
+#else
 	if (dbufalloc * DBUFSIZ > poolsize)
+#endif
 	    {
+#ifndef	CLIENT_COMPILE
+		istat.is_dbufuse--;
+#else
 		dbufalloc--;
+#endif
 		return -2;	/* Not fatal, go back and increase poolsize */
 	    }
 
@@ -133,7 +144,9 @@ dbufbuf **dbptr;
 	if (num < 0)
 		num = 1;
 
-	dbufblocks += num;
+#ifndef	CLIENT_COMPILE
+	istat.is_dbufnow += num;
+#endif
 
 	*dbptr = (dbufbuf *)valloc(num*sizeof(dbufbuf));
 	if (!*dbptr)
@@ -148,7 +161,9 @@ dbufbuf **dbptr;
 	    }
 	return 0;
 #else
-	dbufblocks++;
+#ifndef	CLIENT_COMPILE
+	istat.is_dbufnow++;
+#endif
 	if (!(*dbptr = (dbufbuf *)MyMalloc(sizeof(dbufbuf))))
 		return -1;
 	return 0;
@@ -160,7 +175,11 @@ dbufbuf **dbptr;
 static	void	dbuf_free(ptr)
 Reg	dbufbuf	*ptr;
 {
+#ifndef	CLIENT_COMPILE
+	istat.is_dbufuse--;
+#else
 	dbufalloc--;
+#endif
 	ptr->next = freelist;
 	freelist = ptr;
 }
@@ -204,30 +223,28 @@ int	length;
 #endif
 	Reg	int	chunk, i, dlength;
 
-	off = (dyn->offset + dyn->length) % DBUFSIZ;
-#ifndef DBUF_TAIL
-	nbr = (dyn->offset + dyn->length) / DBUFSIZ;
-#else
-	dtail = dyn->tail;
-#endif
 	dlength = dyn->length;
+
+	off = (dyn->offset + dyn->length) % DBUFSIZ;
+#ifdef DBUF_TAIL
+	dtail = dyn->tail;
+        if (!dyn->length)
+                h = &(dyn->head);
+        else
+	    {
+		if (off)
+                        h = &(dyn->tail);
+                else
+                        h = &(dyn->tail->next);
+        }
+#else
 	/*
 	** Locate the last non-empty buffer. If the last buffer is
 	** full, the loop will terminate with 'd==NULL'. This loop
 	** assumes that the 'dyn->length' field is correctly
 	** maintained, as it should--no other check really needed.
 	*/
-#ifdef DBUF_TAIL
-        if (!dyn->length)
-                h = &(dyn->head);
-        else
-        {
-                if (off)
-                        h = &(dyn->tail);
-                else
-                        h = &(dyn->tail->next);
-        }
-#else
+	nbr = (dyn->offset + dyn->length) / DBUFSIZ;
 	for (h = &(dyn->head); (d = *h) && --nbr >= 0; h = &(d->next));
 #endif
 	/*
@@ -242,6 +259,7 @@ int	length;
 			if ((i = dbuf_alloc(&d)))
 			    {
 				if (i == -1)	/* out of memory, cleanup */
+					/* modifies dyn->tail */
 					dbuf_malloc_error(dyn);
 				else
 				/* If we run out of bufferpool, visit upper

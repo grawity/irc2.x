@@ -31,7 +31,7 @@
 #include "res.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	1.1 1/21/95 (C) 1992 Darren Reed";
+static  char rcsid[] = "@(#)$Id: res.c,v 1.9 1997/07/23 16:37:00 kalt Exp $";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -104,12 +104,12 @@ int	op;
 	    }
 	if (op & RES_CALLINIT)
 	    {
-		ret = res_init();
+		ret = ircd_res_init();
 		if (!ircd_res.nscount)
 		    {
 			ircd_res.nscount = 1;
 			ircd_res.nsaddr_list[0].sin_addr.s_addr =
-				inet_addr("127.0.0.1");
+				inetaddr("127.0.0.1");
 		    }
 	    }
 
@@ -184,7 +184,7 @@ ResRQ	*old;
 			MyFree(s);
 	if (r2ptr->name)
 		MyFree(r2ptr->name);
-	MyFree(r2ptr);
+	MyFree((char *)r2ptr);
 
 	return;
 }
@@ -232,41 +232,43 @@ time_t	now;
 	    {
 		r2ptr = rptr->next;
 		tout = rptr->sentat + rptr->timeout;
-		if (now >= tout && --rptr->retries <= 0)
-		    {
+		if (now >= tout)
+			if (--rptr->retries <= 0)
+			    {
 #ifdef DEBUG
-			Debug((DEBUG_ERROR,"timeout %x now %d cptr %x",
-				rptr, now, rptr->cinfo.value.cptr));
+				Debug((DEBUG_ERROR,"timeout %x now %d cptr %x",
+				       rptr, now, rptr->cinfo.value.cptr));
 #endif
-			reinfo.re_timeouts++;
-			cptr = rptr->cinfo.value.cptr;
-			switch (rptr->cinfo.flags)
-			{
-			case ASYNC_CLIENT :
-				ClearDNS(cptr);
-				if (!DoingAuth(cptr))
-					SetAccess(cptr);
-				break;
-			case ASYNC_CONNECT :
-				sendto_flag(SCH_ERROR,
-					    "Host %s unknown", rptr->name);
-				break;
-			}
-			rem_request(rptr);
-			continue;
-		    }
-		else
-		    {
-			rptr->sentat = now;
-			rptr->timeout += rptr->timeout;
-			resend_query(rptr);
-			tout = now + rptr->timeout;
+				reinfo.re_timeouts++;
+				cptr = rptr->cinfo.value.cptr;
+				switch (rptr->cinfo.flags)
+				    {
+				case ASYNC_CLIENT :
+					ClearDNS(cptr);
+					if (!DoingAuth(cptr))
+						SetAccess(cptr);
+					break;
+				case ASYNC_CONNECT :
+					sendto_flag(SCH_ERROR,
+						    "Host %s unknown",
+						    rptr->name);
+					break;
+				    }
+				rem_request(rptr);
+				continue;
+			    }
+			else
+			    {
+				rptr->sentat = now;
+				rptr->timeout += rptr->timeout;
+				resend_query(rptr);
+				tout = now + rptr->timeout;
 #ifdef DEBUG
-			Debug((DEBUG_INFO,"r %x now %d retry %d c %x",
-				rptr, now, rptr->retries,
-				rptr->cinfo.value.cptr));
+				Debug((DEBUG_INFO,"r %x now %d retry %d c %x",
+				       rptr, now, rptr->retries,
+				       rptr->cinfo.value.cptr));
 #endif
-		    }
+			    }
 		if (!next || tout < next)
 			next = tout;
 	    }
@@ -449,7 +451,7 @@ ResRQ	*rptr;
 	HEADER	*hptr;
 
 	bzero(buf, sizeof(buf));
-	r = res_mkquery(QUERY, name, class, type, NULL, 0, NULL,
+	r = ircd_res_mkquery(QUERY, name, class, type, NULL, 0, NULL,
 			(u_char *)buf, sizeof(buf));
 	if (r <= 0)
 	    {
@@ -530,7 +532,7 @@ HEADER	*hptr;
 #else
 	while (hptr->qdcount-- > 0)
 #endif
-		if ((n = dn_skipname((u_char *)cp, (u_char *)eob)) == -1)
+		if ((n = __ircd_dn_skipname((u_char *)cp, (u_char *)eob)) == -1)
 			break;
 		else
 			cp += (n + QFIXEDSZ);
@@ -538,19 +540,19 @@ HEADER	*hptr;
 	 * proccess each answer sent to us blech.
 	 */
 	while (hptr->ancount-- > 0 && cp && cp < eob) {
-		n = dn_expand((u_char *)buf, (u_char *)eob, (u_char *)cp,
+		n = ircd_dn_expand((u_char *)buf, (u_char *)eob, (u_char *)cp,
 			      hostbuf, sizeof(hostbuf));
 		if (n <= 0)
 			break;
 
 		cp += n;
-		type = (int)_getshort((u_char *)cp);
+		type = (int)ircd_getshort((u_char *)cp);
 		cp += sizeof(short);
-		class = (int)_getshort((u_char *)cp);
+		class = (int)ircd_getshort((u_char *)cp);
 		cp += sizeof(short);
-		rptr->ttl = _getlong((u_char *)cp);
+		rptr->ttl = ircd_getlong((u_char *)cp);
 		cp += sizeof(rptr->ttl);
-		dlen =  (int)_getshort((u_char *)cp);
+		dlen =  (int)ircd_getshort((u_char *)cp);
 		cp += sizeof(short);
 		rptr->type = type;
 
@@ -569,6 +571,16 @@ HEADER	*hptr;
 		switch(type)
 		{
 		case T_A :
+			if (dlen != sizeof(dr))
+			    {
+				sendto_flag(SCH_ERROR,
+				    "Bad IP length (%d) returned for %s", dlen,
+					    hostbuf);
+				Debug((DEBUG_DNS,
+				       "Bad IP length (%d) returned for %s",
+				       dlen, hostbuf));
+				return -2;
+			    }
 			hp->h_length = dlen;
 			if (ans == 1)
 				hp->h_addrtype =  (class == C_IN) ?
@@ -587,7 +599,7 @@ HEADER	*hptr;
 			cp += dlen;
  			break;
 		case T_PTR :
-			if((n = dn_expand((u_char *)buf, (u_char *)eob,
+			if((n = ircd_dn_expand((u_char *)buf, (u_char *)eob,
 					  (u_char *)cp, hostbuf,
 					  sizeof(hostbuf) )) < 0)
 			    {
@@ -624,7 +636,7 @@ HEADER	*hptr;
 			cp += dlen;
 			Debug((DEBUG_INFO,"got cname %s",hostbuf));
 			if (bad_hostname(hostbuf, len))
-				return -1;
+				return -1; /* a break would be enough here */
 			if (alias >= &(hp->h_aliases[MAXALIASES-1]))
 				break;
 			*alias = (char *)MyMalloc(len + 1);
@@ -737,15 +749,17 @@ char	*lp;
 	    }
 	a = proc_answer(rptr, hptr, buf, buf+rc);
 	if (a == -1) {
-		sendto_flag(SCH_ERROR, "Bad hostname returned from %s",
-			inet_ntoa(sin.sin_addr));
-		Debug((DEBUG_DNS, "Bad hostname returned from %s",
-			inet_ntoa(sin.sin_addr)));
+		sendto_flag(SCH_ERROR, "Bad hostname returned from %s for %s",
+			    inetntoa((char *)&sin.sin_addr),
+			    inetntoa((char *)&rptr->he.h_addr));
+		Debug((DEBUG_DNS, "Bad hostname returned from %s for %s",
+		       inetntoa((char *)&sin.sin_addr),
+		       inetntoa((char *)&rptr->he.h_addr)));
 	}
 #ifdef DEBUG
 	Debug((DEBUG_INFO,"get_res:Proc answer = %d",a));
 #endif
-	if (a && rptr->type == T_PTR)
+	if (a > 0 && rptr->type == T_PTR)
 	    {
 		struct	hostent	*hp2 = NULL;
 
@@ -835,7 +849,7 @@ Reg	u_char	*ip;
 	hashv += (int)*ip++;
 	hashv += hashv + (int)*ip++;
 	hashv += hashv + (int)*ip++;
-	hashv += hashv + (int)*ip++;
+	hashv += hashv + (int)*ip;
 	hashv %= ARES_CACSIZE;
 	return (hashv);
 }
@@ -1380,7 +1394,7 @@ char	*parv[];
 					   parv[0], cp->he.h_name,
 					   inetntoa(cp->he.h_addr_list[i]));
 		    }
-		return 0;
+		return 2;
 	}
 	sendto_one(sptr,"NOTICE %s :Ca %d Cd %d Ce %d Cl %d Ch %d:%d Cu %d",
 		   sptr->name,
@@ -1394,7 +1408,7 @@ char	*parv[];
 	sendto_one(sptr,"NOTICE %s :Ru %d Rsh %d Rs %d(%d) Rt %d", sptr->name,
 		   reinfo.re_unkrep, reinfo.re_shortttl, reinfo.re_sent,
 		   reinfo.re_resends, reinfo.re_timeouts);
-	return 0;
+	return 2;
 }
 
 u_long	cres_mem(sptr, nick)
