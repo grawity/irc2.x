@@ -358,6 +358,10 @@
 /* Sends an extra NOTICE in the beginning of client connection     */
 #undef	IRCII_KLUDGE
 
+#define FOLLOW_IDENT_RFC
+#define HIDE_FAKES
+#define TRACE_STATS
+
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
 /* You shouldn't change anything below this line, unless absolutely needed. */

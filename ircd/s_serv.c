@@ -1760,7 +1760,11 @@ char	*parv[];
 	 * Add these lines to summarize the above which can get rather long
          * and messy when done remotely - Avalon
          */
+#ifndef TRACE_STATS
        	if (!IsAnOper(sptr) || !cnt)
+#else
+        if (!SendWallops(sptr) || !cnt)
+#endif
 	    {
 		if (cnt)
 			return 0;

@@ -37,9 +37,6 @@ char	serveropts[] = {
 #ifdef	CMDLINE_CONFIG
 'C',
 #endif
-#ifdef	DO_ID
-'d',
-#endif
 #ifdef	DEBUGMODE
 'D',
 #endif
@@ -49,8 +46,11 @@ char	serveropts[] = {
 #ifdef	OPER_REHASH
 'E',
 #endif
-#ifdef	NOTE_FORWARDER
+#ifdef	FOLLOW_IDENT_RFC
 'f',
+#endif
+#ifdef  HIDE_FAKES
+'F',
 #endif
 #ifdef	HUB
 'H',
@@ -97,6 +97,9 @@ char	serveropts[] = {
 #endif
 #ifdef	OPER_REMOTE
 't',
+#endif
+#ifdef  TRACE_STATS
+'T',
 #endif
 #ifdef	IRCII_KLUDGE
 'u',

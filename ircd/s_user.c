@@ -357,8 +357,10 @@ char	*nick, *username;
 			user->username[USERLEN] = '\0';
 			
 		    }
+#ifndef FOLLOW_IDENT_RFC
 		else if (sptr->flags & FLAGS_GOTID)
 			strncpyzt(user->username, sptr->username, USERLEN+1);
+#endif
 		else
 			strncpyzt(user->username, username, USERLEN+1);
 
