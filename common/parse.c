@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, lib/ircd/parse.c
+ *   IRC - Internet Relay Chat, common/parse.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
  *                      University of Oulu, Computing Center
  *
@@ -112,7 +112,20 @@ aClient *find_server(name, cptr)
 char *name;
 aClient *cptr;
     {
-	aClient *c2ptr = find_client(name, (aClient *)NULL);
+	register aClient *c2ptr = (aClient *) 0;
+
+	if (name)
+	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
+	    if (matches(c2ptr->name, name) == 0)
+	      break;
+
+	if (c2ptr != NULL && (IsServer(c2ptr) || IsMe(c2ptr)))
+		return c2ptr;
+
+	if (name)
+	  for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
+	    if (matches(name, c2ptr->name) == 0)
+	      break;
 
 	if (c2ptr != NULL && (IsServer(c2ptr) || IsMe(c2ptr)))
 		return c2ptr;
@@ -215,7 +228,7 @@ struct Message *mptr;
 		mptr = NULL;
 		numeric = (*ch - '0') * 100 + (*(ch + 1) - '0') * 10
 			+ (*(ch + 2) - '0');
-		paramcount = 11;
+		paramcount = MAXPARA;
 	    }
 	else
 	    {
@@ -234,13 +247,18 @@ struct Message *mptr;
 			** If it has got to person state, it at least
 			** seems to be well behaving. Perhaps this message
 			** should never be generated, though...  --msa
+			** Hm, when is the buffer empty -- if a command
+			** code has been found ?? --Gonzo
 			*/
-			if (buffer[0] != '0') {
+			if (buffer[0] != '\0') {
 			  if (IsPerson(from))
 			    sendto_one(from,
 				       ":%s %d %s %s :Unknown command",
 				       me.name, ERR_UNKNOWNCOMMAND,
 				       from->name, ch);
+			  /*
+                          ** This concerns only client ... --Gonzo
+			  */
 			  if (!IsServer(&me))
 			    debug(DEBUG_ERROR,
 				  "*** Error: %s %s from server",

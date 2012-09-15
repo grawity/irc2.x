@@ -92,7 +92,7 @@
 #define	IsOper(x)	((~STAT_CHANOP & (x)->status) == STAT_OPER)
 #define IsPerson(x)	(IsClient(x) || IsOper(x))
 #define IsPrivileged(x)	(IsOper(x) || IsServer(x))
-#define IsChanOp(x)     ((x)->status & STAT_CHANOP)
+#define IsChanOp(x)     ((x)->status > 0 && (x)->status & STAT_CHANOP)
 
 #define	SetHandshake(x)	((x)->status = STAT_HANDSHAKE)
 #define	SetMe(x)	((x)->status = STAT_ME)
@@ -300,7 +300,7 @@ extern long getlongtime();
 
 #define LOCAL static
 
-#if HUPX
+#if HPUX
 #define random rand
 #define srandom srand
 #endif

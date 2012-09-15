@@ -21,6 +21,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 14 Jul 1990
+ * channel operator kill bug fixed
+ */
+
+/* -- Gonzo -- 10 Jul 1990
+ * m_whois() fixed, server died (sptr->user was NULL)
+ */
+
 /* -- Jto -- 07 Jul 1990
  * MSG_MAIL system fixes
  * Fixed m_lusers()
@@ -893,7 +901,7 @@ char *parv[];
 			++found;
 			a2cptr = find_server(user->server, (aClient *)NULL);
 			if (chptr && PubChannel(chptr) ||
-			    (chptr == sptr->user->channel &&
+			    (sptr->user && chptr == sptr->user->channel &&
 			     chptr != (aChannel *) 0))
 				sendto_one(sptr,":%s %d %s %s %s %s %s :%s",
 					   me.name, RPL_WHOISUSER,
@@ -1502,11 +1510,11 @@ char *parv[];
 			continue;
 		if (acptr->name[0] == '\0')
 			continue; /* Yet unknowns cannot be passed */
+		if (IsPerson(acptr) && IsChanOp(acptr) && acptr->user->channel)
+		  continue;
 		sendto_one(cptr,"NICK %s",acptr->name);
 		if (!IsPerson(acptr))
 			continue; /* Not fully introduced yet... */
-		if (IsChanOp(acptr) && acptr->user->channel)
-		  continue;
 		sendto_one(cptr,":%s USER %s %s %s :%s", acptr->name,
 			   acptr->user->username, acptr->user->host,
 			   acptr->user->server, acptr->info);
@@ -1925,7 +1933,7 @@ aClient *sptr; /* Client exiting */
 		    {
 			next = acptr->next;
 			if (!IsServer(acptr) && acptr->from == sptr)
-				ExitOneClient(cptr, acptr);
+				ExitOneClient((aClient *) 0, acptr);
 		    }
 		/*
 		** Second SQUIT all servers behind this link
@@ -1934,7 +1942,7 @@ aClient *sptr; /* Client exiting */
 		    {
 			next = acptr->next;
 			if (IsServer(acptr) && acptr->from == sptr)
-				ExitOneClient(cptr, acptr);
+				ExitOneClient((aClient *) 0, acptr);
 		    }
 	    }
 

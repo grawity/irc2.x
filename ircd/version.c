@@ -1,43 +1,3 @@
-#!/bin/sh
-#************************************************************************
-#*   IRC - Internet Relay Chat, ircd/mkversion.sh
-#*   Copyright (C) 1990 Chelsea Ashley Dyerman
-#*
-#*   This program is free software; you can redistribute it and/or modify
-#*   it under the terms of the GNU General Public License as published by
-#*   the Free Software Foundation; either version 1, or (at your option)
-#*   any later version.
-#*
-#*   This program is distributed in the hope that it will be useful,
-#*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#*   GNU General Public License for more details.
-#*
-#*   You should have received a copy of the GNU General Public License
-#*   along with this program; if not, write to the Free Software
-#*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#*/
-# 14 Jul 1990 - Jto
-# Applied Gonzo's fixes..
-#
-# 30 May 1990 - Jto
-# Changed Kimmo Suominen's mail address.
-# Added Heikki Piirainen's fix to creation
-#
-# $Header$
-# $Log$
-
-if [ ! -f version.c ]
-then
-	generation=0
-else
-	generation=`sed -n 's/^char \*generation = \"\(.*\)\";/\1/p' < version.c`
-	if [ ! "$generation" ]; then generation=0; fi
-fi
-
-generation=`expr $generation + 1`
-creation=`date | awk '{if (NF == 6) { print $1 " "  $2 " " $3 " "  $6 " at " $4 " " $5 } else { print $1 " "  $2 " " $3 " " $7 " at " $4 " " $5 " " $6 }}'`
-cat > version.c <<EOF
 /*
  *   IRC - Internet Relay Chat, ircd/version.c
  *   Copyright (C) 1990 Chelsea Ashley Dyerman
@@ -64,8 +24,8 @@ cat > version.c <<EOF
 #include "struct.h"
 #include "patchlevel.h"
 
-char *generation = "$generation";
-char *creation = "$creation";
+char *generation = "1";
+char *creation = "Tue Jul 24 1990 at 21:54:37 JST";
 char *version = PATCHLEVEL;
 
 char *infotext[] =
@@ -114,6 +74,3 @@ char *infotext[] =
 	0,
     };
 
-EOF
-
-exit 0

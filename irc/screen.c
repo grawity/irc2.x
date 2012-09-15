@@ -18,11 +18,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/*
+ * -- Gonzo -- Sat Jul  8 1990
+ * Added getmypass() [used in m_oper()]
+ */
+
 char screen_id[] = "screen.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
 
 #include "struct.h"
 #include <stdio.h>
 #include <curses.h>
+#ifdef GETPASS
+#include <signal.h>
+#include <sgtty.h>
+#include <pwd.h>
+#endif
 
 #ifdef TRUE
 #undef TRUE
@@ -289,3 +299,112 @@ int paikka;
 	return 0;
     return place[paikka];
 }
+
+#ifdef GETPASS
+/*
+** getmypass -        read password from /dev/tty
+**            backspace - space - backspace must make sense
+**            environment is preserved across interrupts
+**            ag 10/86
+**            rev ag 7/90 (adapted for Internet Relay Chat)
+*/
+
+static void (*oldsig[NSIG])();        /* save signal handlers */
+static struct sgttyb ttyb;    /* ioctl needs this */
+static int flags;             /* save old tty settings */
+static FILE *fi;
+
+static reset()
+{
+  register int i;
+  
+  ioctl(fileno(fi), TIOCFLUSH);
+  putc('\r', stderr);
+  for (i = 1; i < COLS; i++)
+    putc(' ', stderr);
+  putc('\r', stderr);
+  ttyb.sg_flags = flags;
+  ioctl(fileno(fi), TIOCSETP, &ttyb);
+  if (fi != stdin)
+    fclose(fi);
+  for (i=1; i < NSIG; i++)
+    if (i != SIGKILL)
+      signal(i, oldsig[i]);
+}
+
+static interrupt(sig)
+     int sig;
+{
+  if (oldsig[sig] != SIG_IGN)
+    {
+      reset();
+      kill(getpid(), sig);
+    }
+}
+
+char *getmypass(prompt)
+     char *prompt;
+{
+  static char pbuf[PASSWDLEN + NICKLEN + 1];
+  register int p, c;
+  char lbuf[PASSWDLEN + NICKLEN + 1];
+  
+  if ((fi = fopen("/dev/tty", "r")) == NULL)
+    fi = stdin;
+  else
+    setbuf(fi, (char *)NULL);
+  
+  ioctl(fileno(fi), TIOCGETP, &ttyb);
+  
+  for (c=1; c < NSIG; c++)
+    if (c != SIGKILL)
+      oldsig[c] = signal(c, interrupt);
+  
+  flags = ttyb.sg_flags;
+  ttyb.sg_flags &= ~ECHO;
+  ttyb.sg_flags |= CBREAK;
+  
+  ioctl(fileno(fi), TIOCSETP, &ttyb);
+  ioctl(fileno(fi), TIOCFLUSH);
+  putc('\r', stderr);
+  fputs(prompt, stderr);
+  srand(time(0));
+  for (p=0; p <PASSWDLEN + NICKLEN;)
+    {
+      switch (c = getc(fi)){
+      case EOF:
+      case '\0':
+      case '\004':
+      case '\n':
+	break;
+      default:
+	if (c == ttyb.sg_erase)
+	  {
+	    if (p)
+	      for (--p, c=0; c<lbuf[p];++c)
+		fputs("\b \b", stderr);
+	    continue;
+	  }
+	if (c == ttyb.sg_kill)
+	  {
+	    putc('\r', stderr);
+	    for (c = 1; c < COLS; c++)
+	      putc(' ', stderr);
+	    putc('\r', stderr);
+	    fputs(prompt, stderr);
+	    p = 0;
+	    continue;
+	  }
+	pbuf[p] = c;
+	for (lbuf[p] = c = 1 + rand() % 2; c--;)
+	  putc(' '+1+rand()%('~'-' '), stderr);
+	++p;
+	continue;
+      }
+      break;
+    }
+  pbuf[p] = '\0';
+  reset();
+  return pbuf;
+}
+#endif

@@ -828,3 +828,20 @@ char *recipient;
 
   return (name);
 }
+
+/*
+ * Left out until it works with VMS as well..
+ */
+
+#ifdef GETPASS
+do_oper(ptr, xtra)
+char *ptr, *xtra;
+{
+      extern char *getmypass();
+
+      if (BadPtr(ptr))
+	ptr = getmypass("Enter nick & password: ");
+
+      sendto_one(&me, "%s %s", xtra, ptr);
+}
+#endif

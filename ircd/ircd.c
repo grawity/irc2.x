@@ -18,6 +18,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Jto -- 14 Jul 1990
+ * Added Wumpus's MAXIMUM_LINKS fix...
+ */
+
 /* -- Jto -- 07 Jul 1990
  * Added jlp@hamblin.byu.edu's debugtty fixes
  * Added init_messages() -call (for mail.c)
@@ -110,6 +114,31 @@ long currenttime;
 	aClient *cptr;
 	int connected = FALSE;
 	long nexttime = currenttime + CONNECTFREQUENCY;
+	int connections = 0;
+
+#ifdef MAXIMUM_LINKS
+	/*
+	 * Count the places we can connect out to
+	 */
+	for (aconf = conf; aconf; aconf = aconf->next )
+	  {
+	    if (aconf->status != CONF_CONNECT_SERVER || aconf->port <= 0)
+	      continue;
+	    /*
+	     * now we have a possible one, see if we're already connected
+	     */
+	    for (cptr = client; cptr; cptr = cptr->next)
+	      if (!IsPerson(cptr) &&
+		  mycmp(cptr->name, aconf->name) == 0) {
+		connections++;
+		break;
+	      }
+	  }
+	if ( connections >= MAXIMUM_LINKS ) {
+	  sendto_ops( "Punting because we have enough connections." ); 
+	  return nexttime;
+	}
+#endif
 
 	for (aconf = conf; aconf; aconf = aconf->next )
 	    {

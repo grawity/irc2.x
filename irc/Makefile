@@ -26,6 +26,7 @@
 # Removed it (as suggested by Kim).
 
 # Check the curses libraries if your systems wants them differently...
+# CLIBS = -lcurses -lcur # for AIX PS/2 --Gonzo
 CLIBS = -lcurses -ltermcap
 
 OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
@@ -86,6 +87,7 @@ c_numeric.o: ../include/config.h ../include/sys.h
 c_numeric.o: ../include/struct.h
 c_numeric.o: ../include/dbuf.h ../include/numeric.h
 c_version.o: ../include/struct.h ../include/config.h ../include/dbuf.h
+c_version.o: ../include/patchlevel.h
 edit.o: ../include/struct.h
 edit.o: ../include/config.h ../include/dbuf.h
 help.o: ../include/struct.h ../include/config.h ../include/dbuf.h

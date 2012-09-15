@@ -43,7 +43,7 @@ long clock;
   struct timeval tp;
   struct timezone tzp;
   char *timezonename;
-#if !HPUX
+#if !(HPUX || AIX)
   extern char *timezone();
 #endif
 
@@ -52,7 +52,7 @@ long clock;
   ltbuf = localtime(&clock);
   gettimeofday(&tp, &tzp);
 
-#if HPUX
+#if HPUX || AIX
   tzset();
   timezonename = tzname[ltbuf->tm_isdst];
 #else

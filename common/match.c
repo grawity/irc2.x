@@ -1,5 +1,5 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, ircd/match.c
+ *   IRC - Internet Relay Chat, common/match.c
  *   Copyright (C) 1990 Jarkko Oikarinen
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -22,11 +22,11 @@
 
 /*
 **  Compare if a given string (name) matches the given
-**  mask (which can contain wild cards: '*' match any
-**  number of chars, '?'=match any single character.
+**  mask (which can contain wild cards: '*' - match any
+**  number of chars, '?' - match any single character.
 **
-**	return	1, if match
-**		0, if no match
+**	return	0, if match
+**		1, if no match
 */
 int matches(mask, name)
 char *mask, *name;

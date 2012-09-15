@@ -19,9 +19,10 @@
  */
 
 #include "struct.h"
+#include "patchlevel.h"
 
 char *intro = "Internet Relay Chat v%s";
-char *version = "2.5";
+char *version = PATCHLEVEL;
 char *infotext[] =
     {
 	"Original code written by Jarkko Oikarinen <jto@tolsun.oulu.fi>",

@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#if HPUX | VMS
+#if HPUX | VMS | AIX
 #include <string.h>
 #define index         strchr
 #define rindex        strrchr

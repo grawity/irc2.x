@@ -18,7 +18,9 @@
  */
 
 /* 
- * $Log:	config.h,v $
+ * -- Jto -- 14 Jul 1990
+ * Added Wumpus's MAXIMUM_LINKS fix
+ *
  * -- Jto -- 16 Jun 1990
  * Added new MSG_BASE (now MAIL) fixes from Wizible...
  *
@@ -46,7 +48,7 @@
 #define HPUX		0	/* HP-UX */
 #define ULTRIX		0	/* Vax Ultrix. */
 #define SYSV		0	/* Does not work yet. Under construction */
-#define VMS		0	/* Might even work... */
+#define VMS		0	/* Should work for IRC client, not server */
 #define MAIL50		0	/* If you're running VMS 5.0 */
 #define RSUMMON		0	/* Remote summon feature --does not work */
 
@@ -96,24 +98,52 @@
  * these are only the reccommened names and paths. Change as needed.
  */
 
-#define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
-#define CPATH "/usr/local/lib/irc/ircd.conf"	 /* IRC Configuration file.  */
-#define MPATH "/usr/local/lib/irc/ircd.motd"     /* Message Of The Day file. */
-#define LPATH "/usr/local/lib/irc/ircd.log"      /* Where the Logfile lives. */
+#define SPATH "/home/kick/etc/irc2.5.1/ircd/ircd" /* Where the server lives.  */
+#define CPATH "/home/kick/etc/irc2.5.1/ircd/ircd.cf"	 /* IRC Configuration file.  */
+#define MPATH "/home/kick/etc/irc2.5.1/ircd/ircd.motd"     /* Message Of The Day file. */
+#define LPATH "/home/kick/etc/irc2.5.1/ircd/ircd.log"      /* Where the Logfile lives. */
 #ifdef MSG_MAIL
 /* Where MSGBASE saves its messages from time to time... */
-#define MAIL_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
+#define MAIL_SAVE_FILENAME "/home/kick/etc/irc2.5.1/ircd/.ircdmail"
 #endif
 
-#define UPHOST "tolsun.oulu.fi"              /* Default UPHOST for irc */
-                                             /* Standard client        */
+#define UPHOST "choshi.kaba.or.jp"           /* Default UPHOST for irc */
+                                             /* standard client        */
 
-#define AUTOTOPIC 1	/* Automatic topic notify upon joining a channel  */ 
+/* MAXIMUM LINKS
+ *
+ * This define is useful for leaf nodes and gateways. It keeps you from
+ * connecting to too many places. It works by keeping you from
+ * connecting to more than "n" nodes which you have C:blah::blah:6667
+ * lines for.
+ *
+ * Note that any number of nodes can still connect to you. This only
+ * limits the number that you actively reach out to connect to.
+ *
+ * Leaf nodes are nodes which are on the edge of the tree. If you want
+ * to have a backup link, then sometimes you end up connected to both
+ * your primary and backup, routing traffic between them. To prevent
+ * this, #define MAXIMUM_LINKS 1 and set up both primary and
+ * secondary with C:blah::blah:6667 lines. THEY SHOULD NOT TRY TO
+ * CONNECT TO YOU, YOU SHOULD CONNECT TO THEM.
+ *
+ * Gateways such as the server which connects Australia to the US can
+ * do a similar thing. Put the American nodes you want to connect to
+ * in with C:blah::blah:6667 lines, and the Australian nodes with
+ * C:blah::blah lines. Have the Americans put you in with C:blah::blah
+ * lines. Then you will only connect to one of the Americans.
+ *
+ * If you don't want this feature, leave MAXIMUM_LINKS undefined. Setting
+ * it to zero just wastes CPU time.
+ */
+
+/* #define MAXIMUM_LINKS 1 */
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
-
 /* You shouldn't change anything below this line, unless absolutely needed. */
+
+#define AUTOTOPIC 1	/* Automatic topic notify upon joining a channel  */ 
 
 /*
  * Port where ircd resides. NOTE: This *MUST* be greater than 1024 if you
@@ -219,3 +249,6 @@
 #ifdef sequent                   /* Dynix (sequent OS) */
 #define SEQ_NOFILE    128        /* set to your current kernel impl, */
 #endif                           /* max number of socket connections */
+
+#undef GETPASS                  /* Whether password non-echoing query */
+                                /* should work or not..               */
