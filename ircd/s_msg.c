@@ -1534,11 +1534,11 @@ char	*parv[];
        ** See if the newly found server is behind a guaranteed
        ** leaf (L-line). If so, close the link.
        */
-      if (aconf = find_conf_name(sptr->name, CONF_LEAF))
+      if (aconf = find_conf_name(cptr->name, CONF_LEAF))
 	  if (aconf->port == 0 || hop >= aconf->port)
 	    {
 	      sendto_ops("Leaf-only link %s issued second server command",
-			 get_client_name(sptr, FALSE) );
+			 get_client_name(cptr, FALSE) );
 	      sendto_one(cptr, "ERROR :Leaf-only link, sorry." );
 	      return exit_client(cptr, cptr, cptr, "Leaf Only");
 	    }
@@ -3222,7 +3222,7 @@ char *parv[];
 	 * 3 seconds. -avalon (curtesy of wumpus)
 	 */
 	alarm(3);
-	if (!(fd = open(MOTD, O_RDONLY)))
+	if ((fd = open(MOTD, O_RDONLY)) == -1)
 	    {
 		alarm(0);
 		sendto_one(sptr,
@@ -3233,7 +3233,7 @@ char *parv[];
 	alarm(0);
 	sendto_one(sptr, ":%s NOTICE %s :MOTD - %s Message of the Day - ",
 		me.name, parv[0], me.name);
-	while (dgets(fd, line, sizeof(line) - 1))
+	while (dgets(fd, line, sizeof(line) - 1) > 0)
 	    {
 		if (tmp = (char *)index(line,'\n'))
 			*tmp = '\0';

@@ -312,7 +312,7 @@ char	*comment;	/* Reason for the exit */
 		 */
 		alarm(3);
 		if (IsPerson(sptr) &&
-		    (userlogfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)))
+		    (userlogfile=open(FNAME_USERLOG,O_WRONLY|O_APPEND))!=-1)
 		    {
 			alarm(0);
 			sprintf(linebuf, "%s (%3d:%02d:%02d): %s@%s\n",
