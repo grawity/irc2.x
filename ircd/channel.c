@@ -171,13 +171,15 @@ char	*banid;
 	Reg1	Link	*ban;
 	Reg2	int	cnt = 0, len = 0;
 
+	if (MyClient(cptr))
+		(void)collapse(banid);
 	for (ban = chptr->banlist; ban; ban = ban->next)
 	    {
 		len += strlen(ban->value.cp);
 		if (MyClient(cptr) &&
 		    ((len > MAXBANLENGTH) || (++cnt >= MAXBANS) ||
-		     !matches(ban->value.cp, banid) ||
-		     !matches(banid, ban->value.cp)))
+		     !match(ban->value.cp, banid) ||
+		     !match(banid, ban->value.cp)))
 			return -1;
 		else if (!mycmp(ban->value.cp, banid))
 			return -1;
@@ -235,7 +237,7 @@ aChannel *chptr;
 				  cptr->user->host);
 
 	for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-		if (matches(tmp->value.cp, s) == 0)
+		if (match(tmp->value.cp, s) == 0)
 			break;
 	return (tmp);
 }
@@ -454,6 +456,8 @@ void	send_channel_modes(cptr, chptr)
 aClient *cptr;
 aChannel *chptr;
 {
+	if (*chptr->chname != '#')
+		return;
 
 	*modebuf = *parabuf = '\0';
 	channel_modes(cptr, modebuf, parabuf, chptr);
@@ -1243,7 +1247,7 @@ char	*parv[];
 		if (*name == '&' && !MyConnect(sptr))
 			continue;
 		if (*name == '0' && !atoi(name))
-			*jbuf = '\0';
+			(void)strcpy(jbuf, "0");
 		else if (!IsChannelName(name))
 		    {
 			if (MyClient(sptr))

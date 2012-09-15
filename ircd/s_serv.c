@@ -293,16 +293,20 @@ char	*parv[];
 	** Also, changed to check other "difficult" characters, now
 	** that parse lets all through... --msa
 	*/
+	if (strlen(host) > HOSTLEN)
+		host[HOSTLEN] = '\0';
 	for (ch = host; *ch; ch++)
 		if (*ch <= ' ' || *ch > '~')
-		    {
-			sendto_one(sptr,"ERROR :Bogus server name (%s)",
-		   		   sptr->name, host);
-			sendto_ops("Bogus server name (%s) from %s",
-				   host, get_client_name(cptr,FALSE));
-			return 0;
-		    }
-	
+			break;
+	if (*ch || !index(host, '.'))
+	    {
+		sendto_one(sptr,"ERROR :Bogus server name (%s)",
+			   sptr->name, host);
+		sendto_ops("Bogus server name (%s) from %s", host,
+			   get_client_name(cptr, TRUE));
+		return 0;
+	    }
+
 	if (IsPerson(cptr))
 	    {
 		/*
@@ -312,7 +316,7 @@ char	*parv[];
 		sendto_one(cptr, err_str(ERR_ALREADYREGISTRED),
 			   me.name, parv[0]);
 		sendto_ops("User %s trying to become a server %s",
-			   get_client_name(cptr,FALSE),host);
+			   get_client_name(cptr, TRUE),host);
 		return 0;
 	    }
 	/* *WHEN* can it be that "cptr != sptr" ????? --msa */
@@ -345,12 +349,6 @@ char	*parv[];
 		sendto_one(cptr,"ERROR :Nickname %s already exists!", host);
 		sendto_ops("Link %s cancelled: Server/nick collision on %s",
 			   inpath, host);
-                sendto_serv_butone(NULL, /* all servers */
-                                   ":%s KILL %s :%s (%s <- %s)",
-                                   me.name, acptr->name, me.name,
-                                   acptr->from->name, host);
-                acptr->flags |= FLAGS_KILLED;
-		(void)exit_client(NULL, acptr, &me, "Nick collision");
 		return exit_client(cptr, cptr, cptr, "Nick as Server");
 	    }
 
@@ -378,7 +376,7 @@ char	*parv[];
 		    (!aconf->port || (hop > aconf->port)))
 		    {
 	      		sendto_ops("Leaf-only link %s->%s - Closing",
-				   get_client_name(cptr, FALSE),
+				   get_client_name(cptr,  TRUE),
 				   aconf->host ? aconf->host : "*");
 	      		sendto_one(cptr, "ERROR :Leaf-only link, sorry.");
       			return exit_client(cptr, cptr, cptr, "Leaf Only");
@@ -390,7 +388,7 @@ char	*parv[];
 		    (aconf->port && (hop > aconf->port)) )
 		    {
 			sendto_ops("Non-Hub link %s introduced %s(%s).",
-				   get_client_name(cptr, FALSE), host,
+				   get_client_name(cptr,  TRUE), host,
 				   aconf ? (aconf->host ? aconf->host : "*") :
 				   "!");
 			return exit_client(cptr, cptr, cptr,
@@ -784,11 +782,11 @@ char	*parv[];
 	else
 		mask = parc < 2 ? NULL : parv[1];
 
-	for (acptr = client; acptr; acptr = acptr->next) 
+	for (acptr = client, (void)collapse(mask); acptr; acptr = acptr->next) 
 	    {
 		if (!IsServer(acptr) && !IsMe(acptr))
 			continue;
-		if (!BadPtr(mask) && matches(mask, acptr->name))
+		if (!BadPtr(mask) && match(mask, acptr->name))
 			continue;
 		sendto_one(sptr, rpl_str(RPL_LINKS),
 			   me.name, parv[0], acptr->name, acptr->serv->up,
@@ -1240,16 +1238,17 @@ char	*parv[];
 				!= HUNTED_ISME)
 			return 0;
 
+	(void)collapse(parv[1]);
 	for (acptr = client; acptr; acptr = acptr->next)
 	    {
 		if (parc>1)
 			if (!IsServer(acptr) && acptr->user)
 			    {
-				if (matches(parv[1], acptr->user->server))
+				if (match(parv[1], acptr->user->server))
 					continue;
 			    }
 			else
-	      			if (matches(parv[1], acptr->name))
+	      			if (match(parv[1], acptr->name))
 					continue;
 
 		switch (acptr->status)

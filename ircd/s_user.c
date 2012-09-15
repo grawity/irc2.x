@@ -124,7 +124,7 @@ Reg2	char	*ch;	/* search string (may include wilds) */
 	    {
 		if (IsService(next))
 			continue;
-		if (!matches(ch,next->name) || !matches(next->name,ch))
+		if (!match(ch, next->name) || !matches(next->name, ch))
 			break;
 	    }
 	return next;
@@ -177,7 +177,7 @@ int	server, parc;
 		if (acptr->from == sptr->from && !MyConnect(acptr))
 			acptr = NULL;
 	if (!acptr)
-		for (acptr = client;
+		for (acptr = client, (void)collapse(parv[server]);
 		     (acptr = next_client(acptr, parv[server]));
 		     acptr = acptr->next)
 		    {
@@ -417,17 +417,8 @@ char	*nick, *username;
 	    {
 		aClient	*acptr;
 
-		if (!(acptr = find_server(user->server, NULL)))
-		    {
-			sendto_ops("%s : Unknown %s in '%s USER %s %s %s %s'",
-				cptr->name, user->server, nick, user->username,
-				user->host, user->server, sptr->info);
-			Debug((DEBUG_ERROR,
-				"%s : Unknown %s in '%s USER %s %s %s %s'",
-				cptr->name, user->server, nick, user->username,
-				user->host, user->server, sptr->info));
-		    }
-		else if (acptr->from != sptr->from)
+		if ((acptr = find_server(user->server, NULL)) &&
+		    acptr->from != sptr->from)
 		   {
 			sendto_ops("Bad User [%s] :%s USER %s %s, != %s[%s]",
 				cptr->name, nick, user->username, user->server,
@@ -1009,6 +1000,7 @@ char	*parv[];
 		mask = NULL;
 	else
 		channame = mask;
+	(void)collapse(mask);
 
 	if (IsChannelName(channame))
 	    {
@@ -1073,11 +1065,11 @@ char	*parv[];
 		*/
 		if (showperson &&
 		    (!mask ||
-		     matches(mask, acptr->name) == 0 ||
-		     matches(mask, acptr->user->username) == 0 ||
-		     matches(mask, acptr->user->host) == 0 ||
-		     matches(mask, acptr->user->server) == 0 ||
-		     matches(mask, acptr->info) == 0))
+		     match(mask, acptr->name) == 0 ||
+		     match(mask, acptr->user->username) == 0 ||
+		     match(mask, acptr->user->host) == 0 ||
+		     match(mask, acptr->user->server) == 0 ||
+		     match(mask, acptr->info) == 0))
 			do_who(sptr, acptr, ch2ptr);
 	    }
 	sendto_one(sptr, rpl_str(RPL_ENDOFWHO), me.name, parv[0],
@@ -1139,6 +1131,7 @@ char	*parv[];
 		int	invis, showperson, member, wilds;
 
 		found = 0;
+		(void)collapse(nick);
 		wilds = (index(nick, '?') || index(nick, '*'));
 		for (acptr = client; (acptr = next_client(acptr, nick));
 		     acptr = acptr->next)

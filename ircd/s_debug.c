@@ -284,7 +284,6 @@ char	*nick;
 
 	if (times(&tmsbuf) == -1)
 	    {
-		extern char *sys_errlist[];
 		sendto_one(cptr,":%s %d %s :times(2) error: %s.",
 			   me.name, RPL_STATSDEBUG, nick, strerror(errno));
 		return;

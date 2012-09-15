@@ -135,7 +135,7 @@ char	*sockhost;
 					*uhost = '\0';
 				(void)strncat(uhost, fullname,
 					sizeof(uhost) - strlen(uhost));
-				if (!matches(aconf->name, uhost))
+				if (!match(aconf->name, uhost))
 					goto attach_iline;
 			    }
 
@@ -147,7 +147,7 @@ char	*sockhost;
 		else
 			*uhost = '\0';
 		(void)strncat(uhost, sockhost, sizeof(uhost) - strlen(uhost));
-		if (!matches(aconf->host, uhost))
+		if (!match(aconf->host, uhost))
 			goto attach_iline;
 		continue;
 attach_iline:
@@ -309,7 +309,7 @@ int	statmask;
 	    {
 		if ((tmp->status & statmask) && !IsIllegal(tmp) &&
 		    ((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) == 0) &&
-		    tmp->name && !matches(tmp->name, name))
+		    tmp->name && !match(tmp->name, name))
 		    {
 			if (!attach_conf(cptr, tmp) && !first)
 				first = tmp;
@@ -344,7 +344,7 @@ int	statmask;
 	    {
 		if ((tmp->status & statmask) && !IsIllegal(tmp) &&
 		    (tmp->status & CONF_SERVER_MASK) == 0 &&
-		    (!tmp->host || matches(tmp->host, host) == 0))
+		    (!tmp->host || match(tmp->host, host) == 0))
 		    {
 			if (!attach_conf(cptr, tmp) && !first)
 				first = tmp;
@@ -382,7 +382,7 @@ int	statmask;
 		** socket host) matches *either* host or name field
 		** of the configuration.
 		*/
-		if (matches(tmp->host, userhost))
+		if (match(tmp->host, userhost))
 			continue;
 		if (tmp->status & (CONF_OPERATOR|CONF_LOCOP))
 		    {
@@ -410,7 +410,7 @@ int	statmask;
 		** matches *either* host or name field of the configuration.
 		*/
 		if ((tmp->status & statmask) &&
-		    (!tmp->name || matches(tmp->name, name) == 0))
+		    (!tmp->name || match(tmp->name, name) == 0))
 			return tmp;
 	    }
 	return NULL;
@@ -434,7 +434,7 @@ int	statmask;
 		    (((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) &&
 	 	     tmp->name && !mycmp(tmp->name, name)) ||
 		     ((tmp->status & (CONF_SERVER_MASK|CONF_HUB)) == 0 &&
-		     tmp->name && !matches(tmp->name, name))))
+		     tmp->name && !match(tmp->name, name))))
 			return tmp;
 	    }
 	return NULL;
@@ -458,7 +458,7 @@ Reg3	int	statmask;
 		tmp = lp->value.aconf;
 		if (tmp->status & statmask &&
 		    (!(tmp->status & CONF_SERVER_MASK || tmp->host) ||
-	 	     (tmp->host && !matches(tmp->host, host))))
+	 	     (tmp->host && !match(tmp->host, host))))
 			return tmp;
 	    }
 	return NULL;
@@ -485,7 +485,7 @@ int	statmask;
 			continue;
 		s = index(tmp->host, '@');
 		*s = '\0';
-		if (matches(tmp->host, user))
+		if (match(tmp->host, user))
 		    {
 			*s = '@';
 			continue;
@@ -874,6 +874,17 @@ int	opt;
 				  tmp ? atoi(tmp) : 0);
 			continue;
 		    }
+		/*
+                ** associate each conf line with a class by using a pointer
+                ** to the correct class record. -avalon
+                */
+		if (aconf->status & (CONF_CLIENT_MASK|CONF_LISTEN_PORT))
+		    {
+			if (Class(aconf) == 0)
+				Class(aconf) = find_class(0);
+			if (MaxLinks(Class(aconf)) < 0)
+				Class(aconf) = find_class(0);
+		    }
 		if (aconf->status & (CONF_LISTEN_PORT|CONF_CLIENT))
 		    {
 			aConfItem *bconf;
@@ -914,17 +925,6 @@ int	opt;
 				MyFree(aconf->host);
 				aconf->host = newhost;
 			    }
-		/*
-                ** associate each conf line with a class by using a pointer
-                ** to the correct class record. -avalon
-                */
-		if (aconf->status & CONF_CLIENT_MASK)
-		    {
-			if (Class(aconf) == 0)
-				Class(aconf) = find_class(0);
-			if (MaxLinks(Class(aconf)) < 0)
-				Class(aconf) = find_class(0);
-		    }
 		if (aconf->status & CONF_SERVER_MASK)
 		    {
 			if (BadPtr(aconf->passwd))
@@ -949,6 +949,8 @@ int	opt;
 			if (portnum < 0 && aconf->port >= 0)
 				portnum = aconf->port;
 		    }
+		(void)collapse(aconf->host);
+		(void)collapse(aconf->name);
 		Debug((DEBUG_NOTICE,
 		      "Read Init: (%d) (%s) (%s) (%s) (%d) (%d)",
 		      aconf->status, aconf->host, aconf->passwd,
@@ -1038,8 +1040,8 @@ aClient	*cptr;
 
 	for (tmp = conf; tmp; tmp = tmp->next)
  		if ((tmp->status == CONF_KILL) && tmp->host && tmp->name &&
-		    (matches(tmp->host, host) == 0) &&
- 		    (!name || matches(tmp->name, name) == 0) &&
+		    (match(tmp->host, host) == 0) &&
+ 		    (!name || match(tmp->name, name) == 0) &&
 		    (!tmp->port || (tmp->port == cptr->acpt->port)))
  			if (BadPtr(tmp->passwd) ||
  			    check_time_interval(tmp->passwd, reply))
@@ -1049,9 +1051,8 @@ aClient	*cptr;
 		sendto_one(cptr, reply,
 			   me.name, ERR_YOUREBANNEDCREEP, cptr->name);
 	else if (tmp)
-		sendto_one(cptr,
-			   ":%s %d %s :*** You are not welcome to this server.",
-			   me.name, ERR_YOUREBANNEDCREEP, cptr->name);
+		sendto_one(cptr, err_str(ERR_YOUREBANNEDCREEP), me.name,
+			   cptr->name);
 
  	return (tmp ? -1 : 0);
  }
@@ -1084,8 +1085,8 @@ aClient	*cptr;
 	for (tmp = conf; tmp; tmp = tmp->next)
 	    {
 		if (tmp->status != CONF_RESTRICT ||
-		    (tmp->host && host && matches(tmp->host, host)) ||
-		    (tmp->name && name && matches(tmp->name, name)))
+		    (tmp->host && host && match(tmp->host, host)) ||
+		    (tmp->name && name && match(tmp->name, name)))
 			continue;
 
 		if (BadPtr(tmp->passwd))

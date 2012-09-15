@@ -112,6 +112,7 @@ extern unsigned char touppertab[];
 #undef islower
 #undef isupper
 #undef isspace
+#undef iscntrl
 
 extern unsigned char char_atribs[];
 
@@ -122,6 +123,7 @@ extern unsigned char char_atribs[];
 #define DIGIT 16
 #define SPACE 32
 
+#define	iscntrl(c) (char_atribs[(u_char)(c)]&CNTRL)
 #define isalpha(c) (char_atribs[(u_char)(c)]&ALPHA)
 #define isspace(c) (char_atribs[(u_char)(c)]&SPACE)
 #define islower(c) ((char_atribs[(u_char)(c)]&ALPHA) && ((u_char)(c) > 0x5f))

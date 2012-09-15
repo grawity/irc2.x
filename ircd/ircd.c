@@ -271,7 +271,6 @@ time_t	currenttime;
 		if (cptr->flags & FLAGS_DEADSOCKET)
 		    {
 			(void)exit_client(cptr, cptr, &me, "Dead socket");
-			i = 0;
 			continue;
 		    }
 
@@ -279,9 +278,11 @@ time_t	currenttime;
 #ifdef R_LINES_OFTEN
 		rflag = IsPerson(cptr) ? find_restrict(cptr) : 0;
 #endif
-		ping = get_client_ping(cptr);
-		if (!IsRegistered(cptr))
-			ping = CONNECTTIMEOUT;
+		ping = IsRegistered(cptr) ? get_client_ping(cptr) :
+					    CONNECTTIMEOUT;
+		Debug((DEBUG_DEBUG, "c(%s)=%d p %d k %d r %d a %d",
+			cptr->name, cptr->status, ping, killflag, rflag,
+			currenttime - cptr->lasttime));
 		/*
 		 * Ok, so goto's are ugly and can be avoided here but this code
 		 * is already indented enough so I think its justified. -avalon
@@ -301,28 +302,25 @@ time_t	currenttime;
 		    (!IsRegistered(cptr) &&
 		     (currenttime - cptr->firsttime) >= ping))
 		    {
-			if (!IsRegistered(cptr) && IsUnknown(cptr))
+			if (!IsRegistered(cptr) &&
+			    (DoingDNS(cptr) || DoingAuth(cptr)))
 			    {
-				if (DoingDNS(cptr) || DoingAuth(cptr))
+				if (cptr->authfd >= 0)
 				    {
-					if (cptr->authfd >= 0)
-					    {
-						(void)close(cptr->authfd);
-						cptr->authfd = -1;
-						cptr->count = 0;
-						*cptr->buffer = '\0';
-					    }
-					Debug((DEBUG_NOTICE,
-						"DNS/AUTH timeout %s",
-						get_client_name(cptr,TRUE)));
-					del_queries((char *)cptr);
-					ClearAuth(cptr);
-					ClearDNS(cptr);
-					SetAccess(cptr);
-					cptr->firsttime = currenttime;
-					continue;
+					(void)close(cptr->authfd);
+					cptr->authfd = -1;
+					cptr->count = 0;
+					*cptr->buffer = '\0';
 				    }
-				exit_client(cptr, cptr, &me, "Ping timeout");
+				Debug((DEBUG_NOTICE,
+					"DNS/AUTH timeout %s",
+					get_client_name(cptr,TRUE)));
+				del_queries((char *)cptr);
+				ClearAuth(cptr);
+				ClearDNS(cptr);
+				SetAccess(cptr);
+				cptr->firsttime = currenttime;
+				cptr->lasttime = currenttime;
 				continue;
 			    }
 			if (IsServer(cptr) || IsConnecting(cptr) ||
@@ -600,12 +598,13 @@ char	*argv[];
 	    }
 	if (!(bootopt & BOOT_INETD))
 	    {
+		static	char	star[] = "*";
 		aConfItem	*aconf;
 
 		if ((aconf = find_me()) && portarg <= 0 && aconf->port > 0)
 			portnum = aconf->port;
 		Debug((DEBUG_ERROR, "Port = %d", portnum));
-		if (inetport(&me, "*", portnum))
+		if (inetport(&me, star, portnum))
 			exit(1);
 	    }
 	else if (inetport(&me, "*", 0))

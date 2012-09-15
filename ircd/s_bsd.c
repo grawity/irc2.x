@@ -1096,7 +1096,27 @@ aClient	*cptr;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
+#if defined(IP_OPTIONS) && defined(IPPROTO_IP)
+	{
+	char	*s = readbuf, *t = readbuf + sizeof(readbuf) / 2;
+
+	opt = sizeof(readbuf) / 8;
+	if (getsockopt(fd, IPPROTO_IP, IP_OPTIONS, t, &opt) < 0)
+		report_error("getsockopt(IP_OPTIONS) %s:%s", cptr);
+	else if (opt > 0)
+	    {
+		for (*readbuf = '\0'; opt > 0; opt--, s+= 3)
+			(void)sprintf(s, "%02.2x:", *t++);
+		*s = '\0';
+		sendto_ops("Connection %s using IP opts: (%s)",
+			   get_client_name(cptr, TRUE), readbuf);
+	    }
+	if (setsockopt(fd, IPPROTO_IP, IP_OPTIONS, (char *)NULL, 0) < 0)
+		report_error("setsockopt(IP_OPTIONS) %s:%s", cptr);
+	}
+#endif
 }
+
 
 int	get_sockerr(cptr)
 aClient	*cptr;
@@ -1704,7 +1724,11 @@ struct	hostent	*hp;
 	 * If we dont know the IP# for this host and itis a hostname and
 	 * not a ip# string, then try and find the appropriate host record.
 	 */
-	if (!aconf->ipnum.s_addr)
+	if ( ( !aconf->ipnum.s_addr )
+#ifdef UNIXPORT
+	    && ( ( aconf->host[2] ) != '/' )  /* needed for Unix domain -- dl*/
+#endif
+            )
 	    {
 	        Link    lin;
 
@@ -1734,7 +1758,7 @@ struct	hostent	*hp;
 	strncpyzt(cptr->sockhost, aconf->host, HOSTLEN+1);
 
 #ifdef	UNIXPORT
-	if (aconf->host[0] == '/')
+	if (aconf->host[2] == '/') /* (/ starts a 2), Unix domain -- dl*/
 		svp = connect_unix(aconf, cptr, &len);
 	else
 		svp = connect_inet(aconf, cptr, &len);
@@ -1904,7 +1928,7 @@ int	*lenp;
 
 	if ((cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 	    {
-		report_error("Connect to host %s failed: %s", cptr);
+		report_error("Unix domain connect to host %s failed: %s", cptr);
 		return NULL;
 	    }
 	else if (cptr->fd >= MAXCLIENTS)
@@ -1914,7 +1938,8 @@ int	*lenp;
 	    }
 
 	get_sockhost(cptr, aconf->host);
-	strncpyzt(sock.sun_path, aconf->host, sizeof(sock.sun_path));
+	/* +2 needed for working Unix domain -- dl*/
+	strncpyzt(sock.sun_path, aconf->host+2, sizeof(sock.sun_path));
 	sock.sun_family = AF_UNIX;
 	*lenp = strlen(sock.sun_path) + 2;
 
@@ -2249,6 +2274,7 @@ static	void	polludp()
 	/*
 	 * attach my name and version for the reply
 	 */
+	*readbuf |= 1;
 	(void)strcpy(s, me.name);
 	s += strlen(s)+1;
 	(void)strcpy(s, PATCHLEVEL);

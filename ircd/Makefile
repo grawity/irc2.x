@@ -223,11 +223,11 @@ whowas.o: ../include/struct.h ../include/config.h ../include/sys.h \
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
 	../include/common.h ../include/config.h s_bsd.c s_serv.c s_user.c \
 	channel.c s_misc.c
-#	@crypt/sums
+	@crypt/sums
 	$(CC) $(CFLAGS) -c hash.c
-#	@/bin/rm -f hash.c
-#	@/bin/mv -f hash.c.old hash.c
-#	@touch hash.o
+	@/bin/rm -f hash.c
+	@/bin/mv -f hash.c.old hash.c
+	@touch hash.o
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

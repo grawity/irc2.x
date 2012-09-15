@@ -150,13 +150,11 @@ authsenderr:
 			while (!local[highest_fd])
 				highest_fd--;
 		cptr->authfd = -1;
-		cptr->flags &= ~(FLAGS_AUTH|FLAGS_WRAUTH);
+		cptr->flags &= ~FLAGS_AUTH;
 		if (!DoingDNS(cptr))
 			SetAccess(cptr);
-		return;
 	    }
 	cptr->flags &= ~FLAGS_WRAUTH;
-
 	return;
 }
 
@@ -192,6 +190,7 @@ Reg1	aClient	*cptr;
 		cptr->buffer[cptr->count] = '\0';
 	    }
 
+	cptr->lasttime = time(NULL);
 	if ((len > 0) && (cptr->count != (sizeof(cptr->buffer) - 1)) &&
 	    (sscanf(cptr->buffer, "%hd , %hd : USERID : %*[^:]: %10s",
 		    &remp, &locp, ruser) == 3))

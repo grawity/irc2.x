@@ -112,12 +112,12 @@ int	*count;
 	Reg2	aClient	*res = cptr;
 
 	*count = 0;
-	if (user)
+	if (collapse(user))
 		for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) 
 		    {
 			if (!MyClient(c2ptr)) /* implies mine and a user */
 				continue;
-			if ((!host || !matches(host, c2ptr->user->host)) &&
+			if ((!host || !match(host, c2ptr->user->host)) &&
 			     mycmp(user, c2ptr->user->username) == 0)
 			    {
 				(*count)++;
@@ -156,7 +156,7 @@ aClient *cptr;
 {
 	Reg1 aClient *c2ptr = cptr;
 
-	if (!name)
+	if (!collapse(name))
 		return c2ptr;
 
 	if ((c2ptr = hash_find_server(name, cptr)))
@@ -167,10 +167,10 @@ aClient *cptr;
 	    {
 		if (!IsServer(c2ptr) && !IsMe(c2ptr))
 			continue;
-		if (matches(name, c2ptr->name) == 0)
+		if (match(name, c2ptr->name) == 0)
 			break;
 		if (index(c2ptr->name, '*'))
-			if (matches(c2ptr->name, name) == 0)
+			if (match(c2ptr->name, name) == 0)
 					break;
 	    }
 	return (c2ptr ? c2ptr : cptr);
@@ -182,15 +182,15 @@ aClient	*cptr;
 {
 	Reg1	aClient *c2ptr = cptr;
 
-	if (!name)
+	if (!collapse(name))
 		return c2ptr;
 
 	for (c2ptr = client; c2ptr; c2ptr = c2ptr->next)
 	    {
 		if (!IsServer(c2ptr) && !IsMe(c2ptr))
 			continue;
-		if (matches(c2ptr->name, name) == 0 ||
-		    matches(name, c2ptr->name) == 0)
+		if (match(c2ptr->name, name) == 0 ||
+		    match(name, c2ptr->name) == 0)
 			break;
 	    }
 	return (c2ptr ? c2ptr : cptr);
