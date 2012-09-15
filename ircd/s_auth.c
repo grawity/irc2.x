@@ -53,7 +53,8 @@ static  char sccsid[] = "@(#)s_auth.c	1.18 4/18/94 (C) 1992 Darren Reed";
 void	start_auth(cptr)
 Reg1	aClient	*cptr;
 {
-	struct	sockaddr_in	sock;
+	struct	sockaddr_in	sock, us;
+	int	ulen = sizeof(us);
 
 	Debug((DEBUG_NOTICE,"start_auth(%x) fd %d status %d",
 		cptr, cptr->fd, cptr->status));
@@ -87,10 +88,23 @@ Reg1	aClient	*cptr;
 	sock.sin_port = htons(113);
 	sock.sin_family = AF_INET;
 
-	(void)alarm((unsigned)4);
-	if (connect(cptr->authfd, (struct sockaddr *)&sock,
-		    sizeof(sock)) == -1 && errno != EINPROGRESS)
-	    {
+        /* We must bind the local end to the interface that they connected
+           to: The local system might have more than one network address,
+           and RFC931 check only sends port numbers: server takes IP addresses
+           from query socket -- jrg */
+        (void)getsockname(cptr->fd, (struct sockaddr *)&us, &ulen);
+        us.sin_port = htons(0);		/* bind assigns us a port */
+        us.sin_family = AF_INET;
+        Debug((DEBUG_NOTICE,"auth(%x) from %s",
+               cptr, inetntoa((char *)&us.sin_addr)));
+        if (bind(cptr->authfd, (struct sockaddr *)&us, ulen) >= 0) {
+            Debug((DEBUG_NOTICE,"auth(%x) to %s",
+                   cptr, inetntoa((char *)&sock.sin_addr)));
+	    (void)alarm((unsigned)4);
+	    if (connect(cptr->authfd, (struct sockaddr *)&sock,
+		        sizeof(sock)) == -1 && errno != EINPROGRESS) {
+                Debug((DEBUG_ERROR,"auth(%x) connect failed to %s - %d",
+                       cptr, inetntoa((char *)&sock.sin_addr), errno));
 		ircstp->is_abad++;
 		/*
 		 * No error report from this...
@@ -102,7 +116,15 @@ Reg1	aClient	*cptr;
 			SetAccess(cptr);
 		return;
 	    }
-	(void)alarm((unsigned)0);
+	    (void)alarm((unsigned)0);
+        } else {
+            Debug((DEBUG_ERROR,"auth(%x) bind failed on %s port %d - %d",
+                  cptr, inetntoa((char *)&us.sin_addr),
+                  ntohs(us.sin_port), errno));
+	    sendto_ops("auth(%x) bind failed on %s port %d - %d",
+                       cptr, inetntoa((char *)&us.sin_addr),
+                       ntohs(us.sin_port), errno);
+        }
 	cptr->flags |= (FLAGS_WRAUTH|FLAGS_AUTH);
 	if (cptr->authfd > highest_fd)
 		highest_fd = cptr->authfd;
@@ -236,9 +258,13 @@ Reg1	aClient	*cptr;
 		return;
 	    }
 	ircstp->is_asuc++;
-	strncpyzt(cptr->username, ruser, USERLEN+1);
-	if (strncmp(system, "OTHER", 5))
-		cptr->flags |= FLAGS_GOTID;
+	if (!strncmp(system, "OTHER", 5)) {	/* abnormal identifier	*/
+		*cptr->username = '-';		/* -> add '-' prefix	*/
+		strncpy(&cptr->username[1], ruser, USERLEN);
+		cptr->username[USERLEN] = '\0';
+	} else
+		strncpyzt(cptr->username, ruser, USERLEN+1);
+	cptr->flags |= FLAGS_GOTID;
 	Debug((DEBUG_INFO, "got username [%s]", ruser));
 	return;
 }

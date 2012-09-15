@@ -443,6 +443,17 @@ struct	Message *mptr;
 	if (mptr == NULL)
 		return (do_numeric(numeric, cptr, from, i, para));
 	mptr->count++;
+#if !defined(CLIENT_COMPILE) && defined(SECUNREG)
+        if (!IsRegistered(cptr) &&
+        /* patch to avoid server flooding from unregistered connects: --dl */
+            mptr->func != m_user  && mptr->func != m_quit && 
+            mptr->func != m_admin && mptr->func != m_version && 
+            mptr->func != m_hash  && mptr->func != m_server && 
+            mptr->func != m_pass  && mptr->func != m_nick) {
+		sendto_one(cptr, err_str(ERR_NOTREGISTERED), me.name, "*");
+		return -1;
+        }
+#endif
 	if (IsRegisteredUser(cptr) &&
 #ifdef	IDLE_FROM_MSG
 	    mptr->func == m_private)
@@ -535,12 +546,21 @@ char	*sender;
 	 * Do kill if it came from a server because it means there is a ghost
 	 * user on the other server which needs to be removed. -avalon
 	 */
-	if (!index(sender, '.'))
+	if (!index(sender, '.')) {
+#ifdef SHOW_GHOSTS
+		sendto_ops("Ghost %s from %s killed.",
+			   sender, get_client_name(cptr, FALSE));
+#endif
 		sendto_one(cptr, ":%s KILL %s :%s (%s(?) <- %s)",
 			   me.name, sender, me.name, sender,
 			   get_client_name(cptr, FALSE));
-	else
+	} else {
+#ifdef SHOW_GHOSTS
+		sendto_ops("Unknown %s from %s squited.",
+			   sender, get_client_name(cptr, FALSE));
+#endif
 		sendto_one(cptr, ":%s SQUIT %s :(Unknown from %s)",
 			   me.name, sender, get_client_name(cptr, FALSE));
+	}
 }
 #endif

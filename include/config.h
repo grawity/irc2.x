@@ -358,6 +358,15 @@
 /* Sends an extra NOTICE in the beginning of client connection     */
 #undef	IRCII_KLUDGE
 
+#undef FOLLOW_IDENT_RFC
+#define HIDE_FAKES
+#define SUN_GSO_BUG
+#define DELAY_NICKS
+#define TRACE_STATS
+#define NOWRITEALARM
+#define SECUNREG
+#undef SHOW_GHOSTS
+
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
 /* You shouldn't change anything below this line, unless absolutely needed. */

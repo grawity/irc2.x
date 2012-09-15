@@ -63,6 +63,30 @@ Reg1	aClient	*cptr;
 }
 
 /*
+** find_history
+**      Return the user that was using the given nickname within
+**      the timelimit. Returns NULL, if no one found...
+*/
+anUser	*find_history(nick, timelimit)
+char	*nick;
+time_t	timelimit;
+{
+	Reg1	aName	*wp, *wp2;
+
+	wp = wp2 = &was[ww_index];
+	timelimit = time(NULL)-timelimit;
+
+	do {
+		if (!mycmp(nick, wp->ww_nick) && wp->ww_logout >= timelimit)
+			return (wp->ww_user);
+		if (wp == was)
+			wp = &was[NICKNAMEHISTORYLENGTH];
+		wp--;
+	} while (wp != wp2);
+	return (NULL);
+}
+
+/*
 ** get_history
 **      Return the current client that was using the given
 **      nickname within the timelimit. Returns NULL, if no

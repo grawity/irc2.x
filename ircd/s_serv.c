@@ -110,10 +110,10 @@ int	parc;
 char	*parv[];
 {
 	extern	char	serveropts[];
-
+#ifndef SECUNREG	/* Allow VERSION query from unregistered */
 	if (check_registered(sptr))
 		return 0;
-
+#endif
 	if (hunt_server(cptr,sptr,":%s VERSION :%s",1,parc,parv)==HUNTED_ISME)
 		sendto_one(sptr, rpl_str(RPL_VERSION), me.name,
 			   parv[0], version, debugmode, me.name, serveropts);
@@ -406,8 +406,8 @@ char	*parv[];
 		if ((aconf = find_conf_name(host, CONF_QUARANTINED_SERVER)))
 		    {
 			sendto_ops_butone(NULL, &me,
-				":%s WALLOPS * :%s brought in %s, %s %s",
-				me.name, me.name, get_client_name(cptr,FALSE),
+				":%s WALLOPS :%s brought in %s, %s %s",
+				me.name, get_client_name(cptr,FALSE),
 				host, "closing link because",
 				BadPtr(aconf->passwd) ? "reason unspecified" :
 				aconf->passwd);
@@ -1512,10 +1512,10 @@ int	parc;
 char	*parv[];
     {
 	aConfItem *aconf;
-
+#ifndef SECUNREG	/* Allow ADMIN query from unregistered */
 	if (check_registered(sptr))
 		return 0;
-
+#endif
 	if (hunt_server(cptr,sptr,":%s ADMIN :%s",1,parc,parv) != HUNTED_ISME)
 		return 0;
 	if ((aconf = find_admin()))
@@ -1760,7 +1760,11 @@ char	*parv[];
 	 * Add these lines to summarize the above which can get rather long
          * and messy when done remotely - Avalon
          */
+#ifndef TRACE_STATS
        	if (!IsAnOper(sptr) || !cnt)
+#else
+        if (!SendWallops(sptr) || !cnt)
+#endif
 	    {
 		if (cnt)
 			return 0;

@@ -357,8 +357,10 @@ char	*nick, *username;
 			user->username[USERLEN] = '\0';
 			
 		    }
-		else if (sptr->flags & FLAGS_GOTID)
+#ifndef FOLLOW_IDENT_RFC
+		else if (sptr->flags & FLAGS_GOTID && *sptr->username != '-')
 			strncpyzt(user->username, sptr->username, USERLEN+1);
+#endif
 		else
 			strncpyzt(user->username, username, USERLEN+1);
 
@@ -551,7 +553,16 @@ char	*parv[];
 		sptr->flags |= FLAGS_KILLED;
 		return exit_client(cptr, sptr, &me, "Nick/Server collision");
 	    }
-	if (!(acptr = find_client(nick, NULL)))
+	if (!(acptr = find_client(nick, NULL))
+#ifdef DELAY_NICKS
+        /*
+        ** Nick is free, and it comes from another server or
+        ** it has been free for a while here
+        */
+            && (IsServer(cptr) ||
+                !find_history(nick, (long)KILLCHASETIMELIMIT))
+#endif
+           )
 		goto nickkilldone;  /* No collisions, all clear... */
 	/*
 	** If acptr == sptr, then we have a client doing a nick
@@ -584,7 +595,11 @@ char	*parv[];
 	** and proceed with the nick. This should take care of the
 	** "dormant nick" way of generating collisions...
 	*/
-	if (IsUnknown(acptr) && MyConnect(acptr))
+	if (
+#ifdef DELAY_NICKS
+	    acptr &&
+#endif
+	    IsUnknown(acptr) && MyConnect(acptr))
 	    {
 		exit_client(NULL, acptr, &me, "Overridden");
 		goto nickkilldone;
@@ -1294,6 +1309,14 @@ char	*parv[];
 
 	if (!MyConnect(sptr))
 	    {
+#ifdef SHOW_GHOSTS	/* Testing & debugging.. */
+		if (!IsUnknown(sptr)) {
+		    /* Another server sent us NICK, USER, USER sequence */
+		    sendto_ops("Re-registering %s USER %s %s %s %s from %s.",
+			       parv[0], parv[1], parv[2], parv[3], parv[4],
+			       get_client_name(cptr, FALSE));
+		}
+#endif
 		strncpyzt(user->server, server, sizeof(user->server));
 		strncpyzt(user->host, host, sizeof(user->host));
 		goto user_finish;
@@ -1422,7 +1445,7 @@ char	*parv[];
 	    }
 
 #ifdef	LOCAL_KILL_ONLY
-	if (MyConnect(sptr) && !MyConnect(acptr))
+	if (MyOper(sptr) && !MyConnect(acptr))
 	    {
 		sendto_one(sptr, ":%s NOTICE %s :Nick %s isnt on your server",
 			   me.name, parv[0], acptr->name);
@@ -1583,7 +1606,7 @@ char	*parv[];
 	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], awy2);
 #ifdef	USE_SERVICES
 	check_services_butonee(SERVICE_WANT_AWAY, ":%s AWAY :%s",
-				parv[0], parv[1]);
+				parv[0], awy2);
 #endif
 
 	if (away)

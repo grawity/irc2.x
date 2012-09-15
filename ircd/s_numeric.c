@@ -102,17 +102,32 @@ char	*parv[];
 			else if (IsServer(acptr) && acptr->from != cptr)
 				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 					parv[0], numeric, nick, buffer);
+#ifdef SHOW_GHOSTS
+			else	/* Test to see # of useless numerics */
+				sendto_ops("Bad numeric (:%s %d %s%s)",
+					   parv[0], numeric, nick, buffer);
+#endif
 		    }
 		else if ((acptr = find_server(nick, (aClient *)NULL)))
 		    {
 			if (!IsMe(acptr) && acptr->from != cptr)
 				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 					parv[0], numeric, nick, buffer);
+#ifdef SHOW_GHOSTS
+			else	/* Test to see # of useless numerics */
+				sendto_ops("Bad numeric (:%s %d %s%s)",
+					   parv[0], numeric, nick, buffer);
+#endif
 		    }
 		else if ((chptr = find_channel(nick, (aChannel *)NULL)))
 			sendto_channel_butone(cptr,sptr,chptr,":%s %d %s%s",
 					      parv[0],
 					      numeric, chptr->chname, buffer);
+#ifdef SHOW_GHOSTS
+		else	/* Test to see # of useless numerics */
+			sendto_ops("Bad numeric (:%s %d %s%s)",
+				   parv[0], numeric, nick, buffer);
+#endif
 	    }
 	return 0;
 }

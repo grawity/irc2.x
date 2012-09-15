@@ -81,7 +81,8 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf, "*** =%s= %s", parv[0], parv[1]);
+  sprintf(mybuf, "*** =%s= %s %s", parv[0], parv[1],
+                                   BadPtr(parv[2]) ? "" : parv[2]);
   putline(mybuf);
   return 0;
 }

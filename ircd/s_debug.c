@@ -49,8 +49,17 @@ char	serveropts[] = {
 #ifdef	OPER_REHASH
 'E',
 #endif
-#ifdef	NOTE_FORWARDER
+#ifdef	FOLLOW_IDENT_RFC
 'f',
+#endif
+#ifdef	HIDE_FAKES
+'F',
+#endif
+#ifdef	SUN_GSO_BUG
+'g',
+#endif
+#ifdef	SHOW_GHOSTS
+'G',
 #endif
 #ifdef	HUB
 'H',
@@ -77,6 +86,9 @@ char	serveropts[] = {
 #ifdef	IDLE_FROM_MSG
 'M',
 #endif
+#ifdef	DELAY_NICKS
+'N',
+#endif
 #ifdef	CRYPT_OPER_PASSWORD
 'p',
 #endif
@@ -92,11 +104,17 @@ char	serveropts[] = {
 #ifdef	OPER_RESTART
 'R',
 #endif
+#ifdef	SECUNREG
+'s',
+#endif
 #ifdef	ENABLE_SUMMON
 'S',
 #endif
 #ifdef	OPER_REMOTE
 't',
+#endif
+#ifdef	TRACE_STATS
+'T',
 #endif
 #ifdef	IRCII_KLUDGE
 'u',
@@ -106,6 +124,9 @@ char	serveropts[] = {
 #endif
 #ifdef	VALLOC
 'V',
+#endif
+#ifdef	NOWRITEALARM
+'w',
 #endif
 #ifdef	UNIXPORT
 'X',

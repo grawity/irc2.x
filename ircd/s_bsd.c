@@ -1097,7 +1097,7 @@ aClient	*cptr;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
-#if defined(IP_OPTIONS) && defined(IPPROTO_IP)
+#if defined(IP_OPTIONS) && defined(IPPROTO_IP) && !defined(SUN_GSO_BUG)
 	{
 	char	*s = readbuf, *t = readbuf + sizeof(readbuf) / 2;
 
