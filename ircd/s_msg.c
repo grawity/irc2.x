@@ -21,6 +21,15 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* -- Hoppie -- 5 Dec 1990
+ * fixed a bug in m_summon
+ * put local summoning in as a compile time option.
+ */
+
+/* -- Hoppie -- 20 Nov 1990
+ * fixed a typo that crept into some of the replies (m_rehash and m_user)
+ */
+
 /* -- Hoppie -- 5 Nov 1990
  * changed m_rehash to make immediate call to TryConnections 
  * and check_pings following it.
@@ -1085,7 +1094,7 @@ char *parv[];
 #ifdef R_LINES
 	        if (find_restrict(host,username,reply))
 		  {
-		    sendto_one(sptr,"%s %d :*** %s",me.name,
+		    sendto_one(sptr,":%s %d :*** %s",me.name,
 			       ERR_YOUREBANNEDCREEP,reply);
 		    return ExitClient(sptr, sptr);
 		  }
@@ -1884,7 +1893,7 @@ char *parv[];
     {
 	aClient *acptr;
 	char namebuf[10],linebuf[10],hostbuf[17],*host,*user;
-	int fd, flag;
+	int fd, flag, servflag;
 
 	CheckRegisteredUser(sptr);
 	if (parc < 2 || *parv[1] == '\0')
@@ -1900,8 +1909,32 @@ char *parv[];
 	else 
 		*(host++) = '\0';
 
-	if (BadPtr(host) || mycmp(host,me.name) == 0)
+	if (BadPtr(host)) servflag=HUNTED_ISME;
+	else
+	  for (acptr = client;
+	       acptr = NextClient(acptr, host);
+	       acptr = acptr->next)
 	    {
+	      if (IsMe(acptr)) 
+		{
+		  servflag=HUNTED_ISME;
+		  break;
+		}
+	      if (IsServer(acptr))
+		{
+		  servflag=HUNTED_PASS;
+		  break;
+		}
+	    }
+	if (!(acptr))
+	  {
+	    sendto_one(sptr, ":%s ERROR :SUMMON No such host (%s) found",
+		       me.name,host);
+	    return(HUNTED_NOSUCH);
+	  }
+	if (servflag == HUNTED_ISME)
+	    {
+#ifdef ENABLE_SUMMON
 #if RSUMMON
 		if (index(user,'%') != NULL)
 		    {
@@ -1911,8 +1944,8 @@ char *parv[];
 #endif
 		if ((fd = utmp_open()) == -1)
 		    {
-			sendto_one(sptr,"NOTICE %s Cannot open %s",
-				   sptr->name,UTMP);
+			sendto_one(sptr,":%s NOTICE %s Cannot open %s",
+				   me.name,sptr->name,UTMP);
 			return 0;
 		    }
 		while ((flag = utmp_read(fd, namebuf, linebuf, hostbuf)) == 0) 
@@ -1920,21 +1953,22 @@ char *parv[];
 				break;
 		utmp_close(fd);
 		if (flag == -1)
-			sendto_one(sptr,"NOTICE %s :User %s not logged in",
-				   sptr->name, user);
+			sendto_one(sptr,":%s NOTICE %s :User %s not logged in",
+				   me.name, sptr->name, user);
 		else
 			summon(sptr, namebuf, linebuf);
+#else
+		sendto_one(sptr,":%s NOTICE %s :SUMMON disabled on server %s",
+			   me.name, sptr->name, me.name);
+#endif
 		return 0;
 	    }
 	/*
 	** Summoning someone on remote server, find out which link to
 	** use and pass the message there...
 	*/
-	acptr = find_server(host,(aClient *)NULL);
-	if (acptr == NULL)
-		sendto_one(sptr, "ERROR :SUMMON No such host (%s) found",
-			   host);
-	else
+	
+	if (servflag=HUNTED_PASS)
 		sendto_one(acptr, ":%s SUMMON %s@%s",sptr->name, user, host);
 	return 0;
     }
@@ -2796,7 +2830,7 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	if (!IsOper(sptr) && MyConnect(sptr))
+	if (!IsOper(sptr) || !MyConnect(sptr))
 	    {
 		sendto_one(sptr,":%s %d %s :Use the force, Luke !",
 			   me.name, ERR_NOPRIVILEGES,
@@ -2822,7 +2856,7 @@ char *parv[];
 	      {
 		sendto_ops("Restricting %s (%s), closing link",
 			   GetClientName(cptr,FALSE),reply);
-		sendto_one(cptr,"%s %d :*** %s",me.name,
+		sendto_one(cptr,":%s %d :*** %s",me.name,
 			   ERR_YOUREBANNEDCREEP,reply);
 		return ExitClient((aClient *)NULL, cptr);
 	      }

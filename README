@@ -29,9 +29,10 @@ what you are doing.  If you happen to not heed this warning, you may end
 up with a server that will not function properly and annoy not only you,
 but users all around the world.
 
-Both the original irc client and IRC II can be found in this package.
-Compile whichever you prefer, but check the Makefile in directory irc
-(or IRC II) before compiling.
+Both the original irc client and IRC II can be found in this package (in
+the subdirectory clients/). To compile, type either "make irc" or "make
+irc2". If you are compiling ircII check the README in the ircII
+directory before proceeding.
 
 This version was brought together from several sources by ckd@cs.bu.edu;
 please send any bug fixes and suggestions to me.

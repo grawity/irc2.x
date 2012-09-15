@@ -51,6 +51,14 @@ clean:
 		${MAKE} clean; cd ..;\
 	done
 
+irc:
+	(cd clients/irc; make)
+			
+irc2:	ircii
+ircII:	ircii
+ircii:
+	(cd clients/ircII2.02; make)
+
 depend:
 	@for i in $(SUBDIRS); do \
 		echo "Making dependencies in $$i";\

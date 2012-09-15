@@ -1,3 +1,10 @@
+Sun Jan  6 06:30:49 1991  Helen Trillian Rose  (hrose at bucsd)
+
+	* s_msg.c
+	  added msa's rehash fix and Hoppie's typo fixes.
+
+	  Added Hoppie's fix for the summon bug.
+
 Mon Nov  5 19:32:09 1990  Tom Hopkins  (hoppie at buengf)
 
 	* s_msg.c

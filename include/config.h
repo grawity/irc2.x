@@ -18,10 +18,13 @@
  */
 
 /* 
- * --Hoppie -- 30 Oct 1990 
+ * -- Hoppie -- 5 Dec 1990
+ * Added support for local summon (ENABLE_SUMMON)
+ *
+ * -- Hoppie -- 30 Oct 1990 
  * Added support for restrict lines. (R_LINES)
  * 
- * --Hoppie -- 12 Oct 1990
+ * -- Hoppie -- 12 Oct 1990
  * Added WALLOPS_REMOTE and WALLOPS_QUARANTINE, and stealth's user logging.
  *
  * -- Jto -- 14 Jul 1990
@@ -115,6 +118,16 @@
 
 #define UPHOST "choshi.kaba.or.jp"           /* Default UPHOST for irc */
                                              /* standard client        */
+
+/* ENABLE_SUMMON
+ * 
+ * The SUMMON command requires the ircd to be run as group tty in order
+ * to work properly in many cases.  If you are on a machine where it 
+ * won't work, or simply don't want local users to be summoned, undefine
+ * this.
+ */ 
+
+/* #define ENABLE_SUMMON /* local summon */
 
 /* MAXIMUM LINKS
  *

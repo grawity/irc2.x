@@ -1,0 +1,473 @@
+The following is a context diff from bu.09a to bu.10... we'll probably
+have bu.11 ready fairly soon, but bu.10 fixes bugs (bu.11 will be adding
+some minor features for testing before we freeze the 2.5 releases at 2.5.2
+and start working on the 2.6 series).
+
+I strongly recommend upgrading to 2.5.1.bu.10 if you are running any
+2.5.1 server, as it fixes a fatal bug that was in all previous 2.5
+versions (and seems to have made it into at least some, if not all,
+2.6pre* versions as well).
+
+SPECIAL NOTE TO ARCHIVE MAINTAINERS:
+
+Please replace ANY and ALL earlier versions of the IRC server package
+with this one.  Among other things, it has updated documentation (most
+of the old ones still have Karl Kleinpaste as the contact address...).
+
+Also, if your available 2.6 servers have this, please update their docs
+with those found here.  Note that we recommend sticking with 2.5 servers
+except for limited testing of 2.6... after all, "pre" == "beta"!
+
+--Chris
+(ckd@cs.bu.edu)
+
+diff -cr ChangeLog.orig ChangeLog
+*** ChangeLog.orig	Mon Nov 12 20:35:09 1990
+--- ChangeLog	Sun Jan  6 06:34:26 1991
+***************
+*** 1,3 ****
+--- 1,14 ----
++ Sun Jan  6 06:07:58 1991  Helen Trillian Rose  (hrose at bucsd)
++ 
++ 	* Makefile
++ 
++ 	Added support for all of the different clients. 
++ 
++ 	* clients/*
++ 
++ 	Moved all of the clients to their own directory. Changed original
++ 	C client to reflect such. Indicated this in README.
++ 
+  Sun Oct 21 18:39:32 1990  Christopher Davis  (ckd at bucsd)
+  
+  	* Makefile
+***************
+*** 11,14 ****
+  	* README
+  
+  	Rewritten slightly to reflect changes in the distribution package
+! 	for this release.
+--- 22,25 ----
+  	* README
+  
+  	Rewritten slightly to reflect changes in the distribution package
+! 	for this release.
+diff -cr Makefile.orig Makefile
+*** Makefile.orig	Mon Nov 12 20:34:57 1990
+--- Makefile	Sun Jan  6 06:01:34 1991
+***************
+*** 51,56 ****
+--- 51,64 ----
+  		${MAKE} clean; cd ..;\
+  	done
+  
++ irc:
++ 	(cd clients/irc; make)
++ 			
++ irc2:	ircii
++ ircII:	ircii
++ ircii:
++ 	(cd clients/ircII2.02; make)
++ 
+  depend:
+  	@for i in $(SUBDIRS); do \
+  		echo "Making dependencies in $$i";\
+diff -cr README.orig README
+*** README.orig	Mon Nov 12 20:34:57 1990
+--- README	Sun Jan  6 06:07:49 1991
+***************
+*** 29,37 ****
+  up with a server that will not function properly and annoy not only you,
+  but users all around the world.
+  
+! Both the original irc client and IRC II can be found in this package.
+! Compile whichever you prefer, but check the Makefile in directory irc
+! (or IRC II) before compiling.
+  
+  This version was brought together from several sources by ckd@cs.bu.edu;
+  please send any bug fixes and suggestions to me.
+--- 29,38 ----
+  up with a server that will not function properly and annoy not only you,
+  but users all around the world.
+  
+! Both the original irc client and IRC II can be found in this package (in
+! the subdirectory clients/). To compile, type either "make irc" or "make
+! irc2". If you are compiling ircII check the README in the ircII
+! directory before proceeding.
+  
+  This version was brought together from several sources by ckd@cs.bu.edu;
+  please send any bug fixes and suggestions to me.
+diff -cr include/config.h.orig include/config.h
+*** include/config.h.orig	Mon Nov 12 20:34:52 1990
+--- include/config.h	Sun Jan  6 06:11:39 1991
+***************
+*** 18,27 ****
+   */
+  
+  /* 
+!  * --Hoppie -- 30 Oct 1990 
+   * Added support for restrict lines. (R_LINES)
+   * 
+!  * --Hoppie -- 12 Oct 1990
+   * Added WALLOPS_REMOTE and WALLOPS_QUARANTINE, and stealth's user logging.
+   *
+   * -- Jto -- 14 Jul 1990
+--- 18,30 ----
+   */
+  
+  /* 
+!  * -- Hoppie -- 5 Dec 1990
+!  * Added support for local summon (ENABLE_SUMMON)
+!  *
+!  * -- Hoppie -- 30 Oct 1990 
+   * Added support for restrict lines. (R_LINES)
+   * 
+!  * -- Hoppie -- 12 Oct 1990
+   * Added WALLOPS_REMOTE and WALLOPS_QUARANTINE, and stealth's user logging.
+   *
+   * -- Jto -- 14 Jul 1990
+***************
+*** 115,120 ****
+--- 118,133 ----
+  
+  #define UPHOST "garfield.mit.edu"              /* Default UPHOST for irc */
+                                               /* standard client        */
++ 
++ /* ENABLE_SUMMON
++  * 
++  * The SUMMON command requires the ircd to be run as group tty in order
++  * to work properly in many cases.  If you are on a machine where it 
++  * won't work, or simply don't want local users to be summoned, undefine
++  * this.
++  */ 
++ 
++ /* #define ENABLE_SUMMON /* local summon */
+  
+  /* MAXIMUM LINKS
+   *
+diff -cr include/patchlevel.h.orig include/patchlevel.h
+*** include/patchlevel.h.orig	Mon Nov 12 20:45:16 1990
+--- include/patchlevel.h	Sun Jan  6 06:52:56 1991
+***************
+*** 18,21 ****
+   */
+  
+  /* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
+! #define PATCHLEVEL "2.5.1.bu.09a"
+--- 18,21 ----
+   */
+  
+  /* $Header: patchlevel.h,v 2.4 90/05/02 00:24:15 casie Exp $ */
+! #define PATCHLEVEL "2.5.1.bu.10"
+diff -cr ircd/ChangeLog.orig ircd/ChangeLog
+*** ircd/ChangeLog.orig	Mon Nov 12 20:34:53 1990
+--- ircd/ChangeLog	Sun Jan  6 06:32:57 1991
+***************
+*** 1,3 ****
+--- 1,10 ----
++ Sun Jan  6 06:30:49 1991  Helen Trillian Rose  (hrose at bucsd)
++ 
++ 	* s_msg.c
++ 	  added msa's rehash fix and Hoppie's typo fixes.
++ 
++ 	  Added Hoppie's fix for the summon bug.
++ 
+  Mon Nov  5 19:32:09 1990  Tom Hopkins  (hoppie at buengf)
+  
+  	* s_msg.c
+diff -cr ircd/mkversion.sh.orig ircd/mkversion.sh
+*** ircd/mkversion.sh.orig	Mon Nov 12 20:34:56 1990
+--- ircd/mkversion.sh	Sun Jan  6 06:16:09 1991
+***************
+*** 71,77 ****
+  char *infotext[] =
+      {
+  	"Based on the original code written by Jarkko Oikarinen",
+! 	"Copyright 1988,1989 University of Oulu, Computing Center",
+  	"",
+  	"This program is free software; you can redistribute it and/or",
+  	"modify it under the terms of the GNU General Public License as",
+--- 71,77 ----
+  char *infotext[] =
+      {
+  	"Based on the original code written by Jarkko Oikarinen",
+! 	"Copyright 1988,1989,1990,1991 University of Oulu, Computing Center",
+  	"",
+  	"This program is free software; you can redistribute it and/or",
+  	"modify it under the terms of the GNU General Public License as",
+***************
+*** 79,94 ****
+  	"(at your option) any later version.",
+  	"",
+  	"The following persons have made many changes and enhancements to the",
+! 	"code and may know how IRC really works if you have questions about it:",
+  	"",
+  	"WiZ          Jarkko Oikarinen         jto@tolsun.oulu.fi",
+! 	"Msa          Markku Savela            Markku.Savela@vtt.fi",
+! 	"Misha        Mike Bolotski            mikeb@salmon.ee.ubc.ca",
+! 	"Chelsea      Chelsea Ashley Dyerman   casie@earth.CChem.Berkeley.EDU",
+  	"Wumpus       Greg Lindahl             gl8f@astsun.astro.virginia.edu",
+  	"",
+  	"Those who helped in prior versions and continue to be helpful:",
+  	"",
+  	"             Markku Jarvinen          mta@tut.fi",
+  	"Kim          Kimmo Suominen           kim@lut.fi",
+  	"             Jeff Trim                jtrim@orion.cair.du.edu",
+--- 79,97 ----
+  	"(at your option) any later version.",
+  	"",
+  	"The following persons have made many changes and enhancements to the",
+! 	"code and may know how IRC really works if you have questions:",
+  	"",
+  	"WiZ          Jarkko Oikarinen         jto@tolsun.oulu.fi",
+! 	"msa          Markku Savela            Markku.Savela@vtt.fi",
+! 	"Hoppie       Tom Hopkins              hoppie@buengf.bu.edu",
+  	"Wumpus       Greg Lindahl             gl8f@astsun.astro.virginia.edu",
++ 	"ckd          Christopher Davis        ckd@cs.bu.edu",
++ 	"Chelsea      Chelsea Ashley Dyerman   chelsea@soda.berkeley.edu",
++ 
+  	"",
+  	"Those who helped in prior versions and continue to be helpful:",
+  	"",
++ 	"Misha        Mike Bolotski            misha@ai.mit.edu",
+  	"             Markku Jarvinen          mta@tut.fi",
+  	"Kim          Kimmo Suominen           kim@lut.fi",
+  	"             Jeff Trim                jtrim@orion.cair.du.edu",
+***************
+*** 99,113 ****
+  	"",
+  	"Various modifications, bugreports, cleanups by:",
+  	"",
+! 	"             Hugo Calendar            hugo@!ucscl.ucsc.edu",
+! 	"             Bo Adler                 beau@through.cs.caltech.edu",
+  	"BigCheese    Michael Sandrof          ms5n+@andrew.cmu.edu",
+  	"             Jon Solomon              jsol@buit5.bu.edu",
+! 	"             Jan Peterson             jlp@hamblin.byu.edu",
+  	"",
+  	"Alpha and beta testers, who put up with our bugs, and such:",
+  	"",
+! 	"Trillian     Helen Rose               hrose@uceng.uc.edu",
+  	"",
+  	"Thanks also goes to those persons not mentioned here who have added",
+  	"their advice, opinions, and code to IRC.",
+--- 102,121 ----
+  	"",
+  	"Various modifications, bugreports, cleanups by:",
+  	"",
+! 	"Hugo         Hugo Calendar            hugo@ucscb.ucsc.edu",
+! 	"Thumper      Bo Adler                 adler@csvax.caltech.edu",
+  	"BigCheese    Michael Sandrof          ms5n+@andrew.cmu.edu",
+  	"             Jon Solomon              jsol@buit5.bu.edu",
+! 	"jlp          Jan Peterson             jlp@hamblin.byu.edu",
+! 	"spam         Noah Friedman            friedman@ai.mit.edu",
+  	"",
+  	"Alpha and beta testers, who put up with our bugs, and such:",
+  	"",
+! 	"Fornax       Dan Goodwin              fornax@wpi.wpi.edu",
+! 	"",
+! 	"Documentation cleanup and rewriting, and release coordination:",
+! 	"",
+! 	"Trillian     Helen Rose               hrose@cs.bu.edu",
+  	"",
+  	"Thanks also goes to those persons not mentioned here who have added",
+  	"their advice, opinions, and code to IRC.",
+diff -cr ircd/s_msg.c.orig ircd/s_msg.c
+*** ircd/s_msg.c.orig	Mon Nov 12 20:34:55 1990
+--- ircd/s_msg.c	Sun Jan  6 06:12:11 1991
+***************
+*** 21,26 ****
+--- 21,35 ----
+   *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   */
+  
++ /* -- Hoppie -- 5 Dec 1990
++  * fixed a bug in m_summon
++  * put local summoning in as a compile time option.
++  */
++ 
++ /* -- Hoppie -- 20 Nov 1990
++  * fixed a typo that crept into some of the replies (m_rehash and m_user)
++  */
++ 
+  /* -- Hoppie -- 5 Nov 1990
+   * changed m_rehash to make immediate call to TryConnections 
+   * and check_pings following it.
+***************
+*** 1085,1091 ****
+  #ifdef R_LINES
+  	        if (find_restrict(host,username,reply))
+  		  {
+! 		    sendto_one(sptr,"%s %d :*** %s",me.name,
+  			       ERR_YOUREBANNEDCREEP,reply);
+  		    return ExitClient(sptr, sptr);
+  		  }
+--- 1094,1100 ----
+  #ifdef R_LINES
+  	        if (find_restrict(host,username,reply))
+  		  {
+! 		    sendto_one(sptr,":%s %d :*** %s",me.name,
+  			       ERR_YOUREBANNEDCREEP,reply);
+  		    return ExitClient(sptr, sptr);
+  		  }
+***************
+*** 1884,1890 ****
+      {
+  	aClient *acptr;
+  	char namebuf[10],linebuf[10],hostbuf[17],*host,*user;
+! 	int fd, flag;
+  
+  	CheckRegisteredUser(sptr);
+  	if (parc < 2 || *parv[1] == '\0')
+--- 1893,1899 ----
+      {
+  	aClient *acptr;
+  	char namebuf[10],linebuf[10],hostbuf[17],*host,*user;
+! 	int fd, flag, servflag;
+  
+  	CheckRegisteredUser(sptr);
+  	if (parc < 2 || *parv[1] == '\0')
+***************
+*** 1900,1907 ****
+  	else 
+  		*(host++) = '\0';
+  
+! 	if (BadPtr(host) || mycmp(host,me.name) == 0)
+  	    {
+  #if RSUMMON
+  		if (index(user,'%') != NULL)
+  		    {
+--- 1909,1940 ----
+  	else 
+  		*(host++) = '\0';
+  
+! 	if (BadPtr(host)) servflag=HUNTED_ISME;
+! 	else
+! 	  for (acptr = client;
+! 	       acptr = NextClient(acptr, host);
+! 	       acptr = acptr->next)
+  	    {
++ 	      if (IsMe(acptr)) 
++ 		{
++ 		  servflag=HUNTED_ISME;
++ 		  break;
++ 		}
++ 	      if (IsServer(acptr))
++ 		{
++ 		  servflag=HUNTED_PASS;
++ 		  break;
++ 		}
++ 	    }
++ 	if (!(acptr))
++ 	  {
++ 	    sendto_one(sptr, ":%s ERROR :SUMMON No such host (%s) found",
++ 		       me.name,host);
++ 	    return(HUNTED_NOSUCH);
++ 	  }
++ 	if (servflag == HUNTED_ISME)
++ 	    {
++ #ifdef ENABLE_SUMMON
+  #if RSUMMON
+  		if (index(user,'%') != NULL)
+  		    {
+***************
+*** 1911,1918 ****
+  #endif
+  		if ((fd = utmp_open()) == -1)
+  		    {
+! 			sendto_one(sptr,"NOTICE %s Cannot open %s",
+! 				   sptr->name,UTMP);
+  			return 0;
+  		    }
+  		while ((flag = utmp_read(fd, namebuf, linebuf, hostbuf)) == 0) 
+--- 1944,1951 ----
+  #endif
+  		if ((fd = utmp_open()) == -1)
+  		    {
+! 			sendto_one(sptr,":%s NOTICE %s Cannot open %s",
+! 				   me.name,sptr->name,UTMP);
+  			return 0;
+  		    }
+  		while ((flag = utmp_read(fd, namebuf, linebuf, hostbuf)) == 0) 
+***************
+*** 1920,1929 ****
+  				break;
+  		utmp_close(fd);
+  		if (flag == -1)
+! 			sendto_one(sptr,"NOTICE %s :User %s not logged in",
+! 				   sptr->name, user);
+  		else
+  			summon(sptr, namebuf, linebuf);
+  		return 0;
+  	    }
+  	/*
+--- 1953,1966 ----
+  				break;
+  		utmp_close(fd);
+  		if (flag == -1)
+! 			sendto_one(sptr,":%s NOTICE %s :User %s not logged in",
+! 				   me.name, sptr->name, user);
+  		else
+  			summon(sptr, namebuf, linebuf);
++ #else
++ 		sendto_one(sptr,":%s NOTICE %s :SUMMON disabled on server %s",
++ 			   me.name, sptr->name, me.name);
++ #endif
+  		return 0;
+  	    }
+  	/*
+***************
+*** 1930,1940 ****
+  	** Summoning someone on remote server, find out which link to
+  	** use and pass the message there...
+  	*/
+! 	acptr = find_server(host,(aClient *)NULL);
+! 	if (acptr == NULL)
+! 		sendto_one(sptr, "ERROR :SUMMON No such host (%s) found",
+! 			   host);
+! 	else
+  		sendto_one(acptr, ":%s SUMMON %s@%s",sptr->name, user, host);
+  	return 0;
+      }
+--- 1967,1974 ----
+  	** Summoning someone on remote server, find out which link to
+  	** use and pass the message there...
+  	*/
+! 	
+! 	if (servflag=HUNTED_PASS)
+  		sendto_one(acptr, ":%s SUMMON %s@%s",sptr->name, user, host);
+  	return 0;
+      }
+***************
+*** 2796,2802 ****
+  int parc;
+  char *parv[];
+      {
+! 	if (!IsOper(sptr) && MyConnect(sptr))
+  	    {
+  		sendto_one(sptr,":%s %d %s :Use the force, Luke !",
+  			   me.name, ERR_NOPRIVILEGES,
+--- 2830,2836 ----
+  int parc;
+  char *parv[];
+      {
+! 	if (!IsOper(sptr) || !MyConnect(sptr))
+  	    {
+  		sendto_one(sptr,":%s %d %s :Use the force, Luke !",
+  			   me.name, ERR_NOPRIVILEGES,
+***************
+*** 2822,2828 ****
+  	      {
+  		sendto_ops("Restricting %s (%s), closing link",
+  			   GetClientName(cptr,FALSE),reply);
+! 		sendto_one(cptr,"%s %d :*** %s",me.name,
+  			   ERR_YOUREBANNEDCREEP,reply);
+  		return ExitClient((aClient *)NULL, cptr);
+  	      }
+--- 2856,2862 ----
+  	      {
+  		sendto_ops("Restricting %s (%s), closing link",
+  			   GetClientName(cptr,FALSE),reply);
+! 		sendto_one(cptr,":%s %d :*** %s",me.name,
+  			   ERR_YOUREBANNEDCREEP,reply);
+  		return ExitClient((aClient *)NULL, cptr);
+  	      }
