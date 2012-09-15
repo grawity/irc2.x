@@ -49,8 +49,10 @@ void free();
 
 extern	int	matches PROTO((char *, char *)), mycmp PROTO((char *, char *));
 
-#ifdef NEED_STRTOKEN
+#ifdef NEED_STRTOK
 extern	char	*strtok PROTO((char *, char *));
+#endif
+#ifdef NEED_STRTOKEN
 extern	char	*strtoken PROTO((char **, char *, char *));
 #endif
 #ifdef NEED_INET_ADDR

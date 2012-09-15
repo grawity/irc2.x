@@ -17,10 +17,14 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+                                                Date: 04 Apr 1989
                                               Author: Karl Kleinpaste
                                                       karl@cis.ohio-state.edu
-                                                Date: 04 Apr 1989
-                                   Last modification: 05 Oct 1990
+                                                
+                                   Last modification: 15 May 1992
+                                                  by  Mauri Haikola 
+                                                      mjh@stekt.oulu.fi
+
 
 			 INTERNET RELAY CHAT
 		  a real-time conversational system
@@ -37,12 +41,11 @@ Internet, and providing a whole raft of other useful features.
 
 * 2: Entering Internet Relay Chat
 
-There are two ways to enter Internet Relay Chat. If you are using
-the emacs lisp client, you need to load the client into your Emacs
-session and then M-x irc. If you are using the C client (easier for
-beginners) then type `irc2 -f'. (the -f option allows for flow
-control problems to be handled) If you wish to be known by a nickname
-which is not one's login name, type `irc2 -f chosen-nickname' instead.
+There are two ways to enter Internet Relay Chat. If you are using the
+emacs lisp client, you need to load the client into your Emacs session
+and then M-x irc. If you are using the C client (easier for beginners)
+then type (usually) irc. If you wish to be known by a nickname which
+is not one's login name, type `irc chosen-nickname' instead.
 
 * 3: How much can be seen from here
 
@@ -77,51 +80,47 @@ else.
 
 Fundamental to the operation of irc is the concept of a channel.  All
 users are `on a channel' while inside irc.  One enters the `null
-channel,' channel 0, first.  One cannot send any messages while in
-channel 0 unless one has set up a private conversation in some way.
-The number of channels is essentially unlimited - whatever will fit in
-a 32-bit integer or a string of some ungodly length, that must start with a
-plus (+) sign. 
+channel' first.  One cannot send any messages while not in any
+chatting channel unless one has set up a private conversation in some
+way.  The number of channels is essentially unlimited - whatever will
+fit in a string of some ungodly length, that must start with a # sign.
 
-** 4.3: Types of channels
+** 4.3: Main modes of channels
 
-There are 4 channel types, with increasing levels of privacy and some
-degree of flexibility afforded them.
+Public
 
-*** 4.3.1: Public channels
+This is the default mode for a channel. When one is on a public
+channel, one can be seen by all other users (if one's own user mode
+permits this).  Anyone can notice users on a public channel and join
+such a channel's conversation.
 
-Public channels are channels 1-999.  If one is on one of these
-channels, one can be seen by all other users.  Anyone can notice users
-on a public channel and join such a channel's conversation.
+Private
 
-*** 4.3.2: Secret channels
+This means that, although anyone can see that one is using chat, no
+one can tell what channel one is using unless one is already on that
+channel with oneself.  Since the number of potential channels is in
+the billions, this is quite some security - all one gives away is the
+acknowledgement that one is using chat.
 
-Channels 1000-up are called `secret.'  This means that, although
-anyone can see that one is using chat, no one can tell what channel
-one is using unless one is already on that channel with oneself.
-Since the number of potential channels is in the billions, this is
-quite some security - all one gives away is the acknowledgement that
-one is using chat.
+Secret
 
-*** 4.3.3: Hidden channels
+While one is on a secret channel, no one who is not on one's channel
+with oneself can even see that one is there.  One's name does not show
+up in a list of active users.  The only indication of one's presence
+is that, when entering chat, all new users are told that there are "N
+users on P servers."  If one checks on all users and finds less than N
+of them, one knows that others are hiding on secret channels.  But a
+secret channel user still cannot be found except by brute-force
+checking through all channels, a hopeless proposition in the face of
+the huge number of possible channel names. Security through obscurity
+finally means something.
 
-Negative channel numbers are called `hidden.'  While one is on a
-hidden channel, no one who is not on one's channel with oneself can
-even see that one is there.  One's name does not show up in a list of
-active users.  The only indication of one's presence is that, when
-entering chat, all new users are told that there are "N users on P
-servers."  If one checks on all users and finds less than N of them,
-one knows that others are hiding on negative channels.  But a hidden
-channel user still cannot be found except by brute-force checking
-through all channels, a hopeless proposition in the face of 10-digit
-channel numbers.  Security through obscurity finally means something.
+Changing the mode
 
-*** 4.3.4: String Channels
-
-Channels starting with a + are string channels. Their status (secret,
-invite-only, moderated, topic-limited, anonymous, person-number-limited, 
-private, no-messages-to-channel) is set by the channel operator, who is the
-first person to join a string channel, or someone who has had channel
+The mode of a channel (private, secret, invite-only, moderated,
+topic-limited, person-number-limited, no-messages-to-channel, ban
+someone from channel) is set by the channel operator, who is the
+first person to join a channel, or someone who has had channel
 operatorship bestowed on them by another channel operator. 
 
 
@@ -138,7 +137,7 @@ Chat is a full-screen utility.  It takes over the screen, with the
 bulk of activity happening in the top N-2 lines, a modeline (vaguely
 emacs-like) on the next to last line, and one's input being entered on
 the last line.  A very good version of client is the IRC-II client,
-avaliable on anonymous ftp from rvw2.hhs.ri.cmu.edu. 
+avaliable on anonymous ftp from various sites around the world.
 
 ** 5.1: Keyboard input
 
@@ -176,7 +175,9 @@ Commands may in general be abbreviated to a unique prefix.
 ** 6.1: Leaving irc
 
 The way to get out of irc is to enter the /signoff command.  "/si" is
-sufficient.  Also equivalent are "/exit," "/bye," and perhaps "quit."
+sufficient.  Also equivalent are "/exit," "/bye," and "/quit." A
+signoff command may include a comment which will be seen by everyone
+on the current channel of the person who left.
 
 ** 6.2: Getting help
 
@@ -184,35 +185,37 @@ Type "/help."  Follow the instructions.
 
 ** 6.3: User commands
 
-Other commands supported by irc are:
+The most important commands supported by irc are:
 
       help   signoff       who     whois
       list     topic      join   channel
-     links       msg    invite    summon
+     links       msg    invite    ignore
      users     stats      nick      away
       info     clear     query     cmdch
-      date
+      date      mode
 
 *** 6.3.1: help
 
 Information on how to use the rest of the system is available via
 /help.  The modeline says so as well.
 
-*** 6.3.2: signoff
+*** 6.3.2: signoff {comment}
 
-/signoff exits chat.
+/signoff exits chat. Optional comment may be included; see above.
 
 *** 6.3.3: who
 
 /who returns information on who is using chat.  /who without arguments
 prints info on all users that can be seen.  Users of public channels
-show up with their channel identified.  Users of secret channels
+show up with their channel identified.  Users of private channels
 appear, but they are specified as being on a private, unspecified
-channel.  Users of hidden channels do not appear at all.
+channel.  Users of secret channels and users whose user mode is +i
+(invisible) do not appear at all.
 
-Giving a numeric argument to /who returns only those users of the
-specified channel.  This still doesn't show users of secret or hidden
-channels unless one is actually on that channel.
+Giving a channel name as an argument to /who returns only those users of the
+specified channel.  This still doesn't show users of secret channel or
+invisible users one is actually on the same channel with them. Users
+of private channels are shown, if an exact channel name is given.
 
 *** 6.3.4: whois
 
@@ -228,15 +231,14 @@ string of text" will associate that topic with the current channel.
 *** 6.3.6: list
 
 /list will give lists of active channels, the number of users of each,
-and the topics therewith associated.  Again, secret and hidden
-channels do not appear.
+and the topics therewith associated.  Again, secret channels do not
+appear and private channels only appear as Prv.
 
 *** 6.3.7: join & channel
 
-/join or /channel are the means to enter a channel.  Give a numeric
-argument for the channel one wishes to enter.  If this is a secret or
-hidden channel, /who commands will show oneself and any other users of
-one's channel.
+/join or /channel are the means to enter a channel.  Give the channel
+name as an argument.  If this is a secret or hidden channel, /who
+commands will show oneself and any other users of one's channel.
 
 One's arrival on a channel is announced to the rest of the users
 already on that channel.  Silent, anonymous "lurking" is not
@@ -246,7 +248,7 @@ supported.
 
 /links lists the currently-active set of chat servers.  Beware: this
 list can be quite long, and will undoubtedly get longer as chat gains
-wider use.  As of 13 October, 1990, about 90 servers is typical.
+wider use.  As of 15 May, 1992, about 130 servers is typical.
 
 *** 6.3.9: msg
 
@@ -262,15 +264,11 @@ nickname" with an optional channel number.  The receiving user gets a
 one-line message indicating the sender and the invitation.  The
 receiving user is free to ignore the invitation, of course.
 
-*** 6.3.11: summon
+*** 6.3.11: ignore
 
-An extreme form of /invite is /summon.  "/summon user@host" will
-request the user on the specified host to enter the chat system.  Do
-not do this unless one is fairly sure that one's request will be
-welcome - it can be a fairly disturbing and sometimes irritating
-intrusion.  In order for /summon to work, the specified host must be a
-connected chat server - one can't summon random people from around the
-Internet.
+If one wants to ignore messages sent by some other user or users, it
+may be done with /ignore command. One can ignore someone by their
+nickname, or by their user@host data. Wildcards may be used. 
 
 *** 6.3.12: users
 
@@ -281,8 +279,8 @@ into that system will be listed.
 *** 6.3.13: stats
 
 This command returns counts of various protocol operations of one's
-chat server.  It is neither particularly useful nor interesting; it
-was, at one time, a debugging aid.
+chat server.  It is neither particularly useful nor interesting to
+users other than operators.
 
 *** 6.3.14: nick
 
@@ -334,6 +332,12 @@ One leaves this private mode by issuing /query without arguments.
 The `/' character may not be best for some people to use as their
 command character.  It can be changed with "/cmdch <character>."
 
+*** 6.3.20: mode
+
+This command can be used for altering the various modes of a channel
+(see the explanation of channel modes above). /mode command can only
+be issued by channel operators. 
+
 ** 6.4: Operator commands
 
 The chat system administrators on each host have additional
@@ -353,8 +357,8 @@ Obnoxious users had best beware the operator who's fast on the /kill
 command.  "/kill nickname" blows any given nickname completely out of
 the chat system.
 
-Obnoxiousness is not to be tolerated.  But operators do not use /kill
-lightly.
+Obnoxiousness is not to be tolerated.  But operators should not use
+/kill lightly.
 
 *** 6.4.3: quote
 
@@ -368,8 +372,9 @@ and not to be used lightly.
 
 * 7: Questions, problems, troubles?
 
-If you have problems, please contact Christopher Davis (ckd@cs.bu.edu) or
-Helen Rose (hrose@cs.bu.edu). Known as "ckd" and "Trillian" on irc,
-respectively. They will be able to assist you in whatever problems you are
-having with IRC.
+If you have problems, please contact Christopher Davis (ckd@eff.org) or
+Helen Rose (hrose@eff.org). Known as "ckd" and "Trillian" on irc,
+respectively. You can also ask for help on some of the operator
+channels on irc, for example #twilight_zone and #eu-opers. They will
+be able to assist you in whatever problems you are having with IRC.
 

@@ -106,6 +106,7 @@ typedef struct User anUser;
 #define IsPrivileged(x)	(IsOper(x) || IsServer(x))
 #define SendWallops(x)  ((x)->flags & FLAGS_WALLOP)
 #define SendServNotice(x) ((x)->flags & FLAGS_SERVNOTICE)
+#define	IsUnixSocket(x)	((x)->flags & FLAGS_UNIX)
 
 #define SetMaster(x)    ((x)->status = STAT_MASTER)
 #define SetConnecting(x) ((x)->status = STAT_CONNECTING)
@@ -121,6 +122,7 @@ typedef struct User anUser;
 #define SetLocOp(x)     ((x)->flags |= FLAGS_LOCOP)
 #define SetInvisible(x) ((x)->flags |= FLAGS_INVISIBLE)
 #define SetWallops(x)   ((x)->flags |= FLAGS_WALLOP)
+#define	SetUnixSock(x)	((x)->flags |= FLAGS_UNIX)
 
 #define ClearOper(x)    ((x)->flags &= ~FLAGS_OPER)
 #define ClearInvisible(x) ((x)->flags &= ~FLAGS_INVISIBLE)
@@ -143,8 +145,9 @@ typedef struct User anUser;
 #define CONF_SERVICE            0x0800
 #define CONF_LEAF		0x1000
 
-#define	CONF_CLIENT_MASK	(CONF_CLIENT| CONF_CONNECT_SERVER|CONF_LOCOP|\
-				 CONF_OPERATOR | CONF_NOCONNECT_SERVER)
+#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_CONNECT_SERVER | \
+				 CONF_OPERATOR | CONF_NOCONNECT_SERVER | \
+				 CONF_LOCOP | CONF_SERVICE)
 
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
 

@@ -17,6 +17,26 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Thu May 21 00:37:21 1992  Christopher Davis <ckd@eff.org>
+
+        * s_msg.c       Fixed the bug that prevented user modes (such as
+                        the default invisibility) from propagating.
+
+Wed May 20 21:52:19 1992  Christopher Davis <ckd@eff.org>
+
+        * s_misc.c      Fixed dereferencing of NULL cptr
+                        (mycroft@gnu.ai.mit.edu,
+                        frechett@spot.colorado.edu)
+
+        * Makefile, s_bsd.c, s_msg.c
+                        Added support for IDENT (RFC931) protocol for
+                        sockets in AF_INET.
+
+Fri May 15 23:25:40 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c, s_bsd.c
+			Changed rehash to rebuild Unix domain sockets used
+			for listening for connections.
+
 Wed May 13 00:07:24 1992  Darren Reed <avalon@coombs.anu.edu.au>
 	* s_msg.c	STATS C reports L-lines (numeric 241) as well as
 			N-Lines. STATS also defaults to *not* send any

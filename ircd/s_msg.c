@@ -37,6 +37,10 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/stat.h>
 #include <stdio.h>
 #include <utmp.h>
+#ifdef IDENT
+#include "authuser.h"
+#include <errno.h>
+#endif /* IDENT */
 
 extern	aClient	*client, me, *local[];
 extern	aClient	*find_server PROTO((char *, aClient *));
@@ -54,14 +58,21 @@ extern	anUser	*make_user PROTO((aClient *));
 extern	aChannel *channel;
 extern	int	connect_server PROTO((aConfItem *));
 extern	int	close_connection PROTO((aClient *));
+extern	int	check_client PROTO((aClient *, int));
 extern	int	find_kill PROTO((aClient *));
 extern	char	*debugmode, *configfile;
 extern	char	*get_client_name PROTO((aClient *, int));
 extern	char	*my_name_for_link PROTO((char *, aConfItem *));
 extern	int	highest_fd, debuglevel;
+
 #ifdef	R_LINES
 extern	int	find_restrict PROTO((aClient *));
 #endif		
+
+#ifdef IDENT
+extern int  auth_fd2();
+extern char *auth_tcpuser3();
+#endif /* IDENT */
 
 extern	char	*date PROTO((long));
 extern	char	*strerror();
@@ -287,7 +298,7 @@ char	*nick;
         char	*parv[3];
 	short	oldstatus = sptr->status;
 	aConfItem *aconf;
-	anUser	*user;
+	anUser	*user = sptr->user;
 
 	sptr->user->last = time((long *)NULL);
 	parv[0] = sptr->name;
@@ -327,7 +338,11 @@ char	*nick;
 	    if (find_restrict(sptr))
 		return exit_client(cptr, sptr, sptr , "R-lined");
 #endif
-	    strncpyzt(sptr->user->host, sptr->sockhost, HOSTLEN);
+	    if (IsUnixSocket(sptr))
+		strncpyzt(user->host, me.sockhost, HOSTLEN+1);
+	    else
+		strncpyzt(user->host, sptr->sockhost, HOSTLEN+1);
+
 	    if (oldstatus == STAT_MASTER && MyConnect(sptr))
 		m_oper(&me, sptr, 1, parv);
 	  }
@@ -346,7 +361,6 @@ char	*nick;
 	    m_motd(sptr, sptr, 1, parv);
 	  }
 	sendto_serv_butone(cptr, "NICK %s %d", nick, sptr->hopcount+1);
-	user = sptr->user;
 	sendto_serv_butone(cptr, ":%s USER %s %s %s :%s", nick,
 			   user->username, user->host,
 			   user->server, sptr->info);
@@ -354,10 +368,13 @@ char	*nick;
 	    {
 		if (!(acptr = local[i]))
 			continue;
-		if (acptr != sptr || !IsServer(acptr))
+		if (acptr == cptr || !IsServer(acptr))
 			continue;
-		send_umode(acptr, cptr);
+		send_umode(acptr, sptr);
 	    }
+	if (MyConnect(sptr))
+		send_umode(sptr, sptr);
+
 	return 0;
     }
 
@@ -1151,6 +1168,14 @@ char	*parv[];
 
 	char	*username, *host, *server, *realname;
 	anUser	*user;
+#ifdef IDENT
+        char    *authuser = NULL;
+        unsigned long authlocaladdr,authremoteaddr;
+        unsigned short authlocalport,authremoteport;
+        int authtimeout = AUTHTIMEOUT;
+        int errtmp;
+#endif /* IDENT */
+        
  
 	if (parc > 2 && (username = (char *)index(parv[1],'@')))
 		*username = '\0'; 
@@ -1174,30 +1199,63 @@ char	*parv[];
 	realname = (parc < 5 || BadPtr(parv[4])) ? "<bad realname>" : parv[4];
 
 	if (MyConnect(sptr))
-	    {
-		if (!IsUnknown(sptr))
-		    {
-			sendto_one(sptr,":%s %d %s :Identity problems, eh ?",
-				   me.name, ERR_ALREADYREGISTRED, parv[0]);
-			return 0;
-		    }
-		sptr->flags |= FLAGS_INVISIBLE;
-		sptr->flags |= (UFLAGS & atoi(host));
-		host = sptr->sockhost;
-		server = me.name;
-	    }
-
-	user = make_user(sptr);
-	strncpyzt(user->username, username, USERLEN);
-	strncpyzt(sptr->info, realname, REALLEN);
-	strncpyzt(user->server, server, HOSTLEN);
-	strncpyzt(user->host, host, HOSTLEN);
-
+          {
+            if (!IsUnknown(sptr))
+              {
+                sendto_one(sptr,":%s %d %s :Identity problems, eh ?",
+                           me.name, ERR_ALREADYREGISTRED, parv[0]);
+                return 0;
+              }
+#ifndef	NO_DEFAULT_INVISIBLE
+            sptr->flags |= FLAGS_INVISIBLE;
+#endif
+            sptr->flags |= (UFLAGS & atoi(host));
+            if (IsUnixSocket(sptr))
+              host = me.sockhost;
+            else
+              {
+                host = sptr->sockhost;
+#ifdef IDENT
+                if (auth_fd2(sptr->fd,
+                             &authlocaladdr,&authremoteaddr,
+                             &authlocalport,&authremoteport) == -1)
+                  {
+                    errtmp=errno;
+                    report_error("authfd2 blew, host %s: %s",sptr);
+                    close(sptr->fd);
+                    free(sptr);
+                    return(errtmp);
+                  }
+                authuser = auth_tcpuser3(authlocaladdr,authremoteaddr,
+                                         authlocalport,authremoteport,
+                                         authtimeout);
+                if (authuser != NULL)
+                  strncpyzt(username,authuser,USERLEN);
+#endif /* IDENT */
+              }
+            server = me.name;
+          }
+        
+  	user = make_user(sptr);
+        user = sptr->user;
+	strncpyzt(user->username, username, sizeof(user->username));
+#ifdef IDENT
+        if ((authuser == NULL) && MyConnect(sptr))
+          {
+            strcpy(sptr->info, "!id "); /* doesn't need strncpy - constant */
+            strncat(sptr->info, realname, sizeof(sptr->info)-4);
+          }
+        else
+#endif /* !IDENT */
+          strncpyzt(sptr->info, realname, sizeof(sptr->info));
+	strncpyzt(user->server, server, sizeof(user->server));
+	strncpyzt(user->host, host, sizeof(user->host));
+        
 	if (sptr->name[0]) /* NICK already received, now we have USER... */
-		return register_user(cptr,sptr,sptr->name);
-
+          return register_user(cptr,sptr,sptr->name);
+        
 	return 0;
-}
+      }
 
 /*
 ** m_version
@@ -1223,10 +1281,10 @@ char *parv[];
 **	parv[0] = sender prefix
 **	parv[1] = comment
 */
-int m_quit(cptr, sptr, parc, parv)
+int	m_quit(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
 	register char *comment = (parc > 1 && parv[1]) ? parv[1] : cptr->name;
 
@@ -1239,10 +1297,10 @@ char *parv[];
 **	parv[1] = server name
 **	parv[2] = comment
 */
-int m_squit(cptr, sptr, parc, parv)
+int	m_squit(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
 	char	*server;
 	aClient *acptr;
@@ -1258,11 +1316,27 @@ char *parv[];
 
 	if (parc > 1)
 	    {
+		server = parv[1];
+		/*
+		** To accomodate host masking, a squit for a masked server
+		** name is expanded if the incoming mask is the same as
+		** the server name for that link to the name of link.
+		*/
+		while (*server == '*')
+		    {
+			Reg1	aConfItem *aconf;
+			aconf = find_conf(cptr->confs, cptr->name,
+					  CONF_NOCONNECT_SERVER);
+			if (aconf == (aConfItem *)NULL)
+				break;
+			if (!mycmp(server, my_name_for_link(me.name, aconf)))
+				server = cptr->name;
+			break; /* WARNING is normal here */
+		    }
 		/*
 		** The following allows wild cards in SQUIT. Only usefull
 		** when the command is issued by an oper.
 		*/
-		server = parv[1];
 		for (acptr = client;
 		     acptr = next_client(acptr, server);
 		     acptr = acptr->next)
@@ -1278,6 +1352,7 @@ char *parv[];
 		server = cptr->sockhost;
 		acptr = cptr;
 	    }
+
 	/*
 	** SQUIT semantics is tricky, be careful...
 	**
@@ -1683,10 +1758,10 @@ char	*parv[];
 **	parv[1] = kill victim
 **	parv[2] = kill path
 */
-int m_kill(cptr, sptr, parc, parv)
+int	m_kill(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
 	aClient *acptr;
 	char *inpath = get_client_name(cptr,FALSE);
@@ -1703,12 +1778,22 @@ char *parv[];
 	user = parv[1];
 	path = parv[2]; /* Either defined or NULL (parc >= 2!!) */
 
-	if (!IsPrivileged(sptr) && !IsServer(cptr))
+#ifdef	OPER_KILL
+	if (!IsPrivileged(cptr))
 	    {
 		sendto_one(sptr,":%s %d %s :Death before dishonor ?",
 			   me.name, ERR_NOPRIVILEGES, parv[0]);
 		return 0;
 	    }
+#else
+	if (!IsServer(cptr))
+	    {
+		sendto_one(sptr,":%s %d %s :Death before dishonor ?",
+			   me.name, ERR_NOPRIVILEGES, parv[0]);
+		return 0;
+	    }
+#endif
+
 	if (!(acptr = find_client(user, (aClient *)NULL)))
 	    {
 		/*
@@ -2520,21 +2605,6 @@ char *parv[];
 		     acptr->from->name);
 	  return -1;
 	}
-	/*
-	** Notify all operators about remote connect requests
-	*/
-	if (!IsAnOper(cptr))
-	 {
-	  sendto_ops_butone((aClient *)0, &me,
-			    ":%s WALLOPS :Remote 'CONNECT %s %s' from %s",
-			    me.name,
-			    parv[1], parv[2] ? parv[2] : "",
-			    get_client_name(sptr,FALSE));
-#if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
-	  syslog(LOG_DEBUG, "CONNECT From %s : %s %d",
-		 parv[0], parv[1], parv[2] ? parv[2] : "");
-#endif
-	 }
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status == CONF_CONNECT_SERVER &&
@@ -2571,6 +2641,21 @@ char *parv[];
 			   parv[0]);
 		return -1;
 	    }
+	/*
+	** Notify all operators about remote connect requests
+	*/
+	if (!IsAnOper(cptr))
+	 {
+	  sendto_ops_butone((aClient *)0, &me,
+			    ":%s WALLOPS :Remote 'CONNECT %s %s' from %s",
+			    me.name,
+			    parv[1], parv[2] ? parv[2] : "",
+			    get_client_name(sptr,FALSE));
+#if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
+	  syslog(LOG_DEBUG, "CONNECT From %s : %s %d",
+		 parv[0], parv[1], parv[2] ? parv[2] : "");
+#endif
+	 }
 	aconf->port = port;
 	switch (retval = connect_server(aconf))
 	    {
@@ -2897,6 +2982,15 @@ char *parv[];
 	syslog(LOG_INFO, "REHASH From %s\n", get_client_name(sptr, FALSE));
 #endif
 
+#ifdef	UNIXPORT
+	/*
+	 * rebuild_unix() is called here to provide an easy way to
+	 * regenerate Unix Domain sockets if they get closed. In future, they
+	 * will all be closed and regenerated by the Conf file with some sort
+	 * of conf file entry (current method is a kludge & hack). -avalon
+	 */
+	rebuild_unix();
+#endif
 	rehash();
 
 #if defined(R_LINES_REHASH) && !defined(R_LINES_OFTEN)
@@ -3231,24 +3325,49 @@ static int user_modes[]	     = { FLAGS_OPER, 'o',
 #define	SEND_UMODES	(FLAGS_OPER|FLAGS_INVISIBLE|FLAGS_WALLOP)
 
 #ifndef NPATH
-int m_note(cptr, sptr, parc, parv)
-aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	m_note(cptr, sptr, parc, parv)
+aClient	*cptr, *sptr;
+int	parc;
+char	*parv[];
 {
- int i = 0;
- char *c, buf[100];
- aClient *acptr;
+	Reg1	aClient *acptr;
+	Reg2	int	i = 0;
+	int	wilds = 0;
+	char	*c, buf[50];
 
- if (parc < 2) return -1; else c = parv[1];
- while (i < 99 && *c && *c != ' ') buf[i++] = *c++; 
- buf[i] = 0;
- for (i = 0; i <= highest_fd; i++) {
-      if (!(acptr = local[i])) continue;
-      if (IsServer(acptr) && acptr != cptr 
-          && matches(buf, acptr->name) == 0)
-          sendto_one(acptr, ":%s NOTE %s", sptr->name, parv[1]);
-  }
+	if (parc < 2)
+		return 0;
+
+	c = parv[1];
+
+	while (*c && *c != ' ' && i < 49)
+	    {
+        	if (*c == '*' || *c == '?')
+			wilds = 1;
+	  	buf[i++] = *c++;
+	    }
+
+	buf[i] = 0;
+
+	if (IsOper(sptr) && wilds)
+		for (i = 0; i <= highest_fd; i++)
+		    {
+			if (!(acptr = local[i]))
+				continue;
+        		if (IsServer(acptr) && acptr != cptr)
+				sendto_one(acptr, ":%s NOTE %s",
+					   parv[0], parv[1]);
+		    }
+	else
+		for (acptr = client; acptr; acptr = acptr->next)
+			if (IsServer(acptr) && acptr != cptr
+			    && !mycmp(buf, acptr->name))
+			    {
+				sendto_one(acptr, ":%s NOTE %s",
+					   parv[0], parv[1]);
+				break;
+			    }
+	return 0;
 }
 #endif
 

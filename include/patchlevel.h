@@ -16,4 +16,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define PATCHLEVEL "2.7.2"
+#include "config.h"
+
+#ifdef IDENT
+#define PATCHLEVEL "2.7.2c"
+#else
+#define PATCHLEVEL "2.7.2c.no931"
+#endif

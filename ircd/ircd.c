@@ -454,12 +454,6 @@ char	*argv[];
 	me.lasttime = me.since = me.firsttime = time(NULL);
 	add_to_client_hash_table(me.name, &me);
 
-#ifdef	UNIXPORT
-	cptr = make_client((aClient *)NULL);
-	if (unixport(portnum, cptr))
-		free(cptr);
-#endif
-
 	check_class();
 	if (debugtty == -1) {
 	  aClient *tmp = add_connection(0);
@@ -470,6 +464,13 @@ char	*argv[];
 	}
 	else
 	  write_pidfile();
+
+#ifdef	UNIXPORT
+	cptr = make_client((aClient *)NULL);
+	if (unixport(portnum, cptr))
+		free(cptr);
+#endif
+
 	debug(DEBUG_NOTICE,"Server ready...");
 	for (;;)
 	    {

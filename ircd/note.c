@@ -2594,16 +2594,29 @@ char *parv[];
            c = split_string(param, 1, 1); c2 = c;
            while (*c2 && *c2 != '.') c2++;
            if (*c2) {
-               for (t = 0; t <= highest_fd; t++) {
-                    if (!(acptr = local[t])) continue;
-                    if (IsServer(acptr) && acptr != cptr && 
-                        !matches(c, acptr->name))
-                        sendto_one(acptr, ":%s NOTE %s", sptr->name, param);
-		}
+               if (wildcards(c))
+                   for (t = 0; t <= highest_fd; t++) {
+                       if (!(acptr = local[t])) continue;
+                       if (IsServer(acptr) && acptr != cptr) 
+                          sendto_one(acptr, ":%s NOTE %s", sptr->name, param);
+		    }
+                 else for (acptr = client; acptr; acptr = acptr->next)
+                          if (IsServer(acptr) && acptr != cptr
+                              && !mycmp(c, acptr->name)) {
+		              sendto_one(acptr, 
+                                        ":%s NOTE %s", sptr->name, param);
+                              break;
+			   }
                if (!matches(c, me.name)) {
-                   if (wildcards(param)) remote = -1; else remote = 1;
+                   if (wildcards(c)) remote = -1; else remote = 1;
                    while (*param && *param != ' ') param++; 
                          if (*param) param++;
+                         if (!*param) {
+                            sendto_one(sptr,
+                                       "NOTICE %s :#?# No option specified.", 
+                                       sptr->name);
+                            return -1;
+                          }
 	       } else return 0;
      
 	    }

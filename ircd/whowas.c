@@ -45,8 +45,8 @@ aClient	*cptr;
 {
 	aName	ntmp;
 
-	strncpyzt(ntmp.ww_nick, cptr->name, NICKLEN);
-	strncpyzt(ntmp.ww_info, cptr->info, REALLEN);
+	strncpyzt(ntmp.ww_nick, cptr->name, NICKLEN+1);
+	strncpyzt(ntmp.ww_info, cptr->info, REALLEN+1);
 	ntmp.ww_user = cptr->user;
 	ntmp.ww_logout = time(NULL);
 	ntmp.ww_online = cptr->from ? cptr : NULL;

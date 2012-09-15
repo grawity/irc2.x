@@ -71,7 +71,8 @@ long	clock;
 	struct	timeval	tp;
 	struct	timezone tzp;
 	Reg2	char	*timezonename;
-#if !(defined(HPUX) || defined(AIX) || defined(PCS))
+#if !(defined(HPUX) || defined(AIX) || defined(PCS) || defined(SYSV) || \
+      defined(SGI))
 	extern char *timezone();
 #endif
 
@@ -80,7 +81,8 @@ long	clock;
 	ltbuf = localtime(&clock);
 	gettimeofday(&tp, &tzp);
 
-#if defined(HPUX) || defined(AIX) || defined(PCS)
+#if defined(HPUX) || defined(AIX) || defined(PCS) || defined(SYSV) || \
+      defined(SGI)
 	tzset();
 	timezonename = tzname[ltbuf->tm_isdst];
 #else
@@ -193,13 +195,20 @@ int	showip;
 {
 	static char nbuf[sizeof(sptr->name)+sizeof(sptr->sockhost)+3];
 
-	if (MyConnect(sptr) && mycmp(sptr->name,sptr->sockhost))
+	if (MyConnect(sptr))
 	    {
 		if (showip)
-			sprintf(nbuf, "%s[%s.%d]",
-				sptr->name, inet_ntoa(sptr->ip), sptr->port);
+			sprintf(nbuf, "%s[%s.%u]",
+				sptr->name, inet_ntoa(sptr->ip),
+				(unsigned int)sptr->port);
 		else
-			sprintf(nbuf, "%s[%s]", sptr->name, sptr->sockhost);
+		    {
+			if (mycmp(sptr->name, sptr->sockhost))
+				sprintf(nbuf, "%s[%s]",
+					sptr->name, sptr->sockhost);
+			else
+				return sptr->name;
+		    }
 		return nbuf;
 	    }
 	return sptr->name;
@@ -318,8 +327,16 @@ char	*comment;	/* Reason for the exit */
 # endif
 #endif
 		if (sptr->fd >= 0)
-			sendto_one(sptr, "ERROR :Closing Link: %s(%s)",
-				   get_client_name(sptr,FALSE), comment);
+                  {
+                    if (cptr != NULL)
+                      sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
+                                 get_client_name(sptr,FALSE),
+                                 cptr->name, comment);
+                    else
+                      sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
+                                 get_client_name(sptr,FALSE),
+                                 comment);
+                  }
 		/*
 		** Currently only server connections can have
 		** depending remote clients here, but it does no

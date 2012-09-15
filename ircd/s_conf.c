@@ -432,8 +432,8 @@ int	statmask;
 
 int rehash()
     {
-	Reg1 aConfItem *tmp = conf, *tmp2;
-	Reg2 aClass *cltmp;
+	Reg1	aConfItem *tmp = conf, *tmp2;
+	Reg2	aClass	*cltmp;
 
 	while (tmp)
 	    {
@@ -614,8 +614,7 @@ int rehashing;
 		  continue;
 		}
 
-		if (aconf->status & (CONF_CONNECT_SERVER |
-		    CONF_NOCONNECT_SERVER)) {
+		if (aconf->status & CONF_SERVER_MASK) {
 		  if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
 		      aconf->host && index(aconf->host, '*')) {
 		    conf = aconf->next;
@@ -628,9 +627,7 @@ int rehashing;
                 ** associate each conf line with a class by using a pointer
                 ** to the correct class record. -avalon
                 */
-		if (aconf->status & (CONF_CONNECT_SERVER | CONF_CLIENT |
-		    CONF_NOCONNECT_SERVER | CONF_OPERATOR | CONF_LOCOP |
-		    CONF_SERVICE )) {
+		if (aconf->status & CONF_CLIENT_MASK) {
 		  if (Class(aconf) == 0)
 		    Class(aconf) = find_class(0);
 		  if (MaxLinks(Class(aconf)) < 0)
@@ -641,8 +638,11 @@ int rehashing;
 		** ip numbers in conf structure.
 		*/
 		aconf->ipnum.s_addr = -1;
-		while (!rehashing && (aconf->status &
-		       (CONF_CONNECT_SERVER|CONF_NOCONNECT_SERVER))) {
+		while (!rehashing && (aconf->status & CONF_SERVER_MASK)) {
+		    if (BadPtr(aconf->host))
+			break;
+		    if (!isalpha(*aconf->host) && !isdigit(*aconf->host))
+			break;
 		    if (aconf->host && (hp = gethostbyname(aconf->host))) {
 			bcopy(hp->h_addr, &(aconf->ipnum), hp->h_length);
 			if (aconf->ipnum.s_addr)

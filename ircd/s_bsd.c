@@ -44,7 +44,9 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
+#ifdef	UNIXPORT
 #include <sys/un.h>
+#endif
 #if defined(__hpux)
 #include "inet.h"
 #endif
@@ -55,12 +57,14 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <utmp.h>
 #include <sys/errno.h>
 #include <sys/resource.h>
-#ifdef AIX
+#ifdef	BAD_DNS
+# ifdef	AIX
 #include <arpa/nameser.h>
 #include <resolv.h>
-#else
+# else
 #include "nameser.h"
 #include "resolv.h"
+# endif
 #endif
 #include "sock.h"	/* If FD_ZERO isn't define up to this point,  */
 			/* define it (BSD4.2 needs this) */
@@ -162,7 +166,10 @@ static	int	AcceptNewConnections = TRUE;
 **	cptr	if not NULL, is the *LOCAL* client associated with
 **		the error.
 */
-static	int	report_error(text,cptr)
+#ifndef IDENT
+static
+#endif /* not IDENT */;
+int	report_error(text,cptr)
 char	*text;
 aClient *cptr;
     {
@@ -225,9 +232,8 @@ int	portnum;
 	  if (getsockname(sock, &server, &len))
 	  	exit(1);
 
-	  me.port = server.sin_port;
 	  sprintf(buf, ":%s %d %d :Port to local server is\n",
-		  me.name, RPL_MYPORTIS, me.port);
+		  me.name, RPL_MYPORTIS, server.sin_port);
 	  write(0, buf, strlen(buf));
 	}
 	if (sock > highest_fd)
@@ -248,6 +254,7 @@ aClient	*cptr;
 	cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	un.sun_family = AF_UNIX;
+	mkdir(UNIXPORTPATH, 0755);
 	sprintf(unixpath, "%s/%d", UNIXPORTPATH, port);
 	unlink(unixpath);
 	strcpy(un.sun_path, unixpath);
@@ -261,7 +268,7 @@ aClient	*cptr;
 	listen(cptr->fd, 3);
 	chmod(UNIXPORTPATH, 0755);
 	SetMe(cptr);
-	cptr->flags |= FLAGS_UNIX;
+	SetUnixSock(cptr);
 	cptr->from = cptr;
 	cptr->port = 0;
 	strncpyzt(cptr->sockhost, unixpath, sizeof(cptr->sockhost));
@@ -269,6 +276,25 @@ aClient	*cptr;
 	local[cptr->fd] = cptr;
 
 	return 0;
+}
+
+rebuild_unix()
+{
+	Reg1	int	i;
+	Reg2	aClient	*cptr;
+
+	for (i = 0; i <= highest_fd; i++)
+	    {
+		if (!(cptr = local[i]))
+			continue;
+		if (!IsUnixSocket(cptr) || !IsMe(cptr))
+			continue;
+		unlink(cptr->sockhost);
+		close_connection(cptr);
+		cptr = make_client((aClient *)NULL);
+		if (unixport(me.port, cptr))
+			free(cptr);
+	    }
 }
 #endif
 
@@ -390,7 +416,7 @@ Reg3	struct	sockaddr_in *socka;
 	int	len = sizeof(struct sockaddr_in);
 
 #ifdef	UNIXPORT
-	if (cptr->flags & FLAGS_UNIX)
+	if (IsUnixSocket(cptr))
 	    {
 		strncpyzt(full, unixpath, HOSTLEN+1);
 		strncpyzt(sockn, unixpath, HOSTLEN+1);
@@ -445,7 +471,7 @@ int	len, fam;
 	for (i = 0; !stop && hp->h_addr_list[i]; i++)
 		for (j = 0; !stop && hp2->h_addr_list[j]; j++)
 			if (!bcmp(hp->h_addr_list[i],
-				  hp2->h_addr_list[j], sizeof(long))
+				  hp2->h_addr_list[j], sizeof(long)))
 				stop = 1;
 	if (stop)
 		return hp;
@@ -478,7 +504,7 @@ int	flags;
 	if (check_init(cptr, sockname, fullname, &sk))
 		return -2;
 
-	if (!(cptr->flags & FLAGS_UNIX))
+	if (!IsUnixSocket(cptr))
 		hp = gethostbyaddr(&(sk.sin_addr), sizeof(struct in_addr),
 				   sk.sin_family);
 
@@ -573,7 +599,7 @@ aClient	*cptr;
 		    }
 	    }
 #ifdef	UNIXPORT
-	if (cptr->flags & FLAGS_UNIX)
+	if (IsUnixSocket(cptr))
 	    {
 		if (!c_conf)
 			c_conf = find_conf(links, name, CFLAG);
@@ -650,9 +676,9 @@ aClient	*cptr;
 	attach_conf(cptr, n_conf);
 	attach_conf(cptr, c_conf);
 
-	if ((c_conf->ipnum.s_addr == -1) && !(cptr->flags & FLAGS_UNIX))
+	if ((c_conf->ipnum.s_addr == -1) && !IsUnixSocket(cptr))
 		bcopy(&(sk.sin_addr),&(c_conf->ipnum),sizeof(struct in_addr));
-	if (!(cptr->flags & FLAGS_UNIX))
+	if (!IsUnixSocket(cptr))
 		strncpy(cptr->sockhost, c_conf->host, HOSTLEN);
 
 	debug(DEBUG_DNS,"sv_cl: access ok: %s[%s]",
@@ -845,7 +871,7 @@ int	fd;
 	if (fd > highest_fd)
 		highest_fd = fd;
 	local[fd] = cptr;
-	cptr->flags |= FLAGS_UNIX;
+	SetUnixSock(cptr);
 	hp = gethostbyname(me.sockhost);
 	if (hp)
 		bcopy(hp->h_addr_list[0], &cptr->ip, sizeof(struct in_addr));
@@ -891,7 +917,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       FD_ZERO(&write_set);
       for (i = 0; i <= highest_fd; i++)
 	if ((cptr = local[i]) && IsMe(cptr) && AcceptNewConnections &&
-	    (now > lastaccept))
+	    (now > lastaccept + 1))
 	  FD_SET(i, &read_set);
       for (i = 0; i <= highest_fd; i++)
 	if (cptr = local[i])
@@ -933,20 +959,20 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
     {
       FD_CLR(i, &read_set);
       nfds--;
-      lastaccept = now;
+      lastaccept = time(NULL);
       if ((fd = accept(i, (struct sockaddr *)0, (int *)0)) < 0)
 	{
 	  /*
-	   ** There may be many reasons for error return, but
-	   ** in otherwise correctly working environment the
-	   ** probable cause is running out of file descriptors
-	   ** (EMFILE, ENFILE or others?). The man pages for
-	   ** accept don't seem to list these as possible,
-	   ** although it's obvious that it may happen here.
-	   ** Thus no specific errors are tested at this
-	   ** point, just assume that connections cannot
-	   ** be accepted until some old is closed first.
-	   */
+	  ** There may be many reasons for error return, but
+	  ** in otherwise correctly working environment the
+	  ** probable cause is running out of file descriptors
+	  ** (EMFILE, ENFILE or others?). The man pages for
+	  ** accept don't seem to list these as possible,
+	  ** although it's obvious that it may happen here.
+	  ** Thus no specific errors are tested at this
+	  ** point, just assume that connections cannot
+	  ** be accepted until some old is closed first.
+	  */
 	  report_error("Cannot accept new connections %s:%s",
 		      (aClient *)NULL);
 	  AcceptNewConnections = FALSE;
@@ -1003,7 +1029,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       readcalls++;
       if ((length = read(i, buffer, buflen)) > 0) {
 	*from = cptr;
-	cptr->since = cptr->lasttime = now;
+	cptr->since = cptr->lasttime = time(NULL);
 	cptr->flags &= ~FLAGS_PINGSENT;
 	dopacket(cptr, buffer, length);
 	continue;
@@ -1200,7 +1226,7 @@ int	*lenp;
 	sock.sun_family = AF_UNIX;
 	*lenp = strlen(sock.sun_path) + 2;
 
-	cptr->flags |= FLAGS_UNIX;
+	SetUnixSock(cptr);
 	return (struct sockaddr *)&sock;
 }
 #endif
