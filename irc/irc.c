@@ -177,9 +177,6 @@ char	*argv[];
 		case 'i':
 			mode |= FLAGS_INVISIBLE;
 			break;
-		case 's':
-			mode |= FLAGS_SERVNOTICE;
-			break;
 		case 'w':
 			mode |= FLAGS_WALLOP;
 			break;

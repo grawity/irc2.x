@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.9 1/30/94 (C) 1993 Darren Reed";
+static  char sccsid[] = "%W% %G% (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -28,6 +28,7 @@ static  char sccsid[] = "@(#)chkconf.c	1.9 1/30/94 (C) 1993 Darren Reed";
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #ifdef __hpux
 #include "inet.h"
 #endif
@@ -92,6 +93,11 @@ static	int	openconf()
 #ifdef	M4_PREPROC
 	int	pi[2];
 
+	if (access("ircd.m4", R_OK) == -1)
+	    {
+		(void)fprintf(stderr, "ircd.m4 missing in %s\n", DPATH);
+		return -1;
+	    }
 	if (pipe(pi) == -1)
 		return -1;
 	switch(fork())
@@ -140,6 +146,7 @@ int	opt;
 	aConfItem *aconf = NULL, *ctop = NULL;
 
 	(void)fprintf(stderr, "initconf(): ircd.conf = %s\n", configfile);
+	(void)fprintf(stderr, "initconf(): ircd dir  = %s\n", DPATH);
 	if ((fd = openconf()) == -1)
 	    {
 #ifdef	M4_PREPROC
@@ -363,8 +370,8 @@ int	opt;
 				(void)fprintf(stderr,
 					"\tWARNING: missing sendq field\n");
 				(void)fprintf(stderr, "\t\t default: %d\n",
-					MAXSENDQLENGTH);
-				(void)sprintf(maxsendq, "%d", MAXSENDQLENGTH);
+					QUEUELEN);
+				(void)sprintf(maxsendq, "%d", QUEUELEN);
 			    }
 			else
 				(void)sprintf(maxsendq, "%d", atoi(tmp));
@@ -651,7 +658,7 @@ dgetsreturnbuf:
 static	int	validate(top)
 aConfItem *top;
 {
-	Reg1	aConfItem *aconf, *bconf;
+	Reg	aConfItem *aconf, *bconf;
 	u_int	otype, valid = 0;
 
 	if (!top)

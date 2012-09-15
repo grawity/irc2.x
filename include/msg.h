@@ -59,7 +59,9 @@
 #define MSG_LUSERS   "LUSERS"	/* LUSE */
 #define MSG_MOTD     "MOTD"	/* MOTD */
 #define MSG_MODE     "MODE"	/* MODE */
+#define MSG_UMODE    "UMODE"	/* UMOD */
 #define MSG_KICK     "KICK"	/* KICK */
+#define	MSG_RECONECT "RECONNECT" /* RECONNECT -> RECO */
 #define MSG_SERVICE  "SERVICE"	/* SERV -> SRVI */
 #define MSG_USERHOST "USERHOST"	/* USER -> USRH */
 #define MSG_ISON     "ISON"	/* ISON */
@@ -71,7 +73,7 @@
 #define	MSG_RESTART  "RESTART"	/* REST */
 #define	MSG_CLOSE    "CLOSE"	/* CLOS */
 #define	MSG_DIE	     "DIE"
-#define	MSG_HASH     "HSAH"	/* HASH */
+#define	MSG_HASH     "HAZH"	/* HASH */
 #define	MSG_DNS      "DNS"	/* DNS  -> DNSS */
 
 #define MAXPARA    15 
@@ -81,15 +83,15 @@ extern int m_ping(), m_pong(), m_wallops(), m_kick();
 extern int m_nick(), m_error(), m_notice();
 extern int m_invite(), m_quit(), m_kill();
 #ifndef CLIENT_COMPILE
-extern int m_motd(), m_who(), m_whois(), m_user(), m_list();
+extern int m_motd(), m_who(), m_whois(), m_user(), m_list(), m_umode();
 extern int m_server(), m_info(), m_links(), m_summon(), m_stats();
 extern int m_users(), m_version(), m_help();
 extern int m_squit(), m_away(), m_connect();
 extern int m_oper(), m_pass(), m_trace();
 extern int m_time(), m_names(), m_admin();
 extern int m_lusers(), m_umode(), m_note(), m_close();
-extern int m_motd(), m_whowas();
-extern int m_service(), m_userhost(), m_ison();
+extern int m_motd(), m_whowas(), m_reconnect();
+extern int m_userhost(), m_ison();
 extern int m_service(), m_servset(), m_servlist(), m_squery();
 #if defined(OPER_REHASH) || defined(LOCOP_REHASH)
 extern	int	m_rehash();
@@ -105,69 +107,86 @@ extern int m_hash(), m_dns();
 
 #ifdef MSGTAB
 struct Message msgtab[] = {
-  { MSG_PRIVATE, m_private,  0, MAXPARA, 1 ,0L },
-  { MSG_NICK,    m_nick,     0, MAXPARA, 1 ,0L },
-  { MSG_NOTICE,  m_notice,   0, MAXPARA, 1 ,0L },
-  { MSG_JOIN,    m_join,     0, MAXPARA, 1 ,0L },
-  { MSG_MODE,    m_mode,     0, MAXPARA, 1 ,0L },
-  { MSG_QUIT,    m_quit,     0, MAXPARA, 1 ,0L },
-  { MSG_PART,    m_part,     0, MAXPARA, 1 ,0L },
-  { MSG_TOPIC,   m_topic,    0, MAXPARA, 1 ,0L },
-  { MSG_INVITE,  m_invite,   0, MAXPARA, 1 ,0L },
-  { MSG_KICK,    m_kick,     0, MAXPARA, 1 ,0L },
-  { MSG_WALLOPS, m_wallops,  0, MAXPARA, 1 ,0L },
-  { MSG_PING,    m_ping,     0, MAXPARA, 1 ,0L },
-  { MSG_PONG,    m_pong,     0, MAXPARA, 1 ,0L },
-  { MSG_ERROR,   m_error,    0, MAXPARA, 1 ,0L },
-  { MSG_KILL,    m_kill,     0, MAXPARA, 1 ,0L },
+  { MSG_PRIVATE, m_private,  0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_NICK,    m_nick,     0, MAXPARA, MSG_LAG, 0L},
+  { MSG_NOTICE,  m_notice,   0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_JOIN,    m_join,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_MODE,    m_mode,     0, MAXPARA, MSG_LAG|MSG_REG|MSG_PP, 0L},
+  { MSG_QUIT,    m_quit,     0, MAXPARA, MSG_LAG, 0L},
+  { MSG_PART,    m_part,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_TOPIC,   m_topic,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_INVITE,  m_invite,   0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_KICK,    m_kick,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_WALLOPS, m_wallops,  0, MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0L},
+  { MSG_PING,    m_ping,     0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_PONG,    m_pong,     0, MAXPARA, MSG_LAG, 0L},
+  { MSG_ERROR,   m_error,    0, MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0L},
+#ifdef	OPER_KILL
+  { MSG_KILL,    m_kill,     0, MAXPARA, MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0L},
+#else
+  { MSG_KILL,    m_kill,     0, MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0L},
+#endif
 #ifndef CLIENT_COMPILE
-  { MSG_USER,    m_user,     0, MAXPARA, 1 ,0L },
-  { MSG_AWAY,    m_away,     0, MAXPARA, 1 ,0L },
-  { MSG_ISON,    m_ison,     0, 1, 1 ,0L },
-  { MSG_SERVER,  m_server,   0, MAXPARA, 1 ,0L },
-  { MSG_SQUIT,   m_squit,    0, MAXPARA, 1 ,0L },
-  { MSG_WHOIS,   m_whois,    0, MAXPARA, 1 ,0L },
-  { MSG_WHO,     m_who,      0, MAXPARA, 1 ,0L },
-  { MSG_WHOWAS,  m_whowas,   0, MAXPARA, 1 ,0L },
-  { MSG_LIST,    m_list,     0, MAXPARA, 1 ,0L },
-  { MSG_NAMES,   m_names,    0, MAXPARA, 1 ,0L },
-  { MSG_USERHOST,m_userhost, 0, 1, 1 ,0L },
-  { MSG_TRACE,   m_trace,    0, MAXPARA, 1 ,0L },
-  { MSG_PASS,    m_pass,     0, MAXPARA, 1 ,0L },
-  { MSG_LUSERS,  m_lusers,   0, MAXPARA, 1 ,0L },
-  { MSG_TIME,    m_time,     0, MAXPARA, 1 ,0L },
-  { MSG_OPER,    m_oper,     0, MAXPARA, 1 ,0L },
-  { MSG_CONNECT, m_connect,  0, MAXPARA, 1 ,0L },
-  { MSG_VERSION, m_version,  0, MAXPARA, 1 ,0L },
-  { MSG_STATS,   m_stats,    0, MAXPARA, 1 ,0L },
-  { MSG_LINKS,   m_links,    0, MAXPARA, 1 ,0L },
-  { MSG_ADMIN,   m_admin,    0, MAXPARA, 1 ,0L },
-  { MSG_USERS,   m_users,    0, MAXPARA, 1 ,0L },
-  { MSG_SUMMON,  m_summon,   0, MAXPARA, 1 ,0L },
-  { MSG_HELP,    m_help,     0, MAXPARA, 1 ,0L },
-  { MSG_INFO,    m_info,     0, MAXPARA, 1 ,0L },
-  { MSG_MOTD,    m_motd,     0, MAXPARA, 1 ,0L },
-  { MSG_CLOSE,   m_close,    0, MAXPARA, 1 ,0L },
+  { MSG_USER,    m_user,     0, MAXPARA, MSG_LAG|MSG_NOU, 0L},
+  { MSG_AWAY,    m_away,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_UMODE,   m_umode,    0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_ISON,    m_ison,     0, 1,	 MSG_LAG|MSG_REG, 0L},
+  { MSG_SERVER,  m_server,   0, MAXPARA, MSG_LAG, 0L},
+  { MSG_SQUIT,   m_squit,    0, MAXPARA, MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0L},
+  { MSG_WHOIS,   m_whois,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_WHO,     m_who,      0, MAXPARA, MSG_LAG, 0L},
+  { MSG_WHOWAS,  m_whowas,   0, MAXPARA, MSG_LAG, 0L},
+  { MSG_LIST,    m_list,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_NAMES,   m_names,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_USERHOST,m_userhost, 0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_TRACE,   m_trace,    0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_PASS,    m_pass,     0, MAXPARA, MSG_LAG|MSG_NOU, 0L},
+  { MSG_LUSERS,  m_lusers,   0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_TIME,    m_time,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_OPER,    m_oper,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_CONNECT, m_connect,  0, MAXPARA, MSG_LAG|MSG_REGU|MSG_OP|MSG_LOP, 0L},
+  { MSG_VERSION, m_version,  0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_STATS,   m_stats,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_LINKS,   m_links,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_ADMIN,   m_admin,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_USERS,   m_users,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_SUMMON,  m_summon,   0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_HELP,    m_help,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_INFO,    m_info,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_MOTD,    m_motd,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
+  { MSG_CLOSE,   m_close,    0, MAXPARA, MSG_LAG|MSG_REGU|MSG_OP, 0L},
+  { MSG_RECONECT,m_reconnect,0, MAXPARA, MSG_LAG|MSG_NOU, 0L },
 #if defined(NPATH) && !defined(CLIENT_COMPILE)
-  { MSG_NOTE,    m_note,     0, 1, 1 ,0L },
+  { MSG_NOTE,    m_note,     0, 1, MSG_LAG|MSG_REG, 0L},
 #endif
-#undef USE_SERVICES
-#ifdef USE_SERVICES
-  { MSG_SERVICE, m_service,  0, MAXPARA, 1 ,0L },
-  { MSG_SERVSET, m_servset,  0, MAXPARA, 1 ,0L },
-  { MSG_SQUERY,  m_squery,   0, MAXPARA, 1 ,0L },
-  { MSG_SERVLIST,m_servlist, 0, MAXPARA, 1 ,0L },
+  { MSG_SERVICE, m_service,  0, MAXPARA, MSG_LAG|MSG_NOU, 0L},
+#ifdef	USE_SERVICES
+  { MSG_SERVSET, m_servset,  0, MAXPARA, MSG_LAG|MSG_SVC|MSG_NOU, 0L},
 #endif
-  { MSG_HASH,    m_hash,     0, MAXPARA, 1 ,0L },
-  { MSG_DNS,     m_dns,      0, MAXPARA, 1 ,0L },
+  { MSG_SQUERY,  m_squery,   0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_SERVLIST,m_servlist, 0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_HASH,    m_hash,     0, MAXPARA, MSG_LAG, 0L},
+  { MSG_DNS,     m_dns,      0, MAXPARA, MSG_LAG, 0L},
 #if defined(OPER_REHASH) || defined(LOCOP_REHASH)
-  { MSG_REHASH,  m_rehash,   0, MAXPARA, 1 ,0L },
+  { MSG_REHASH,  m_rehash,   0, MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_REHASH
+					 |MSG_LOP
+# endif
+					 , 0L },
 #endif
 #if defined(OPER_RESTART) || defined(LOCOP_RESTART)
-  { MSG_RESTART, m_restart,  0, MAXPARA, 1 ,0L },
+  { MSG_RESTART,  m_restart,   0, MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_RESTART
+					 |MSG_LOP
+# endif
+					 , 0L },
 #endif
 #if defined(OPER_DIE) || defined(LOCOP_DIE)
-  { MSG_DIE, m_die,  0, MAXPARA, 1 ,0L },
+  { MSG_DIE,  m_die,   0, MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_DIE
+					 |MSG_LOP
+# endif
+					 , 0L },
 #endif
 #endif /* !CLIENT_COMPILE */
   { (char *) 0, (int (*)()) 0 , 0, 0, 0, 0L}

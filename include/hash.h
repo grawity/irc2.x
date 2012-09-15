@@ -24,14 +24,17 @@ typedef	struct	hashentry {
 	int	hits;
 	int	links;
 	void	*list;
-	} aHashEntry;
+} aHashEntry;
 
-#ifndef	DEBUGMODE
-#define	HASHSIZE	8009	/* prime number */
-#define	CHANNELHASHSIZE	2003	/* prime number */
-#else
-extern	int	HASHSIZE;
-extern	int	CHANNELHASHSIZE;
-#endif
+/*
+ * it is not important for these to be "big" as ircd will make them grow
+ * as required.
+ */
+#define	HASHSIZE	((int)((float)MAXCONNECTIONS*1.75))
+#define	CHANNELHASHSIZE	((int)(((float)MAXCONNECTIONS*1.75)/2.0))
+#define	SERVERSIZE	(MAXCONNECTIONS/10)
+
+extern	int	_HASHSIZE;
+extern	int	_CHANNELHASHSIZE;
 
 #endif	/* __hash_include__ */

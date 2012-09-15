@@ -19,9 +19,11 @@
 
 #include "struct.h"
 #include "numeric.h"
+#include "common.h"
+#include "h.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_err.c	1.12 11/1/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "%W% %G% (C) 1992 Darren Reed";
 #endif
 
 typedef	struct	{
@@ -29,42 +31,42 @@ typedef	struct	{
 	char	*num_form;
 } Numeric;
 
-static	char	*prepbuf PROTO((char *, int, char *));
+static	char	*prepbuf __P((char *, char *, char *, int, char *));
 static	char	numbuff[512];
-static	char	numbers[] = "0123456789";
 
 static	Numeric	local_replies[] = {
 /* 000 */	0, (char *)NULL,
 /* 001 */	RPL_WELCOME, ":Welcome to the Internet Relay Network %s",
 /* 002 */	RPL_YOURHOST, ":Your host is %s, running version %s",
 /* 003 */	RPL_CREATED, ":This server was created %s",
-/* 004 */	RPL_MYINFO, "%s %s oiws biklmnopstv",
+/* 004 */	RPL_MYINFO, "%s %s oiw biklmnopstva",
 		0, (char *)NULL
 };
 
 static	Numeric	numeric_errors[] = {
 /* 401 */	ERR_NOSUCHNICK, "%s :No such nick/channel",
 /* 402 */	ERR_NOSUCHSERVER, "%s :No such server",
-/* 402 */	ERR_NOSUCHCHANNEL, "%s :No such channel",
-/* 402 */	ERR_CANNOTSENDTOCHAN, "%s :Cannot send to channel",
-/* 402 */	ERR_TOOMANYCHANNELS, "%s :You have joined too many channels",
-/* 402 */	ERR_WASNOSUCHNICK, "%s :There was no such nickname",
-/* 402 */	ERR_TOOMANYTARGETS,
+/* 403 */	ERR_NOSUCHCHANNEL, "%s :No such channel",
+/* 404 */	ERR_CANNOTSENDTOCHAN, "%s :Cannot send to channel",
+/* 405 */	ERR_TOOMANYCHANNELS, "%s :You have joined too many channels",
+/* 406 */	ERR_WASNOSUCHNICK, "%s :There was no such nickname",
+/* 407 */	ERR_TOOMANYTARGETS,
 		"%s :Duplicate recipients. No message delivered",
-/* 402 */	ERR_NOSUCHSERVICE, (char *)NULL,
-/* 402 */	ERR_NOORIGIN, ":No origin specified",
+/* 408 */	ERR_NOSUCHSERVICE, "%s :No such service",
+/* 409 */	ERR_NOORIGIN, ":No origin specified",
 		0, (char *)NULL,
 /* 411 */	ERR_NORECIPIENT, ":No recipient given (%s)",
-/* 411 */	ERR_NOTEXTTOSEND, ":No text to send",
-/* 411 */	ERR_NOTOPLEVEL, "%s :No toplevel domain specified",
-/* 411 */	ERR_WILDTOPLEVEL, "%s :Wildcard in toplevel Domain",
+/* 412 */	ERR_NOTEXTTOSEND, ":No text to send",
+/* 413 */	ERR_NOTOPLEVEL, "%s :No toplevel domain specified",
+/* 414 */	ERR_WILDTOPLEVEL, "%s :Wildcard in toplevel Domain",
+/* 415 */	ERR_BADMASK, "%s :Bad Server/host mask",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
+		0, (char *)NULL, 0, (char *)NULL,
 /* 421 */	ERR_UNKNOWNCOMMAND, "%s :Unknown command",
 /* 422 */	ERR_NOMOTD, ":MOTD File is missing",
-/* 422 */	ERR_NOADMININFO,
+/* 424 */	ERR_NOADMININFO,
 		"%s :No administrative info available",
-/* 422 */	ERR_FILEERROR, ":File error doing %s on %s",
+/* 424 */	ERR_FILEERROR, ":File error doing %s on %s",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 /* 431 */	ERR_NONICKNAMEGIVEN, ":No nickname given",
@@ -72,7 +74,7 @@ static	Numeric	numeric_errors[] = {
 /* 433 */	ERR_NICKNAMEINUSE, "%s :Nickname is already in use.",
 /* 434 */	ERR_SERVICENAMEINUSE, (char *)NULL,
 /* 435 */	ERR_SERVICECONFUSED, (char *)NULL,
-/* 436 */	ERR_NICKCOLLISION, "%s :Nickname collision KILL",
+/* 436 */	ERR_NICKCOLLISION, "%s :Nickname collision KILL from %s@%s",
 		0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL,
 		ERR_USERNOTINCHANNEL, "%s %s :They aren't on that channel",
@@ -109,8 +111,8 @@ static	Numeric	numeric_errors[] = {
 /* 474 */	ERR_BANNEDFROMCHAN, "%s :Cannot join channel (+b)",
 /* 475 */	ERR_BADCHANNELKEY, "%s :Cannot join channel (+k)",
 /* 476 */	ERR_BADCHANMASK, "%s :Bad Channel Mask",
+/* 477 */	ERR_NOCHANMODES, "%s :Channel doesn't support modes",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL,
 /* 481 */	ERR_NOPRIVILEGES,
 		":Permission Denied- You're not an IRC operator",
 /* 482 */	ERR_CHANOPRIVSNEEDED, "%s :You're not channel operator",
@@ -195,7 +197,7 @@ static	Numeric	numeric_replies[] = {
 /* 385 */	RPL_NOTOPERANYMORE, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL,
-/* 391 */	RPL_TIME, "%s :%s",
+/* 391 */	RPL_TIME, ":%s",
 #ifdef	ENABLE_USERS
 /* 392 */	RPL_USERSSTART, ":UserID   Terminal  Host",
 /* 393 */	RPL_USERS, ":%-8s %-9s %-8s",
@@ -235,8 +237,8 @@ static	Numeric	numeric_replies[] = {
 /* 231 */	RPL_SERVICEINFO, (char *)NULL,
 /* 232 */	RPL_ENDOFSERVICES, (char *)NULL,
 /* 233 */	RPL_SERVICE, (char *)NULL,
-/* 234 */	RPL_SERVLIST, (char *)NULL,
-/* 235 */	RPL_SERVLISTEND, (char *)NULL,
+/* 234 */	RPL_SERVLIST, "%s %s %s %d %d :%s",
+/* 235 */	RPL_SERVLISTEND, "%s %d :End of service listing",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL,
 /* 241 */	RPL_STATSLLINE, "%c %s * %s %d %d",
@@ -244,8 +246,9 @@ static	Numeric	numeric_replies[] = {
 /* 243 */	RPL_STATSOLINE, "%c %s * %s %d %d",
 /* 244 */	RPL_STATSHLINE, "%c %s * %s %d %d", 
 /* 245 */	RPL_STATSSLINE, "%c %s * %s %d %d", 
+/* 246 */	RPL_STATSPING, "%s %d %d %d %d",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL, 0, (char *)NULL,
+		0, (char *)NULL,
 /* 251 */	RPL_LUSERCLIENT,
 		":There are %d users and %d invisible on %d servers",
 /* 252 */	RPL_LUSEROP, "%d :operator(s) online",
@@ -258,45 +261,52 @@ static	Numeric	numeric_replies[] = {
 /* 259 */	RPL_ADMINEMAIL, ":%s",
 		0, (char *)NULL,
 /* 261 */	RPL_TRACELOG, "File %s %d",
+/* 262 */	RPL_TRACEEND, "%s :End of TRACE",
 		0, (char *)NULL
 };
 
-char	*err_str(numeric)
+char	*err_str(numeric, to)
 int	numeric;
+char	*to;
 {
-	Reg1	Numeric	*nptr;
-	Reg2	int	num = numeric;
+	Reg	Numeric	*nptr;
+	Reg	int	num = numeric;
 
 	num -= numeric_errors[0].num_val;
 	if (num < 0 || num > ERR_USERSDONTMATCH)
-		(void)sprintf(numbuff,
+		SPRINTF(numbuff,
 			":%%s %d %%s :INTERNAL ERROR: BAD NUMERIC! %d",
 			numeric, num);
 	else
 	    {
 		nptr = &numeric_errors[num];
+		Debug((DEBUG_NUM,
+			"err_str: to %s #%d num %d nptr %#x %d [%s]", to,
+			numeric, num, nptr, nptr->num_val, nptr->num_form));
 		if (!nptr->num_form || !nptr->num_val)
-			(void)sprintf(numbuff,
+			SPRINTF(numbuff,
 				":%%s %d %%s :NO ERROR FOR NUMERIC ERROR %d",
 				numeric, num);
 		else
-			(void)prepbuf(numbuff, nptr->num_val, nptr->num_form);
+			(void)prepbuf(numbuff, ME, to, nptr->num_val,
+				      nptr->num_form);
 	    }
 	return numbuff;
 }
 
 
-char	*rpl_str(numeric)
+char	*rpl_str(numeric, to)
 int	numeric;
+char	*to;
 {
-	Reg1	Numeric	*nptr;
-	Reg2	int	num = numeric;
+	Reg	Numeric	*nptr;
+	Reg	int	num = numeric;
 
 	if (num > 4)
 		num -= (num > 300) ? 300 : 100;
 
 	if (num < 0 || num > 200)
-		(void)sprintf(numbuff,
+		SPRINTF(numbuff,
 			":%%s %d %%s :INTERNAL REPLY ERROR: BAD NUMERIC! %d",
 			numeric, num);
 	else
@@ -305,33 +315,40 @@ int	numeric;
 			nptr = &numeric_replies[num];
 		else
 			nptr = &local_replies[num];
-		Debug((DEBUG_NUM, "rpl_str: numeric %d num %d nptr %x %d %x",
+		Debug((DEBUG_NUM,
+			"rpl_str: to %s #%d num %d nptr %#x %d [%s]", to,
 			numeric, num, nptr, nptr->num_val, nptr->num_form));
 		if (!nptr->num_form || !nptr->num_val)
-			(void)sprintf(numbuff,
+			SPRINTF(numbuff,
 				":%%s %d %%s :NO REPLY FOR NUMERIC ERROR %d",
 				numeric, num);
 		else
-			(void)prepbuf(numbuff, nptr->num_val, nptr->num_form);
+			(void)prepbuf(numbuff, ME, to, nptr->num_val,
+				      nptr->num_form);
 	    }
 	return numbuff;
 }
 
-static	char	*prepbuf(buffer, num, tail)
+static	char	*prepbuf(buffer, from, to, num, tail)
 char	*buffer;
-Reg1	int	num;
-char	*tail;
+Reg	int	num;
+char	*from, *to, *tail;
 {
-	Reg1	char	*s;
+	Reg	char	*s = buffer;
 
-	(void)strcpy(buffer, ":%s ");
-	s = buffer + 4;
+	*s++ = ':';
+	(void)strcpy(s, from);
+	(void)strcat(s, " ");
+	s += strlen(s);
 
-	*s++ = numbers[num/100];
+	*s++ = '0' + num/100;
 	num %= 100;
-	*s++ = numbers[num/10];
-	*s++ = numbers[num%10];
-	(void)strcpy(s, " %s ");
-	(void)strcpy(s+4, tail);
+	*s++ = '0' + num/10;
+	*s++ = '0' + num%10;
+	*s++ = ' ';
+	(void)strcpy(s, to);
+	s += strlen(s);
+	*s++ = ' ';
+	(void)strcpy(s, tail);
 	return buffer;
 }

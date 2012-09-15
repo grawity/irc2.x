@@ -29,10 +29,11 @@
 #define ChannelExists(n)	(find_channel(n, NullChn) != NullChn)
 
 #ifndef	V28PlusOnly
-#define	MAXMODEPARAMS	6
+# define	MAXMODEPARAMS	6
 #else
-#include "msg.h"
-#define	MAXMODEPARAMS	(MAXPARA-2)
+# include "msg.h"
+# define	MAXMODEPARAMS	(MAXPARA-2)
 #endif
+#define	MAXCMODEPARAMS	3
 
 #endif

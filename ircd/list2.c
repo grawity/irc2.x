@@ -48,8 +48,8 @@ Computing Center and Jarkko Oikarinen";
 #ifdef	DBMALLOC
 #include "malloc.h"
 #endif
-void	free_link PROTO((Link *));
-Link	*make_link PROTO(());
+void	free_link __P((Link *));
+Link	*make_link __P(());
 
 static	struct	liststats {
 	int	inuse;
@@ -102,8 +102,8 @@ void	outofmemory()
 aClient	*make_client(from)
 aClient	*from;
 {
-	Reg1	aClient *cptr = NULL;
-	Reg2	unsigned size = CLIENT_REMOTE_SIZE;
+	Reg	aClient *cptr = NULL;
+	Reg	unsigned size = CLIENT_REMOTE_SIZE;
 
 	/*
 	 * Check freelists first to see if we can grab a client without
@@ -211,7 +211,7 @@ aClient	*cptr;
 anUser	*make_user(cptr)
 aClient *cptr;
 {
-	Reg1	anUser	*user;
+	Reg	anUser	*user;
 	char	c;
 
 	user = cptr->user;
@@ -244,7 +244,7 @@ aClient *cptr;
 aServer	*make_server(cptr)
 aClient	*cptr;
 {
-	Reg1	aServer	*serv = cptr->serv;
+	Reg	aServer	*serv = cptr->serv;
 	char	c;
 
 	if (!serv)
@@ -279,7 +279,7 @@ aClient	*cptr;
 **	if count reaches 0
 */
 void	free_user(user, cptr)
-Reg1	anUser	*user;
+Reg	anUser	*user;
 aClient	*cptr;
 {
 	if (cptr && user->bcptr && (user->bcptr != cptr))
@@ -308,7 +308,7 @@ aClient	*cptr;
  * - avalon
  */
 void	remove_client_from_list(cptr)
-Reg1	aClient	*cptr;
+Reg	aClient	*cptr;
 {
 	checklist();
 	if (cptr->prev)
@@ -363,8 +363,8 @@ aClient	*cptr;
  * Look for ptr in the linked listed pointed to by link.
  */
 Link	*find_user_link(lp, ptr)
-Reg1	Link	*lp;
-Reg2	aClient *ptr;
+Reg	Link	*lp;
+Reg	aClient *ptr;
 {
 	while (lp && ptr)
 	   {
@@ -377,7 +377,7 @@ Reg2	aClient *ptr;
 
 Link	*make_link()
 {
-	Reg1	Link	*lp;
+	Reg	Link	*lp;
 	char	c;
 
 	if ((lp = lfree))
@@ -403,7 +403,7 @@ Link	*make_link()
 }
 
 void	free_link(lp)
-Reg1	Link	*lp;
+Reg	Link	*lp;
 {
 	bzero((char *)lp, sizeof(*lp));
 	lp->next = lfree;
@@ -415,7 +415,7 @@ Reg1	Link	*lp;
 
 aClass	*make_class()
 {
-	Reg1	aClass	*tmp;
+	Reg	aClass	*tmp;
 
 	if ((tmp = clfree))
 	    {
@@ -433,7 +433,7 @@ aClass	*make_class()
 }
 
 void	free_class(tmp)
-Reg1	aClass	*tmp;
+Reg	aClass	*tmp;
 {
 	bzero((char *)tmp, sizeof(*tmp));
 	tmp->next = clfree;
@@ -444,7 +444,7 @@ Reg1	aClass	*tmp;
 
 aConfItem	*make_conf()
 {
-	Reg1	aConfItem *aconf;
+	Reg	aConfItem *aconf;
 	char	c;
 
 	if ((aconf = cofree))

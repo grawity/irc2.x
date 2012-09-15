@@ -29,89 +29,99 @@ extern	aClient	*client, me, *local[];
 extern	aChannel *channel;
 extern	struct	stats	*ircstp;
 extern	int	bootopt;
+#ifndef	CLIENT_COMPILE
+extern	aServer	*svrtop;
+extern	aService *svctop;
+extern	anUser	*usrtop;
+extern	FdAry	fdas, fdall, fdaa;
+#endif
 
-extern	aChannel *find_channel PROTO((char *, aChannel *));
-extern	void	remove_user_from_channel PROTO((aClient *, aChannel *));
-extern	void	del_invite PROTO((aClient *, aChannel *));
-extern	void	send_user_joins PROTO((aClient *, aClient *));
-extern	void	clean_channelname PROTO((char *));
-extern	int	can_send PROTO((aClient *, aChannel *));
-extern	int	is_chan_op PROTO((aClient *, aChannel *));
-extern	int	has_voice PROTO((aClient *, aChannel *));
-extern	int	count_channels PROTO((aClient *));
+extern	aChannel *find_channel __P((char *, aChannel *));
+extern	void	remove_user_from_channel __P((aClient *, aChannel *));
+extern	void	del_invite __P((aClient *, aChannel *));
+extern	void	send_user_joins __P((aClient *, aClient *));
+extern	void	clean_channelname __P((char *));
+extern	int	can_send __P((aClient *, aChannel *));
+extern	int	is_chan_op __P((aClient *, aChannel *));
+extern	int	has_voice __P((aClient *, aChannel *));
+extern	int	count_channels __P((aClient *));
 
-extern	aClient	*find_client PROTO((char *, aClient *));
-extern	aClient	*find_name PROTO((char *, aClient *));
-extern	aClient	*find_person PROTO((char *, aClient *));
-extern	aClient	*find_server PROTO((char *, aClient *));
-extern	aClient	*find_service PROTO((char *, aClient *));
-extern	aClient	*find_userhost PROTO((char *, char *, aClient *, int *));
+extern	aClient	*find_client __P((char *, aClient *));
+extern	aClient	*find_name __P((char *, aClient *));
+extern	aClient	*find_person __P((char *, aClient *));
+extern	aClient	*find_server __P((char *, aClient *));
+extern	aServer	*find_tokserver __P((int, aClient *, aClient *));
+extern	aClient	*find_nickserv __P((char *, aClient *));
+extern	aClient	*find_service __P((char *, aClient *));
+extern	aClient	*find_userhost __P((char *, char *, aClient *, int *));
 
-extern	int	attach_conf PROTO((aClient *, aConfItem *));
-extern	aConfItem *attach_confs PROTO((aClient*, char *, int));
-extern	aConfItem *attach_confs_host PROTO((aClient*, char *, int));
-extern	int	attach_Iline PROTO((aClient *, struct hostent *, char *));
-extern	aConfItem *conf, *find_me PROTO(()), *find_admin PROTO(());
-extern	aConfItem *count_cnlines PROTO((Link *));
-extern	void	det_confs_butmask PROTO((aClient *, int));
-extern	int	detach_conf PROTO((aClient *, aConfItem *));
-extern	aConfItem *det_confs_butone PROTO((aClient *, aConfItem *));
-extern	aConfItem *find_conf PROTO((Link *, char*, int));
-extern	aConfItem *find_conf_exact PROTO((char *, char *, char *, int));
-extern	aConfItem *find_conf_host PROTO((Link *, char *, int));
-extern	aConfItem *find_conf_ip PROTO((Link *, char *, char *, int));
-extern	aConfItem *find_conf_name PROTO((char *, int));
-extern	int	find_kill PROTO((aClient *));
-extern	int	find_restrict PROTO((aClient *));
-extern	int	rehash PROTO((aClient *, aClient *, int));
-extern	int	initconf PROTO((int));
+extern	int	attach_conf __P((aClient *, aConfItem *));
+extern	aConfItem *attach_confs __P((aClient*, char *, int));
+extern	aConfItem *attach_confs_host __P((aClient*, char *, int));
+extern	int	attach_Iline __P((aClient *, struct hostent *, char *));
+extern	aConfItem *conf, *find_me __P(()), *find_admin __P(());
+extern	aConfItem *count_cnlines __P((Link *));
+extern	void	det_confs_butmask __P((aClient *, int));
+extern	int	detach_conf __P((aClient *, aConfItem *));
+extern	aConfItem *det_confs_butone __P((aClient *, aConfItem *));
+extern	aConfItem *find_conf __P((Link *, char*, int));
+extern	aConfItem *find_conf_exact __P((char *, char *, char *, int));
+extern	aConfItem *find_conf_host __P((Link *, char *, int));
+extern	aConfItem *find_conf_ip __P((Link *, char *, char *, int));
+extern	aConfItem *find_conf_name __P((char *, int));
+extern	int	find_kill __P((aClient *, int));
+extern	int	find_restrict __P((aClient *));
+extern	int	rehash __P((aClient *, aClient *, int));
+extern	int	initconf __P((int));
+extern	int	rehashed;
 
-extern	char	*MyMalloc PROTO((int)), *MyRealloc PROTO((char *, int));
+extern	char	*MyMalloc __P((int)), *MyRealloc __P((char *, int));
 extern	char	*debugmode, *configfile, *sbrk0;
-extern	char	*getfield PROTO((char *));
-extern	void	get_sockhost PROTO((aClient *, char *));
-extern	char	*rpl_str PROTO((int)), *err_str PROTO((int));
-extern	char	*strerror PROTO((int));
-extern	int	dgets PROTO((int, char *, int));
-extern	char	*inetntoa PROTO((char *));
+extern	char	*getfield __P((char *));
+extern	void	get_sockhost __P((aClient *, char *));
+extern	char	*rpl_str __P((int, char *)), *err_str __P((int, char *));
+extern	char	*strerror __P((int));
+extern	int	dgets __P((int, char *, int));
+extern	void	ircsprintf __P(());
+extern	char	*inetntoa __P((char *));
 
-extern	int	dbufalloc, dbufblocks, debuglevel, errno, h_errno;
+extern	int	dbufalloc, dbufblocks, debuglevel, errno, h_errno, poolsize;
 extern	int	highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
 extern	int	readcalls, udpfd, resfd;
-extern	aClient	*add_connection PROTO((aClient *, int));
-extern	int	add_listener PROTO((aConfItem *));
-extern	void	add_local_domain PROTO((char *, int));
-extern	int	check_client PROTO((aClient *));
-extern	int	check_server PROTO((aClient *, struct hostent *, \
+extern	aClient	*add_connection __P((aClient *, int));
+extern	int	add_listener __P((aConfItem *));
+extern	void	add_local_domain __P((char *, int));
+extern	int	check_client __P((aClient *));
+extern	int	check_server __P((aClient *, struct hostent *, \
 				    aConfItem *, aConfItem *, int));
-extern	int	check_server_init PROTO((aClient *));
-extern	void	close_connection PROTO((aClient *));
-extern	void	close_listeners PROTO(());
-extern	int connect_server PROTO((aConfItem *, aClient *, struct hostent *));
-extern	void	get_my_name PROTO((aClient *, char *, int));
-extern	int	get_sockerr PROTO((aClient *));
-extern	int	inetport PROTO((aClient *, char *, int));
-extern	void	init_sys PROTO(());
-extern	int	read_message PROTO((time_t));
-extern	void	report_error PROTO((char *, aClient *));
-extern	void	set_non_blocking PROTO((int, aClient *));
-extern	int	setup_ping PROTO(());
-extern	void	summon PROTO((aClient *, char *, char *, char *));
-extern	int	unixport PROTO((aClient *, char *, int));
-extern	int	utmp_open PROTO(());
-extern	int	utmp_read PROTO((int, char *, char *, char *, int));
-extern	int	utmp_close PROTO((int));
+extern	int	check_server_init __P((aClient *));
+extern	void	close_connection __P((aClient *));
+extern	void	close_listeners __P(());
+extern	int	connect_server __P((aConfItem *, aClient *, struct hostent *));
+extern	void	get_my_name __P((aClient *, char *, int));
+extern	int	get_sockerr __P((aClient *));
+extern	int	inetport __P((aClient *, char *, int));
+extern	void	init_sys __P(());
+extern	int	read_message __P((time_t, FdAry *));
+extern	void	report_error __P((char *, aClient *));
+extern	void	send_ping __P((aConfItem *));
+extern	void	set_non_blocking __P((int, aClient *));
+extern	void	summon __P((aClient *, char *, char *, char *));
+extern	int	unixport __P((aClient *, char *, int));
+extern	int	utmp_open __P(());
+extern	int	utmp_read __P((int, char *, char *, char *, int));
+extern	int	utmp_close __P((int));
 
-extern	void	start_auth PROTO((aClient *));
-extern	void	read_authports PROTO((aClient *));
-extern	void	send_authports PROTO((aClient *));
+extern	void	start_auth __P((aClient *));
+extern	void	read_authports __P((aClient *));
+extern	void	send_authports __P((aClient *));
 
-extern	void	restart PROTO((char *));
-extern	void	send_channel_modes PROTO((aClient *, aChannel *));
-extern	void	server_reboot PROTO(());
-extern	void	terminate PROTO(()), write_pidfile PROTO(());
+extern	void	restart __P((char *));
+extern	void	send_channel_modes __P((aClient *, aChannel *));
+extern	void	server_reboot __P(());
+extern	void	terminate __P(()), write_pidfile __P(());
 
-extern	int	send_queued PROTO((aClient *));
+extern	int	send_queued __P((aClient *));
 /*VARARGS2*/
 extern	void	sendto_one();
 /*VARARGS4*/
@@ -134,93 +144,99 @@ extern	void	sendto_ops();
 extern	void	sendto_ops_butone();
 /*VARARGS3*/
 extern	void	sendto_prefix_one();
+/*VARARGS2*/
+extern	void	sendto_flag();
 
 extern	int	writecalls, writeb[];
-extern	int	deliver_it PROTO((aClient *, char *, int));
+extern	int	deliver_it __P((aClient *, char *, int));
 
-extern	int	check_registered PROTO((aClient *));
-extern	int	check_registered_user PROTO((aClient *));
-extern	char	*get_client_name PROTO((aClient *, int));
-extern	char	*get_client_host PROTO((aClient *));
-extern	char	*my_name_for_link PROTO((char *, aConfItem *));
-extern	char	*myctime PROTO((time_t)), *date PROTO((time_t));
-extern	int	exit_client PROTO((aClient *, aClient *, aClient *, char *));
-extern	void	initstats PROTO(()), tstats PROTO((aClient *, char *));
+extern	int	check_registered __P((aClient *));
+extern	int	check_registered_user __P((aClient *));
+extern	char	*get_client_name __P((aClient *, int));
+extern	char	*get_client_host __P((aClient *));
+extern	char	*my_name_for_link __P((char *, int));
+extern	char	*myctime __P((time_t)), *date __P((time_t));
+extern	int	exit_client __P((aClient *, aClient *, aClient *, char *));
+extern	void	initstats __P(()), tstats __P((aClient *, char *));
 
-extern	int	parse PROTO((aClient *, char *, char *, struct Message *));
-extern	int	do_numeric PROTO((int, aClient *, aClient *, int, char **));
-extern	int hunt_server PROTO((aClient *,aClient *,char *,int,int,char **));
-extern	aClient	*next_client PROTO((aClient *, char *));
+extern	int	parse __P((aClient *, char *, char *, struct Message *));
+extern	int	do_numeric __P((int, aClient *, aClient *, int, char **));
+extern	int hunt_server __P((aClient *,aClient *,char *,int,int,char **));
+extern	aClient	*next_client __P((aClient *, char *));
 #ifndef	CLIENT_COMPILE
-extern	int	m_umode PROTO((aClient *, aClient *, int, char **));
-extern	int	m_names PROTO((aClient *, aClient *, int, char **));
-extern	int	m_server_estab PROTO((aClient *));
-extern	void	send_umode PROTO((aClient *, aClient *, int, int, char *));
-extern	void	send_umode_out PROTO((aClient*, aClient *, int));
+extern	int	do_nick_name __P((char *));
+extern	int	m_umode __P((aClient *, aClient *, int, char **));
+extern	int	m_names __P((aClient *, aClient *, int, char **));
+extern	int	m_server_estab __P((aClient *));
+extern	void	send_umode __P((aClient *, aClient *, int, int, char *));
+extern	void	send_umode_out __P((aClient*, aClient *, int));
 #endif
 
-extern	void	free_client PROTO((aClient *));
-extern	void	free_link PROTO((Link *));
-extern	void	free_conf PROTO((aConfItem *));
-extern	void	free_class PROTO((aClass *));
-extern	void	free_user PROTO((anUser *, aClient *));
-extern	Link	*make_link PROTO(());
-extern	anUser	*make_user PROTO((aClient *));
-extern	aConfItem *make_conf PROTO(());
-extern	aClass	*make_class PROTO(());
-extern	aServer	*make_server PROTO(());
-extern	aClient	*make_client PROTO((aClient *));
-extern	Link	*find_user_link PROTO((Link *, aClient *));
-extern	void	add_client_to_list PROTO((aClient *));
-extern	void	checklist PROTO(());
-extern	void	remove_client_from_list PROTO((aClient *));
-extern	void	initlists PROTO(());
+extern	int	numclients;
+extern	void	free_client __P((aClient *));
+extern	void	free_link __P((Link *));
+extern	void	free_conf __P((aConfItem *));
+extern	void	free_class __P((aClass *));
+extern	void	free_user __P((anUser *, aClient *));
+extern	void	free_server __P((aServer *, aClient *));
+extern	Link	*make_link __P(());
+extern	anUser	*make_user __P((aClient *));
+extern	aConfItem *make_conf __P(());
+extern	aClass	*make_class __P(());
+extern	aServer	*make_server __P(());
+extern	aClient	*make_client __P((aClient *));
+extern	Link	*find_user_link __P((Link *, aClient *));
+extern	void	add_client_to_list __P((aClient *));
+extern	void	checklist __P(());
+extern	void	remove_client_from_list __P((aClient *));
+extern	void	initlists __P(());
 
-extern	void	add_class PROTO((int, int, int, int, long));
-extern	void	fix_class PROTO((aConfItem *, aConfItem *));
-extern	long	get_sendq PROTO((aClient *));
-extern	int	get_con_freq PROTO((aClass *));
-extern	int	get_client_ping PROTO((aClient *));
-extern	int	get_client_class PROTO((aClient *));
-extern	int	get_conf_class PROTO((aConfItem *));
-extern	void	report_classes PROTO((aClient *));
+extern	void	add_class __P((int, int, int, int, long));
+extern	void	fix_class __P((aConfItem *, aConfItem *));
+extern	long	get_sendq __P((aClient *));
+extern	int	get_con_freq __P((aClass *));
+extern	int	get_client_ping __P((aClient *));
+extern	int	get_client_class __P((aClient *));
+extern	int	get_conf_class __P((aConfItem *));
+extern	void	report_classes __P((aClient *, char *));
 
-extern	struct	hostent	*get_res PROTO((char *));
-extern	struct	hostent	*gethost_byaddr PROTO((char *, Link *));
-extern	struct	hostent	*gethost_byname PROTO((char *, Link *));
-extern	void	flush_cache PROTO(());
-extern	int	init_resolver PROTO((int));
-extern	time_t	timeout_query_list PROTO((time_t));
-extern	time_t	expire_cache PROTO((time_t));
-extern	void    del_queries PROTO((char *));
+extern	struct	hostent	*get_res __P((char *));
+extern	struct	hostent	*gethost_byaddr __P((char *, Link *));
+extern	struct	hostent	*gethost_byname __P((char *, Link *));
+extern	void	flush_cache __P(());
+extern	int	init_resolver __P((int));
+extern	time_t	timeout_query_list __P((time_t));
+extern	time_t	expire_cache __P((time_t));
+extern	void    del_queries __P((char *));
 
-extern	void	clear_channel_hash_table PROTO(());
-extern	void	clear_client_hash_table PROTO(());
-extern	int	add_to_client_hash_table PROTO((char *, aClient *));
-extern	int	del_from_client_hash_table PROTO((char *, aClient *));
-extern	int	add_to_channel_hash_table PROTO((char *, aChannel *));
-extern	int	del_from_channel_hash_table PROTO((char *, aChannel *));
-extern	aChannel *hash_find_channel PROTO((char *, aChannel *));
-extern	aClient	*hash_find_client PROTO((char *, aClient *));
-extern	aClient	*hash_find_nickserver PROTO((char *, aClient *));
-extern	aClient	*hash_find_server PROTO((char *, aClient *));
+extern	void	inithashtables __P(());
+extern	int	add_to_client_hash_table __P((char *, aClient *));
+extern	int	del_from_client_hash_table __P((char *, aClient *));
+extern	int	add_to_channel_hash_table __P((char *, aChannel *));
+extern	int	del_from_channel_hash_table __P((char *, aChannel *));
+extern	aChannel *hash_find_channel __P((char *, aChannel *));
+extern	aServer	*hash_find_stoken __P((int, aClient *, void *));
+extern	aClient	*hash_find_client __P((char *, aClient *));
+extern	aClient	*hash_find_nickserv __P((char *, aClient *));
+extern	aClient	*hash_find_server __P((char *, aClient *));
 
-extern	void	add_history PROTO((aClient *));
-extern	aClient	*get_history PROTO((char *, time_t));
-extern	void	initwhowas PROTO(());
-extern	void	off_history PROTO((aClient *));
+extern	int	ww_size;
+extern	void	add_history __P((aClient *));
+extern	aClient	*get_history __P((char *, time_t));
+extern	void	initwhowas __P(());
+extern	void	off_history __P((aClient *));
 
-extern	int	dopacket PROTO((aClient *, char *, int));
+extern	int	dopacket __P((aClient *, char *, int));
 
 #ifdef	CLIENT_COMPILE
-extern	char	*mycncmp PROTO((char *, char *));
+extern	char	*mycncmp __P((char *, char *));
 #endif
 
 /*VARARGS2*/
 extern	void	debug();
 #if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
-extern	void	send_usage PROTO((aClient *, char *));
-extern	void	send_listinfo PROTO((aClient *, char *));
-extern	void	count_memory PROTO((aClient *, char *));
+extern	void	send_usage __P((aClient *, char *));
+extern	void	send_listinfo __P((aClient *, char *));
+extern	void	count_memory __P((aClient *, char *));
 #endif
 

@@ -17,28 +17,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: whowas.h,v 6.1 1991/07/04 21:04:39 gruner stable gruner $
- *
- * $Log: whowas.h,v $
- * Revision 6.1  1991/07/04  21:04:39  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:08  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 #ifndef	__whowas_include__
 #define __whowas_include__
-
-#ifndef PROTO
-#if __STDC__
-#	define PROTO(x)	x
-#else
-#	define PROTO(x) ()
-#endif /* __STDC__ */
-#endif /* ! PROTO */
 
 /*
 ** WHOWAS structure moved here from whowas.c
@@ -58,7 +38,7 @@ typedef struct aname {
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
-void	add_history PROTO((aClient *));
+void	add_history __P((aClient *));
 
 /*
 ** off_history
@@ -67,7 +47,7 @@ void	add_history PROTO((aClient *));
 **	structures and it must know when they cease to exist. This
 **	also implicitly calls AddHistory.
 */
-void	off_history PROTO((aClient *));
+void	off_history __P((aClient *));
 
 /*
 ** get_history
@@ -75,15 +55,15 @@ void	off_history PROTO((aClient *));
 **	nickname within the timelimit. Returns NULL, if no
 **	one found...
 */
-aClient	*get_history PROTO((char *, time_t));
+aClient	*get_history __P((char *, time_t));
 					/* Nick name */
 					/* Time limit in seconds */
 
-int	m_whowas PROTO((aClient *, aClient *, int, char *[]));
+int	m_whowas __P((aClient *, aClient *, int, char *[]));
 
 /*
 ** for debugging...counts related structures stored in whowas array.
 */
-void	count_whowas_memory PROTO((int *, int *, u_long *));
+void	count_whowas_memory __P((int *, int *, u_long *));
 
 #endif /* __whowas_include__ */

@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)bsd.c	2.14 1/30/94 (C) 1988 University of Oulu, \
+static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -29,8 +29,10 @@ Computing Center and Jarkko Oikarinen";
 #include "h.h"
 #include <signal.h>
 
+#ifndef SYS_ERRLIST_DECLARED
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
 extern	char	*sys_errlist[];
+#endif
 
 #ifdef DEBUGMODE
 int	writecalls = 0, writeb[10] = {0,0,0,0,0,0,0,0,0,0};
@@ -40,11 +42,11 @@ VOIDSIG dummy()
 #ifndef HAVE_RELIABLE_SIGNALS
 	(void)signal(SIGALRM, dummy);
 	(void)signal(SIGPIPE, dummy);
-#ifndef HPUX	/* Only 9k/800 series require this, but don't know how to.. */
-# ifdef SIGWINCH
+# ifndef HPUX	/* Only 9k/800 series require this, but don't know how to.. */
+#  ifdef SIGWINCH
 	(void)signal(SIGWINCH, dummy);
+#  endif
 # endif
-#endif
 #else
 # ifdef POSIX_SIGNALS
 	struct  sigaction       act;
@@ -97,9 +99,7 @@ char	*str;
 #ifdef	DEBUGMODE
 	writecalls++;
 #endif
-#ifndef NOWRITEALARM
 	(void)alarm(WRITEWAITDELAY);
-#endif
 #ifdef VMS
 	retval = netwrite(cptr->fd, str, len);
 #else
@@ -113,6 +113,9 @@ char	*str;
 	** ...now, would this work on VMS too? --msa
 	*/
 	if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN ||
+#ifdef	EMSGSIZE
+			   errno == EMSGSIZE ||
+#endif
 			   errno == ENOBUFS))
 	    {
 		retval = 0;
@@ -127,14 +130,15 @@ char	*str;
 	    }
 
 #endif
-#ifndef NOWRITEALARM
-	(void)alarm(0);
-#endif
+	(void )alarm(0);
 #ifdef DEBUGMODE
 	if (retval < 0) {
 		writeb[0]++;
 		Debug((DEBUG_ERROR,"write error (%s) to %s",
 			sys_errlist[errno], cptr->name));
+#ifndef	CLIENT_COMPILE
+		hold_server(cptr);
+#endif
 	} else if (retval == 0)
 		writeb[1]++;
 	else if (retval < 16)

@@ -81,8 +81,7 @@ aClient *sptr, *cptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf, "*** =%s= %s %s", parv[0], parv[1],
-                                   BadPtr(parv[2]) ? "" : parv[2]);
+  sprintf(mybuf, "*** =%s= %s", parv[0], parv[1]);
   putline(mybuf);
   return 0;
 }
@@ -162,7 +161,11 @@ aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
 {
-	sprintf(mybuf,"*** Change: %s <%s> has joined channel %s", 
+	char *tmp = index(parv[1], '\007');	/* Find o/v mode in 2.9 */
+
+	if (tmp)
+		*tmp = ' ';
+	sprintf(mybuf,"*** %s <%s> joined channel %s", 
 		parv[0], userhost, parv[1]);
 	putline(mybuf);
   return 0;
@@ -359,13 +362,25 @@ aClient	*sptr, *cptr;
 int	parc;
 char	*parv[];
 {
-	if (parv[0] && parv[0][0]) {
+        anIgnore *iptr;
+
+        iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost);
+        if ((iptr != (anIgnore *)NULL) &&
+            ((iptr->flags == IGNORE_TOTAL) ||
+             (IsChannelName(parv[1]) && (iptr->flags & IGNORE_PUBLIC)) ||
+             (!IsChannelName(parv[1]) && (iptr->flags & IGNORE_PRIVATE))))
+                return 0;
+
+	if (parv[0] && parv[0][0] && parv[1]) {
 		if ((*parv[1] >= '0' && *parv[1] <= '9') ||
 		    *parv[1] == '-' || IsChannelName(parv[1]) ||
 		    *parv[1] == '$' || *parv[1] == '+')
 			sprintf(mybuf,"(%s:%s) %s",parv[0],parv[1],parv[2]);
-		else
+		else if (index(userhost, '@'))  /* user */
 			sprintf(mybuf, "-%s- %s", parv[0], parv[2]);
+                    else                        /* service */
+			sprintf(mybuf, "-%s@%s- %s",
+                                parv[0], userhost, parv[2]);
 		putline(mybuf);
 	} else
 		putline(parv[2]);

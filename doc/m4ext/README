@@ -1,0 +1,41 @@
+-- README of the ircd.conf m4 extended macro package.... -*- text -*-
+$Id: README,v 2.1 1993/11/15 15:24:12 pioch Exp $
+
+A complete new version of the EXTENDED m4 macro package just shipped!!!
+These macros allow to write and configure ircd.conf files in a very
+simple way, English macros instead of the mysterious Z::*:*:::6667:
+cryptic lines...
+
+Version 2.x should be a lot more simple than the 1.x ones since all the
+boring uninteresting technical macro code has been moved to another
+file, `ircd.m4ext', and the explanations have been moved to a separate
+file `m4ext.doc'.
+
+The m4ext-2.x package includes:
+              README: this file!
+             INSTALL: how to get the thing to work!
+           ChangeLog: step-by-step improvements (not really useful)
+                NEWS: list of major new features and changes
+           m4ext.doc: complete manual, description of macros and arguments.
+          ircd.m4ext: the source code of the macros themselves
+  example.conf.m4ext: a sample simple ircd.conf template... just fill in!!!
+
+Stop struggling with the number of '::' and ':*:', the setup
+of Y class lines, the configuration of Hubs or Leaves, Uplinks or Downlinks!
+Have a look at the ircd.conf sample below and see :)
+
+
+Availability of the package (FTP)
+=================================
+Release 2.x is available on ftp server ftp.funet.fi, as:
+/pub/unix/irc/server/util/m4ext-2.*.tar.gz.
+
+It may be available on other ftp sites or maybe in the next ircd release
+if there is enough interest for it.
+
+Important enhancements and changes are in the file 'NEWS'.
+Instructions for installation and configuration are in the file 'INSTALL'.
+
+Nicolas Pioch, <Nicolas.Pioch@enst.fr>
+
+-- End of README

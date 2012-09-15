@@ -42,13 +42,14 @@ Computing Center and Jarkko Oikarinen";
 **	necessary fields (buffer etc..)
 */
 int	dopacket(cptr, buffer, length)
-Reg3	aClient *cptr;
+Reg	aClient *cptr;
 char	*buffer;
-Reg4	int	length;
+Reg	int	length;
 {
-	Reg1	char	*ch1;
-	Reg2	char	*ch2;
+	Reg	char	*ch1;
+	Reg	char	*ch2;
 	aClient	*acpt = cptr->acpt;
+	int	r = 1;
  
 	me.receiveB += length; /* Update bytes received */
 	cptr->receiveB += length;
@@ -96,7 +97,7 @@ Reg4	int	length;
 					 ** FLUSH_BUFFER without removing the
 					 ** structure pointed by cptr... --msa
 					 */
-			if (parse(cptr, cptr->buffer, ch1, msgtab) ==
+			if ((r = parse(cptr, cptr->buffer, ch1, msgtab)) ==
 			    FLUSH_BUFFER)
 				/*
 				** FLUSH_BUFFER means actually that cptr
@@ -109,8 +110,12 @@ Reg4	int	length;
 			** FLUSH_BUFFER here).  - avalon
 			*/
 			if (cptr->flags & FLAGS_DEADSOCKET)
+			    {
+				if (cptr->exitc == '0')
+					cptr->exitc = 'D';
 				return exit_client(cptr, cptr, &me,
 						   "Dead Socket");
+			    }
 #endif
 			ch1 = cptr->buffer;
 		    }
@@ -118,5 +123,5 @@ Reg4	int	length;
 			ch1++; /* There is always room for the null */
 	    }
 	cptr->count = ch1 - cptr->buffer;
-	return 0;
+	return r;
 }

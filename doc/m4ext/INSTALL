@@ -1,0 +1,25 @@
+-- Install of the ircd.conf m4 extended macro package -*- text -*-
+$Id: INSTALL,v 2.2 1993/11/15 15:36:11 pioch Exp pioch $
+
+In order to install this package, you simply need to edit `Makefile'
+to set up IRCDDIR to the directory where ircd.conf is located
+(same as ircd IRCDDIR in Makefile, or DPATH in include/config.h)
+then "make install".
+
+You can also type:
+	make  IRCDDIR=/where/ircd/directory/is  install
+
+Then you can edit the ircd.conf template supplied
+(called example.conf.m4ext) to match your server configuration
+so that it suits your needs (don't forget to leave the 2 lines
+			# Needed *here* by the package
+			include(`ircd.m4ext')dnl
+where shown... :)
+
+You can use:
+	"m4 ircd.m4 ircd.conf"
+		to see if the macros are expanded okay,
+	"chkconf"
+		to see if this server utility finds any error/mistake.
+
+-- End of INSTALL

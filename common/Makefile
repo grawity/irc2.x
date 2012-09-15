@@ -22,9 +22,10 @@ RM=/bin/rm
 INCLUDE=../include
 
 # For MIPS, use:
-# CFLAGS=-O -systype bsd43 -I${INCLUDE}
+# CFLAGS=-O2 -systype bsd43 -I${INCLUDE}
 # and otherwise:
-CFLAGS=-gx -I${INCLUDE}
+#CFLAGS=-O2 -I${INCLUDE}
+CFLAGS=-g -I${INCLUDE}
 
 
 OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o inet_addr.o

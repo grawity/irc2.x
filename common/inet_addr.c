@@ -52,12 +52,17 @@
  * -
  * --Copyright--
  */
-
-#include "sys.h"
+#include "setup.h"
+#include "struct.h"
 #include "common.h"
+#include "sys.h"
 #include <netinet/in.h>
 #include "nameser.h"
 #include "resolv.h"
+
+#ifndef	INADDR_NONE
+#define	INADDR_NONE	((u_long)0xffffffff)
+#endif
 
 /* this is a compatibility routine, not needed on recent BSD releases */
 #ifdef	NEED_INET_ADDR
@@ -87,12 +92,12 @@ inet_addr(cp)
 #ifdef	NEED_INET_ATON
 int
 inet_aton(cp, addr)
-	register const char *cp;
+	register const u_char *cp;
 	struct in_addr *addr;
 {
 	register u_long val;
 	register int base, n;
-	register char c;
+	register u_char c;
 	u_int parts[4];
 	register u_int *pp = parts;
 

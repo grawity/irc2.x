@@ -28,12 +28,12 @@
 /*	HPUX			Nothing needed (A.08/A.09) */
 /*	ULTRIX			Nothing needed (4.2) */
 /*	OSF			Nothing needed (1.2) */
-#undef	AIX			/* IBM ugly so-called Unix, AIX */
+/*	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
 /*	SGI			Nothing needed (IRIX 4.0.4) */
 #undef 	SVR3			/* SVR3 stuff - being worked on where poss. */
 #undef	DYNIXPTX		/* Sequents Brain-dead Posix implement. */
-#undef	SOL20			/* Solaris2 */
+#undef	SVR4			/* Solaris2, SVR4 */
 #undef	ESIX			/* ESIX */
 #undef	NEXT			/* NeXTStep */
 #undef        SVR4
@@ -98,7 +98,9 @@
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
+#ifndef	DPATH	/* Should be defined in ../Makefile */
 #define	DPATH	"/usr/local/lib/ircd"	/* dir where all ircd stuff is */
+#endif
 #define	SPATH	"/usr/local/bin/ircd"	/* path to server executeable */
 #define	CPATH	"ircd.conf"	/* server configuration file */
 #define	MPATH	"ircd.motd"	/* server MOTD file */
@@ -209,9 +211,11 @@
  * If your server is running as a a HUB Server then define this.
  * A HUB Server has many servers connect to it at the same as opposed
  * to a leaf which just has 1 server (typically the uplink). Define this
- * correctly for performance reasons.
+ * correctly for performance reasons.  Increasing the value for HUB
+ * increases the servers preference for server-only traffic.  If defined,
+ * must be at least defined to 0.
  */
-#undef	HUB
+#undef	HUB	/* #define	HUB	0 */
 
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
@@ -312,17 +316,6 @@
 #define IDLE_FROM_MSG
 
 /*
- * Max amount of internal send buffering when socket is stuck (bytes)
- */
-#define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
-                                 /*                    900000 for backbones */
-/*
- *  BUFFERPOOL is the maximum size of the total of all sendq's.
- *  Recommended value is 2 * MAXSENDQLENGTH, for hubs, 5 *.
- */
-#define	BUFFERPOOL     (2 * MAXSENDQLENGTH)
-
-/*
  * use these to setup a Unix domain socket to connect clients/servers to.
  */
 #define	UNIXPORT
@@ -375,13 +368,11 @@
  *	 of KILL for non-local clients should be punished by removal of the
  *	 server's links (if only for ignoring this warning!).
  */
-#define	LOCAL_KILL_ONLY
+#undef	LOCAL_KILL_ONLY
 #endif
-/*
- * Port where ircd resides. NOTE: This *MUST* be greater than 1024 if you
- * plan to run ircd under any other uid than root.
- */
-#define PORTNUM 6667		/* Recommended values: 6667 or 6666 */
+
+/* Default server port, used by CONNECT and client. */
+#define	PORTNUM	6667
 
 /*
  * Maximum number of network connections your server will allow.  This should
@@ -397,10 +388,12 @@
 #define MAXCONNECTIONS	50
 
 /*
- * This defines the length of the nickname history.  each time a user changes
+ * this defines the length of the nickname history.  each time a user changes
  * nickname or signs off, their old nickname is added to the top of the list.
+ * This will grow (as needed) as the server runs to ensure that there is
+ * always at least room for 1 nick `change' per client.
  */
-#define NICKNAMEHISTORYLENGTH 4096
+#define NICKNAMEHISTORYLENGTH 800
 
 /*
  * Time interval to wait and if no messages have been received, then check for
@@ -473,6 +466,10 @@
 #define	CONFIGFILE CPATH
 #define	IRCD_PIDFILE PPATH
 
+#ifdef	_AIX
+#define	AIX
+#endif
+
 #ifdef	__osf__
 #define	OSF
 /* OSF defines BSD to be its version of BSD */
@@ -539,21 +536,7 @@ extern	void	debug();
 #define	DYNIXPTX
 #endif
 
-#ifdef	BSD_RELIABLE_SIGNALS
-# if defined(SYSV_UNRELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
-error You stuffed up config.h signals #defines use only one.
-# endif
-#define	HAVE_RELIABLE_SIGNALS
-#endif
-
-#ifdef	SYSV_UNRELIABLE_SIGNALS
-# ifdef	POSIX_SIGNALS
-error You stuffed up config.h signals #defines use only one.
-# endif
-#undef	HAVE_RELIABLE_SIGNALS
-#endif
-
-#ifdef	POSIX_SIGNALS
+#if defined(BSD_RELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
@@ -608,15 +591,6 @@ error CLIENT_FLOOD undefined
 # define BSD_INCLUDES
 #endif
 
-#define Reg1 register
-#define Reg2 register
-#define Reg3 register
-#define Reg4 register
-#define Reg5 register
-#define Reg6 register
-#define Reg7 register
-#define Reg8 register
-#define Reg9 register
-#define Reg10 register
+#define	Reg	register
 
 #endif /* __config_include__ */

@@ -18,7 +18,7 @@
  */
 
 #ifndef	lint
-static char sccsid[] = "@(#)class.c	1.4 6/28/93 (C) 1990 Darren Reed";
+static char sccsid[] = "%W% %G% (C) 1990 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -62,8 +62,8 @@ aConfItem	*aconf;
 int	get_client_class(acptr)
 aClient	*acptr;
 {
-	Reg1	Link	*tmp;
-	Reg2	aClass	*cl;
+	Reg	Link	*tmp;
+	Reg	aClass	*cl;
 	int	i = 0, retc = BAD_CLIENT_CLASS;
 
 	if (acptr && !IsMe(acptr)  && (acptr->confs))
@@ -143,17 +143,19 @@ long	sendq;
 		p = (aClass *)make_class();
 		NextClass(p) = NextClass(t);
 		NextClass(t) = p;
+		MaxSendq(p) = QUEUELEN;
 	    }
 	else
 		p = t;
 	Debug((DEBUG_DEBUG,
 		"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d sq: %l",
-		class, p, t, confreq, ping, maxli, sendq));
+		class, p, t, confreq, ping, maxli, QUEUELEN));
 	Class(p) = class;
 	ConFreq(p) = confreq;
 	PingFreq(p) = ping;
 	MaxLinks(p) = maxli;
-	MaxSendq(p) = (sendq > 0) ? sendq : MAXSENDQLENGTH;
+	if (sendq)
+		MaxSendq(p) = sendq;
 	if (p != t)
 		Links(p) = 0;
 }
@@ -171,7 +173,7 @@ int	cclass;
 
 void	check_class()
 {
-	Reg1 aClass *cltmp, *cltmp2;
+	Reg	aClass	*cltmp, *cltmp2;
 
 	Debug((DEBUG_DEBUG, "Class check:"));
 
@@ -200,30 +202,33 @@ void	initclass()
 	ConFreq(FirstClass()) = CONNECTFREQUENCY;
 	PingFreq(FirstClass()) = PINGFREQUENCY;
 	MaxLinks(FirstClass()) = MAXIMUM_LINKS;
-	MaxSendq(FirstClass()) = MAXSENDQLENGTH;
+	MaxSendq(FirstClass()) = QUEUELEN;
 	Links(FirstClass()) = 0;
 	NextClass(FirstClass()) = NULL;
 }
 
-void	report_classes(sptr)
+void	report_classes(sptr, to)
 aClient	*sptr;
+char	*to;
 {
-	Reg1 aClass *cltmp;
+	Reg	aClass	*cltmp;
 
 	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
-		sendto_one(sptr, rpl_str(RPL_STATSYLINE), me.name, sptr->name,
-			   'Y', Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
+		sendto_one(sptr, rpl_str(RPL_STATSYLINE, to), 'Y',
+			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
 			   MaxLinks(cltmp), MaxSendq(cltmp));
 }
 
 long	get_sendq(cptr)
 aClient	*cptr;
 {
-	Reg1	int	sendq = MAXSENDQLENGTH, retc = BAD_CLIENT_CLASS;
-	Reg2	Link	*tmp;
-	Reg2	aClass	*cl;
+	Reg	int	sendq = QUEUELEN, retc = BAD_CLIENT_CLASS;
+	Reg	Link	*tmp;
+	Reg	aClass	*cl;
 
-	if (cptr && !IsMe(cptr)  && (cptr->confs))
+	if (cptr->serv)
+		sendq = MaxSendq(cptr->serv->nline->class);
+	else if (cptr && !IsMe(cptr)  && (cptr->confs))
 		for (tmp = cptr->confs; tmp; tmp = tmp->next)
 		    {
 			if (!tmp->value.aconf ||

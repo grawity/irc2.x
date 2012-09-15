@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static char sccsid[] = "@(#)hash.c	2.10 7/3/93 (C) 1991 Darren Reed";
+static char sccsid[] = "%W% %G% (C) 1991 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -26,25 +26,18 @@ static char sccsid[] = "@(#)hash.c	2.10 7/3/93 (C) 1991 Darren Reed";
 #include "hash.h"
 #include "h.h"
 
-#ifdef	DEBUGMODE
+#include <math.h>
+
 static	aHashEntry	*clientTable = NULL;
 static	aHashEntry	*channelTable = NULL;
-static	int	clhits, clmiss;
-static	int	chhits, chmiss;
-int	HASHSIZE = 2003;
-int	CHANNELHASHSIZE = 607;
-#else
-static	aHashEntry	clientTable[HASHSIZE];
-static	aHashEntry	channelTable[CHANNELHASHSIZE];
-#endif
+static	aHashEntry	*serverTable = NULL;
+static	int	clhits = 0, clmiss = 0, clsize = 0;
+static	int	chhits = 0, chmiss = 0, chsize = 0;
+static	int	svsize = 0;
+int	_HASHSIZE = 0;
+int	_CHANNELHASHSIZE = 0;
+int	_SERVERSIZE = 0;
 
-static	int	hash_mult[] = { 173, 179, 181, 191, 193, 197,
-				199, 211, 223, 227, 229, 233,
-				239, 241, 251, 257, 263, 269,
-				271, 277, 281, 293, 307, 311,
-				401, 409, 419, 421, 431, 433,
-				439, 443, 449, 457, 461, 463
-				};
 /*
  * Hashing.
  *
@@ -80,18 +73,23 @@ static	int	hash_mult[] = { 173, 179, 181, 191, 193, 197,
  * or division or modulus in the inner loop.  subtraction and other bit
  * operations allowed.
  */
-int	hash_nick_name(nname)
+int	hash_nick_name(nname, store)
 char	*nname;
+int	*store;
 {
-	Reg1	u_char	*name = (u_char *)nname;
-	Reg2	u_char	ch;
-	Reg4	int	hash = 1, *tab;
+	Reg	u_char	*name = (u_char *)nname;
+	Reg	u_char	ch;
+	Reg	int	hash = 1;
 
-	for (tab = hash_mult; (ch = *name); name++, tab++)
-		hash += tolower(ch) + *tab + hash;
+	for (; (ch = *name); name++)
+	{
+		hash <<= 1;
+		hash += tolower(ch) * 109;
+	}
+	*store = hash;
 	if (hash < 0)
 		hash = -hash;
-	hash %= HASHSIZE;
+	hash %= _HASHSIZE;
 	return (hash);
 }
 
@@ -103,20 +101,60 @@ char	*nname;
  * is little or no point hashing on a full channel name which maybe 255 chars
  * long.
  */
-int	hash_channel_name(hname)
+int	hash_channel_name(hname, store)
 char	*hname;
+int	*store;
 {
-	Reg1	u_char	*name = (u_char *)hname;
-	Reg2	u_char	ch;
-	Reg3	int	i = 30;
-	Reg4	int	hash = 5, *tab;
+	Reg	u_char	*name = (u_char *)hname;
+	Reg	u_char	ch;
+	Reg	int	i = 30;
+	Reg	int	hash = 5;
 
-	for (tab = hash_mult; (ch = *name) && --i; name++, tab++)
-		hash += tolower(ch) + *tab + hash + i + i;
+	for (; (ch = *name) && --i; name++)
+	{
+		hash <<= 1;
+		hash += tolower(ch) * 109 + (i << 1);
+	}
+	*store = hash;
 	if (hash < 0)
 		hash = -hash;
-	hash %= CHANNELHASHSIZE;
+	hash %= _CHANNELHASHSIZE;
 	return (hash);
+}
+
+/* bigger prime
+ *
+ * given a positive integer, return a prime number that's larger
+ *
+ * 13feb94 gbl
+ */
+static	int	bigger_prime(size)
+int	size;
+{
+	int	trial, failure, sq;
+
+	if (size < 0)
+		return -1;
+
+	if (size < 4)
+		return size;
+
+	for ( ; ; size++)
+	    {
+		failure = 0;
+		sq = (int)sqrt((double)size);
+		for (trial = 2; trial <= sq ; trial++)
+		    {
+			if ((size % trial) == 0)
+			    {
+				failure = 1;
+				break;
+			    }
+		    }
+		if (!failure)
+			return size;
+	    }
+	return -1;
 }
 
 /*
@@ -124,30 +162,127 @@ char	*hname;
  *
  * Nullify the hashtable and its contents so it is completely empty.
  */
-void	clear_client_hash_table()
+static	void	clear_client_hash_table(size)
+int	size;
 {
-#ifdef	DEBUGMODE
+	_HASHSIZE = bigger_prime(size);
 	clhits = 0;
 	clmiss = 0;
 	if (!clientTable)
-		clientTable = (aHashEntry *)MyMalloc(HASHSIZE *
+		clientTable = (aHashEntry *)MyMalloc(_HASHSIZE *
 						     sizeof(aHashEntry));
-#endif
-
-	bzero((char *)clientTable, sizeof(aHashEntry) * HASHSIZE);
+	bzero((char *)clientTable, sizeof(aHashEntry) * _HASHSIZE);
+	Debug((DEBUG_DEBUG, "Client Hash Table Init: %d (%d)",
+		_HASHSIZE, size));
 }
 
-void	clear_channel_hash_table()
+static	void	clear_channel_hash_table(size)
+int	size;
 {
-#ifdef	DEBUGMODE
+	_CHANNELHASHSIZE = bigger_prime(size);
 	chmiss = 0;
 	chhits = 0;
 	if (!channelTable)
-		channelTable = (aHashEntry *)MyMalloc(CHANNELHASHSIZE *
+		channelTable = (aHashEntry *)MyMalloc(_CHANNELHASHSIZE *
 						     sizeof(aHashEntry));
-#endif
-	bzero((char *)channelTable, sizeof(aHashEntry) * CHANNELHASHSIZE);
+	bzero((char *)channelTable, sizeof(aHashEntry) * _CHANNELHASHSIZE);
+	Debug((DEBUG_DEBUG, "Channel Hash Table Init: %d (%d)",
+		_CHANNELHASHSIZE, size));
 }
+
+static	void	clear_server_hash_table(size)
+int	size;
+{
+	_SERVERSIZE = bigger_prime(size);
+	if (!serverTable)
+		serverTable = (aHashEntry *)MyMalloc(_SERVERSIZE *
+						     sizeof(aHashEntry));
+	bzero((char *)serverTable, sizeof(aHashEntry) * _SERVERSIZE);
+	Debug((DEBUG_DEBUG, "Server Hash Table Init: %d (%d)",
+		_SERVERSIZE, size));
+}
+
+void	inithashtables()
+{
+	clear_client_hash_table(HASHSIZE);
+	clear_channel_hash_table(CHANNELHASHSIZE);
+	clear_server_hash_table(SERVERSIZE);
+}
+
+static	void	bigger_hash_table(size, table, new)
+int	*size;
+aHashEntry	*table;
+int	new;
+{
+	Reg	aClient	*cptr;
+	Reg	aChannel *chptr;
+	Reg	aServer	*sptr;
+	aHashEntry	*otab = table;
+	int	osize = *size;
+
+	while (!new || new <= osize)
+		if (!new)
+		    {
+			new = osize;
+			new = bigger_prime(1 + (int)((float)new * 1.30));
+		    }
+		else
+			new = bigger_prime(1 + new);
+
+	Debug((DEBUG_NOTICE, "bigger_h_table(*%#x = %d,%#x,%d)",
+		size, osize, table, new));
+
+	*size = new;
+	MyFree((char *)table);
+	table = (aHashEntry *)MyMalloc(sizeof(*table) * new);
+	bzero((char *)table, sizeof(*table) * new);
+
+	if (otab == channelTable)
+	    {
+		Debug((DEBUG_ERROR, "Channel Hash Table from %d to %d (%d)",
+			    osize, new, chsize));
+		chmiss = 0;
+		chhits = 0;
+		chsize = 0;
+		channelTable = table;
+		for (chptr = channel; chptr; chptr = chptr->nextch)
+			chptr->hnextch = NULL;
+		for (chptr = channel; chptr; chptr = chptr->nextch)
+			(void)add_to_channel_hash_table(chptr->chname, chptr);
+		sendto_flag(SCH_HASH, "Channel Hash Table from %d to %d (%d)",
+			    osize, new, chsize);
+	    }
+	else if (otab == clientTable)
+	    {
+		Debug((DEBUG_ERROR, "Client Hash Table from %d to %d (%d)",
+			    osize, new, clsize));
+		sendto_flag(SCH_HASH, "Client Hash Table from %d to %d (%d)",
+			    osize, new, clsize);
+		clmiss = 0;
+		clhits = 0;
+		clsize = 0;
+		clientTable = table;
+		for (cptr = client; cptr; cptr = cptr->next)
+			cptr->hnext = NULL;
+		for (cptr = client; cptr; cptr = cptr->next)
+			(void)add_to_client_hash_table(cptr->name, cptr);
+	    }
+	else if (otab == serverTable)
+	    {
+		Debug((DEBUG_ERROR, "Server Hash Table from %d to %d (%d)",
+			    osize, new, svsize));
+		sendto_flag(SCH_HASH, "Server Hash Table from %d to %d (%d)",
+			    osize, new, svsize);
+		svsize = 0;
+		serverTable = table;
+		for (sptr = svrtop; sptr; sptr = sptr->nexts)
+			sptr->shnext = NULL;
+		for (sptr = svrtop; sptr; sptr = sptr->nexts)
+			(void)add_to_server_hash_table(sptr, sptr->bcptr);
+	    }
+	return;
+}
+
 
 /*
  * add_to_client_hash_table
@@ -156,13 +291,16 @@ int	add_to_client_hash_table(name, cptr)
 char	*name;
 aClient	*cptr;
 {
-	Reg1	int	hashv;
+	Reg	int	hashv;
 
-	hashv = hash_nick_name(name);
+	hashv = hash_nick_name(name, &cptr->hashv);
 	cptr->hnext = (aClient *)clientTable[hashv].list;
 	clientTable[hashv].list = (void *)cptr;
 	clientTable[hashv].links++;
 	clientTable[hashv].hits++;
+	clsize++;
+	if (clsize > _HASHSIZE)
+		bigger_hash_table(&_HASHSIZE, clientTable, 0);
 	return 0;
 }
 
@@ -173,13 +311,39 @@ int	add_to_channel_hash_table(name, chptr)
 char	*name;
 aChannel	*chptr;
 {
-	Reg1	int	hashv;
+	Reg	int	hashv;
 
-	hashv = hash_channel_name(name);
+	hashv = hash_channel_name(name, &chptr->hashv);
 	chptr->hnextch = (aChannel *)channelTable[hashv].list;
 	channelTable[hashv].list = (void *)chptr;
 	channelTable[hashv].links++;
 	channelTable[hashv].hits++;
+	chsize++;
+	if (chsize > _CHANNELHASHSIZE)
+		bigger_hash_table(&_CHANNELHASHSIZE, channelTable, 0);
+	return 0;
+}
+
+/*
+ * add_to_server_hash_table
+ */
+int	add_to_server_hash_table(sptr, cptr)
+aServer	*sptr;
+aClient	*cptr;
+{
+	Reg	int	hashv;
+
+	Debug((DEBUG_DEBUG, "Add %s token %d/%d/%s cptr %#x to server table",
+		sptr->bcptr->name, sptr->stok, sptr->ltok, sptr->tok, cptr));
+	hashv = sptr->stok * 15053;
+	hashv %= _SERVERSIZE;
+	sptr->shnext = (aServer *)serverTable[hashv].list;
+	serverTable[hashv].list = (void *)sptr;
+	serverTable[hashv].links++;
+	serverTable[hashv].hits++;
+	svsize++;
+	if (svsize > _SERVERSIZE)
+		bigger_hash_table(&_SERVERSIZE, serverTable, 0);
 	return 0;
 }
 
@@ -190,10 +354,14 @@ int	del_from_client_hash_table(name, cptr)
 char	*name;
 aClient	*cptr;
 {
-	Reg1	aClient	*tmp, *prev = NULL;
-	Reg2	int	hashv;
+	Reg	aClient	*tmp, *prev = NULL;
+	Reg	int	hashv;
+	int	hv;
 
-	hashv = hash_nick_name(name);
+	hashv = cptr->hashv;
+	if (hashv < 0)
+		hashv = -hashv;
+	hashv %= _HASHSIZE;
 	for (tmp = (aClient *)clientTable[hashv].list; tmp; tmp = tmp->hnext)
 	    {
 		if (tmp == cptr)
@@ -206,15 +374,19 @@ aClient	*cptr;
 			if (clientTable[hashv].links > 0)
 			    {
 				clientTable[hashv].links--;
+				clsize--;
 				return 1;
-			    } 
+			    }
 			else
+			    {
+				Debug((DEBUG_ERROR, "ch-hash table failure")); 
 				/*
 				 * Should never actually return from here and
 				 * if we do it is an error/inconsistency in the
 				 * hash table.
 				 */
 				return -1;
+			    }
 		    }
 		prev = tmp;
 	    }
@@ -228,10 +400,14 @@ int	del_from_channel_hash_table(name, chptr)
 char	*name;
 aChannel	*chptr;
 {
-	Reg1	aChannel	*tmp, *prev = NULL;
-	Reg2	int	hashv;
+	Reg	aChannel	*tmp, *prev = NULL;
+	Reg	int	hashv;
+	int	hv;
 
-	hashv = hash_channel_name(name);
+	hashv = chptr->hashv;
+	if (hashv < 0)
+		hashv = -hashv;
+	hashv %= _CHANNELHASHSIZE;
 	for (tmp = (aChannel *)channelTable[hashv].list; tmp;
 	     tmp = tmp->hnextch)
 	    {
@@ -245,6 +421,46 @@ aChannel	*chptr;
 			if (channelTable[hashv].links > 0)
 			    {
 				channelTable[hashv].links--;
+				chsize--;
+				return 1;
+			    }
+			else
+				return -1;
+		    }
+		prev = tmp;
+	    }
+	return 0;
+}
+
+
+/*
+ * del_from_server_hash_table
+ */
+int	del_from_server_hash_table(sptr, cptr)
+aServer	*sptr;
+aClient	*cptr;
+{
+	Reg	aServer	*tmp, *prev = NULL;
+	Reg	int	hashv;
+	int	hv;
+
+	hashv = sptr->stok * 15053;
+	if (hashv < 0)
+		hashv = -hashv;
+	hashv %= _SERVERSIZE;
+	for (tmp = (aServer *)serverTable[hashv].list; tmp; tmp = tmp->shnext)
+	    {
+		if (tmp == sptr)
+		    {
+			if (prev)
+				prev->shnext = tmp->shnext;
+			else
+				serverTable[hashv].list = (void *)tmp->shnext;
+			tmp->shnext = NULL;
+			if (serverTable[hashv].links > 0)
+			    {
+				serverTable[hashv].links--;
+				svsize--;
 				return 1;
 			    }
 			else
@@ -263,101 +479,66 @@ aClient	*hash_find_client(name, cptr)
 char	*name;
 aClient	*cptr;
 {
-	Reg1	aClient	*tmp;
-	Reg2	aClient	*prv = NULL;
-	Reg3	aHashEntry	*tmp3;
-	int	hashv;
+	Reg	aClient	*tmp;
+	Reg	aClient	*prv = NULL;
+	Reg	aHashEntry	*tmp3;
+	int	hashv, hv;
 
-	hashv = hash_nick_name(name);
+	hashv = hash_nick_name(name, &hv);
 	tmp3 = &clientTable[hashv];
 
 	/*
 	 * Got the bucket, now search the chain.
 	 */
 	for (tmp = (aClient *)tmp3->list; tmp; prv = tmp, tmp = tmp->hnext)
-		if (mycmp(name, tmp->name) == 0)
-			goto c_move_to_top;
-#ifdef	DEBUGMODE
-	clmiss++;
-#endif
-	return (cptr);
-c_move_to_top:
-#ifdef	DEBUGMODE
-	clhits++;
-#endif
-	/*
-	 * If the member of the hashtable we found isnt at the top of its
-	 * chain, put it there.  This builds a most-frequently used order into
-	 * the chains of the hash table, giving speadier lookups on those nicks
-	 * which are being used currently.  This same block of code is also
-	 * used for channels and servers for the same performance reasons.
-	 */
-	if (prv)
-	    {
-		aClient *tmp2;
+		if (hv == tmp->hashv && mycmp(name, tmp->name) == 0)
+		    {
+			clhits++;
+			/*
+			 * If the member of the hashtable we found isnt at
+			 * the top of its chain, put it there.  This builds
+			 * a most-frequently used order into the chains of
+			 * the hash table, giving speadier lookups on those
+			 * nicks which are being used currently.  This same
+			 * block of code is also used for channels and
+			 * servers for the same performance reasons.
+			 */
+			if (prv)
+			    {
+				aClient *tmp2;
 
-		tmp2 = (aClient *)tmp3->list;
-		tmp3->list = (void *)tmp;
-		prv->hnext = tmp->hnext;
-		tmp->hnext = tmp2;
-	    }
-	return (tmp);
+				tmp2 = (aClient *)tmp3->list;
+				tmp3->list = (void *)tmp;
+				prv->hnext = tmp->hnext;
+				tmp->hnext = tmp2;
+			    }
+			return (tmp);
+		    }
+	clmiss++;
+	return (cptr);
 }
 
 /*
- * hash_find_nickserver
+ * hash_find_nickserv
  */
-aClient	*hash_find_nickserver(name, cptr)
+aClient	*hash_find_nickserv(name, cptr)
 char	*name;
 aClient *cptr;
 {
-	Reg1	aClient	*tmp;
-	Reg2	aClient	*prv = NULL;
-	Reg3	aHashEntry	*tmp3;
-	int	hashv;
+	aClient	*c2ptr = cptr;
 	char	*serv;
 
-	serv = index(name, '@');
-	*serv++ = '\0';
-	hashv = hash_nick_name(name);
-	tmp3 = &clientTable[hashv];
-
-	/*
-	 * Got the bucket, now search the chain.
-	 */
-	for (tmp = (aClient *)tmp3->list; tmp; prv = tmp, tmp = tmp->hnext)
-		if (mycmp(name, tmp->name) == 0 && tmp->user &&
-		    mycmp(serv, tmp->user->server) == 0)
-			goto c_move_to_top;
-
-#ifdef	DEBUGMODE
-	clmiss++;
-#endif
-	*--serv = '\0';
-	return (cptr);
-
-c_move_to_top:
-#ifdef	DEBUGMODE
-	clhits++;
-#endif
-	/*
-	 * If the member of the hashtable we found isnt at the top of its
-	 * chain, put it there.  This builds a most-frequently used order into
-	 * the chains of the hash table, giving speadier lookups on those nicks
-	 * which are being used currently.  This same block of code is also
-	 * used for channels and servers for the same performance reasons.
-	 */
-	if (prv)
+	if ((serv = (char *)index(name, '@')))
 	    {
-		aClient *tmp2;
-
-		tmp2 = (aClient *)tmp3->list;
-		tmp3->list = (void *)tmp;
-		prv->hnext = tmp->hnext;
-		tmp->hnext = tmp2;
+		*serv++ = '\0';
+		c2ptr = hash_find_server(serv, cptr);
+		if (c2ptr && IsMe(c2ptr))
+			c2ptr = hash_find_client(name, cptr);
+		*--serv = '@';
 	    }
-	*--serv = '\0';
-	return (tmp);
+	else
+		c2ptr = hash_find_client(name, cptr);
+	return (c2ptr);
 }
 
 /*
@@ -367,22 +548,33 @@ aClient	*hash_find_server(server, cptr)
 char	*server;
 aClient *cptr;
 {
-	Reg1	aClient	*tmp, *prv = NULL;
-	Reg2	char	*t;
-	Reg3	char	ch;
+	Reg	aClient	*tmp, *prv = NULL;
+	Reg	char	*t;
+	Reg	char	ch;
 	aHashEntry	*tmp3;
+	int	hashv, hv;
 
-	int hashv;
-
-	hashv = hash_nick_name(server);
+	hashv = hash_nick_name(server, &hv);
 	tmp3 = &clientTable[hashv];
 
 	for (tmp = (aClient *)tmp3->list; tmp; prv = tmp, tmp = tmp->hnext)
 	    {
 		if (!IsServer(tmp) && !IsMe(tmp))
 			continue;
-		if (mycmp(server, tmp->name) == 0)
-			goto s_move_to_top;
+		if (hv == tmp->hashv && mycmp(server, tmp->name) == 0)
+		    {
+			clhits++;
+			if (prv)
+			    {
+				aClient *tmp2;
+
+				tmp2 = (aClient *)tmp3->list;
+				tmp3->list = (void *)tmp;
+				prv->hnext = tmp->hnext;
+				tmp->hnext = tmp2;
+			    }
+			return (tmp);
+		    }
 	    }
 	t = ((char *)server + strlen(server));
 	/*
@@ -403,7 +595,7 @@ aClient *cptr;
 		*t = '*';
 		/*
 	 	 * Dont need to check IsServer() here since nicknames cant
-		 *have *'s in them anyway.
+		 * have *'s in them anyway.
 		 */
 		if (((tmp = hash_find_client(t, cptr))) != cptr)
 		    {
@@ -412,24 +604,8 @@ aClient *cptr;
 		    }
 		*t = ch;
 	    }
-#ifdef	DEBUGMODE
 	clmiss++;
-#endif
 	return (cptr);
-s_move_to_top:
-#ifdef	DEBUGMODE
-	clhits++;
-#endif
-	if (prv)
-	    {
-		aClient *tmp2;
-
-		tmp2 = (aClient *)tmp3->list;
-		tmp3->list = (void *)tmp;
-		prv->hnext = tmp->hnext;
-		tmp->hnext = tmp2;
-	    }
-	return (tmp);
 }
 
 /*
@@ -439,34 +615,63 @@ aChannel	*hash_find_channel(name, chptr)
 char	*name;
 aChannel *chptr;
 {
-	int	hashv;
-	Reg1	aChannel	*tmp, *prv = NULL;
-	aHashEntry	*tmp3;
+	Reg	aChannel	*tmp, *prv = NULL;
+	Reg	aHashEntry	*tmp3;
+	int	hashv, hv;
 
-	hashv = hash_channel_name(name);
+	hashv = hash_channel_name(name, &hv);
 	tmp3 = &channelTable[hashv];
 
 	for (tmp = (aChannel *)tmp3->list; tmp; prv = tmp, tmp = tmp->hnextch)
-		if (mycmp(name, tmp->chname) == 0)
-			goto c_move_to_top;
-#ifdef	DEBUGMODE
-	chmiss++;
-#endif
-	return chptr;
-c_move_to_top:
-#ifdef	DEBUGMODE
-	chhits++;
-#endif
-	if (prv)
-	    {
-		register aChannel *tmp2;
+		if (hv == tmp->hashv && mycmp(name, tmp->chname) == 0)
+		    {
+			chhits++;
+			if (prv)
+			    {
+				register aChannel *tmp2;
 
-		tmp2 = (aChannel *)tmp3->list;
-		tmp3->list = (void *)tmp;
-		prv->hnextch = tmp->hnextch;
-		tmp->hnextch = tmp2;
-	    }
-	return (tmp);
+				tmp2 = (aChannel *)tmp3->list;
+				tmp3->list = (void *)tmp;
+				prv->hnextch = tmp->hnextch;
+				tmp->hnextch = tmp2;
+			    }
+			return (tmp);
+		    }
+	chmiss++;
+	return chptr;
+}
+
+/*
+ * hash_find_stoken
+ */
+aServer	*hash_find_stoken(tok, cptr, dummy)
+int	tok;
+aClient *cptr;
+void	*dummy;
+{
+	Reg	aServer	*tmp, *prv = NULL;
+	Reg	aHashEntry	*tmp3;
+	int	hashv, hv;
+
+	hv = hashv = tok * 15053;
+	hashv %= _SERVERSIZE;
+	tmp3 = &serverTable[hashv];
+
+	for (tmp = (aServer *)tmp3->list; tmp; prv = tmp, tmp = tmp->shnext)
+		if (tmp->stok == tok && tmp->bcptr->from == cptr)
+		    {
+			if (prv)
+			    {
+				Reg	aServer	*tmp2;
+
+				tmp2 = (aServer *)tmp3->list;
+				tmp3->list = (void *)tmp;
+				prv->shnext = tmp->shnext;
+				tmp->shnext = tmp2;
+			    }
+			return (tmp);
+		    }
+	return (aServer *)dummy;
 }
 
 /*
@@ -487,7 +692,7 @@ char	*parv[];
 	register	aHashEntry	*tab;
 	int	deepest = 0, deeplink = 0, showlist = 0, tothits = 0;
 	int	mosthit = 0, mosthits = 0, used = 0, used_now = 0, totlink = 0;
-	int	link_pop[10], size = HASHSIZE;
+	int	link_pop[10], size = _HASHSIZE;
 	char	ch;
 	aHashEntry	*table;
 
@@ -497,7 +702,7 @@ char	*parv[];
 			table = clientTable;
 		else {
 			table = channelTable;
-			size = CHANNELHASHSIZE;
+			size = _CHANNELHASHSIZE;
 		}
 		if (ch == 'L' || ch == 'l')
 			showlist = 1;
@@ -565,7 +770,7 @@ char	*parv[];
 		return (0);
 	case 'r' :
 	    {
-		Reg1	aClient	*acptr;
+		Reg	aClient	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Client List.", parv[0]);
 		clear_client_hash_table();
@@ -575,7 +780,7 @@ char	*parv[];
 	    }
 	case 'R' :
 	    {
-		Reg1	aChannel	*acptr;
+		Reg	aChannel	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Channel List.", parv[0]);
 		clear_channel_hash_table();
@@ -602,9 +807,9 @@ char	*parv[];
 
 		if (parc <= 2)
 			return (0);
-		l = atoi(parv[2]) % HASHSIZE;
+		l = atoi(parv[2]) % _HASHSIZE;
 		if (parc > 3)
-			max = atoi(parv[3]) % HASHSIZE;
+			max = atoi(parv[3]) % _HASHSIZE;
 		else
 			max = l;
 		for (;l <= max; l++)
@@ -625,9 +830,9 @@ char	*parv[];
 
 		if (parc <= 2)
 			return (0);
-		l = atoi(parv[2]) % CHANNELHASHSIZE;
+		l = atoi(parv[2]) % _CHANNELHASHSIZE;
 		if (parc > 3)
-			max = atoi(parv[3]) % CHANNELHASHSIZE;
+			max = atoi(parv[3]) % _CHANNELHASHSIZE;
 		else
 			max = l;
 		for (;l <= max; l++)
@@ -641,11 +846,11 @@ char	*parv[];
 #else
 	if (parc>1&&!strcmp(parv[1],"sums")){
 #endif
-	sendto_one(sptr, "NOTICE %s :SUSER SSERV", parv[0]);
-	sendto_one(sptr, "NOTICE %s :SBSDC IRCDC", parv[0]);
-	sendto_one(sptr, "NOTICE %s :CHANC SMISC", parv[0]);
-	sendto_one(sptr, "NOTICE %s :HASHC VERSH", parv[0]);
-	sendto_one(sptr, "NOTICE %s :MAKEF HOSTID", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[35223 115 s_bsd.c] [36420 114 s_user.c]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[3296 100 s_serv.c] [6666 41 ircd.c]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[42410 89 channel.c] [9670 37 s_misc.c]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[24417 34 hash.c.old] [43910 8 version.c.SH]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[35223 115 s_bsd.c] HOSTID", parv[0]);
 #ifndef	DEBUGMODE
 	}
 #endif
@@ -653,43 +858,28 @@ char	*parv[];
 #ifdef	DEBUGMODE
 	case 'z' :
 	    {
-		Reg1	aClient	*acptr;
+		Reg	aClient	*acptr;
 
 		if (parc <= 2)
 			return 0;
 		l = atoi(parv[2]);
 		if (l < 256)
 			return 0;
-		(void)free((char *)clientTable);
-		clientTable = (aHashEntry *)malloc(sizeof(aHashEntry) * l);
-		HASHSIZE = l;
-		clear_client_hash_table();
-		for (acptr = client; acptr; acptr = acptr->next)
-		    {
-			acptr->hnext = NULL;
-			(void)add_to_client_hash_table(acptr->name, acptr);
-		    }
+		bigger_hash_table(&_HASHSIZE, clientTable, l);
 		sendto_one(sptr, "NOTICE %s :HASHSIZE now %d", parv[0], l);
 		break;
 	    }
 	case 'Z' :
 	    {
-		Reg1	aChannel	*acptr;
+		Reg	aChannel	*acptr;
 
 		if (parc <= 2)
 			return 0;
 		l = atoi(parv[2]);
 		if (l < 256)
 			return 0;
-		(void)free((char *)channelTable);
-		channelTable = (aHashEntry *)malloc(sizeof(aHashEntry) * l);
-		CHANNELHASHSIZE = l;
-		clear_channel_hash_table();
-		for (acptr = channel; acptr; acptr = acptr->nextch)
-		    {
-			acptr->hnextch = NULL;
-			(void)add_to_channel_hash_table(acptr->chname, acptr);
-		    }
+		bigger_hash_table(&_CHANNELHASHSIZE,
+						 channelTable, l);
 		sendto_one(sptr, "NOTICE %s :CHANNELHASHSIZE now %d",
 			   parv[0], l);
 		break;
@@ -710,7 +900,7 @@ char	*parv[];
 		used = 1;
 	sendto_one(sptr,"NOTICE %s :Total Hits: %d Unhit: %d Av Hits: %f",
 		   parv[0], tothits, size-used,
-		   (float)((1.0 * tothits) / (1.0 * used)));
+		   (float)((1.0 * (float)tothits) / (1.0 * (float)used)));
 	sendto_one(sptr,"NOTICE %s :Entry Most Hit: %d Hits: %d",
 		   parv[0], mosthit, mosthits);
 	sendto_one(sptr,"NOTICE %s :Client hits %d miss %d",

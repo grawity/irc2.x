@@ -28,12 +28,12 @@
 /*	HPUX			Nothing needed (A.08/A.09) */
 /*	ULTRIX			Nothing needed (4.2) */
 /*	OSF			Nothing needed (1.2) */
-#undef	AIX			/* IBM ugly so-called Unix, AIX */
+/*	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
 /*	SGI			Nothing needed (IRIX 4.0.4) */
 #undef 	SVR3			/* SVR3 stuff - being worked on where poss. */
 #undef	DYNIXPTX		/* Sequents Brain-dead Posix implement. */
-#undef	SOL20			/* Solaris2 */
+#undef	SVR4			/* Solaris2, SVR4 */
 #undef	ESIX			/* ESIX */
 #undef	NEXT			/* NeXTStep */
 #undef        SVR4
@@ -98,8 +98,10 @@
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
-#define	DPATH	"/scratch/avalon/ircd"	/* dir where all ircd stuff is */
-#define	SPATH	"/scratch/avalon/ircd/bin/ircd"
+#ifndef	DPATH	/* Should be defined in ../Makefile */
+#define	DPATH	"/usr/local/lib/ircd"	/* dir where all ircd stuff is */
+#endif
+#define	SPATH	"/usr/local/bin/ircd"	/* path to server executeable */
 #define	CPATH	"ircd.conf"	/* server configuration file */
 #define	MPATH	"ircd.motd"	/* server MOTD file */
 #define	LPATH	"/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
@@ -112,8 +114,8 @@
  * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
  * successful use of /oper.  These are either full paths or files within DPATH.
  */
-#define FNAME_USERLOG "/usr/local/lib/ircd/users" /* */
-#define FNAME_OPERLOG "/usr/local/lib/ircd/opers" /* */
+/* #define FNAME_USERLOG "/usr/local/lib/ircd/users" /* */
+/* #define FNAME_OPERLOG "/usr/local/lib/ircd/opers" /* */
 
 /* CHROOTDIR
  *
@@ -133,7 +135,7 @@
  * won't work, or simply don't want local users to be summoned, undefine
  * this.
  */
-#define	ENABLE_SUMMON	/* local summon */
+#undef	ENABLE_SUMMON	/* local summon */
 #undef	ENABLE_USERS	/* enables local /users (same as who/finger output) */
 
 /* SHOW_INVISIBLE_LUSERS
@@ -209,9 +211,11 @@
  * If your server is running as a a HUB Server then define this.
  * A HUB Server has many servers connect to it at the same as opposed
  * to a leaf which just has 1 server (typically the uplink). Define this
- * correctly for performance reasons.
+ * correctly for performance reasons.  Increasing the value for HUB
+ * increases the servers preference for server-only traffic.  If defined,
+ * must be at least defined to 0.
  */
-#define	HUB
+#undef	HUB	/* #define	HUB	0 */
 
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
@@ -262,7 +266,7 @@
  * this option is used unless you tell the system administrator beforehand
  * and obtain their permission to send messages to the system log files.
  */
-#define	USE_SYSLOG
+#undef	USE_SYSLOG
 
 #ifdef	USE_SYSLOG
 /*
@@ -279,7 +283,7 @@
  * If you want to log to a different facility than DAEMON, change
  * this define.
  */
-#define LOG_FACILITY LOG_LOCAL1
+#define LOG_FACILITY LOG_DAEMON
 #endif /* USE_SYSLOG */
 
 /*
@@ -310,17 +314,6 @@
  * Added 3.8.1992, kny@cs.hut.fi (nam)
  */
 #define IDLE_FROM_MSG
-
-/*
- * Max amount of internal send buffering when socket is stuck (bytes)
- */
-#define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
-                                 /*                    700000 for backbones */
-/*
- *  BUFFERPOOL is the maximum size of the total of all sendq's.
- *  Recommended value is 2 * MAXSENDQLENGTH, for hubs, 5 *.
- */
-#define	BUFFERPOOL     (2 * MAXSENDQLENGTH)
 
 /*
  * use these to setup a Unix domain socket to connect clients/servers to.
@@ -358,15 +351,6 @@
 /* Sends an extra NOTICE in the beginning of client connection     */
 #undef	IRCII_KLUDGE
 
-#undef FOLLOW_IDENT_RFC
-#define HIDE_FAKES
-#define SUN_GSO_BUG
-#define DELAY_NICKS
-#define TRACE_STATS
-#define NOWRITEALARM
-#define SECUNREG
-#undef SHOW_GHOSTS
-
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
 /* You shouldn't change anything below this line, unless absolutely needed. */
@@ -386,11 +370,9 @@
  */
 #undef	LOCAL_KILL_ONLY
 #endif
-/*
- * Port where ircd resides. NOTE: This *MUST* be greater than 1024 if you
- * plan to run ircd under any other uid than root.
- */
-#define PORTNUM 6667		/* Recommended values: 6667 or 6666 */
+
+/* Default server port, used by CONNECT and client. */
+#define	PORTNUM	6667
 
 /*
  * Maximum number of network connections your server will allow.  This should
@@ -403,21 +385,13 @@
  * 1 server = 1 connection, 1 user = 1 connection.
  * This should be at *least* 3: 1 listen port, 1 dns port + 1 client
  */
-#define MAXCONNECTIONS	256
+#define MAXCONNECTIONS	50
 
 /*
  * this defines the length of the nickname history.  each time a user changes
  * nickname or signs off, their old nickname is added to the top of the list.
- * The following sizes are recommended:
- * 8MB or less  core memory : 500	(at least 1/4 of max users)
- * 8MB-16MB     core memory : 500-750	(1/4 -> 1/2 of max users)
- * 16MB-32MB    core memory : 750-1000	(1/2 -> 3/4 of max users)
- * 32MB or more core memory : 1000+	(> 3/4 if max users)
- * where max users is the expected maximum number of users.
- * (100 nicks/users ~ 25k)
- * NOTE: this is directly related to the amount of memory ircd will use whilst
- *	 resident and running - it hardly ever gets swapped to disk! You can
- *	 ignore these recommendations- they only are meant to serve as a guide
+ * This will grow (as needed) as the server runs to ensure that there is
+ * always at least room for 1 nick `change' per client.
  */
 #define NICKNAMEHISTORYLENGTH 800
 
@@ -492,6 +466,10 @@
 #define	CONFIGFILE CPATH
 #define	IRCD_PIDFILE PPATH
 
+#ifdef	_AIX
+#define	AIX
+#endif
+
 #ifdef	__osf__
 #define	OSF
 /* OSF defines BSD to be its version of BSD */
@@ -558,21 +536,7 @@ extern	void	debug();
 #define	DYNIXPTX
 #endif
 
-#ifdef	BSD_RELIABLE_SIGNALS
-# if defined(SYSV_UNRELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
-error You stuffed up config.h signals #defines use only one.
-# endif
-#define	HAVE_RELIABLE_SIGNALS
-#endif
-
-#ifdef	SYSV_UNRELIABLE_SIGNALS
-# ifdef	POSIX_SIGNALS
-error You stuffed up config.h signals #defines use only one.
-# endif
-#undef	HAVE_RELIABLE_SIGNALS
-#endif
-
-#ifdef	POSIX_SIGNALS
+#if defined(BSD_RELIABLE_SIGNALS) || defined(POSIX_SIGNALS)
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
@@ -627,15 +591,6 @@ error CLIENT_FLOOD undefined
 # define BSD_INCLUDES
 #endif
 
-#define Reg1 register
-#define Reg2 register
-#define Reg3 register
-#define Reg4 register
-#define Reg5 register
-#define Reg6 register
-#define Reg7 register
-#define Reg8 register
-#define Reg9 register
-#define Reg10 register
+#define	Reg	register
 
 #endif /* __config_include__ */

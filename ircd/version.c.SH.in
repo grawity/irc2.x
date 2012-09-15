@@ -21,13 +21,13 @@ fi
 
 generation=`expr $generation + 1`
 
-sumsserv=`sum s_serv.c`;
-sumsuser=`sum s_user.c`;
-sumchan=`sum channel.c`;
-sumsbsd=`sum s_bsd.c`;
-sumhash=`sum hash.c`;
-sumsmisc=`sum s_misc.c`;
-sumircd=`sum ircd.c`;
+sumsserv=`@SUM@ s_serv.c`;
+sumsuser=`@SUM@ s_user.c`;
+sumchan=`@SUM@ channel.c`;
+sumsbsd=`@SUM@ s_bsd.c`;
+sumhash=`@SUM@ hash.c`;
+sumsmisc=`@SUM@ s_misc.c`;
+sumircd=`@SUM@ ircd.c`;
 
 creation=`date | \
 awk '{if (NF == 6) \

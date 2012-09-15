@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)whowas.c	2.16 08 Nov 1993 (C) 1988 Markku Savela";
+static  char sccsid[] = "%W% %G% (C) 1988 Markku Savela";
 #endif
 
 #include "struct.h"
@@ -34,56 +34,41 @@ static  char sccsid[] = "@(#)whowas.c	2.16 08 Nov 1993 (C) 1988 Markku Savela";
 #include "whowas.h"
 #include "h.h"
 
-static	aName	was[NICKNAMEHISTORYLENGTH];
-static	int	ww_index = 0;
+static	aName	*was;
+int	ww_index = 0, ww_size = MAXCONNECTIONS*2;
+
+static	void	grow_history()
+{
+	int	osize = ww_size;
+
+	ww_size = (int)((float)numclients * 1.1);
+	was = (aName *)MyRealloc((char *)was, sizeof(*was) * ww_size);
+	bzero(was + osize, sizeof(*was) * (ww_size - osize));
+}
+
 
 void	add_history(cptr)
-Reg1	aClient	*cptr;
+Reg	aClient	*cptr;
 {
-	aName	ntmp;
-	Reg2	aName	*np = &ntmp, *np2;
+	Reg	aName	*np;
 
-	strncpyzt(np->ww_nick, cptr->name, NICKLEN+1);
-	strncpyzt(np->ww_info, cptr->info, REALLEN+1);
+	cptr->user->refcnt++;
+
+	np = &was[ww_index];
+	if (np->ww_user)
+		free_user(np->ww_user, np->ww_online);
 	np->ww_user = cptr->user;
 	np->ww_logout = time(NULL);
 	np->ww_online = (cptr->from != NULL) ? cptr : NULL;
-	np->ww_user->refcnt++;
-
-	np2 = &was[ww_index];
-	if (np2->ww_user)
-		free_user(np2->ww_user, np2->ww_online);
-
-	bcopy((char *)&ntmp, (char *)np2, sizeof(aName));
+	strncpyzt(np->ww_nick, cptr->name, NICKLEN+1);
+	strncpyzt(np->ww_info, cptr->info, REALLEN+1);
 
 	ww_index++;
-	if (ww_index >= NICKNAMEHISTORYLENGTH)
+	if ((ww_index == ww_size) && (numclients > ww_size))
+		grow_history();
+	if (ww_index >= ww_size)
 		ww_index = 0;
 	return;
-}
-
-/*
-** find_history
-**      Return the user that was using the given nickname within
-**      the timelimit. Returns NULL, if no one found...
-*/
-anUser	*find_history(nick, timelimit)
-char	*nick;
-time_t	timelimit;
-{
-	Reg1	aName	*wp, *wp2;
-
-	wp = wp2 = &was[ww_index];
-	timelimit = time(NULL)-timelimit;
-
-	do {
-		if (!mycmp(nick, wp->ww_nick) && wp->ww_logout >= timelimit)
-			return (wp->ww_user);
-		if (wp == was)
-			wp = &was[NICKNAMEHISTORYLENGTH];
-		wp--;
-	} while (wp != wp2);
-	return (NULL);
 }
 
 /*
@@ -96,8 +81,8 @@ aClient	*get_history(nick, timelimit)
 char	*nick;
 time_t	timelimit;
 {
-	Reg1	aName	*wp, *wp2;
-	Reg2	int	i = 0;
+	Reg	aName	*wp, *wp2;
+	Reg	int	i = 0;
 
 	wp = wp2 = &was[ww_index];
 	timelimit = time(NULL)-timelimit;
@@ -106,7 +91,7 @@ time_t	timelimit;
 		if (!mycmp(nick, wp->ww_nick) && wp->ww_logout >= timelimit)
 			break;
 		wp++;
-		if (wp == &was[NICKNAMEHISTORYLENGTH])
+		if (wp == &was[ww_size])
 			i = 1, wp = was;
 	} while (wp != wp2);
 
@@ -116,12 +101,12 @@ time_t	timelimit;
 }
 
 void	off_history(cptr)
-Reg3	aClient	*cptr;
+Reg	aClient	*cptr;
 {
-	Reg1	aName	*wp;
-	Reg2	int	i;
+	Reg	aName	*wp;
+	Reg	int	i;
 
-	for (i = NICKNAMEHISTORYLENGTH, wp = was; i; wp++, i--)
+	for (i = ww_size, wp = was; i; wp++, i--)
 		if (wp->ww_online == cptr)
 			wp->ww_online = NULL;
 	return;
@@ -129,9 +114,10 @@ Reg3	aClient	*cptr;
 
 void	initwhowas()
 {
-	Reg1	int	i;
+	Reg	int	i;
 
-	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
+	was = (aName *)MyMalloc(sizeof(*was) * ww_size);
+	for (i = 0; i < ww_size; i++)
 		bzero((char *)&was[i], sizeof(aName));
 	return;
 }
@@ -147,16 +133,15 @@ aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
 {
-	Reg1	aName	*wp, *wp2 = NULL;
-	Reg2	int	j = 0;
-	Reg3	anUser	*up = NULL;
+	Reg	aName	*wp, *wp2 = NULL;
+	Reg	int	j = 0;
+	Reg	anUser	*up = NULL;
 	int	max = -1;
 	char	*p, *nick, *s;
 
  	if (parc < 2)
 	    {
-		sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN),
-			   me.name, parv[0]);
+		sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN, parv[0]));
 		return 0;
 	    }
 	if (parc > 2)
@@ -171,20 +156,19 @@ char	*parv[];
 
 		do {
 			if (wp < was)
-				wp = &was[NICKNAMEHISTORYLENGTH - 1];
+				wp = &was[ww_size - 1];
 			if (mycmp(nick, wp->ww_nick) == 0)
 			    {
 				up = wp->ww_user;
-				sendto_one(sptr, rpl_str(RPL_WHOWASUSER),
-					   me.name, parv[0], wp->ww_nick,
-					   up->username,
+				sendto_one(sptr, rpl_str(RPL_WHOWASUSER,
+					   parv[0]), wp->ww_nick, up->username,
 					   up->host, wp->ww_info);
-				sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
-					   me.name, parv[0], wp->ww_nick,
-					   up->server, myctime(wp->ww_logout));
+				sendto_one(sptr, rpl_str(RPL_WHOISSERVER,
+					   parv[0]), wp->ww_nick, up->server,
+					   myctime(wp->ww_logout));
 				if (up->away)
-					sendto_one(sptr, rpl_str(RPL_AWAY),
-						   me.name, parv[0],
+					sendto_one(sptr, rpl_str(RPL_AWAY,
+						   parv[0]),
 						   wp->ww_nick, up->away);
 				j++;
 			    }
@@ -194,13 +178,13 @@ char	*parv[];
 		} while (wp != wp2);
 
 		if (up == NULL)
-			sendto_one(sptr, err_str(ERR_WASNOSUCHNICK),
-				   me.name, parv[0], parv[1]);
+			sendto_one(sptr, err_str(ERR_WASNOSUCHNICK, parv[0]),
+				   parv[1]);
 
 		if (p)
 			p[-1] = ',';
 	    }
-	sendto_one(sptr, rpl_str(RPL_ENDOFWHOWAS), me.name, parv[0], parv[1]);
+	sendto_one(sptr, rpl_str(RPL_ENDOFWHOWAS, parv[0]), parv[1]);
 	return 0;
     }
 
@@ -209,12 +193,12 @@ void	count_whowas_memory(wwu, wwa, wwam)
 int	*wwu, *wwa;
 u_long	*wwam;
 {
-	Reg1	anUser	*tmp;
-	Reg2	int	i, j;
+	Reg	anUser	*tmp;
+	Reg	int	i, j;
 	int	u = 0, a = 0;
 	u_long	am = 0;
 
-	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
+	for (i = 0; i < ww_size; i++)
 		if ((tmp = was[i].ww_user))
 			if (!was[i].ww_online)
 			    {

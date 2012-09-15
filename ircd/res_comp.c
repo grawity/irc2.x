@@ -1,31 +1,74 @@
 /*
- * Copyright (c) 1985 Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted provided
- * that: (1) source distributions retain this entire copyright notice and
- * comment, and (2) distributions including binaries display the following
- * acknowledgement:  ``This product includes software developed by the
- * University of California, Berkeley and its contributors'' in the
- * documentation or other materials provided with the distribution and in
- * all advertising materials mentioning features or use of this software.
- * Neither the name of the University nor the names of its contributors may
- * be used to endorse or promote products derived from this software without
- * specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ * ++Copyright++ 1985, 1993
+ * -
+ * Copyright (c) 1985, 1993
+ *    The Regents of the University of California.  All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ * 	This product includes software developed by the University of
+ * 	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ * -
+ * Portions Copyright (c) 1993 by Digital Equipment Corporation.
+ * 
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies, and that
+ * the name of Digital Equipment Corporation not be used in advertising or
+ * publicity pertaining to distribution of the document or software without
+ * specific, written prior permission.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND DIGITAL EQUIPMENT CORP. DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS.   IN NO EVENT SHALL DIGITAL EQUIPMENT
+ * CORPORATION BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+ * SOFTWARE.
+ * -
+ * --Copyright--
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)res_comp.c	6.18 (Berkeley) 6/27/90";
+static char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
+static char rcsid[] = "$Id: res_comp.c,v 4.9.1.4 1993/11/12 01:23:34 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include <sys/types.h>
+#include "config.h"
+#include <sys/param.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include "nameser.h"
 
-static dn_find();
+#include "resolv.h"
+
+#include "sys.h"
+
+static int dn_find();
 
 /*
  * Expand compressed domain name 'comp_dn' to full domain name.
@@ -35,7 +78,8 @@ static dn_find();
  * Return size of compressed name or -1 if there was an error.
  */
 dn_expand(msg, eomorig, comp_dn, exp_dn, length)
-	u_char *msg, *eomorig, *comp_dn, *exp_dn;
+	const u_char *msg, *eomorig, *comp_dn;
+	u_char *exp_dn;
 	int length;
 {
 	register u_char *cp, *dn;
@@ -44,7 +88,7 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 	int len = -1, checked = 0;
 
 	dn = exp_dn;
-	cp = comp_dn;
+	cp = (u_char *)comp_dn;
 	eom = exp_dn + length;
 	/*
 	 * fetch next label in domain name
@@ -78,7 +122,7 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 		case INDIR_MASK:
 			if (len < 0)
 				len = cp - comp_dn + 1;
-			cp = msg + (((n & 0x3f) << 8) | (*cp & 0xff));
+			cp = (u_char *)msg + (((n & 0x3f) << 8) | (*cp & 0xff));
 			if (cp < msg || cp >= eomorig)	/* out of range */
 				return(-1);
 			checked += 2;
@@ -114,16 +158,16 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
  * is NULL, we don't update the list.
  */
 dn_comp(exp_dn, comp_dn, length, dnptrs, lastdnptr)
-	u_char *exp_dn, *comp_dn;
+	const u_char *exp_dn;
+	u_char *comp_dn, **dnptrs, **lastdnptr;
 	int length;
-	u_char **dnptrs, **lastdnptr;
 {
 	register u_char *cp, *dn;
 	register int c, l;
 	u_char **cpp, **lpp, *sp, *eob;
 	u_char *msg;
 
-	dn = exp_dn;
+	dn = (u_char *)exp_dn;
 	cp = comp_dn;
 	eob = cp + length;
 	if (dnptrs != NULL) {
@@ -191,28 +235,31 @@ dn_comp(exp_dn, comp_dn, length, dnptrs, lastdnptr)
 /*
  * Skip over a compressed domain name. Return the size or -1.
  */
-dn_skipname(comp_dn, eom)
-	u_char *comp_dn, *eom;
+__dn_skipname(comp_dn, eom)
+	const u_char *comp_dn, *eom;
 {
 	register u_char *cp;
 	register int n;
 
-	cp = comp_dn;
+	cp = (u_char *)comp_dn;
 	while (cp < eom && (n = *cp++)) {
 		/*
 		 * check for indirection
 		 */
 		switch (n & INDIR_MASK) {
-		case 0:		/* normal case, n == len */
+		case 0:			/* normal case, n == len */
 			cp += n;
 			continue;
-		default:	/* illegal type */
-			return (-1);
 		case INDIR_MASK:	/* indirection */
 			cp++;
+			break;
+		default:		/* illegal type */
+			return -1;
 		}
 		break;
 	}
+	if (cp > eom)
+		return -1;
 	return (cp - comp_dn);
 }
 
@@ -222,7 +269,7 @@ dn_skipname(comp_dn, eom)
  * dnptrs is the pointer to the first name on the list,
  * not the pointer to the start of the message.
  */
-static
+static int
 dn_find(exp_dn, msg, dnptrs, lastdnptr)
 	u_char *exp_dn, *msg;
 	u_char **dnptrs, **lastdnptr;
@@ -276,54 +323,73 @@ dn_find(exp_dn, msg, dnptrs, lastdnptr)
  * used by sendmail.
  */
 
-u_short
+u_int16_t
 _getshort(msgp)
-	u_char *msgp;
+	register u_char *msgp;
 {
-	register u_char *p = (u_char *) msgp;
-#ifdef vax
-	/*
-	 * vax compiler doesn't put shorts in registers
-	 */
-	register u_long u;
-#else
-	register u_short u;
-#endif
+	register u_int16_t u;
 
-	u = *p++ << 8;
-	return ((u_short)(u | *p));
+	GETSHORT(u, msgp);
+	return (u);
 }
 
-u_long
+u_int32_t
 _getlong(msgp)
-	u_char *msgp;
+	register u_char *msgp;
 {
-	register u_char *p = (u_char *) msgp;
-	register u_long u;
+	register u_int32_t u;
 
-	u = *p++; u <<= 8;
-	u |= *p++; u <<= 8;
-	u |= *p++; u <<= 8;
-	return (u | *p);
+	GETLONG(u, msgp);
+	return (u);
 }
 
+void
+#if defined(__STDC__) || defined(__cplusplus)
+__putshort(register u_short s, register u_char *msgp)	/* must match proto */
+#else
+__putshort(s, msgp)
+	register u_int16_t s;
+	register u_char *msgp;
+#endif
+{
+	PUTSHORT(s, msgp);
+}
 
+void
+__putlong(l, msgp)
+	register u_int32_t l;
+	register u_char *msgp;
+{
+	PUTLONG(l, msgp);
+}
+
+/* #ifdef ultrix - not only ultrix, but older systems - av */
+/* ultrix 4.0 had some icky packaging in its libc.a.  alias for it here. */
+#undef putshort
+void
+#if defined(__STDC__) || defined(__cplusplus)
+putshort(register u_short s, register u_char *msgp)
+#else
 putshort(s, msgp)
 	register u_short s;
 	register u_char *msgp;
+#endif
 {
-
-	msgp[1] = s;
-	msgp[0] = s >> 8;
+	__putshort(s, msgp);
 }
-
+#undef putlong
+void
 putlong(l, msgp)
-	register u_long l;
+	register u_int32_t l;
 	register u_char *msgp;
 {
-
-	msgp[3] = l;
-	msgp[2] = (l >>= 8);
-	msgp[1] = (l >>= 8);
-	msgp[0] = l >> 8;
+	__putlong(l, msgp);
 }
+ 
+#undef dn_skipname
+dn_skipname(comp_dn, eom)
+	const u_char *comp_dn, *eom;
+{
+	return __dn_skipname(comp_dn, eom);
+}
+/* #endif /* Ultrix 4.0 hackery */

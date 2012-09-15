@@ -1,0 +1,26 @@
+
+	* +a (anonymous) channel mode;
+	* +s user mode removed;
+	* &KILLS, &NOTICES, &ERRORS, &CHANNEL, &HASH, &NUMERICS, &SQUITS
+ 	  channels created and used by the server for server notices
+	  (comments on what goes where please) and dividing notices up this
+	  way was better than using more user modes (they default to the
+	  server being on them and +amnt);
+	* + channels reintroduced (can't have modes);
+	* Config doesn't prompt for cc/includes/libs;
+	* M-line doesn't define port, PORTNUM removed from config.h (must use
+	  P-lines or use inetd);
+	* BIND 4.9.2 libresolv stuff included;
+	* USERHOST will return as many id's as requested. 
+	* RECONNECT to pickup error'd sserver-server links
+	* chooses next bigger prime for hash table sizes rather than
+	  needing exact primes
+	* hash tables grow to suit rather than being static in size
+	* adaptive growth of sendq (suggested by msa)
+	* Server parameter in USER message tokenised betweem 2.9 servers
+	* whowas tables grow to suit rather than being static in size
+	* NICK+USER combined into NICK for 2.9 <-> 2.9 communication
+	* MODE +ov and JOIN combined into JOIN for 2.9 <-> 2.9 communication
+	  on connect bursts
+	* autoconf'iscated ircd.
+

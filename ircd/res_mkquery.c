@@ -1,57 +1,101 @@
 /*
- * Copyright (c) 1985 Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted
- * provided that: (1) source distributions retain this entire copyright
- * notice and comment, and (2) distributions including binaries display
- * the following acknowledgement:  ``This product includes software
- * developed by the University of California, Berkeley and its contributors''
- * in the documentation or other materials provided with the distribution
- * and in all advertising materials mentioning features or use of this
- * software. Neither the name of the University nor the names of its
- * contributors may be used to endorse or promote products derived
- * from this software without specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ * ++Copyright++ 1985, 1993
+ * -
+ * Copyright (c) 1985, 1993
+ *    The Regents of the University of California.  All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ * 	This product includes software developed by the University of
+ * 	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ * -
+ * Portions Copyright (c) 1993 by Digital Equipment Corporation.
+ * 
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies, and that
+ * the name of Digital Equipment Corporation not be used in advertising or
+ * publicity pertaining to distribution of the document or software without
+ * specific, written prior permission.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND DIGITAL EQUIPMENT CORP. DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS.   IN NO EVENT SHALL DIGITAL EQUIPMENT
+ * CORPORATION BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+ * SOFTWARE.
+ * -
+ * --Copyright--
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)res_mkquery.c	6.12 (Berkeley) 6/1/90";
+static char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
+static char rcsid[] = "$Id: res_mkquery.c,v 4.9.1.4 1993/11/12 01:23:34 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <netinet/in.h>
 #include "config.h"
-#include "sys.h"
+#include <sys/param.h>
+#include <netinet/in.h>
+#include <stdio.h>
 #include "nameser.h"
+
 #include "resolv.h"
+#include "sys.h"
+
+#if defined(USE_OPTIONS_H)
+# include <../conf/options.h>
+#endif
 
 /*
  * Form all types of queries.
  * Returns the size of the result or -1.
  */
-res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
+res_mkquery(op, dname, class, type, data, datalen, newrr_in, buf, buflen)
 	int op;			/* opcode of query */
-	char *dname;		/* domain name */
+	const char *dname;	/* domain name */
 	int class, type;	/* class and type of query */
-	char *data;		/* resource record data */
+	const char *data;	/* resource record data */
 	int datalen;		/* length of data */
-	struct rrec *newrr;	/* new rr for modify or append */
+	const char *newrr_in;	/* new rr for modify or append */
 	char *buf;		/* buffer to put query */
 	int buflen;		/* size of buffer */
 {
 	register HEADER *hp;
 	register char *cp;
 	register int n;
+	struct rrec *newrr = (struct rrec *) newrr_in;
 	char *dnptrs[10], **dpp, **lastdnptr;
 
 #ifdef DEBUG
 	if (_res.options & RES_DEBUG)
-		printf("res_mkquery(%d, %s, %d, %d)\n", op, dname, class, type);
-#endif /*DEBUG*/
+		printf(";; res_mkquery(%d, %s, %d, %d)\n",
+		       op, dname, class, type);
+#endif
 	/*
 	 * Initialize header fields.
 	 */
@@ -77,14 +121,15 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 	case QUERY:
 		if ((buflen -= QFIXEDSZ) < 0)
 			return(-1);
-		if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
+		if ((n = dn_comp((u_char *)dname, (u_char *)cp, buflen,
+		    (u_char **)dnptrs, (u_char **)lastdnptr)) < 0)
 			return (-1);
 		cp += n;
 		buflen -= n;
-		putshort(type, cp);
-		cp += sizeof(u_short);
-		putshort(class, cp);
-		cp += sizeof(u_short);
+		__putshort(type, (u_char *)cp);
+		cp += sizeof(u_int16_t);
+		__putshort(class, (u_char *)cp);
+		cp += sizeof(u_int16_t);
 		hp->qdcount = htons(1);
 		if (op == QUERY || data == NULL)
 			break;
@@ -92,18 +137,19 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 		 * Make an additional record for completion domain.
 		 */
 		buflen -= RRFIXEDSZ;
-		if ((n = dn_comp(data, cp, buflen, dnptrs, lastdnptr)) < 0)
+		if ((n = dn_comp((u_char *)data, (u_char *)cp, buflen,
+		    (u_char **)dnptrs, (u_char **)lastdnptr)) < 0)
 			return (-1);
 		cp += n;
 		buflen -= n;
-		putshort(T_NULL, cp);
-		cp += sizeof(u_short);
-		putshort(class, cp);
-		cp += sizeof(u_short);
-		putlong(0, cp);
-		cp += sizeof(u_long);
-		putshort(0, cp);
-		cp += sizeof(u_short);
+		__putshort(T_NULL, (u_char *)cp);
+		cp += sizeof(u_int16_t);
+		__putshort(class, (u_char *)cp);
+		cp += sizeof(u_int16_t);
+		__putlong(0, (u_char *)cp);
+		cp += sizeof(u_int32_t);
+		__putshort(0, (u_char *)cp);
+		cp += sizeof(u_int16_t);
 		hp->arcount = htons(1);
 		break;
 
@@ -114,14 +160,14 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 		if (buflen < 1 + RRFIXEDSZ + datalen)
 			return (-1);
 		*cp++ = '\0';	/* no domain name */
-		putshort(type, cp);
-		cp += sizeof(u_short);
-		putshort(class, cp);
-		cp += sizeof(u_short);
-		putlong(0, cp);
-		cp += sizeof(u_long);
-		putshort(datalen, cp);
-		cp += sizeof(u_short);
+		__putshort(type, (u_char *)cp);
+		cp += sizeof(u_int16_t);
+		__putshort(class, (u_char *)cp);
+		cp += sizeof(u_int16_t);
+		__putlong(0, (u_char *)cp);
+		cp += sizeof(u_int32_t);
+		__putshort(datalen, (u_char *)cp);
+		cp += sizeof(u_int16_t);
 		if (datalen) {
 			bcopy(data, cp, datalen);
 			cp += datalen;
@@ -148,14 +194,14 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 		if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
 			return (-1);
 		cp += n;
-		putshort(type, cp);
-                cp += sizeof(u_short);
-                putshort(class, cp);
-                cp += sizeof(u_short);
-		putlong(0, cp);
-		cp += sizeof(u_long);
-		putshort(datalen, cp);
-                cp += sizeof(u_short);
+		__putshort(type, cp);
+                cp += sizeof(u_int16_t);
+                __putshort(class, cp);
+                cp += sizeof(u_int16_t);
+		__putlong(0, cp);
+		cp += sizeof(u_int32_t);
+		__putshort(datalen, cp);
+                cp += sizeof(u_int16_t);
 		if (datalen) {
 			bcopy(data, cp, datalen);
 			cp += datalen;
@@ -171,14 +217,14 @@ res_mkquery(op, dname, class, type, data, datalen, newrr, buf, buflen)
 		if ((n = dn_comp(dname, cp, buflen, dnptrs, lastdnptr)) < 0)
 			return (-1);
 		cp += n;
-		putshort(newrr->r_type, cp);
-                cp += sizeof(u_short);
-                putshort(newrr->r_class, cp);
-                cp += sizeof(u_short);
-		putlong(0, cp);
-		cp += sizeof(u_long);
-		putshort(newrr->r_size, cp);
-                cp += sizeof(u_short);
+		__putshort(newrr->r_type, cp);
+                cp += sizeof(u_int16_t);
+                __putshort(newrr->r_class, cp);
+                cp += sizeof(u_int16_t);
+		__putlong(0, cp);
+		cp += sizeof(u_int32_t);
+		__putshort(newrr->r_size, cp);
+                cp += sizeof(u_int16_t);
 		if (newrr->r_size) {
 			bcopy(newrr->r_data, cp, newrr->r_size);
 			cp += newrr->r_size;

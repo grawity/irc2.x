@@ -111,6 +111,9 @@ struct Command commands[] = {
   { (void (*)()) 0, "ISON",    SERVER_CMD, "\0\0", MSG_ISON },
   { (void (*)()) 0, "CONNECT", SERVER_CMD, "\0\0", MSG_CONNECT },
   { do_kill,        "SQUIT",   LOCAL_FUNC, "\0\0", MSG_SQUIT },
+  { (void (*)()) 0, "SERVLIST",SERVER_CMD, "\0\0", MSG_SERVLIST },
+  { do_kill,        "SQUERY",  LOCAL_FUNC, "\0\0", MSG_SQUERY },
+  { do_kill,        "NOTICE",  LOCAL_FUNC, "\0\0", MSG_NOTICE },
   { (void (*)()) 0, (char *) 0, 0,         "\0\0", (char *) 0 }
 };
 #else

@@ -17,12 +17,11 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-CC=cc
+CC=gcc -traditional
 RM=/bin/rm
 CP=/bin/cp
 TOUCH=touch
 SHELL=/bin/sh
-INSTALL=/usr/bin/install
 
 # IRCDMODE given in top level Makefile, but added here to make sure
 # compilation works if started in ircd subdirectory
@@ -30,60 +29,18 @@ INSTALL=/usr/bin/install
 IRCDMODE=711
 INCLUDEDIR=../include
 
-# CFLAGS/IRCDLIBS used in ../Makefile should also be used here.  The list
-# given below is less than complete.
-# For MIPS, use the following:
-#CFLAGS= -g -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDEDIR}
-# For Irix 4.x (SGI), use the following:
-#CFLAGS= -g -cckr -I$(INCLUDEDIR)
-# else just this
-CFLAGS= -g -I${INCLUDEDIR}
 #
-# use the following on SUN OS without nameserver libraries inside libc
-# NOTE: most dont have the resolver libraries inside libc
-#IRCDLIBS=-lresolv
-#
-#on NeXT other than 2.0:
-#IRCDLIBS=-lsys_s
-#
-# HPUX:
-#IRCDLIBS=-lBSD
-#
-# Solaris 2
-#IRCDLIBS=-lsocket -lnsl
-#
-# ESIX
-#CFLAGS=-O -I${INCLUDEDIR} -I/usr/ucbinclude
-#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lns -lnsl
-#
-#When profiling:
-#IRCDLIBS=-lc_p
-
 LINTFLAGS=-hba
 #
-# LDFLAGS - flags to send the loader (ld). SunOS users may want to add
-# -Bstatic here.
-#
-#LDFLAGS=-Bstatic
-#LDFLAGS=-Wl,-a,archive
-#
-# RES - if you are missing the resolv library (man 5 resolv.conf), or you
-# experience probems with ip# to hostname lookups for local machines or
-# the server wont compile because _res is missing, uncomment RES.
-# For those who know what these are, if you normally use the resolv+
-# libraries and have setup /etc/resolv.conf, these are fromm resolv+ if they
-# are not part of your system libraries.  In all cases you should try your
-# system libraries before these.
-#
-#RES=res_init.o res_comp.o res_mkquery.o
+RES=res_init.o res_comp.o res_mkquery.o
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o ../common/packet.o \
            ../common/send.o ../common/match.o ../common/parse.o \
-           ../common/support.o
+           ../common/support.o ../common/inet_addr.o
 
 OBJS=channel.o class.o hash.o ircd.o list.o res.o s_auth.o s_bsd.o s_conf.o \
-	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_user.o whowas.o \
-	note.o $(RES) $(COMMONOBJS)
+	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_service.o s_user.o \
+	whowas.o note.o $(RES) $(COMMONOBJS)
 
 SRC=$(OBJS:%.o=%.c)
 
@@ -93,19 +50,20 @@ MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
 	    'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}'
 
 
-all: build
+all:
+	(cd ..; make server)
 
 build: ircd chkconf
 
 ircd: $(OBJS) ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAGS) $(OBJS) version.o $(LDFLAGS) $(IRCDLIBS) -o ircd
+	$(CC) $(CFLAGS) $(OBJS) version.o $(LDFLAGS) $(IRCDLIBS) -o ircd -lm
 	chmod $(IRCDMODE) ircd
 
 chkconf: ../include/struct.h ../include/config.h ../include/sys.h \
 	 ../include/common.h chkconf.c
-	$(CC) $(CFLAGS) chkconf.c ../common/match.o \
+	$(CC) $(CFLAGS) -DDPATH=$(IRCDDIR) chkconf.c ../common/match.o \
 	$(LDFLAGS) $(IRCDLIBS) -o chkconf
 
 saber: $(SRC)
@@ -135,13 +93,15 @@ lint:
 ../common/support.o: ../common/support.c ../include/config.h ../include/sys.h\
 		     ../include/common.h
 	(cd ../common; $(MAKE) build);
+../common/inet_addr.o: ../common/inet_addr.c ../include/sys.h
+	(cd ../common; $(MAKE) build);
 
 install: all
 	-if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
-		mkdir ${IRCDDIR}; \
+		-mkdir ${IRCDDIR}; \
 	fi
-	../bsdinstall -c -s -m ${IRCDMODE} ircd ${BINDIR}
-	../bsdinstall -c -s -m 700 chkconf ${BINDIR}
+	../install -c -s -m ${IRCDMODE} ircd ${BINDIR}
+	../install -c -s -m 700 chkconf ${BINDIR}
 	$(CP) ../doc/example.conf ${IRCDDIR}
 	$(TOUCH) ${IRCDDIR}/ircd.motd
 	$(RM) -f ${IRCDDIR}/ircd.m4
@@ -161,12 +121,13 @@ channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
 	$(CC) $(CFLAGS) -c channel.c
 
 class.o: ../include/struct.h ../include/class.h ../include/numeric.h \
-	 ../include/common.h ../include/config.h ../include/sys.h
+	 ../include/common.h ../include/config.h ../include/sys.h \
+	 ../include/common.h
 	$(CC) $(CFLAGS) -c class.c
 
 ircd.o: ircd.c ../include/struct.h ../include/config.h ../include/sys.h \
 	../include/dbuf.h ../include/numeric.h ../include/common.h
-	$(CC) $(CFLAGS) -c ircd.c
+	$(CC) $(CFLAGS) -DDPATH=$(IRCDDIR) -c ircd.c
 
 list.o: list.c ../include/struct.h ../include/config.h ../include/dbuf.h \
 	../include/sys.h ../include/common.h
@@ -192,10 +153,6 @@ s_debug.o: ../include/config.h ../include/struct.h ../include/common.h \
 	  ../include/sys.h s_debug.c
 	$(CC) $(CFLAGS) -c s_debug.c
 
-s_err.o: ../include/config.h ../include/struct.h ../include/common.h \
-	  ../include/sys.h ../include/numeric.h ../include/msg.h s_err.c
-	$(CC) $(CFLAGS) -c s_err.c
-
 s_misc.o: s_misc.c ../include/struct.h ../include/config.h ../include/dbuf.h \
 	  ../include/common.h ../include/sys.h ../include/numeric.h
 	$(CC) $(CFLAGS) -c s_misc.c
@@ -210,6 +167,12 @@ s_serv.o: s_serv.c ../include/struct.h ../include/config.h ../include/sys.h \
 	  ../include/msg.h ../include/numeric.h ../include/whowas.h
 	$(CC) $(CFLAGS) -c s_serv.c
 
+s_service.o: s_service.c ../include/struct.h ../include/config.h \
+	  ../include/service.h ../include/sys.h \
+	  ../include/common.h ../include/dbuf.h ../include/channel.h \
+	  ../include/msg.h ../include/numeric.h ../include/whowas.h
+	$(CC) $(CFLAGS) -c s_service.c
+
 s_numeric.o: s_numeric.c ../include/config.h ../include/sys.h \
 	  ../include/common.h ../include/struct.h ../include/dbuf.h \
 	  ../include/numeric.h
@@ -223,7 +186,7 @@ whowas.o: ../include/struct.h ../include/config.h ../include/sys.h \
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
 	../include/common.h ../include/config.h s_bsd.c s_serv.c s_user.c \
 	channel.c s_misc.c
-	@crypt/sums
+	@$(SHELL) crypt/sums
 	$(CC) $(CFLAGS) -c hash.c
 	@/bin/rm -f hash.c
 	@/bin/mv -f hash.c.old hash.c
@@ -246,8 +209,6 @@ s_auth.o: ../include/sys.h s_auth.c
 s_debug.o: ../include/config.h ../include/struct.h ../include/common.h
 s_debug.o: ../include/sys.h s_debug.c
 s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h
-s_err.o: ../include/struct.h ../include/config.h ../include/numeric.h
-s_err.o: ../include/dbuf.h ../include/sys.h s_err.c
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h s_conf.c
 s_user.o: ../include/struct.h ../include/config.h
@@ -256,6 +217,10 @@ s_user.o: ../include/msg.h ../include/numeric.h ../include/whowas.h s_user.c
 s_serv.o: ../include/struct.h ../include/config.h
 s_serv.o: ../include/dbuf.h ../include/sys.h ../include/channel.h
 s_serv.o: ../include/msg.h ../include/numeric.h ../include/whowas.h s_serv.c
+s_service.o: s_service.c ../include/struct.h ../include/config.h 
+s_service.o: ../include/service.h ../include/sys.h ../include/msg.h
+s_service.o: ../include/common.h ../include/dbuf.h ../include/channel.h 
+s_service.o: ../include/numeric.h ../include/whowas.h
 s_numeric.o: ../include/config.h ../include/sys.h ../include/struct.h
 s_numeric.o: ../include/dbuf.h ../include/numeric.h s_numeric.c
 whowas.o: ../include/struct.h ../include/config.h ../include/dbuf.h

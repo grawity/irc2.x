@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.48 3/9/94 (C) 1988 University of Oulu, \
+static	char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -32,23 +32,26 @@ Computing Center and Jarkko Oikarinen";
 #include <pwd.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <math.h>
 #include "h.h"
 
 aClient me;			/* That's me */
 aClient *client = &me;		/* Pointer to beginning of Client list */
 
 void	server_reboot();
-void	restart PROTO((char *));
+void	restart __P((char *));
 static	void	open_debugfile(), setup_signals();
 
 char	**myargv;
+int	rehashed = 0;
 int	portnum = -1;		    /* Server port number, listening this */
 char	*configfile = CONFIGFILE;	/* Server configuration file */
 int	debuglevel = -1;		/* Server debug level */
 int	bootopt = 0;			/* Server boot option flags */
 char	*debugmode = "";		/*  -"-    -"-   -"-  */
 char	*sbrk0;				/* initial sbrk(0) */
-static	int	dorehash = 0;
+static	int	dorehash = 0,
+		dorestart = 0;
 static	char	*dpath = DPATH;
 
 time_t	nextconnect = 1;	/* time for next try_connections call */
@@ -93,9 +96,7 @@ static VOIDSIG s_rehash()
 {
 #ifdef	POSIX_SIGNALS
 	struct	sigaction act;
-#endif
-	dorehash = 1;
-#ifdef	POSIX_SIGNALS
+
 	act.sa_handler = s_rehash;
 	act.sa_flags = 0;
 	(void)sigemptyset(&act.sa_mask);
@@ -104,6 +105,7 @@ static VOIDSIG s_rehash()
 #else
 	(void)signal(SIGHUP, s_rehash);	/* sysV -argv */
 #endif
+	dorehash = 1;
 }
 
 void	restart(mesg)
@@ -117,25 +119,25 @@ char	*mesg;
 
 VOIDSIG s_restart()
 {
-	static int restarting = 0;
+#ifdef	POSIX_SIGNALS
+	struct	sigaction act;
 
-#ifdef	USE_SYSLOG
-	(void)syslog(LOG_WARNING, "Server Restarting on SIGINT");
+	act.sa_handler = s_restart;
+	act.sa_flags = 0;
+	(void)sigemptyset(&act.sa_mask);
+	(void)sigaddset(&act.sa_mask, SIGINT);
+	(void)sigaction(SIGINT, &act, NULL);
+#else
+	(void)signal(SIGHUP, s_rehash);	/* sysV -argv */
 #endif
-	if (restarting == 0)
-	    {
-		/* Send (or attempt to) a dying scream to oper if present */
-
-		restarting = 1;
-		server_reboot();
-	    }
+	dorestart = 1;
 }
 
 void	server_reboot()
 {
-	Reg1	int	i;
+	Reg	int	i;
 
-	sendto_ops("Aieeeee!!!  Restarting server...");
+	sendto_flag(SCH_NOTICE, "Aieeeee!!!  Restarting server...");
 	Debug((DEBUG_NOTICE,"Restarting server..."));
 	flush_connections(me.fd);
 	/*
@@ -177,16 +179,17 @@ void	server_reboot()
 static	time_t	try_connections(currenttime)
 time_t	currenttime;
 {
-	Reg1	aConfItem *aconf;
-	Reg2	aClient *cptr;
+	static	time_t	lastsort = 0;
+	Reg	aConfItem *aconf;
+	Reg	aClient *cptr;
 	aConfItem **pconf;
-	int	connecting, confrq;
+	int	confrq;
 	time_t	next = 0;
 	aClass	*cltmp;
-	aConfItem *con_conf;
-	int	con_class = 0;
+	aConfItem *con_conf = NULL;
+	double	f;
+	aCPing	*cp;
 
-	connecting = FALSE;
 	Debug((DEBUG_NOTICE,"Connection check at   : %s",
 		myctime(currenttime)));
 	for (aconf = conf; aconf; aconf = aconf->next )
@@ -202,7 +205,6 @@ time_t	currenttime;
 		** made one successfull connection... [this algorithm is
 		** a bit fuzzy... -- msa >;) ]
 		*/
-
 		if ((aconf->hold > currenttime))
 		    {
 			if ((next > aconf->hold) || (next == 0))
@@ -212,6 +214,7 @@ time_t	currenttime;
 
 		confrq = get_con_freq(cltmp);
 		aconf->hold = currenttime + confrq;
+		send_ping(aconf);
 		/*
 		** Found a CONNECT config with port specified, scan clients
 		** and see if this server is already connected?
@@ -219,17 +222,15 @@ time_t	currenttime;
 		cptr = find_name(aconf->name, (aClient *)NULL);
 
 		if (!cptr && (Links(cltmp) < MaxLinks(cltmp)) &&
-		    (!connecting || (Class(cltmp) > con_class)))
-		    {
-			con_class = Class(cltmp);
+		    (!con_conf ||
+		     (con_conf->pref > aconf->pref && aconf->pref >= 0) ||
+		     (con_conf->pref == -1 &&
+		      Class(cltmp) > ConfClass(con_conf))))
 			con_conf = aconf;
-			/* We connect only one at time... */
-			connecting = TRUE;
-		    }
 		if ((next > aconf->hold) || (next == 0))
 			next = aconf->hold;
 	    }
-	if (connecting)
+	if (con_conf)
 	    {
 		if (con_conf->next)  /* are we already last? */
 		    {
@@ -244,50 +245,93 @@ time_t	currenttime;
 		    }
 		if (connect_server(con_conf, (aClient *)NULL,
 				   (struct hostent *)NULL) == 0)
-			sendto_ops("Connection to %s[%s] activated.",
-				   con_conf->name, con_conf->host);
+			sendto_flag(SCH_NOTICE,
+				    "Connection to %s[%s] activated.",
+				    con_conf->name, con_conf->host);
 	    }
 	Debug((DEBUG_NOTICE,"Next connection check : %s", myctime(next)));
+	/*
+	 * calculate preference value based on accumulated stats.
+	 */
+	if (!lastsort || lastsort < currenttime)
+	    {
+		for (aconf = conf; aconf; aconf = aconf->next)
+			if (!(cp = aconf->ping) || !cp->seq || !cp->recv)
+				aconf->pref = -1;
+			else
+			    {
+				f = (double)cp->recv / (double)cp->seq;
+				f = pow(f, (double)20.0);
+				f = (double)cp->ping /
+				    (double)cp->recv / f;
+				aconf->pref = (int) (f * 100.0);
+			    }
+		lastsort = currenttime + 60;
+	    }
 	return (next);
 }
+
+
+static	void	close_held(cptr)
+aClient	*cptr;
+{
+	Reg	aClient	*acptr;
+	int	i;
+
+	for (i = highest_fd; i >= 0; i--)
+		if ((acptr = local[i]) && (cptr->port == acptr->port) &&
+		    (acptr != cptr) && IsHeld(acptr) &&
+		    !bcmp((char *)&cptr->ip, (char *)&acptr->ip,
+			  sizeof(acptr->ip)))
+		    {
+			(void) exit_client(acptr, acptr, &me,
+					   "Reconnect Timeout");
+			return;
+		    }
+}
+
 
 static	time_t	check_pings(currenttime)
 time_t	currenttime;
 {
-	Reg1	aClient	*cptr;
-	Reg2	int	killflag;
+	static	time_t	lkill = 0;
+	Reg	aClient	*cptr;
+	Reg	int	kflag = 0;
 	int	ping = 0, i, rflag = 0;
 	time_t	oldest = 0, timeout;
 
-	for (i = 0; i <= highest_fd; i++)
+	for (i = highest_fd; i >= 0; i--)
 	    {
-		if (!(cptr = local[i]) || IsMe(cptr) || IsLog(cptr))
+		if (!(cptr = local[i]) || IsListening(cptr) || IsLog(cptr) ||
+		    IsHeld(cptr))
 			continue;
 
 		/*
-		** Note: No need to notify opers here. It's
-		** already done when "FLAGS_DEADSOCKET" is set.
-		*/
-		if (cptr->flags & FLAGS_DEADSOCKET)
+		 * K and R lines once per minute, max.  This is the max.
+		 * granularity in K-lines anyway (with time field).
+		 */
+		if (currenttime - lkill > 60)
 		    {
-			(void)exit_client(cptr, cptr, &me, "Dead socket");
-			continue;
-		    }
-
-		killflag = IsPerson(cptr) ? find_kill(cptr) : 0;
+			if (IsPerson(cptr))
+			    {
+				kflag = find_kill(cptr, rehashed);
 #ifdef R_LINES_OFTEN
-		rflag = IsPerson(cptr) ? find_restrict(cptr) : 0;
+				rflag = find_restrict(cptr);
 #endif
+			    }
+			else
+				kflag = rflag = 0;
+		    }
 		ping = IsRegistered(cptr) ? get_client_ping(cptr) :
 					    CONNECTTIMEOUT;
-		Debug((DEBUG_DEBUG, "c(%s)=%d p %d k %d r %d a %d",
-			cptr->name, cptr->status, ping, killflag, rflag,
+		Debug((DEBUG_DEBUG, "c(%s) %d p %d k %d r %d a %d",
+			cptr->name, cptr->status, ping, kflag, rflag,
 			currenttime - cptr->lasttime));
 		/*
 		 * Ok, so goto's are ugly and can be avoided here but this code
 		 * is already indented enough so I think its justified. -avalon
 		 */
-		if (!killflag && !rflag && IsRegistered(cptr) &&
+		if (!kflag && !rflag && IsRegistered(cptr) &&
 		    (ping >= currenttime - cptr->lasttime))
 			goto ping_timeout;
 		/*
@@ -296,13 +340,22 @@ time_t	currenttime;
 		 * If the client is a user and a KILL line was found
 		 * to be active, close this connection too.
 		 */
-		if (killflag || rflag ||
+		if (kflag || rflag ||
 		    ((currenttime - cptr->lasttime) >= (2 * ping) &&
 		     (cptr->flags & FLAGS_PINGSENT)) ||
 		    (!IsRegistered(cptr) &&
 		     (currenttime - cptr->firsttime) >= ping))
 		    {
-			if (!IsRegistered(cptr) &&
+			if (IsReconnect(cptr))
+			    {
+				sendto_flag(SCH_ERROR,
+					    "Reconnect timeout to %s",
+					    get_client_name(cptr, TRUE));
+				close_held(cptr);
+				(void)exit_client(cptr, cptr, &me,
+						  "Ping timeout");
+			    }
+			if (!IsRegistered(cptr) && 
 			    (DoingDNS(cptr) || DoingAuth(cptr)))
 			    {
 				if (cptr->authfd >= 0)
@@ -312,35 +365,44 @@ time_t	currenttime;
 					cptr->count = 0;
 					*cptr->buffer = '\0';
 				    }
-				Debug((DEBUG_NOTICE,
-					"DNS/AUTH timeout %s",
+				Debug((DEBUG_NOTICE, "DNS/AUTH timeout %s",
 					get_client_name(cptr,TRUE)));
 				del_queries((char *)cptr);
 				ClearAuth(cptr);
 				ClearDNS(cptr);
 				SetAccess(cptr);
 				cptr->firsttime = currenttime;
-				cptr->lasttime = currenttime;
 				continue;
 			    }
 			if (IsServer(cptr) || IsConnecting(cptr) ||
 			    IsHandshake(cptr))
-				sendto_ops("No response from %s, closing link",
-					   get_client_name(cptr, FALSE));
+				sendto_flag(SCH_NOTICE,
+					    "No response from %s closing link",
+					    get_client_name(cptr, FALSE));
 			/*
 			 * this is used for KILL lines with time restrictions
 			 * on them - send a messgae to the user being killed
 			 * first.
 			 */
-			if (killflag && IsPerson(cptr))
-				sendto_ops("Kill line active for %s",
-					   get_client_name(cptr, FALSE));
+			if (kflag && IsPerson(cptr))
+			    {
+				sendto_flag(SCH_NOTICE,
+					    "Kill line active for %s",
+					    get_client_name(cptr, FALSE));
+				cptr->exitc = 'k';
+			    }
 
 #if defined(R_LINES) && defined(R_LINES_OFTEN)
-			if (IsPerson(cptr) && rflag)
-				sendto_ops("Restricting %s, closing link.",
+			else if (IsPerson(cptr) && rflag)
+			    {
+				sendto_flag(SCH_NOTICE,
+					   "Restricting %s, closing link.",
 					   get_client_name(cptr,FALSE));
+				cptr->exitc = 'r';
+			    }
 #endif
+			else
+				cptr->exitc = 'P';
 			(void)exit_client(cptr, cptr, &me, "Ping timeout");
 			continue;
 		    }
@@ -364,12 +426,49 @@ ping_timeout:
 		if (timeout < oldest || !oldest)
 			oldest = timeout;
 	    }
+	if (currenttime - lkill > 60)
+		lkill = currenttime;
 	if (!oldest || oldest < currenttime)
 		oldest = currenttime + PINGFREQUENCY;
+	if (oldest < currenttime + 2)
+		oldest += 2;
 	Debug((DEBUG_NOTICE,"Next check_ping() call at: %s, %d %d %d",
 		myctime(oldest), ping, oldest, currenttime));
-
 	return (oldest);
+}
+
+
+static	void	setup_me(mp)
+aClient	*mp;
+{
+	struct	passwd	*p;
+
+	p = getpwuid(getuid());
+	strncpyzt(mp->username, p->pw_name, sizeof(mp->username));
+	(void)get_my_name(mp, mp->sockhost, sizeof(mp->sockhost)-1);
+	if (mp->name[0] == '\0')
+		strncpyzt(mp->name, mp->sockhost, sizeof(mp->name));
+	mp->lasttime = mp->since = mp->firsttime = time(NULL);
+	mp->hopcount = 0;
+	mp->authfd = -1;
+	mp->confs = NULL;
+	mp->flags = 0;
+	mp->acpt = mp->from = mp;
+	mp->next = NULL;
+	mp->user = NULL;
+	mp->fd = -1;
+	SetMe(mp);
+	(void) make_server(mp);
+	(void) make_user(mp);
+	mp->user->flags |= FLAGS_OPER;
+	mp->serv->up = mp->name;
+	(void) strcpy(mp->user->server, mp->name);
+	strncpyzt(mp->user->username, p->pw_name, sizeof(mp->user->username));
+	(void) strcpy(mp->user->host, mp->name);
+
+	(void)add_to_client_hash_table(mp->name, mp);
+
+	setup_server_channels(mp);
 }
 
 /*
@@ -395,10 +494,10 @@ int	main(argc, argv)
 int	argc;
 char	*argv[];
 {
-	int	portarg = 0;
 	uid_t	uid, euid;
-	time_t	delay = 0, now;
+	time_t	delay = 0;
 
+	(void) myctime(time(NULL));	/* Don't ask, just *don't* ask */
 	sbrk0 = (char *)sbrk((size_t)0);
 	uid = getuid();
 	euid = geteuid();
@@ -416,10 +515,10 @@ char	*argv[];
 	    }
 	res_init();
 	if (chroot(DPATH))
-	  {
-	    (void)fprintf(stderr,"ERROR:  Cannot chdir/chroot\n");
-	    exit(5);
-	  }
+	    {
+		(void)fprintf(stderr,"ERROR:  Cannot chdir/chroot\n");
+		exit(5);
+	    }
 #endif /*CHROOTDIR*/
 
 	myargv = argv;
@@ -479,10 +578,6 @@ char	*argv[];
 		    case 'i':
 			bootopt |= BOOT_INETD|BOOT_AUTODIE;
 		        break;
-		    case 'p':
-			if ((portarg = atoi(p)) > 0 )
-				portnum = portarg;
-			break;
 		    case 't':
                         (void)setuid((uid_t)uid);
 			bootopt |= BOOT_TTY;
@@ -564,26 +659,13 @@ char	*argv[];
 	if (argc > 0)
 		return bad_command(); /* This should exit out */
 
-	clear_client_hash_table();
-	clear_channel_hash_table();
+	inithashtables();
 	initlists();
 	initclass();
 	initwhowas();
 	initstats();
 	open_debugfile();
-	if (portnum < 0)
-		portnum = PORTNUM;
-	me.port = portnum;
 	(void)init_sys();
-	me.flags = FLAGS_LISTEN;
-	if (bootopt & BOOT_INETD)
-	    {
-		me.fd = 0;
-		local[0] = &me;
-		me.flags = FLAGS_LISTEN;
-	    }
-	else
-		me.fd = -1;
 
 #ifdef USE_SYSLOG
 	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
@@ -596,38 +678,24 @@ char	*argv[];
 			configfile);
 		exit(-1);
 	    }
-	if (!(bootopt & BOOT_INETD))
-	    {
-		static	char	star[] = "*";
-		aConfItem	*aconf;
 
-		if ((aconf = find_me()) && portarg <= 0 && aconf->port > 0)
-			portnum = aconf->port;
-		Debug((DEBUG_ERROR, "Port = %d", portnum));
-		if (inetport(&me, star, portnum))
-			exit(1);
-	    }
-	else if (inetport(&me, "*", 0))
-		exit(1);
-
-	(void)setup_ping();
-	(void)get_my_name(&me, me.sockhost, sizeof(me.sockhost)-1);
-	if (me.name[0] == '\0')
-		strncpyzt(me.name, me.sockhost, sizeof(me.name));
-	me.hopcount = 0;
-	me.authfd = -1;
-	me.confs = NULL;
-	me.next = NULL;
-	me.user = NULL;
-	me.from = &me;
-	SetMe(&me);
-	make_server(&me);
-	(void)strcpy(me.serv->up, me.name);
-
-	me.lasttime = me.since = me.firsttime = time(NULL);
-	(void)add_to_client_hash_table(me.name, &me);
-
+	setup_me(&me);
 	check_class();
+
+	if (bootopt & BOOT_INETD)
+	    {
+		aClient	*tmp;
+
+		tmp = make_client(NULL);
+		tmp->fd = 0;
+		tmp->flags = FLAGS_LISTEN;
+		tmp->acpt = tmp;
+		tmp->from = tmp;
+		SetMe(tmp);
+		(void)strcpy(tmp->name, "*");
+		(void)inetport(tmp, "*", 0);
+		local[0] = tmp;
+	    }
 	if (bootopt & BOOT_OPER)
 	    {
 		aClient *tmp = add_connection(&me, 0);
@@ -635,6 +703,7 @@ char	*argv[];
 		if (!tmp)
 			exit(1);
 		SetMaster(tmp);
+		local[0] = tmp;
 	    }
 	else
 		write_pidfile();
@@ -644,78 +713,120 @@ char	*argv[];
 	syslog(LOG_NOTICE, "Server Ready");
 #endif
 
-	for (;;)
-	    {
-		now = time(NULL);
-		/*
-		** We only want to connect if a connection is due,
-		** not every time through.  Note, if there are no
-		** active C lines, this call to Tryconnections is
-		** made once only; it will return 0. - avalon
-		*/
-		if (nextconnect && now >= nextconnect)
-			nextconnect = try_connections(now);
-		/*
-		** DNS checks. One to timeout queries, one for cache expiries.
-		*/
-		if (now >= nextdnscheck)
-			nextdnscheck = timeout_query_list(now);
-		if (now >= nextexpire)
-			nextexpire = expire_cache(now);
-		/*
-		** take the smaller of the two 'timed' event times as
-		** the time of next event (stops us being late :) - avalon
-		** WARNING - nextconnect can return 0!
-		*/
-		if (nextconnect)
-			delay = MIN(nextping, nextconnect);
-		else
-			delay = nextping;
-		delay = MIN(nextdnscheck, delay);
-		delay = MIN(nextexpire, delay);
-		delay -= now;
-		/*
-		** Adjust delay to something reasonable [ad hoc values]
-		** (one might think something more clever here... --msa)
-		** We don't really need to check that often and as long
-		** as we don't delay too long, everything should be ok.
-		** waiting too long can cause things to timeout...
-		** i.e. PINGS -> a disconnection :(
-		** - avalon
-		*/
-		if (delay < 1)
-			delay = 1;
-		else
-			delay = MIN(delay, TIMESEC);
-		(void)read_message(delay);
-		
-		Debug((DEBUG_DEBUG ,"Got message(s)"));
-		
-		now = time(NULL);
-		/*
-		** ...perhaps should not do these loops every time,
-		** but only if there is some chance of something
-		** happening (but, note that conf->hold times may
-		** be changed elsewhere--so precomputed next event
-		** time might be too far away... (similarly with
-		** ping times) --msa
-		*/
-		if (now >= nextping)
-			nextping = check_pings(now);
+	while (1)
+		delay = io_loop(delay);
+}
 
-		if (dorehash)
-		    {
-			(void)rehash(&me, &me, 1);
-			dorehash = 0;
-		    }
-		/*
-		** Flush output buffers on all connections now if they
-		** have data in them (or at least try to flush)
-		** -avalon
-		*/
-		flush_connections(me.fd);
+
+io_loop(delay)
+time_t	delay;
+{
+	static	time_t	nextc = 0, nextactive = 0, lastl = 0;
+	time_t	now;
+
+	now = time(NULL);
+	/*
+	** We only want to connect if a connection is due,
+	** not every time through.  Note, if there are no
+	** active C lines, this call to Tryconnections is
+	** made once only; it will return 0. - avalon
+	*/
+	if (nextconnect && now >= nextconnect)
+		nextconnect = try_connections(now);
+	/*
+	** DNS checks. One to timeout queries, one for cache expiries.
+	*/
+	if (now >= nextdnscheck)
+		nextdnscheck = timeout_query_list(now);
+	if (now >= nextexpire)
+		nextexpire = expire_cache(now);
+	/*
+	** take the smaller of the two 'timed' event times as
+	** the time of next event (stops us being late :) - avalon
+	** WARNING - nextconnect can return 0!
+	*/
+	if (nextconnect)
+		delay = MIN(nextping, nextconnect);
+	else
+		delay = nextping;
+	delay = MIN(nextdnscheck, delay);
+	delay = MIN(nextexpire, delay);
+	delay -= now;
+	/*
+	** Adjust delay to something reasonable [ad hoc values]
+	** (one might think something more clever here... --msa)
+	** We don't really need to check that often and as long
+	** as we don't delay too long, everything should be ok.
+	** waiting too long can cause things to timeout...
+	** i.e. PINGS -> a disconnection :(
+	** - avalon
+	*/
+	if (delay < 1)
+		delay = 1;
+	else
+		delay = MIN(delay, TIMESEC);
+
+#ifdef	HUB
+	Debug((DEBUG_DEBUG, "delay for %d", delay));
+	if (now > nextc)
+	    {
+		(void)read_message(delay, &fdall);
+		nextc = now + HUB + 1;
 	    }
-    }
+	else
+	    {
+		if (now > nextactive)
+		    {
+			(void)read_message(0, &fdaa);
+			nextactive = now + HUB;
+		    }
+		(void)read_message(1, &fdas);
+	    }
+	if (now > lastl)
+	    {
+		decay_activity();
+		lastl = now;
+	    }
+#else
+	(void)read_message(delay, &fdall);
+#endif
+
+	Debug((DEBUG_DEBUG ,"Got message(s)"));
+
+	now = time(NULL);
+	/*
+	** ...perhaps should not do these loops every time,
+	** but only if there is some chance of something
+	** happening (but, note that conf->hold times may
+	** be changed elsewhere--so precomputed next event
+	** time might be too far away... (similarly with
+	** ping times) --msa
+	*/
+	if (now >= nextping)
+	    {
+		nextping = check_pings(now);
+		rehashed = 0;
+	    }
+
+	if (dorestart)
+		restart("Caught SIGINT");
+	if (dorehash)
+	    {
+		(void)rehash(&me, &me, 1);
+		dorehash = 0;
+	    }
+	/*
+	** Flush output buffers on all connections now if they
+	** have data in them (or at least try to flush)
+	** -avalon
+	*/
+	flush_connections(me.fd);
+#ifdef	DEBUGMODE
+	checklists();
+#endif
+
+	return delay;
+}
 
 /*
  * open_debugfile

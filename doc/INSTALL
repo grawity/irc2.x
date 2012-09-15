@@ -44,15 +44,11 @@ Overview of this document:
 	Define DEBUGMODE if you want to see the ircd debugging information
       as the daemon is running. Normally this function will be undefined
       as ircd produces a considerable amount of output.  DEBUGMODE must be
-      defined for either of -t or -x command line options to work.
+      defined for either of -t or -x command line options to work.  Defining
+      this induces a large overhead for the server as it does a large amount
+      of self diagnostics whilst running.
       
-   d) DPATH, SPATH, CPATH, MPATH, LPATH, PPATH
-
-        DPATH is provided so that the other pathnames (SPATH, CPATH, etc)
-      may be provided in just filename form.  When the server starts, it
-      chdir's to DPATH before chroot or any other file operation, making
-      it the "current directory" for the server.  This is where core files
-      will go if it core dumps.
+   d) SPATH, CPATH, MPATH, LPATH, PPATH
 
 	Define SPATH to be the directory path to ircd.  This is usually
       /usr/local/bin/ircd, unless you don't have installation permission
@@ -109,18 +105,20 @@ Overview of this document:
       explanatory in the config.h file.  It is *NOT* recommended that any
       of the file undef the line with "STOP STOP" in it be changed.
 
-3) Configure and compile the code.
+2) Using configure.
 
-      Edit the root Makefile for the server, uncomment/comment the correct
-   CFLAGS/IRCDLIBS lines as appropriate for your system.
-      Change DESTDIR to be the same as the path for DPATH in config.h.
-   Type "make". This will compile the server, the client, and the services.
-   At the end of this step, the server directory will contain 'ircd',
-   and the client directory will contain 'irc'.  To get the server installed,
-   type "make install" which will build a default m4 file for preprocessing,
-   copy example.conf and put the server all in DESTDIR.  The irc client and
-   a copy of the server will also be placed in BINDIR and the modes set
-   accordingly.
+     So that ircd/irc will compile and work correctly with your version of
+   Unix, it is necessary that you run "configure" first.  This will probe
+   your system for any peculiarities it has and setup the Makefile and a
+   file of default #define's (include/setup.h).  To change the default
+   directory into which ircd will install using "make install", invoke
+   configure using the --prefix=/dir command line option.
+
+3) Editting Makefile and compilation.
+
+      Once configure has been run, it is safe to edit the Makefile.  You
+   will most likely need to uncomment the correct IRCDLIBS and IRCLIBS
+   lines.  To now build and install the server, type "make && make install".
 
 4) The ircd.conf file.
 

@@ -48,7 +48,7 @@ static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
 #define	valloc malloc
 #endif
 
-int	dbufalloc = 0, dbufblocks = 0;
+int	dbufalloc = 0, dbufblocks = 0, poolsize = BUFFERPOOL;
 static	dbufbuf	*freelist = NULL;
 
 /* This is a dangerous define because a broken compiler will set DBUFSIZ
@@ -66,10 +66,10 @@ static	dbufbuf	*freelist = NULL;
 static dbufbuf *dbuf_alloc()
 {
 #if defined(VALLOC) && !defined(DEBUGMODE)
-	Reg1	dbufbuf	*dbptr, *db2ptr;
-	Reg2	int	num;
+	Reg	dbufbuf	*dbptr, *db2ptr;
+	Reg	int	num;
 #else
-	Reg1	dbufbuf *dbptr;
+	Reg	dbufbuf *dbptr;
 #endif
 
 	dbufalloc++;
@@ -78,7 +78,7 @@ static dbufbuf *dbuf_alloc()
 		freelist = freelist->next;
 		return dbptr;
 	    }
-	if (dbufalloc * DBUFSIZ > BUFFERPOOL)
+	if (dbufalloc * DBUFSIZ > poolsize)
 	    {
 		dbufalloc--;
 		return NULL;
@@ -116,7 +116,7 @@ static dbufbuf *dbuf_alloc()
 ** dbuf_free - return a dbufbuf structure to the freelist
 */
 static	void	dbuf_free(ptr)
-Reg1	dbufbuf	*ptr;
+Reg	dbufbuf	*ptr;
 {
 	dbufalloc--;
 	ptr->next = freelist;
@@ -149,9 +149,9 @@ dbuf	*dyn;
 char	*buf;
 int	length;
 {
-	Reg1	dbufbuf	**h, *d;
-	Reg2	int	nbr, off;
-	Reg3	int	chunk;
+	Reg	dbufbuf	**h, *d;
+	Reg	int	nbr, off;
+	Reg	int	chunk;
 
 	off = (dyn->offset + dyn->length) % DBUFSIZ;
 	nbr = (dyn->offset + dyn->length) / DBUFSIZ;

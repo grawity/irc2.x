@@ -1,0 +1,30 @@
+
+Commands are:
+
+SERVICE	<servicename> <server> <distribution> <type> <hopcount> :<info>
+
+	servicename -	same reles as for nickname
+	server -	only applicable for server-server connections
+	distribution -	mask (such as *.fi) through which service is
+			advertised
+	type -		service type, 1 = nick, 2 = note, etc
+	hopcount -	only applicable for server-server connections
+	info -		"real name"
+
+SERVLIST <mask>
+	returns list of service names which match mask.
+
+SERVSET <magic number>
+	integer value of `flagged' messages service wants a copy of
+
+SQUERY <servicename> :<text>
+	sends the message <text> to the closest server which matches
+	"servicename".
+
+To setup a service, the following is required:
+	* add an appropriate S-line to ircd.conf
+	* write your service to send "PASS <password>" and then
+	  "SERVICE ..."
+
+	* bingo!
+

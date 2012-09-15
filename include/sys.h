@@ -28,7 +28,10 @@
 #include "setup.h"
 #include <stdio.h>
 #include <sys/types.h>
-#include <sys/param.h>
+#ifndef CDEFSH
+#include "cdefs.h"
+#endif
+#include "bitypes.h"
 
 #ifdef	UNISTDH
 #include <unistd.h>
@@ -49,22 +52,17 @@
 #ifdef NOINDEX
 #define   index   strchr
 #define   rindex  strrchr
-/*
-extern	char	*index PROTO((char *, char));
-extern	char	*rindex PROTO((char *, char));
-*/
 #endif
+extern	char	*index __P((char *, char));
+extern	char	*rindex __P((char *, char));
 
 #ifdef AIX
-#include <sys/select.h>
+# include <sys/select.h>
 #endif
-#if defined(HPUX )|| defined(AIX)
-#include <time.h>
-#ifdef AIX
-#include <sys/time.h>
-#endif
+#if defined(HPUX )
+# include <time.h>
 #else
-#include <sys/time.h>
+# include <sys/time.h>
 #endif
 
 #if !defined(DEBUGMODE) || defined(CLIENT_COMPILE)

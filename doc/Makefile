@@ -20,8 +20,10 @@
 MANDIR=/usr/local/man
 
 all:
+	(cd m4ext; $(MAKE) all; cd ..)
 
 install: all
 	-../install -c -m 644 ircd.8 ${MANDIR}/man8
 	-../install -c -m 644 irc.1 ${MANDIR}/man1
+	(cd m4ext; $(MAKE) install; cd ..)
 

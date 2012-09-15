@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.21 4/13/94 1990, 1991 Armin Gruner;\
+static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
 1992, 1993 Darren Reed";
 #endif
 
@@ -45,7 +45,7 @@ char **save;
 char *str, *fs;
 {
     char *pos = *save;	/* keep last position across calls */
-    Reg1 char *tmp;
+    Reg char *tmp;
 
     if (str)
 	pos = str;		/* new string scan */
@@ -97,8 +97,10 @@ char *str, *fs;
 char *strerror(err_no)
 int err_no;
 {
+#ifndef SYS_ERRLIST_DECLARED
 	extern	char	*sys_errlist[];	 /* Sigh... hopefully on all systems */
 	extern	int	sys_nerr;
+#endif
 
 	static	char	buff[40];
 	char	*errp;
@@ -108,7 +110,7 @@ int err_no;
 	if (errp == (char *)NULL)
 	    {
 		errp = buff;
-		(void) sprintf(errp, "Unknown Error %d", err_no);
+		SPRINTF(errp, "Unknown Error %d", err_no);
 	    }
 	return errp;
 }
@@ -130,14 +132,14 @@ char	*inetntoa(in)
 char	*in;
 {
 	static	char	buf[16];
-	Reg1	u_char	*s = (u_char *)in;
-	Reg2	int	a,b,c,d;
+	Reg	u_char	*s = (u_char *)in;
+	Reg	int	a,b,c,d;
 
 	a = (int)*s++;
 	b = (int)*s++;
 	c = (int)*s++;
 	d = (int)*s++;
-	(void) sprintf(buf, "%d.%d.%d.%d", a,b,c,d );
+	(void)sprintf(buf, "%d.%d.%d.%d", a,b,c,d );
 
 	return buf;
 }
@@ -195,13 +197,13 @@ char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 		kill(p, 9);
 	}
 	write_pidfile();
-	(void)sprintf(corename, "core.%d", p);
+	SPRINTF(corename, "core.%d", p);
 	(void)rename("core", corename);
 	Debug((DEBUG_FATAL, "Dumped core : core.%d", p));
-	sendto_ops("Dumped core : core.%d", p);
+	sendto_flag(SCH_ERROR, "Dumped core : core.%d", p);
 	Debug((DEBUG_FATAL, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9));
-	sendto_ops(msg, p1, p2, p3, p4, p5, p6, p7, p8, p9);
-		(void)s_die();
+	sendto_flag(SCH_ERROR, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+	(void)s_die();
 }
 
 static	char	*marray[20000];
@@ -234,7 +236,7 @@ size_t	x;
 	bcopy((char *)&ret, ret, SZ_CH);
 	bcopy((char *)&x, ret + SZ_ST, SZ_ST);
 	bcopy("VAVA", ret + SZ_CHST + (int)x, 4);
-	Debug((DEBUG_MALLOC, "MyMalloc(%ld) = %#x", x, ret+8));
+	Debug((DEBUG_MALLOC, "MyMalloc(%ld) = %#x", x, ret + SZ_CHST));
 	for(i = 0, s = marray; *s && i < mindex; i++, s++)
 		;
  	if (i < 20000)
@@ -474,4 +476,87 @@ dgetsreturnbuf:
 	    }
 	*tail = '\0';
 	goto dgetsagain;
+}
+
+/*
+ * By Mika
+ */
+int	irc_sprintf(outp, formp, i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10)
+char	*outp;
+char	*formp;
+char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
+{
+	/* rp for Reading, wp for Writing, fp for the Format string */
+	/* we could hack this if we know the format of the stack */
+	char	*inp[11];
+	Reg	char	*rp, *fp, *wp, **pp = inp;
+	Reg	char	f;
+	Reg	int	myi;
+	int	i;
+
+	inp[0] = i0;
+	inp[1] = i1;
+	inp[2] = i2;
+	inp[3] = i3;
+	inp[4] = i4;
+	inp[5] = i5;
+	inp[6] = i6;
+	inp[7] = i7;
+	inp[8] = i8;
+	inp[9] = i9;
+	inp[10] = i10;
+
+	/*
+	 * just scan the format string and puke out whatever is necessary
+	 * along the way...
+	 */
+
+	for (i = 0, wp = outp, fp = formp; (f = *fp++); )
+		if (f != '%')
+			*wp++ = f;
+		else
+			switch (*fp++)
+			{
+ 			/* put the most common case at the top */
+			/* copy a string */
+			case 's':
+				for (rp = *pp++; (*wp++ = *rp++); )
+					;
+				--wp;
+				/* get the next parameter */
+				break;
+			/*
+			 * reject range for params to this mean that the
+			 * param must be within 100-999 and this +ve int
+			 */
+			case 'd':
+			case 'u':
+				myi = (int)*pp++;
+				if ((myi < 100) || (myi > 999))
+				    {
+					(void)sprintf(outp, formp, i0, i1, i2,
+						      i3, i4, i5, i6, i7, i8,
+						      i9, i10);
+					return -1;
+				    }
+
+				*wp++ = (char)(myi / 100 + (int) '0');
+				myi %= 100;
+				*wp++ = (char)(myi / 10 + (int) '0');
+				myi %= 10;
+				*wp++ = (char)(myi + (int) '0');
+				break;
+			case 'c':
+				*wp++ = (char)*pp++;
+				break;
+			case '%':
+				*wp++ = '%';
+				break;
+			default :
+				(void)sprintf(outp, formp, i0, i1, i2, i3, i4,
+					      i5, i6, i7, i8, i9, i10);
+				return -1;
+			}
+	*wp = '\0';
+	return wp - outp;
 }

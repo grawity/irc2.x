@@ -4,8 +4,8 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
-#include <strings.h>
+#include <stdlib.h>
+#include <string.h>
 
 extern char *getpass();
 

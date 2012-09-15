@@ -47,7 +47,7 @@ static	int	calls = 0;
 static	int	_match(mask, name)
 char	*mask, *name;
 {
-	Reg1	u_char	*m = (u_char *)mask, *n = (u_char *)name;
+	Reg	u_char	*m = (u_char *)mask, *n = (u_char *)name;
 	char	*ma = mask, *na = name;
 	int	wild = 0, q = 0;
 
@@ -137,7 +137,7 @@ char	*ma,*na;
 char	*collapse(pattern)
 char	*pattern;
 {
-	Reg1	char	*s = pattern, *s1, *t;
+	Reg	char	*s = pattern, *s1, *t;
 
 	if (BadPtr(pattern))
 		return pattern;
@@ -177,9 +177,9 @@ int	mycmp(s1, s2)
 char	*s1;
 char	*s2;
     {
-	Reg1	unsigned char	*str1 = (unsigned char *)s1;
-	Reg2	unsigned char	*str2 = (unsigned char *)s2;
-	Reg3	int	res;
+	Reg	unsigned char	*str1 = (unsigned char *)s1;
+	Reg	unsigned char	*str2 = (unsigned char *)s2;
+	Reg	int	res;
 
 	while ((res = toupper(*str1) - toupper(*str2)) == 0)
 	    {
@@ -197,9 +197,9 @@ char	*str1;
 char	*str2;
 int	n;
     {
-	Reg1	unsigned char	*s1 = (unsigned char *)str1;
-	Reg2	unsigned char	*s2 = (unsigned char *)str2;
-	Reg3	int		res;
+	Reg	unsigned char	*s1 = (unsigned char *)str1;
+	Reg	unsigned char	*s2 = (unsigned char *)str2;
+	Reg	int		res;
 
 	while ((res = toupper(*s1) - toupper(*s2)) == 0)
 	    {

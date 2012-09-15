@@ -242,7 +242,7 @@ void suspend_irc()
 {
 #if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20) || \
     defined(_SEQUENT_) || defined(linux) || defined(SVR4)
-	signal(SIGTSTP, (void(*)PROTO((int)))suspend_irc);
+	signal(SIGTSTP, (void(*)__P((int)))suspend_irc);
 #ifdef DOCURSES
                 if (termtype == CURSES_TERM) {
                         echo();

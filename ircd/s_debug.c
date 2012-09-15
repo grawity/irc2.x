@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.30 1/3/94 (C) 1988 University of Oulu, \
+static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -49,17 +49,8 @@ char	serveropts[] = {
 #ifdef	OPER_REHASH
 'E',
 #endif
-#ifdef	FOLLOW_IDENT_RFC
+#ifdef	NOTE_FORWARDER
 'f',
-#endif
-#ifdef	HIDE_FAKES
-'F',
-#endif
-#ifdef	SUN_GSO_BUG
-'g',
-#endif
-#ifdef	SHOW_GHOSTS
-'G',
 #endif
 #ifdef	HUB
 'H',
@@ -86,9 +77,6 @@ char	serveropts[] = {
 #ifdef	IDLE_FROM_MSG
 'M',
 #endif
-#ifdef	DELAY_NICKS
-'N',
-#endif
 #ifdef	CRYPT_OPER_PASSWORD
 'p',
 #endif
@@ -104,17 +92,11 @@ char	serveropts[] = {
 #ifdef	OPER_RESTART
 'R',
 #endif
-#ifdef	SECUNREG
-'s',
-#endif
 #ifdef	ENABLE_SUMMON
 'S',
 #endif
 #ifdef	OPER_REMOTE
 't',
-#endif
-#ifdef	TRACE_STATS
-'T',
 #endif
 #ifdef	IRCII_KLUDGE
 'u',
@@ -124,9 +106,6 @@ char	serveropts[] = {
 #endif
 #ifdef	VALLOC
 'V',
-#endif
-#ifdef	NOWRITEALARM
-'w',
 #endif
 #ifdef	UNIXPORT
 'X',
@@ -139,25 +118,21 @@ char	serveropts[] = {
 #endif
 '\0'};
 
-#include "numeric.h"
 #include "common.h"
 #include "sys.h"
+#include "numeric.h"
 #include "whowas.h"
 #include "hash.h"
 #include <sys/file.h>
 #ifdef HPUX
 #include <fcntl.h>
 #endif
-#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
-    !defined(__convex__)
-# include <sys/param.h>
-#endif
 #ifdef HPUX
 # include <sys/syscall.h>
 # define getrusage(a,b) syscall(SYS_GETRUSAGE, a, b)
 #endif
 #ifdef GETRUSAGE_2
-# ifdef SOL20
+# ifdef SVR4
 #  include <sys/time.h>
 #  include <sys/rusage.h>
 # endif
@@ -205,8 +180,8 @@ va_dcl
 	int	err = errno;
 
 #ifdef	USE_SYSLOG
-	if (level == DEBUG_ERROR)
-		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+	if (level == LOG_ERR)
+		syslog(LOG_ERR, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #endif
 	if ((debuglevel >= 0) && (level <= debuglevel))
 	    {
@@ -257,7 +232,10 @@ char	*nick;
 
 	if (getrusage(RUSAGE_SELF, &rus) == -1)
 	    {
+#ifndef SYS_ERRLIST_DECLARED
 		extern char *sys_errlist[];
+#endif
+
 		sendto_one(cptr,":%s NOTICE %s :Getruseage error: %s.",
 			   me.name, nick, sys_errlist[errno]);
 		return;
@@ -309,7 +287,7 @@ char	*nick;
 
 	if (times(&tmsbuf) == -1)
 	    {
-		sendto_one(cptr,":%s %d %s :times(2) error: %s.",
+		sendto_one(cptr, ":%s %d %s :times(2) error: %s.",
 			   me.name, RPL_STATSDEBUG, nick, strerror(errno));
 		return;
 	    }
@@ -344,12 +322,13 @@ char	*nick;
 	extern	aChannel	*channel;
 	extern	aClass	*classes;
 	extern	aConfItem	*conf;
+	extern	int	_HASHSIZE, _CHANNELHASHSIZE;
 
-	Reg1 aClient *acptr;
-	Reg2 Link *link;
-	Reg3 aChannel *chptr;
-	Reg4 aConfItem *aconf;
-	Reg5 aClass *cltmp;
+	Reg	aClient	*acptr;
+	Reg	Link	*link;
+	Reg	aChannel *chptr;
+	Reg	aConfItem *aconf;
+	Reg	aClass	*cltmp;
 
 	int	lc = 0,		/* local clients */
 		ch = 0,		/* channels */
@@ -384,7 +363,7 @@ char	*nick;
 		tot = 0;
 
 	count_whowas_memory(&wwu, &wwa, &wwam);
-	wwm = sizeof(aName) * NICKNAMEHISTORYLENGTH;
+	wwm = sizeof(aName) * ww_size;
 
 	for (acptr = client; acptr; acptr = acptr->next)
 	    {
@@ -436,6 +415,7 @@ char	*nick;
 		com += aconf->host ? strlen(aconf->host)+1 : 0;
 		com += aconf->passwd ? strlen(aconf->passwd)+1 : 0;
 		com += aconf->name ? strlen(aconf->name)+1 : 0;
+		com += aconf->ping ? sizeof(*aconf->ping) : 0;
 		com += sizeof(aConfItem);
 	    }
 
@@ -474,14 +454,14 @@ char	*nick;
 		   me.name, RPL_STATSDEBUG, nick, wwu, wwu*sizeof(anUser),
 		   wwa, wwam);
 	sendto_one(cptr, ":%s %d %s :Whowas array %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, NICKNAMEHISTORYLENGTH, wwm);
+		   me.name, RPL_STATSDEBUG, nick, ww_size, wwm);
 
 	totww = wwu*sizeof(anUser) + wwam + wwm;
 
 	sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, HASHSIZE,
-		   sizeof(aHashEntry) * HASHSIZE,
-		   CHANNELHASHSIZE, sizeof(aHashEntry) * CHANNELHASHSIZE);
+		   me.name, RPL_STATSDEBUG, nick, _HASHSIZE,
+		   sizeof(aHashEntry) * _HASHSIZE,
+		   _CHANNELHASHSIZE, sizeof(aHashEntry) * _CHANNELHASHSIZE);
 	db = dbufblocks * sizeof(dbufbuf);
 	sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
@@ -489,8 +469,8 @@ char	*nick;
 	rm = cres_mem(cptr);
 
 	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db + rm;
-	tot += sizeof(aHashEntry) * HASHSIZE;
-	tot += sizeof(aHashEntry) * CHANNELHASHSIZE;
+	tot += sizeof(aHashEntry) * _HASHSIZE;
+	tot += sizeof(aHashEntry) * _CHANNELHASHSIZE;
 
 	sendto_one(cptr, ":%s %d %s :Total: ww %d ch %d cl %d co %d db %d",
 		   me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, com, db);

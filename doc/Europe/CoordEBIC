@@ -1,6 +1,4 @@
 ############################################################################
-list updated the 18.06.1994
-############################################################################
 
 	If you like in future to establish a link inside the EBIC area,
 	please contact the coordinator of the affected toplevel domain.
@@ -12,17 +10,17 @@ list updated the 18.06.1994
 	These toplevel domains are currently participating EBIC:
 ############################################################################
 
- *.at *.ch *.de *.dk *.fi *.fr *.hr *.is *.it *.nl *.no *.pl *.se *.si *.uk
+  *.at  *.ch  *.de  *.dk  *.fi  *.fr  *.it  *.nl  *.no  *.pl  *.se  *.uk
 
 ############################################################################
-    The following national coordinators have been choosen for '94:
+    The following national coordinators have been choosen for 92/93:
 ############################################################################
 
 *.at	EASINET, ACONET
 	1. Tom		Tom Kovar		<Tom.Kovar@rcvie.co.at>
 
 *.ch	SWITCH, EUNET/CH
-	1. ksa		Karim Saouli		<Karim.Saouli@math.ethz.ch>
+	1. StarNet	Karim Saouli		<Karim.Saouli@epfl.ch>
 	2. Maxim	Maxim Samo		<samo@nessie.cs.id.ethz.ch>
 
 *.de	WIN, BelWue
@@ -41,34 +39,25 @@ list updated the 18.06.1994
 	1. Nono		Arnaud Girsch		<Arnaud.Girsch@insa-lyon.fr>
 	2. Le_Chat	Laurent Montaron	<irc@eurecom.fr>
 
-*.hr	CARNET
-	1. Mozz		Mario Mikocevic		<mozgy@smile.srce.hr>
-
-*.is	ISnet
-	1. ra		Richard Allen		<ra@os.is>
-
 *.it	CILEA
-	1. Mork		Franz Marcolla		<ghe1024@cdc8g5.cdc.polimi.it>
-	2. Allanon	Riccardo Facchetti	<riccardo@cdc8g5.cdc.polimi.it>
+	1. Allanon	Riccardo Facchetti	<riccardo@cdc835.cdc.polimi.it>
+	2. mAu		Maurizio Paoluzi	<paoluzi@mercurio.dm.unirm1.it>
 
 *.nl	SURFNET/NLNET
-	1. cor		Cor Bosman		<cor@xs4all.nl>
-	2. Dathes	Steven Hessing		<steven@nijenrode.nl>
+	1. scorpio	Cor Bosman		<bosman@gene.fwi.uva.nl>
+	2. Erwin	Erwin Bolwidt           <erwin@mars.let.uva.nl>
 
 *.no	UNINETT
-	1. Veggen	Vegard Engen		<vegard@idt.unit.no>
+	1. Veggen	Vegard Engen		<vegard@bih.no>
 
 *.pl	POLIP
 	1. Artur	Artur Jaroszek		<artur@vulcan.mimuw.edu.pl>
 
 *.se	SUNET
-	1. Omnion	Per Persson		<pp@solace.mh.se>
-	2. Sorg		Owe A Rasmussen		<ircadm@dd.chalmers.se>
-
-*.si	
-	1. Iztok	Iztok Umek		<Iztok.Umek@uni-lj.si>
+	1. Black	Christer H. Jansson	<svarten@solace.hsh.se>
+	2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
 
 *.uk	JANET, JIPS
-	1. jim_bob	James R. Grinter	<irc-ops-uk@iifeak.swan.ac.uk>
+	1. ScottM	Scott A. McIntyre       <scott@shrug.dur.ac.uk>
 
 
