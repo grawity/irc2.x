@@ -155,6 +155,7 @@ typedef struct User anUser;
 #define DEBUG_ERROR  1
 #define DEBUG_DNS    3
 #define DEBUG_NOTICE 4
+#define DEBUG_SEND   8
 #define DEBUG_DEBUG  9
 
 #define IGNORE_TOTAL    3
@@ -284,16 +285,6 @@ typedef struct SLink {
   unsigned char flags;
 } Link;
 
-/* banlist structure for channels */
-
-#define BANIDLEN NICKLEN+USERLEN+HOSTLEN+3
-
-typedef struct abanlist {
-	struct abanlist *next;
-	char banid[BANIDLEN];
-	aClient *banner;
-     } BanList;
-
 /* channel structure */
 
 struct Channel
@@ -304,7 +295,7 @@ struct Channel
 	int users;
 	Link *members;
 	Link *invites;
-	BanList *banlist;
+	Link *banlist;
 	char chname[1];
     };
 

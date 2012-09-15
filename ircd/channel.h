@@ -51,4 +51,4 @@ extern int can_join PROTO((aClient *, aChannel *));
 extern void remove_user_from_channel PROTO((aClient *, aChannel *));
 
 extern void add_invite PROTO((aClient *, aChannel *));
-extern void del_invite PROTO((aClient *));
+extern void del_invite PROTO((aClient *, aChannel *));

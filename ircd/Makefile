@@ -31,8 +31,8 @@ INCLUDE=../include
 # CFLAGS= -g -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE}
 CFLAGS= -g -I${INCLUDE}
 #use the following on SUN OS without nameserver libraries inside libc
-#NOTE: most dont have the resolver libraries inside libc
-IRCDLIBS= -lresolv
+##NOTE: most dont have the resolver libraries inside libc
+#IRCDLIBS= -lresolv
 #
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s

@@ -52,7 +52,7 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-#if MIPS || pyr
+#if MIPS || pyr || apollo
 char *malloc(), *calloc();
 void free();
 #else

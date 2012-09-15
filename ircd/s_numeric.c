@@ -19,18 +19,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: s_numeric.c,v 6.1 1991/07/04 21:05:33 gruner stable gruner $
- *
- * $Log: s_numeric.c,v $
- * Revision 6.1  1991/07/04  21:05:33  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:49  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 char numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 
 #include "config.h"

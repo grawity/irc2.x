@@ -18,19 +18,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: date.c,v 6.1 1991/07/04 21:05:15 gruner stable gruner $
- *
- * $Log: date.c,v $
- * Revision 6.1  1991/07/04  21:05:15  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:37  gruner
- * frozen beta revision 2.6.1
- *
- */
-
-char date_id[]="date.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char date_id[]="date.c v2.0 (c) 1988 University of Oulu, Computing Centers\
+ and Jarkko Oikarinen";
 
 #include <stdio.h>
 #include "config.h"

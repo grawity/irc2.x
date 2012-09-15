@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: s_conf.c,v 6.1 1991/07/04 21:05:27 gruner stable gruner $
- *
- * $Log: s_conf.c,v $
- * Revision 6.1  1991/07/04  21:05:27  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:44  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 20 Jun 1990
  * Added gruner's overnight fix..
  */
@@ -492,14 +480,14 @@ initconf(rehashing)
 int rehashing;
     {
 	FILE *fd;
-	char line[256], *tmp, c[80];
+	char line[512], *tmp, c[80];
 	int ccount = 0, ncount = 0;
 	aConfItem *aconf;
 	struct hostent *hp;
 
 	if (!(fd = fopen(configfile,"r")))
 		return(-1);
-	while (fgets(line,255,fd))
+	while (fgets(line,sizeof(line)-1,fd))
 	    {
 		if (line[0] == '#' || line[0] == '\n' ||
 		    line[0] == ' ' || line[0] == '\t')

@@ -280,7 +280,7 @@ char *par6, *par7, *par8, *par9, *par10, *par11;
 #endif
   sprintf(sendbuf, pattern,
 	  par1, par2, par3, par4, par5, par6, par7, par8, par9, par10, par11);
-  debug(DEBUG_NOTICE,"Sending [%s] to %s", sendbuf,to->name);
+  debug(DEBUG_SEND,"Sending [%s] to %s", sendbuf,to->name);
   strcat(sendbuf, NEWLINE);
   if (to->from)
     to = to->from;

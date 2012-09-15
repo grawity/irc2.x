@@ -18,15 +18,9 @@
  */
 
 /*
- * $Id: numeric.h,v 6.1 1991/07/04 21:04:31 gruner stable gruner $
+ * -- Avalon -- 12 Jan 1992
  *
- * $Log: numeric.h,v $
- * Revision 6.1  1991/07/04  21:04:31  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:03  gruner
- * frozen beta revision 2.6.1
- *
+ * Added RPL_TRACELINK
  */
 
 /*
@@ -162,6 +156,7 @@
 
 #define RPL_TIME             391
 
+#define RPL_TRACELINK        200
 #define RPL_TRACECONNECTING  201
 #define RPL_TRACEHANDSHAKE   202
 #define RPL_TRACEUNKNOWN     203

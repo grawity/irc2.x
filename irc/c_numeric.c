@@ -316,23 +316,34 @@ char *parv[];
 		m_newnamreply(cptr, sptr, parc, parv);
 		break;
 	    case RPL_BANLIST:
-		sprintf(mybuf, "*** %s has banned %s on %s",
-			parv[5], parv[4], parv[3]);
+		sprintf(mybuf, "*** %s is banned on %s",
+			parv[4], parv[3]);
+		break;
+	    case RPL_TRACELINK:
+		sprintf(mybuf,"%s<%s> Link => %s", parv[0], parv[3], parv[4]);
+		break;
+	    case RPL_TRACESERVER:
+		if (parc <= 5)
+			sprintf(mybuf,"*** %s Class: %s %s: %s",
+				parv[0], parv[3], parv[2], parv[4]);
+		else
+			sprintf(mybuf,"*** %s %s Class: %s %s (%s %s)",
+				parv[0], parv[2], parv[3], parv[6],
+				parv[4], parv[5]);
 		break;
 	    case RPL_TRACECONNECTING:
 	    case RPL_TRACEHANDSHAKE:
 	    case RPL_TRACEUNKNOWN:
 	    case RPL_TRACEOPERATOR:
 	    case RPL_TRACEUSER:
-	    case RPL_TRACESERVER:
 	    case RPL_TRACESERVICE:
 	    case RPL_TRACENEWTYPE:
-		sprintf(mybuf,"*** %s: %s Class: %s %4s: %s",
-			parv[0], parv[4], parv[3], parv[5]);
+		sprintf(mybuf,"*** %s Class: %s %s",
+			parv[0], parv[3], parv[2], parv[4]);
 		break;
 	    case RPL_TRACECLASS:
-		sprintf(mybuf,"*** %s: %s Class: %s Links: %s",
-			parv[0], parv[4], parv[5]);
+		sprintf(mybuf,"*** %s Class: %s Links: %s",
+			parv[0], parv[3], parv[4]);
 		break;
 	    case RPL_STATSLINKINFO:
 		sprintf(mybuf,"*** %s: %s %s %s %s %s %s %s",

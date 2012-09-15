@@ -24,7 +24,6 @@ char c_bsd_id[] = "c_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
-#include <netinet/in.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <signal.h>

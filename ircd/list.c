@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: list.c,v 6.1 1991/07/04 21:05:19 gruner stable gruner $
- *
- * $Log: list.c,v $
- * Revision 6.1  1991/07/04  21:05:19  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:39  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 20 Jun 1990
  * extern void free() fixed as suggested by
  * gruner@informatik.tu-muenchen.de
@@ -151,8 +139,10 @@ aClient	*cptr;
 {
 	if (cptr->prev)
 		cptr->prev->next = cptr->next;
-	else
+	else {
 		client = cptr->next;
+		client->prev = NULL;
+	}
 	if (cptr->next)
 		cptr->next->prev = cptr->prev;
 	if (cptr->user) {

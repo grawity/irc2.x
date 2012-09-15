@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: s_bsd.c,v 6.1 1991/07/04 21:05:25 gruner stable gruner $
- *
- * $Log: s_bsd.c,v $
- * Revision 6.1  1991/07/04  21:05:25  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:43  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 07 Jul 1990
  * Added jlp@hamblin.byu.edu's debugtty fix
  */
@@ -399,7 +387,7 @@ int flags, do_server;
         for(i = 0; host->h_addr_list[i]; i++)
 	 {
 	  debug(DEBUG_DNS,"Found host %s for %s",
-		inet_ntoa(host->h_addr_list[i]), cptr->name);
+		inet_ntoa(&host->h_addr_list[i]), cptr->name);
 	  if(!bcmp(host->h_addr_list[i], &(addr.sin_addr), host->h_length))
 	    {
 	      strncpyzt(cptr->sockhost, cptr->name, sizeof(cptr->sockhost));
@@ -479,7 +467,7 @@ aClient *cptr;
     sendto_one(cptr, "PASS %s", aconf->passwd);
 
   aconf = find_conf(cptr->confs, (char *) 0, CONF_NOCONNECT_SERVER);
-  sendto_one(cptr, ":%s SERVER %s 1 %s",
+  sendto_one(cptr, ":%s SERVER %s 1 :%s",
 		me.name, my_name_for_link(me.name, aconf), me.info);
 
   return (cptr->flags & FLAGS_DEADSOCKET) == 0;
@@ -631,12 +619,13 @@ read_message(buffer, buflen, from, delay)
       for (i = 0; i <= highest_fd; i++)
 	if (cptr = local[i])
 	  {
-	    if (!IsMe(cptr))
+	    if (!IsMe(cptr)) {
 	      if (cptr->since > tval) /* find time till we can next read
 					 from this connection. -avalon */
 		delay2 = cptr->since - tval;
 	      else
 		FD_SET(i, &read_set);
+	    }
 	    if (DBufLength(&cptr->sendQ) > 0 || IsConnecting(cptr))
 	      FD_SET(i, &write_set);
 	  }
@@ -720,10 +709,7 @@ read_message(buffer, buflen, from, delay)
       nfds--;
       if ((length = read(i, buffer, buflen)) > 0) {
 	*from = cptr;
-	if (cptr->since <= tval)
-	  cptr->since = tval;
-	if (IsRegistered(cptr))
-		cptr->lasttime = now;
+	cptr->since = cptr->lasttime = now;
 	cptr->flags &= ~FLAGS_PINGSENT;
 	dopacket(cptr, buffer, length);
 	continue;

@@ -132,6 +132,7 @@ Overview of this document:
    8.  Excluded machines        (Q)
    9.  Connection Classes       (Y)
   10.  Leaf connections         (L)
+  11.  Service connections      (S)
 
 
    1. SERVER CONNECTIONS:  How to connect to other servers
@@ -675,6 +676,53 @@ Field: 1 2 3       4
    Field 4 is the only 'active' field in the L-line at the moment.
    The <server name> given is that for which you want to enforce leaf-like
    attributes upon.
+
+ 11. Service Connections
+
+  Introduction.
+   The Service is a special kind of IRC client. It does not have the full
+   abilities of a normal user but can behave in a more active manner than
+   a normal client. Services as they stand now are not fully implemented.
+   The following line can be added to your ircd.conf file to enable a
+   service:
+  
+          S:<TARGET Host Mask>:<password>:<service_name>
+  Field:  1          2             3          4
+
+  Explanation:
+
+    Field 2:
+	The host mask should be set to match the hosts(s) from which the
+	service will be connecting from. This may be either an IP# or full
+	name (prefered).
+
+   Field 3:
+	This is the password which must be passed in the SERVICE command.
+ 
+   Field 4:
+	The 'service name' is only used for the purpose of finding the
+	right S-line from the ircd.conf file for password matching. The
+	actual service name used is that set by NICK commands prior to
+	SERVICE being sent.
+
+   To connect a service to your server, you must first create an S-line
+   entry in your ircd.conf file and get your server to read this in (ie
+   rehash or reboot). Once your server has updated itself, you can then
+   attempt to register your connection as a service.
+   Registering as a service is similar to registering as a normal user
+   except that you must send NICK first and then SERVICE. The service
+   command should look something like this:
+
+	SERVICE secretpassword referencename :Service information
+
+   A successfull registering of a service at the server will result in
+   a RPL_YOURESERVICE (383) being sent back to you. Any other reply as
+   a result of sending service indicates an error has occured.
+
+   A service is not a very useful sort of client, it cannot join channels
+   or issue certain commands although most are available to it. Services,
+   however, are not affected by flood control. It is therefore wise to
+   oversee the use of S-lines with some care.
 
 Appendix A: Difference between IP addresses and hostnames
 

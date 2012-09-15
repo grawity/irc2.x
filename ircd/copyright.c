@@ -1,16 +1,4 @@
 /*
- * $Id: copyright.c,v 6.1 1991/07/04 21:05:14 gruner stable gruner $
- *
- * $Log: copyright.c,v $
- * Revision 6.1  1991/07/04  21:05:14  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:36  gruner
- * frozen beta revision 2.6.1
- *
- */
-
-/*
  * copyright.c:
  *	include a copyright notice in the irc binaries.
  */

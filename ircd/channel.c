@@ -18,18 +18,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: channel.c,v 6.1 1991/07/04 21:05:10 gruner stable gruner $
- *
- * $Log: channel.c,v $
- * Revision 6.1  1991/07/04  21:05:10  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:33  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 /* -- Jto -- 09 Jul 1990
  * Bug fix
  */
@@ -43,7 +31,8 @@
  * Moved is_full() from list.c
  */
 
-char channel_id[] = "channel.c v2.0 (c) 1990 University of Oulu, Computing Center and Jarkko Oikarinen";
+char channel_id[] = "channel.c v2.0 (c) 1990 University of Oulu, Computing\
+ Center and Jarkko Oikarinen";
 
 #include <stdio.h>
 #include "struct.h"
@@ -61,9 +50,10 @@ extern aClient *find_person(), me, *find_client();
 extern Link *find_user_link();
 
 extern aChannel *hash_find_channel();
-static void sub1_from_channel(), add_banid(), del_banid();
+static void sub1_from_channel();
+static int add_banid(), del_banid();
 static int set_mode();
-static BanList *is_banned();
+static Link *is_banned();
 
 static char *PartFmt = ":%s PART %s";
 static char namebuf[NICKLEN+USERLEN+HOSTLEN+3];
@@ -127,56 +117,58 @@ char *nick, *name, *host;
  */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
-static void add_banid(cptr, chptr, banid)
-aClient *cptr;
+static int add_banid(chptr, banid)
 aChannel *chptr;
 char *banid;
     {
-	Reg1 BanList *ban;
+	Reg1 Link *ban;
 
-	ban = (BanList *)MyMalloc(sizeof(BanList));
-	bzero(ban, sizeof(BanList));
+	for (ban = chptr->banlist; ban; ban = ban->next)
+		if (mycmp(banid, ban->value.cp)==0)
+			return -1;
+	ban = (Link *)MyMalloc(sizeof(Link));
+	bzero(ban, sizeof(Link));
 	ban->next = chptr->banlist;
-	strncpy(ban->banid, banid, BANIDLEN);
-	ban->banner = cptr;
+	ban->value.cp = (char *)MyMalloc(strlen(banid)+1);
+	strcpy(ban->value.cp, banid);
 	chptr->banlist = ban;
+	return 0;
     }
 
 /*
  * del_banid - delete an id belonging to cptr
  * if banid is null, deleteall banids belonging to cptr.
  */
-static void del_banid(cptr, chptr, banid)
-aClient *cptr;
+static int del_banid(chptr, banid)
 aChannel *chptr;
 char *banid;
     {
-	Reg1 BanList **ban = NULL;
-	Reg2 BanList *tmp = NULL;
+	Reg1 Link **ban = NULL;
+	Reg2 Link *tmp = NULL;
 
+	if (!chptr || !banid)
+		return -1;
 	for (ban = &(chptr->banlist); *ban; ) {
 		tmp = *ban;
-		if (!banid && (tmp->banner != cptr)) {
-			ban = &(tmp->next);
-			continue;
-		    }
-		if (!banid || mycmp(banid, tmp->banid)==0) {
+		if (mycmp(banid, tmp->value.cp)==0) {
 			*ban = tmp->next;
+			free(tmp->value.cp);
 			free(tmp);
 		    }
 		else
 			ban = &(tmp->next);
 	    }
+	return 0;
     }
 
 /*
  * is_banned - returns a pointer to the ban structure if banned else NULL
  */
-static BanList *is_banned(cptr, chptr)
+static Link *is_banned(cptr, chptr)
 aClient *cptr;
 aChannel *chptr;
     {
-	Reg1 BanList *tmp;
+	Reg1 Link *tmp;
 
 	if (!IsPerson(cptr))
 		return NULL;
@@ -185,7 +177,7 @@ aChannel *chptr;
 			    cptr->user->host);
 
 	for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-		if (matches(tmp->banid, namebuf)==0)
+		if (matches(tmp->value.cp, namebuf)==0)
 			break;
 	return (tmp);
     }
@@ -324,8 +316,7 @@ void send_channel_modes(cptr, chptr)
 aClient *cptr;
 aChannel *chptr;
     {
-	Reg1 Link *addops;
-	Reg2 BanList *bantmp;
+	Reg1 Link *link;
 	aClient *acptr;
 	char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN], *cp;
 	int count = 0, send = 0;
@@ -335,12 +326,12 @@ aChannel *chptr;
 	cp = modebuf + strlen(modebuf);
 	if (*parabuf)	/* mode +l xx */
 		count = 1;
-	for (addops = chptr->members ; addops; )
+	for (link = chptr->members ; link; )
 	    {
-		acptr = addops->value.cptr;
+		acptr = link->value.cptr;
 		if (!is_chan_op(acptr, chptr))
 		    {
-			addops = addops->next;
+			link = link->next;
 			continue;
 		    }
 		if (strlen(parabuf) + strlen(acptr->name) + 10 <
@@ -351,7 +342,35 @@ aChannel *chptr;
 			count++;
 			*cp++ = 'o';
 			*cp = '\0';
-			addops = addops->next;
+			link = link->next;
+		    }
+		else if (*parabuf)
+			send = 1;
+		if (count == 3)
+			send = 1;
+		if (send)
+		    {
+			sendto_one(cptr, ":%s MODE %s %s %s",
+				   me.name, chptr->chname, modebuf, parabuf);
+			send = 0;
+			count = 0;
+			*parabuf = '\0';
+			cp = modebuf;
+			*cp++ = '+';
+			*cp = '\0';
+		    }
+	    }
+	for (link = chptr->banlist ; link; )
+	    {
+		if (strlen(parabuf) + strlen(acptr->name) + 10 <
+		    MODEBUFLEN)
+		    {
+			strcat(parabuf, " ");
+			strcat(parabuf, link->value.cp);
+			count++;
+			*cp++ = 'b';
+			*cp = '\0';
+			link = link->next;
 		    }
 		else if (*parabuf)
 			send = 1;
@@ -372,18 +391,6 @@ aChannel *chptr;
 	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   me.name, chptr->chname, modebuf, parabuf);
-
-	for (bantmp = chptr->banlist ; bantmp; bantmp = bantmp->next)
-	    {
-		acptr = bantmp->banner;
-		if (IsServer(acptr))
-			sendto_one(cptr, ":%s MODE %s +b %s",
-				   me.name, chptr->chname, bantmp->banid);
-		else
-			sendto_one(cptr, ":%s MODE %s +b %s",
-				   is_chan_op(acptr, chptr) ? acptr->name :
-				   me.name, chptr->chname, bantmp->banid);
-	    }
     }
 
 
@@ -552,12 +559,12 @@ char *parabuf;
 	}
 	count++;
       } else if (chptr) {
-	  Reg1 BanList *tmp;
+	  Reg1 Link *tmp;
 
 	  for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-	    sendto_one(cptr, ":%s %d %s %s %s %s",
+	    sendto_one(cptr, ":%s %d %s %s %s",
 		       me.name, RPL_BANLIST, cptr->name, chptr->chname,
-		       tmp->banid, tmp->banner->name);
+		       tmp->value.cp);
 	  sendto_one(cptr, ":%s %d %s :End of Channel Ban List",
 		     me.name, RPL_ENDOFBANLIST, cptr->name);
       }
@@ -701,8 +708,7 @@ char *parabuf;
     while (addban) {
       tmplink = addban;
       addban = addban->next;
-      if (strlen(parabuf) + strlen(tmplink->value.cp) + 14 < MODEBUFLEN) {
-	*(modebuf++) = 'b';
+      if (strlen(parabuf) + strlen(tmplink->value.cp) + 14 < MODEBUFLEN)
 	if (ischop) {
 	  char *nick, *user, *host, *buf;
 	  nick = tmplink->value.cp;
@@ -712,11 +718,12 @@ char *parabuf;
 	  if (user)
 	    *user++ = '\0';
 	  buf = make_nick_user_host(nick, user, host);
-	  add_banid(cptr, chptr, buf);
-	  strcat(parabuf, buf);
-	  strcat(parabuf, " ");
-	}
-      }
+	  if (!add_banid(chptr, buf)) {
+	    *(modebuf++) = 'b';
+	    strcat(parabuf, buf);
+	    strcat(parabuf, " ");
+	  }
+        }
       free(tmplink);
     }
   }
@@ -728,13 +735,13 @@ char *parabuf;
     while (delban) {
       tmplink = delban;
       delban = delban->next;
-      if (strlen(parabuf) + strlen(tmplink->value.cp) + 10 < MODEBUFLEN) {
-	*(modebuf++) = 'b';
-	if (ischop)
-	  del_banid(cptr, chptr, tmplink->value.cp);
-	strcat(parabuf, tmplink->value.cp);
-	strcat(parabuf, " ");
-      }
+      if (strlen(parabuf) + strlen(tmplink->value.cp) + 10 < MODEBUFLEN)
+	if (ischop) {
+	  del_banid(chptr, tmplink->value.cp);
+	  *(modebuf++) = 'b';
+	  strcat(parabuf, tmplink->value.cp);
+	  strcat(parabuf, " ");
+	}
       free(tmplink);
     }
   }
@@ -805,7 +812,7 @@ int flag;
 	  chptr->mode.limit = 0;
 	  chptr->members = (Link *)NULL;
 	  chptr->invites = (Link *)NULL;
-	  chptr->banlist = (BanList *)NULL;
+	  chptr->banlist = (Link *)NULL;
 	  if (channel)
 	    channel->prevch = chptr;
 	  chptr->prevch = NullChn;
@@ -883,8 +890,8 @@ static void sub1_from_channel(xchptr)
 aChannel *xchptr;
     {
 	Reg1 aChannel *chptr = xchptr;
-	Reg2 BanList *btmp;
-	BanList *obtmp;
+	Reg2 Link *btmp;
+	Link *obtmp;
 
 	if (--chptr->users <= 0) {
 	  Link *oldinv = (Link *)NULL, *inv = chptr->invites;
@@ -895,7 +902,7 @@ aChannel *xchptr;
 	    free(oldinv);
 	  }
 	  btmp = chptr->banlist;
-	  while (btmp != (BanList *)NULL) {
+	  while (btmp != (Link *)NULL) {
 	    obtmp = btmp;
 	    btmp = btmp->next;
 	    free(obtmp);

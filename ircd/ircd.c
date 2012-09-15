@@ -18,19 +18,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: ircd.c,v 6.1 1991/07/04 21:05:17 gruner stable gruner $
- *
- * $Log: ircd.c,v $
- * Revision 6.1  1991/07/04  21:05:17  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:38  gruner
- * frozen beta revision 2.6.1
- *
- */
-
-char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center and Jarkko Oikarinen";
+char ircd_id[] = "ircd.c v2.0 (c) 1988 University of Oulu, Computing Center\
+ and Jarkko Oikarinen";
 
 #include "struct.h"
 #include "common.h"
@@ -129,7 +118,7 @@ long currenttime;
   int con_class = 0;
   
   connecting = FALSE;
-  debug(DEBUG_DEBUG,"Connection check at   : %s", myctime(currenttime));
+  debug(DEBUG_NOTICE,"Connection check at   : %s", myctime(currenttime));
   for (aconf = conf; aconf; aconf = aconf->next )
     { /* Also when already connecting! (update holdtimes) --SRB */
       if (!(aconf->status & CONF_CONNECT_SERVER) || aconf->port <= 0)
@@ -180,7 +169,7 @@ long currenttime;
       sendto_ops("Connection to %s[%s] activated.",
 		 con_conf->name, con_conf->host);
   }
-  debug(DEBUG_DEBUG,"Next connection check : %s", myctime(next));
+  debug(DEBUG_NOTICE,"Next connection check : %s", myctime(next));
   return (next);
 }
 
@@ -196,7 +185,7 @@ long currenttime;
 #endif
   char reply[128];
   int ping, smallp = 0, i;
-  long oldest = currenttime;
+  long oldest = 0;
 
   for (i = 0; i < MAXCONNECTIONS; i++)
     {
@@ -225,7 +214,7 @@ long currenttime;
 	smallp = ping;
       else if (ping < smallp)
 	smallp = ping;
-      if (killflag || ((currenttime - cptr->since) > ping)
+      if (killflag || ((currenttime - cptr->lasttime) > ping)
 #ifdef R_LINES_OFTEN
 	  || rflag
 #endif
@@ -274,16 +263,14 @@ long currenttime;
 	  sendto_one(cptr, "PING %s", me.name);
 	}
       }
-      if (oldest > cptr->lasttime)
-	oldest = cptr->lasttime;
+      if (!oldest || oldest > (cptr->lasttime+ping))
+	oldest = cptr->lasttime+ping;
       if (killflag == ERR_YOUWILLBEBANNED && IsPerson(cptr))
 	sendto_one(cptr, reply, me.name, killflag, cptr->name);
     }
-  if (smallp <= 0)
-    smallp = PINGFREQUENCY;
-    debug(DEBUG_DEBUG,"Next check_ping() call at: %s",
-	  myctime(oldest + smallp));
-  return (oldest + smallp);
+    debug(DEBUG_NOTICE,"Next check_ping() call at: %s, %d %d %d",
+	  myctime(oldest + smallp),smallp,oldest,currenttime);
+  return (oldest);
 }
 
 /*
@@ -313,7 +300,7 @@ char *argv[];
 	aClient *cptr;
 	int length;		/* Length of message received from client */
 	char buffer[BUFSIZE];
-	long delay, now;
+	long delay=0, now;
 	static int open_log();
 
 	myargv = argv;
@@ -455,7 +442,7 @@ char *argv[];
 	}
 	else
 	  write_pidfile();
-	debug(DEBUG_DEBUG,"Server ready...");
+	debug(DEBUG_NOTICE,"Server ready...");
 	for (;;)
 	    {
 		now = time(NULL);
