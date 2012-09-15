@@ -1079,10 +1079,9 @@ aChannel *chptr;
 
 	cp = modebuf;
 	send = count = 0;
-	*cp++ = '+';
 	*cp = '\0';
+	*cp++ = '+';
 	*parabuf = '\0';
-
 	for (addops = chptr->members; addops; addops = addops->next)
 	    {
 		if (!IsChanOp((aClient *)addops->value, chptr))
@@ -1092,7 +1091,6 @@ aChannel *chptr;
 		    MODEBUFLEN)
 		    {
 			*cp++ = 'o';
-			*cp = '\0';
 			strcat(parabuf, ((aClient *)(addops->value))->name);
 			strcat(parabuf, " ");
 			count++;
@@ -1108,8 +1106,8 @@ aChannel *chptr;
 			send = count = 0;
 			cp = modebuf;
 			*parabuf = '\0';
-			*cp++ = '+';
 			*cp = '\0';
+			*cp++ = '+';
 		    }
 	    }
 	if (*parabuf)

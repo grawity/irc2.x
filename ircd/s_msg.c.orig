@@ -479,21 +479,8 @@ char *parv[];
 		** same nick--purge this NICK from the system
 		** with a KILL... >;)
 		*/
-		/*
-		** The client indicated by 'acptr' is dead meat, give
-		** at least some indication of the reason why we are just
-		** dropping it cold. ERR_NICKNAMEINUSE is not exactly the
-		** right, should have something like ERR_NICKNAMECOLLISION..
-		*/
-		sendto_one(acptr,
-			   ":%s %d %s %s :Nickname collision, sorry.",
-			   me.name, ERR_NICKNAMEINUSE,
-			   acptr->name, acptr->name);
 		if (sptr == cptr)
 		    {
-			sendto_ops("Nick collision on %s(%s <- %s)",
-				   acptr->name, acptr->from->name,
-				   GetClientName(cptr, FALSE));
 			/*
 			** A new NICK being introduced by a neighbouring
 			** server (e.g. message type "NICK new" received)
@@ -520,9 +507,6 @@ char *parv[];
 		** must be killed from the incoming connection, and "old" must
 		** be purged from all outgoing connections.
 		*/
-		sendto_ops("Nick change collision from %s to %s(%s <- %s)",
-			   sptr->name, acptr->name, acptr->from->name,
-			   GetClientName(cptr, FALSE));
 		sendto_serv_butone(cptr, /* KILL old from outgoing servers */
 				   "KILL %s :%s(%s(%s) <- %s)",
 				   sptr->name,
@@ -530,6 +514,8 @@ char *parv[];
 				   acptr->from->name,
 				   acptr->name,
 				   GetClientName(cptr, FALSE));
+		acptr->flags |= FLAGS_KILLED;
+		ExitClient((aClient *)NULL,acptr,&me,"Nick collision(new)");
 		sendto_one(cptr, /* Kill new from incoming link */
 			   "KILL %s :%s(%s <- %s(%s))",
 			   acptr->name,
@@ -537,8 +523,6 @@ char *parv[];
 			   acptr->from->name,
 			   GetClientName(cptr, FALSE),
 			   sptr->name);
-		acptr->flags |= FLAGS_KILLED;
-		ExitClient((aClient *)NULL,acptr,&me,"Nick collision(new)");
 		sptr->flags |= FLAGS_KILLED;
 		return ExitClient(cptr,sptr,&me,"Nick collision(old)");
 	    }

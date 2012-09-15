@@ -29,7 +29,7 @@ INCLUDEDIR=../include
 CFLAGS= -I$(INCLUDEDIR) -g
 
 #use the following on SUN OS without nameserver libraries inside libc
-# IRCDLIBS=-lresolv
+IRCDLIBS=-lresolv
 #
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
@@ -38,7 +38,7 @@ CFLAGS= -I$(INCLUDEDIR) -g
 # IRCDLIBS=
 #
 #and otherwise:
-IRCDLIBS=
+#IRCDLIBS=
 
 # IRCDMODE is the mode you want the binary to be.
 # the 4 at the front is important (allows for setuidness)

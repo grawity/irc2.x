@@ -101,16 +101,16 @@
  * these are only the recommened names and paths. Change as needed.
  */
 
-#define SPATH "/usr/local/src/ircd/bin/ircd" /* Where the server lives.  */
-#define CPATH "/usr/local/src/ircd/ircd.conf" /* IRC Configuration file.  */
-#define MPATH "/usr/local/src/ircd/ircd.motd" /* Message Of The Day file. */
+#define SPATH "/usr/local/lib/irc/ircd" /* Where the server file lives */
+#define CPATH "/usr/local/lib/irc/ircd.conf" /* The configuration file */
+#define MPATH "/usr/local/lib/irc/ircd.motd" /* Message of the Day */
 #define LPATH "/tmp/ircd7.log"   /* Where the Logfile lives. */
 #ifdef MSG_NOTE
 /* Where NOTE system saves its requests from time to time... */
 #define NOTE_SAVE_FILENAME "/usr/local/lib/irc/.ircdnote"
 #endif
 
-#define UPHOST "131.170.8.11"              /* Default UPHOST for irc */
+#define UPHOST "bucsd.bu.edu"
                                              /* standard client        */
 
 /* ENABLE_SUMMON
@@ -121,7 +121,7 @@
  * this.
  */
 
-#define ENABLE_SUMMON /* local summon */
+/* #define ENABLE_SUMMON /* local summon */
  
 /* MAXIMUM LINKS
  *
@@ -151,7 +151,7 @@
  *
  */
 
-#define MAXIMUM_LINKS 99   /* Maximum links accepted */
+#define MAXIMUM_LINKS 1  /* Maximum links accepted */
 
 #define WALLOPS_REMOTES    /* Notify all opers of remote SQUITS/CONNECTS */
 
@@ -195,7 +195,7 @@
  * Logging will be disable also if you do not define this.
  */
 
-#define FNAME_USERLOG "/usr/local/src/ircd/userlog" /* */
+#define FNAME_USERLOG "/usr/local/lib/irc/userlog"
 
 #define WALL /* Define this if you want walls */
 
