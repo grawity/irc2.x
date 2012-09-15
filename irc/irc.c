@@ -135,7 +135,9 @@ char	*argv[];
 	*buf = *currserver = '\0';
 	me.user = &meUser;
 	me.from = &me;
+	/* Let's drop this.. ?	-Vesa
 	initconf(currserver, me.passwd, me.sockhost, &meUser.channel);
+	*/
 	setuid(getuid());
 
 	while (argc > 1 && argv[1][0] == '-') {
@@ -203,10 +205,10 @@ char	*argv[];
 			exit(1);
 		}
 		userdata = getpwuid(getuid());
-		if (strlen(userdata->pw_name) >= USERLEN) {
+		if (strlen(userdata->pw_name) >= (size_t) USERLEN) {
 			userdata->pw_name[USERLEN-1] = '\0';
 		}
-		if (strlen(userdata->pw_gecos) >= REALLEN) {
+		if (strlen(userdata->pw_gecos) >= (size_t) REALLEN) {
 			userdata->pw_gecos[REALLEN-1] = '\0';
 		}
 		/* FIX:    jtrim@orion.cair.du.edu -- 3/14/88 
@@ -512,7 +514,7 @@ sendit(sock,line)
 int	sock;
 char	*line;
 {
-	char	*ptr;
+	char	*ptr = NULL;
 	struct	Command	*cmd = commands;
 
 	KillCount = 0;
@@ -624,7 +626,7 @@ char *line;
 
 /* first, see if we have to chop the string into pieces */
 
-			if (strlen(ptr) > rmargin) {
+			if (strlen(ptr) > (size_t) rmargin) {
 				ch = ptr[rmargin];
 				ptr[rmargin] = '\0';
 				ptr2 = &ptr[rmargin - 1];
@@ -829,7 +831,7 @@ char	*ptr, *xtra;
 do_channel(ptr, xtra)
 char *ptr, *xtra;
 {
-	char *p1, *p2;
+	char *p1;
 
 	if (BadPtr(ptr)) {
 		putline("*** Which channel do you want to join?");

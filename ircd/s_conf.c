@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.39 4/19/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.40 4/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -374,7 +374,6 @@ char	*name, *host, *user;
 int	statmask;
 {
 	Reg1	aConfItem *tmp;
-	Reg2	char	*s, *t;
 	char	userhost[USERLEN+HOSTLEN+3];
 
 	(void)sprintf(userhost, "%s@%s", user, host);
@@ -934,7 +933,8 @@ aClient	*cptr;
 	host = cptr->sockhost;
 	name = cptr->username;
 
-	if (strlen(host)  > HOSTLEN || (name ? strlen(name) : 0) > HOSTLEN)
+	if (strlen(host)  > (size_t) HOSTLEN ||
+            (name ? strlen(name) : 0) > (size_t) HOSTLEN)
 		return (0);
 
 	reply[0] = '\0';

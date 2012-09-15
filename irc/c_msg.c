@@ -445,7 +445,6 @@ int	parc;
 char	*parv[];
 {
 	anIgnore *iptr;
-	int	ignoreflag = 0;
 
 	iptr = find_ignore(parv[0], (anIgnore *)NULL, userhost);
 	if ((iptr != (anIgnore *)NULL) && iptr->flags & IGNORE_PRIVATE)

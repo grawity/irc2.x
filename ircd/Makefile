@@ -174,8 +174,8 @@ s_conf.o: s_conf.c ../include/struct.h ../include/config.h \
 	  ../include/numeric.h  ../include/dbuf.h ../include/sys.h
 	$(CC) $(CFLAGS) -c s_conf.c
 
-s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h \
-	   s_debug.c
+s_debug.o: ../include/config.h ../include/struct.h ../include/common.h \
+	   ../include/sys.h s_debug.c
 	$(CC) $(CFLAGS) -c s_debug.c
 
 s_misc.o: s_misc.c ../include/struct.h ../include/config.h ../include/dbuf.h

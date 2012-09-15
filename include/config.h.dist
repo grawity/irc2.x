@@ -148,12 +148,22 @@
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
-#define	DPATH	"/usr/local/lib/irc"	/* dir where all ircd stuff is */
+#define	DPATH	"/usr/local/lib/ircd"	/* dir where all ircd stuff is */
 #define	SPATH	"/usr/local/bin/ircd"	/* path to server executeable */
 #define	CPATH	"ircd.conf"	/* server configuration file */
 #define	MPATH	"ircd.motd"	/* server MOTD file */
 #define	LPATH	"/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
 #define	PPATH	"ircd.pid"	/* file for server pid */
+
+/*
+ * Define this filename to maintain a list of persons who log
+ * into this server. Logging will stop when the file does not exist.
+ * Logging will be disable also if you do not define this.
+ * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
+ * successful use of /oper
+ */
+/* #define FNAME_USERLOG "/usr/local/lib/ircd/users" /* */
+/* #define FNAME_OPERLOG "/usr/local/lib/ircd/users" /* */
 
 /* CHROOTDIR
  *
@@ -288,16 +298,6 @@
  * reading m4 output as the server's ircd.conf file.
  */
 #undef	M4_PREPROC
-
-/*
- * Define this filename to maintain a list of persons who log
- * into this server. Logging will stop when the file does not exist.
- * Logging will be disable also if you do not define this.
- * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
- * successful use of /oper
- */
-/* #define FNAME_USERLOG "/usr/local/lib/irc/users" /* */
-/* #define FNAME_OPERLOG "/usr/local/lib/irc/users" /* */
 
 /*
  * If you wish to have the server send 'vital' messages about server

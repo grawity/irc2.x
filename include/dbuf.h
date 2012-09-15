@@ -134,7 +134,7 @@ char *dbuf_map PROTO((dbuf *, int *));
 	       				/* Dynamic buffer header */
 	       				/* Return number of bytes accessible */
 
-int dbuf_delete PROTO((dbuf *, int));
+int dbuf_delete PROTO((dbuf *, Long));
 					/* Dynamic buffer header */
 					/* Number of bytes to delete */
 

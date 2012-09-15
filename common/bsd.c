@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)bsd.c	2.9 2/14/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -39,7 +39,9 @@ VOIDSIG dummy()
 #ifndef HAVE_RELIABLE_SIGNALS
 	(void)signal(SIGALRM, dummy);
 	(void)signal(SIGPIPE, dummy);
+#ifndef HPUX	/* Only 9k/800 series require this, but don't know how to.. */
 	(void)signal(SIGWINCH, dummy);
+#endif
 #else
 # ifdef POSIX_SIGNALS
 	struct  sigaction       act;

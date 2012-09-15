@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.21 4/16/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.22 4/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -417,8 +417,8 @@ struct	Message *mptr;
 					    me.name, ERR_UNKNOWNCOMMAND,
 					    from->name, ch);
 #ifdef	CLIENT_COMPILE
-				Debug((DEBUG_ERROR,"Unknown (%s) from %s",
-					ch, get_client_name(cptr, TRUE)));
+				Debug((DEBUG_ERROR,"Unknown (%s) from %s[%s]",
+					ch, cptr->name, cptr->sockhost));
 				/*
 				** This concerns only client ... --Armin
 				*/
@@ -427,8 +427,8 @@ struct	Message *mptr;
 						"*** Error: %s %s from server",
 						"Unknown command", ch));
 #else
-				Debug((DEBUG_ERROR,"Unknown (%s) from %s[%s]",
-					ch, cptr->name, cptr->sockhost));
+				Debug((DEBUG_ERROR,"Unknown (%s) from %s",
+					ch, get_client_name(cptr, TRUE)));
 #endif
 			    }
 			ircstp->is_unco++;

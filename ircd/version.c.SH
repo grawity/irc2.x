@@ -92,6 +92,7 @@ char *infotext[] =
 	"Sodapop      Chuck Kane               ckane@ece.uiuc.edu",
 	"Skygod       Matt Lyle                matt@oc.com",
 	"Vesa         Vesa Ruokonen            ruokonen@lut.fi",
+	"Aiken        Brian Fehdrau            adrum@u.washington.edu",
 	"",
 	"Those who helped in prior versions and continue to be helpful:",
 	"",

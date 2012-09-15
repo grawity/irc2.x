@@ -56,7 +56,7 @@ aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
     {
-	char *nick, *tmp;
+	char *tmp;
 	int i;
 	long l;		/* ctime(&l) on STATS L */
 	

@@ -73,7 +73,7 @@ char *user, *temp;
       putline(ibuf);
       kill_ignore(iptr);
     } else {
-      if (strlen(ch) > NICKLEN)
+      if (strlen(ch) > (size_t) NICKLEN)
 	ch[NICKLEN] = '\0';
       if (add_ignore(ch, status, uh) >= 0) {
 	sprintf(ibuf,"*** Ignore %s messages from user %s", 

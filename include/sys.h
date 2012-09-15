@@ -33,9 +33,7 @@
 #endif
 
 #if defined(HPUX) || defined(VMS) || defined(AIX) || defined(SOL20)
-# ifdef	HPUX
-# include <strings.h>
-# endif
+#include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
 #define bcmp          memcmp

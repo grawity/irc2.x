@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.47 4/15/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.49 4/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -208,7 +208,7 @@ char	*name;
 int	port;
 {
 	static	struct sockaddr_in server;
-	int	length, ad[4], len = sizeof(server);
+	int	ad[4], len = sizeof(server);
 	char	ipname[20];
 
 	ad[0] = ad[1] = ad[2] = ad[3] = 0;
@@ -1234,22 +1234,11 @@ fd_set	*rfd;
 	** For server connections, we process as many as we can without
 	** worrying about the time of day or anything :)
 	*/
-	if (!DBufLength(&cptr->recvQ) &&
-	    (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr)))
+	if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr))
 	    {
-		readptr = readbuf;
-
 		if (length > 0)
-		    {
-			done = dopacket(cptr, readptr, length);
-			if (done)
-			    {
-				if (done > 0)
-					(void)dbuf_put(&cptr->recvQ,
-						readptr+dolen-done, done);
+			if (done = dopacket(cptr, readbuf, length))
 				return done;
-			    }
-		    }
 	    }
 	else
 	    {
@@ -1777,7 +1766,8 @@ int	fd, hlen;
 char	*name, *line, *host;
 {
 	struct	utmp	ut;
-	while (read(fd, &ut, sizeof (struct utmp)) == sizeof (struct utmp))
+	while (read(fd, (char *)&ut, sizeof (struct utmp))
+               == sizeof (struct utmp))
 	    {
 		strncpyzt(name, ut.ut_name, 9);
 		strncpyzt(line, ut.ut_line, 10);
@@ -1818,7 +1808,7 @@ char	*namebuf, *linebuf, *chname;
 
 	now = time(NULL);
 	tp = localtime(&now);
-	if (strlen(linebuf) > 9)
+	if (strlen(linebuf) > (size_t) 9)
 	    {
 		sendto_one(who,"NOTICE %s :Serious fault in SUMMON.",
 			   who->name);

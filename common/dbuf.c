@@ -36,7 +36,7 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.11 4/16/93 (C) 1990 Markku Savela";
+static  char sccsid[] = "@(#)dbuf.c	2.12 4/30/93 (C) 1990 Markku Savela";
 #endif
 
 #include <stdio.h>
@@ -235,7 +235,7 @@ char	*buf;
 Long	length;
     {
 	int	moved = 0;
-	int	chunk;
+	Long	chunk;
 	char	*b;
 
 	while (length > 0 && (b = dbuf_map(dyn, &chunk)) != NULL)
@@ -303,8 +303,8 @@ register int	length;
 	dbufbuf	*d;
 	register char	*s;
 	register int	dlen;
-	register int	i;
-	int	copy;
+	register Long	i;
+	Long	copy;
 
 getmsg_init:
 	d = dyn->head;

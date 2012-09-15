@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.32 4/20/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.35 4/30/93 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -138,16 +138,18 @@ Reg1	char *s;
 static	char *make_nick_user_host(nick, name, host)
 Reg1	char	*nick, *name, *host;
 {
+	Reg2	char	*s = namebuf;
+
 	bzero(namebuf, sizeof(namebuf));
 	nick = check_string(nick);
-	(void)strncpy(namebuf, nick, NICKLEN);
-	(void)strcat(namebuf, "!");
+	s += strlen(strncpy(namebuf, nick, NICKLEN));
+	*s++ = '!';
 	name = check_string(name);
-	(void)strncat(namebuf, name, REALLEN);
-	(void)strcat(namebuf, "@");
+	s += strlen(strncpy(s, name, USERLEN));
+	*s++ = '@';
 	host = check_string(host);
-	(void)strncat(namebuf, host, HOSTLEN);
-
+	s += strlen(strncpy(s, host, HOSTLEN));
+	*s = '\0';
 	return (namebuf);
 }
 
@@ -323,8 +325,8 @@ aChannel *chptr;
 	lp = find_user_link(chptr->members, cptr);
 
 	if (chptr->mode.mode & MODE_MODERATED &&
-	    !(lp->flags & (CHFL_CHANOP|CHFL_VOICE)))
-		return (MODE_MODERATED);
+	    (!lp || !(lp->flags & (CHFL_CHANOP|CHFL_VOICE))))
+			return (MODE_MODERATED);
 
 	if (chptr->mode.mode & MODE_NOPRIVMSGS && !member)
 		return (MODE_NOPRIVMSGS);
@@ -360,7 +362,7 @@ aChannel *chptr;
 		*mbuf++ = 'i';
 	if (chptr->mode.mode & MODE_NOPRIVMSGS)
 		*mbuf++ = 'n';
-	if (chptr->mode.mode & MODE_KEY)
+	if (*chptr->mode.key)
 		*mbuf++ = 'k';
 	if (chptr->mode.limit)
 	    {
@@ -403,7 +405,8 @@ aChannel *chptr;
 			lp = lp->next;
 			continue;
 		    }
-		if (strlen(parabuf) + strlen(acptr->name) + 10 < MODEBUFLEN)
+		if (strlen(parabuf) + strlen(acptr->name) + 10
+                    < (size_t) MODEBUFLEN)
 		    {
 			(void)strcat(parabuf, " ");
 			(void)strcat(parabuf, acptr->name);
@@ -433,7 +436,8 @@ aChannel *chptr;
 	    }
 	for (lp = chptr->banlist ; lp; )
 	    {
-		if (strlen(parabuf) + strlen(lp->value.cp) + 10 < MODEBUFLEN)
+		if (strlen(parabuf) + strlen(lp->value.cp) + 10
+                    < (size_t) MODEBUFLEN)
 		    {
 			(void)strcat(parabuf, " ");
 			(void)strcat(parabuf, lp->value.cp);
@@ -512,16 +516,16 @@ char	*parv[];
 	mcount = set_mode(sptr, chptr, parc - 2, parv + 2,
 			  modebuf, parabuf);
 
-	if (strlen(modebuf) > 1)
+	if ((mcount < 0) && MyConnect(sptr) && !IsServer(sptr))
 	    {
-		if (MyConnect(sptr) && !IsServer(sptr) && !chanop)
-		    {
-			sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
-				   me.name, parv[0], chptr->chname);
-			return 0;
-		    }
+		sendto_one(sptr, err_str(ERR_CHANOPRIVSNEEDED),
+			   me.name, parv[0], chptr->chname);
+		return 0;
+	    }
+	if (strlen(modebuf) > (size_t)1)
+	    {
 		if ((IsServer(cptr) && !IsServer(sptr) && !chanop) ||
-		    mcount == -1)
+		    (mcount < 0))
 		    {
 			sendto_ops("Fake: %s MODE %s %s %s",
 				   parv[0], parv[1], modebuf, parabuf);
@@ -682,6 +686,7 @@ char	*parv[], *mbuf, *pbuf;
 					keychange = 1;
 				    }
 			    }
+			count++;
 			break;
 		case 'b':
 			if (--parc <= 0)
@@ -745,11 +750,6 @@ char	*parv[], *mbuf, *pbuf;
 			    {
 				Link	**lpp;
 
-				if (!ischop)
-				    {
-					count = -1;
-					break;
-				    }
 				for (lpp = &(chptr->invites); *lpp; )
 				    {
 					lp = *lpp;
@@ -880,11 +880,10 @@ char	*parv[], *mbuf, *pbuf;
 			case MODE_BAN :
 				c = 'b';
 				cp = lp->value.cp;
-				user = index(cp, '!');
-				if (host = index(user ? user : cp, '@'))
-					*host++ = '\0';
-				if (user)
+				if (user = index(cp, '!'))
 					*user++ = '\0';
+				if (host = rindex(user ? user : cp, '@'))
+					*host++ = '\0';
 				cp = make_nick_user_host(cp, user, host);
 				break;
 			case MODE_KEY :
@@ -900,7 +899,7 @@ char	*parv[], *mbuf, *pbuf;
 				break;
 			}
 
-			if (len + strlen(cp) + 2 > MODEBUFLEN)
+			if (len + strlen(cp) + 2 > (size_t) MODEBUFLEN)
 				break;
 			/*
 			 * pass on +/-o/v regardless of whether they are
@@ -944,9 +943,10 @@ char	*parv[], *mbuf, *pbuf;
 					change_chan_flag(lp, chptr);
 				break;
 			case MODE_BAN :
-				if (ischop && whatt & MODE_ADD &&
-				    !add_banid(chptr, cp) ||
-				    whatt & MODE_DEL && !del_banid(chptr, cp))
+				if (ischop && ((whatt & MODE_ADD) &&
+				     !add_banid(chptr, cp) ||
+				     (whatt & MODE_DEL) &&
+				     !del_banid(chptr, cp)))
 				    {
 					*mbuf++ = c;
 					(void)strcat(pbuf, cp);
@@ -961,7 +961,7 @@ char	*parv[], *mbuf, *pbuf;
 
 	*mbuf++ = '\0';
 
-	return ischop ? count : -1;
+	return ischop ? count : -count;
 }
 
 static	int	can_join(sptr, chptr, key)
@@ -1197,8 +1197,6 @@ char	*parv[];
 		return 0;
 	    }
 
-	if (parv[2])
-		key = strtoken(&p2, parv[2], ",");
 	*jbuf = '\0';
 	/*
 	** Rebuild list of channels joined to be the actual result of the
@@ -1222,10 +1220,14 @@ char	*parv[];
 		if (*jbuf)
 			(void)strcat(jbuf, ",");
 		(void)strncat(jbuf, name, sizeof(jbuf) - i - 1);
-		i += strlen(name);
+		i += strlen(name)+1;
 	    }
 	(void)strcpy(parv[1], jbuf);
 
+	p = NULL;
+	if (parv[2])
+		key = strtoken(&p2, parv[2], ",");
+	parv[2] = NULL;	/* for m_names call later, parv[parc] must == NULL */
 	for (name = strtoken(&p, jbuf, ","); name;
 	     key = (key) ? strtoken(&p2, NULL, ",") : NULL,
 	     name = strtoken(&p, NULL, ","))
@@ -1266,8 +1268,6 @@ char	*parv[];
 		    }
 
 		chptr = get_channel(sptr, name, CREATE);
-		if (IsMember(sptr, chptr))
-			continue;
 
 		if (!chptr ||
 		    (MyConnect(sptr) && (i = can_join(sptr, chptr, key))))
@@ -1277,8 +1277,9 @@ char	*parv[];
 				   me.name, i, parv[0], name);
 			continue;
 		    }
+		if (IsMember(sptr, chptr))
+			continue;
 
-		del_invite(sptr, chptr);
 		/*
 		**  Complete user entry to the new channel (if any)
 		*/
@@ -1292,6 +1293,7 @@ char	*parv[];
 
 		if (MyClient(sptr))
 		    {
+			del_invite(sptr, chptr);
 			if (flags == CHFL_CHANOP)
 				sendto_match_servs(chptr, cptr,
 						   ":%s MODE %s +o %s",
@@ -1431,7 +1433,7 @@ char	*parv[];
 				   ":%s NOTICE %s :KICK changed from %s to %s",
 					   me.name, parv[0], user, who->name);
 			comment = (BadPtr(parv[3])) ? parv[0] : parv[3];
-			if (strlen(comment) > TOPICLEN)
+			if (strlen(comment) > (size_t) TOPICLEN)
 				comment[TOPICLEN] = '\0';
 			if (IsMember(who, chptr))
 			    {
@@ -1875,7 +1877,7 @@ aClient	*cptr, *user;
 		if (mask = index(chptr->chname, ':'))
 			if (matches(++mask, cptr->name))
 				continue;
-		if (strlen(chptr->chname) > BUFSIZE - 2 - strlen(buf))
+		if (strlen(chptr->chname) > (size_t) BUFSIZE - 2 - strlen(buf))
 		    {
 			if (cnt)
 				sendto_one(cptr, "%s", buf);

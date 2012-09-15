@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.28 4/15/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.30 4/24/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -553,7 +553,12 @@ void	checklist()
 		else if (IsClient(acptr))
 			j++;
 	if (!j)
+	    {
+#ifdef	USE_SYSLOG
+		syslog(LOG_WARNING,"ircd exiting: autodie");
+#endif
 		exit(0);
+	    }
 	return;
 }
 
@@ -596,25 +601,25 @@ char	*name;
 			sp->is_ni++;
 	    }
 
-	sendto_one(cptr, "NOTICE %s :accepts %u refused %u", name,
-		   sp->is_ac, sp->is_ref);
-	sendto_one(cptr, "NOTICE %s :unknown commands %u prefixes %u", name,
-		   sp->is_unco, sp->is_unpf);
-	sendto_one(cptr, "NOTICE %s :nick collisions %u unknown closes %u",
-		   name, sp->is_kill, sp->is_ni);
-	sendto_one(cptr, "NOTICE %s :wrong direction %u empty %u", name,
-		   sp->is_wrdi, sp->is_empt);
-	sendto_one(cptr, "NOTICE %s :numerics seen %u mode fakes %u", name,
-		   sp->is_num, sp->is_fake);
-	sendto_one(cptr, "NOTICE %s :auth successes %u fails %u", name,
-		   sp->is_asuc, sp->is_abad);
-	sendto_one(cptr, "NOTICE %s :Client Server", name);
-	sendto_one(cptr, "NOTICE %s :connected %u %u", name,
-		   sp->is_cl, sp->is_sv);
-	sendto_one(cptr, "NOTICE %s :bytes sent %u %u", name,
-		   sp->is_cbs, sp->is_sbs);
-	sendto_one(cptr, "NOTICE %s :bytes recv %u %u", name,
-		   sp->is_cbr, sp->is_sbr);
-	sendto_one(cptr, "NOTICE %s :time connected %u %u", name,
-		   sp->is_cti, sp->is_sti);
+	sendto_one(cptr, ":%s NOTICE %s :accepts %u refused %u",
+		   me.name, name, sp->is_ac, sp->is_ref);
+	sendto_one(cptr, ":%s NOTICE %s :unknown commands %u prefixes %u",
+		   me.name, name, sp->is_unco, sp->is_unpf);
+	sendto_one(cptr, ":%s NOTICE %s :nick collisions %u unknown closes %u",
+		   me.name, name, sp->is_kill, sp->is_ni);
+	sendto_one(cptr, ":%s NOTICE %s :wrong direction %u empty %u",
+		   me.name, name, sp->is_wrdi, sp->is_empt);
+	sendto_one(cptr, ":%s NOTICE %s :numerics seen %u mode fakes %u",
+		   me.name, name, sp->is_num, sp->is_fake);
+	sendto_one(cptr, ":%s NOTICE %s :auth successes %u fails %u",
+		   me.name, name, sp->is_asuc, sp->is_abad);
+	sendto_one(cptr, ":%s NOTICE %s :Client Server", me.name, name);
+	sendto_one(cptr, ":%s NOTICE %s :connected %u %u",
+		   me.name, name, sp->is_cl, sp->is_sv);
+	sendto_one(cptr, ":%s NOTICE %s :bytes sent %u %u",
+		   me.name, name, sp->is_cbs, sp->is_sbs);
+	sendto_one(cptr, ":%s NOTICE %s :bytes recv %u %u",
+		   me.name, name, sp->is_cbr, sp->is_sbr);
+	sendto_one(cptr, ":%s NOTICE %s :time connected %u %u",
+		   me.name, name, sp->is_cti, sp->is_sti);
 }

@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.46 4/20/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.49 4/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -64,7 +64,7 @@ static char buf[BUFSIZE], buf2[BUFSIZE];
 **			have the prefix.
 **
 **			(sptr != cptr && IsServer(sptr) means
-**			the prefix specified servername. (??)
+**			the prefix specified servername. (?)
 **
 **			(sptr != cptr && !IsServer(sptr) means
 **			that message originated from a remote
@@ -159,25 +159,44 @@ int	server, parc;
 	    matches(me.name, parv[server]) == 0 ||
 	    matches(parv[server], me.name) == 0)
 		return (HUNTED_ISME);
-	for (acptr = client;
-	     acptr = next_client(acptr, parv[server]);
-	     acptr = acptr->next)
-	    {
-		if (IsMe(acptr) || MyClient(acptr))
-			return (HUNTED_ISME);
-		if (IsRegistered(acptr) && (acptr != cptr))
-		    { 
+	/*
+	** These are to pickup matches that would cause the following
+	** message to go in the wrong direction while doing quick fast
+	** non-matching lookups.
+	*/
+	acptr = find_client(parv[server], NULL);
+	if (acptr->from == sptr->from && !MyConnect(acptr))
+		acptr = NULL;
+	if (!acptr)
+		acptr = find_server(parv[server], NULL);
+	if (acptr->from == sptr->from && !MyConnect(acptr))
+		acptr = NULL;
+	if (!acptr)
+		for (acptr = client;
+		     acptr = next_client(acptr, parv[server]);
+		     acptr = acptr->next)
+		    {
+			if (acptr->from == sptr->from && !MyConnect(acptr))
+				continue;
+			if (IsMe(acptr) || MyClient(acptr))
+				return (HUNTED_ISME);
 			/*
 			 * Fix to prevent looping in case the parameter for
 			 * some reason happens to match someone from the from
 			 * link --jto
 			 */
-			sendto_one(acptr, command, parv[0],
-				   parv[1], parv[2], parv[3], parv[4],
-				   parv[5], parv[6], parv[7], parv[8]);
-			return(HUNTED_PASS);
-		    } 
-	    }
+			if (IsRegistered(acptr) && (acptr != cptr))
+				break;
+		    }
+	 if (acptr)
+	    { 
+		if (matches(acptr->name, parv[server]))
+			parv[server] = acptr->name;
+		sendto_one(acptr, command, parv[0],
+			   parv[1], parv[2], parv[3], parv[4],
+			   parv[5], parv[6], parv[7], parv[8]);
+		return(HUNTED_PASS);
+	    } 
 	sendto_one(sptr, err_str(ERR_NOSUCHSERVER), me.name,
 		   parv[0], parv[server]);
 	return(HUNTED_NOSUCH);
@@ -1007,11 +1026,11 @@ char	*parv[];
 		"<Unknown>",	/* host */
 		NULL,	/* server */
 	    };
-	Reg1	char	*nick, *tmp;
 	Reg2	Link	*lp;
 	Reg3	anUser	*user;
-	aChannel *chptr;
 	aClient *acptr, *a2cptr;
+	aChannel *chptr;
+	char	*nick, *tmp, *name;
 	char	*p = NULL;
 	int	found;
 
@@ -1061,6 +1080,7 @@ char	*parv[];
 			if (!MyConnect(sptr) && !MyConnect(acptr) && wilds)
 				continue;
 			user = acptr->user ? acptr->user : &UnknownUser;
+			name = BadPtr(acptr->name) ? "?" : acptr->name;
 
 			invis = IsInvisible(acptr);
 			member = (user->channel) ? 1 : 0;
@@ -1086,8 +1106,8 @@ char	*parv[];
 			a2cptr = find_server(user->server, NULL);
 
 			sendto_one(sptr, rpl_str(RPL_WHOISUSER), me.name,
-				   parv[0], acptr->name, acptr->user->username,
-				   user->host, acptr->info);
+				   parv[0], name,
+				   user->username, user->host, acptr->info);
 			found = 1;
 			for (buf[0] = '\0', lp = user->channel; lp;
 			     lp = lp->next)
@@ -1096,14 +1116,14 @@ char	*parv[];
 				if (ShowChannel(sptr, chptr))
 				    {
 					if (strlen(buf) +
-					    strlen(chptr->chname) > 400)
+					    strlen(chptr->chname)
+                                            > (size_t) 400)
 					    {
 						sendto_one(sptr,
 							   ":%s %d %s %s :%s",
 							   me.name,
 							   RPL_WHOISCHANNELS,
-							   parv[0],
-							   acptr->name, buf);
+							   parv[0], name, buf);
 						buf[0] = '\0';
 					    }
 					if (is_chan_op(acptr, chptr))
@@ -1116,24 +1136,24 @@ char	*parv[];
 			    }
 			if (buf[0] != '\0')
 				sendto_one(sptr, rpl_str(RPL_WHOISCHANNELS),
-					   me.name, parv[0], acptr->name, buf);
+					   me.name, parv[0], name, buf);
 
 			sendto_one(sptr, rpl_str(RPL_WHOISSERVER),
-				   me.name, parv[0], acptr->name, user->server,
+				   me.name, parv[0], name, user->server,
 				   a2cptr?a2cptr->info:"*Not On This Net*");
 
 			if (user->away)
 				sendto_one(sptr, rpl_str(RPL_AWAY), me.name,
-					   parv[0], acptr->name, user->away);
+					   parv[0], name, user->away);
 
 			if (IsAnOper(acptr))
 				sendto_one(sptr, rpl_str(RPL_WHOISOPERATOR),
-					   me.name, parv[0], acptr->name);
+					   me.name, parv[0], name);
 
 			if (acptr->user && MyConnect(acptr))
 				sendto_one(sptr, rpl_str(RPL_WHOISIDLE),
-					   me.name, parv[0], acptr->name,
-					   time(NULL)-user->last);
+					   me.name, parv[0], name,
+					   time(NULL) - user->last);
 		    }
 		if (!found)
 			sendto_one(sptr, err_str(ERR_NOSUCHNICK),
@@ -1231,7 +1251,7 @@ char	*parv[];
 		if (!strncmp("Local Kill", comment, 10) ||
 		    !strncmp(comment, "Killed", 6))
 			comment = parv[0];
-	if (strlen(comment) > TOPICLEN)
+	if (strlen(comment) > (size_t) TOPICLEN)
 		comment[TOPICLEN] = '\0';
 	return IsServer(sptr) ? 0 : exit_client(cptr, sptr, sptr, comment);
     }
@@ -1283,7 +1303,7 @@ char	*parv[];
 				   me.name, parv[0], "KILL");
 			return 0;
 		    }
-		if (strlen(path) > TOPICLEN)
+		if (strlen(path) > (size_t) TOPICLEN)
 			path[TOPICLEN] = '\0';
 	    }
 
@@ -1377,7 +1397,7 @@ char	*parv[];
 	** back.
 	** Suicide kills are NOT passed on --SRB
 	*/
-	if (!MyConnect(acptr) || !MyConnect(sptr) || !IsOper(sptr))
+	if (!MyConnect(acptr) || !MyConnect(sptr) || !IsAnOper(sptr))
 	    {
 		sendto_serv_butone(cptr, ":%s KILL %s :%s!%s",
 				   parv[0], acptr->name, inpath, path);
@@ -1411,7 +1431,8 @@ char	*parv[];
 	else
 	    {
 		if ((killer = index(path, ' ')) &&
-		    (killer = rindex(killer, '!')))
+		    (killer = rindex(killer, '!')) ||
+		    (killer = rindex(path, '!')))
 			killer++;
 		else
 			killer = path;
@@ -1469,7 +1490,7 @@ char	*parv[];
 
 	/* Marking as away */
 
-	if (strlen(awy2) > TOPICLEN)
+	if (strlen(awy2) > (size_t) TOPICLEN)
 		awy2[TOPICLEN] = '\0';
 	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], parv[1]);
 #ifdef	USE_SERVICES

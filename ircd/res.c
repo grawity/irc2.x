@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.20 4/16/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.21 4/30/93 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -305,7 +305,7 @@ int	len, rcount;
 	for (i = 0; i < max; i++)
 	    {
 		if (sendto(resfd, msg, len, 0, &(_res.nsaddr_list[i]),
-			sizeof(struct sockaddr)) == len)
+			   sizeof(struct sockaddr)) == len)
 		    {
 			reinfo.re_sent++;
 			sent++;

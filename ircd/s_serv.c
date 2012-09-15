@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.39 4/20/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.40 4/25/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -1792,7 +1792,7 @@ char	*parv[];
 	Reg2	int	i;
 	int	closed = 0;
 
-	if (!MyClient(sptr) || !IsOper(sptr))
+	if (!MyOper(sptr))
 	    {
 		sendto_one(sptr, err_str(ERR_NOPRIVILEGES), me.name, parv[0]);
 		return 0;
@@ -1802,7 +1802,8 @@ char	*parv[];
 	    {
 		if (!(acptr = local[i]))
 			continue;
-		if (IsRegistered(acptr))
+		if (!IsUnknown(acptr) && !IsConnecting(acptr) &&
+		    !IsHandshake(acptr))
 			continue;
 		sendto_one(sptr, rpl_str(RPL_CLOSING), me.name, parv[0],
 			   get_client_name(acptr, TRUE), acptr->status);

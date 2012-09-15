@@ -32,7 +32,6 @@ char *ptr, *temp;
 {
   struct Help *hptr;
   int count;
-  char *ch;
 
   if (BadPtr(ptr)) {
     sprintf(helpbuf, "*** Help: Internet Relay Chat v%s Commands:", version);

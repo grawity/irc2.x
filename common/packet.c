@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)packet.c	2.8 3/22/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)packet.c	2.9 4/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
  
@@ -74,18 +74,13 @@ Reg4	int	length;
 					 ** FLUSH_BUFFER without removing the
 					 ** structure pointed by cptr... --msa
 					 */
-			switch (parse(cptr, cptr->buffer, ch1, msgtab))
-			{
-			case FLUSH_BUFFER :
+			if (parse(cptr, cptr->buffer, ch1, msgtab) ==
+			    FLUSH_BUFFER)
 				/*
-				** FLUSH_BUFFER means actually
-				** that cptr structure *does*
-				** not exist anymore!!! --msa
+				** FLUSH_BUFFER means actually that cptr
+				** structure *does* not exist anymore!!! --msa
 				*/
 				return FLUSH_BUFFER;
-			case 1 :
-				return length;
-			}
 #ifndef CLIENT_COMPILE
 			/*
 			** Socket is dead so exit (which always returns with

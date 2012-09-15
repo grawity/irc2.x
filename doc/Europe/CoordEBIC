@@ -1,5 +1,5 @@
 ############################################################################
-list updated the 15.4.1993
+list updated the 27.4.1993
 ############################################################################
 
 	If you like in future to establish a link inside the EBIC area,
@@ -18,46 +18,49 @@ list updated the 15.4.1993
     The following national coordinators have been choosen for 92/93:
 ############################################################################
 
-*.at
-    1. Tom		Tom Kovar		<tom@itc.univie.ac.at>
+*.at	EASINET, ACONET
+	1. Tom		Tom Kovar		<tom@itc.univie.ac.at>
 
-*.ch
-    1. StarNet		Karim Saouli		<Karim.Saouli@epfl.ch>
+*.ch	SWITCH, EUNET/CH
+	1. StarNet	Karim Saouli		<Karim.Saouli@epfl.ch>
+	2. Maxim	Maxim Samo		<samo@nessie.cs.id.ethz.ch>
 
-*.de
-    1. YeggMan		Volker Paulsen		<paulsen@informatik.uni-kl.de>
-    2. Haegar		Thomas Thissen		<tici@uni-paderborn.de>
+*.de	WIN
+	1. YeggMan	Volker Paulsen		<paulsen@informatik.uni-kl.de>
+	2. Haegar	Thomas Thissen		<tici@uni-paderborn.de>
 
-*.dk
-    1. karthy		Karsten Thygesen	<karthy@iesd.auc.dk>
+*.dk	DENET, DKNET
+	1. karthy	Karsten Thygesen	<karthy@iesd.auc.dk>
+	2. MAGNA	Jens Fallesen		<fallesen@login.dkuug.dk>
 
-*.fi
-    1. Vesa		Vesa Ruokonen		<Vesa.Ruokonen@lut.fi>
-    2. Visti		Hannu Visti		<visti@sauna.cs.hut.fi>
+*.fi	FUNET
+	1. Vesa		Vesa Ruokonen		<Vesa.Ruokonen@lut.fi>
+	2. Visti	Hannu Visti		<visti@sauna.cs.hut.fi>
 
-*.fr
-    1. Nono		Arnaud Girsch		<Arnaud.Girsch@insa-lyon.fr>
+*.fr	EASINET/ROCAD, RENATER
+	1. Nono		Arnaud Girsch		<Arnaud.Girsch@insa-lyon.fr>
+	2. Le_Chat	Laurent Montaron	<irc@eurecom.fr>
 
-*.it
-    1. Allanon		Riccardo Facchetti	<mez002@cdc835.cdc.polimi.it>
-    2. mAu		Maurizio Paoluzi	<paoluzi@mercurio.dm.unirm1.it>
+*.it	CILEA
+	1. Allanon	Riccardo Facchetti	<riccardo@cdc835.cdc.polimi.it>
+	2. mAu		Maurizio Paoluzi	<paoluzi@mercurio.dm.unirm1.it>
 
-*.nl
-    1. scorpio		Cor Bosman		<bosman@gene.fwi.uva.nl>
-    2. JohnPC		Jan-Pieter Cornet	<cornet@duteca.et.tudelft.nl>
+*.nl	SURFNET/NLNET
+	1. scorpio	Cor Bosman		<bosman@gene.fwi.uva.nl>
+	2. JohnPC	Jan-Pieter Cornet	<cornet@duteca.et.tudelft.nl>
 
-*.no
-    1. gnarfer		Ove Ruben R Olsen	<Ove.R.Olsen@uib.no>
+*.no	UNINETT
+	1. gnarfer	Ove Ruben R Olsen	<Ove.R.Olsen@uib.no>
 
-*.pl
-    1. Artur		Artur Jaroszek		<artur@vulcan.minuw.edu.pl>(?)
+*.pl	POLIP
+	1. Artur	Artur Jaroszek		<artur@vulcan.mimuw.edu.pl>
 
-*.se
-    1. Black		Christer H. Jansson	<st90_cjn@manwe.sunet.se>
-    2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
+*.se	SUNET
+	1. Black	Christer H. Jansson	<svarten@solace.hsh.se>
+	2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
 
-*.uk
-    1.ScottM            Scott A. McIntyre       <scott@shrug.dur.ac.uk>
-(?) - not yet approved
+*.uk	JANET, JIPS
+	1.ScottM	Scott A. McIntyre       <scott@shrug.dur.ac.uk>
+
 
 

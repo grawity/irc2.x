@@ -75,7 +75,7 @@ real_name(user)
     default:
       *cp++ = *bp++;
     }
-  } while (*bp != '\0' && strlen(name) < REALLEN);
+  } while (*bp != '\0' && strlen(name) < (size_t) REALLEN);
   return(name);
 }
 

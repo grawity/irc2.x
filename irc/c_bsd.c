@@ -118,7 +118,7 @@ client_loop(sock)
 int	sock;
 {
 	int	i = 0, size, pos;
-	char	apubuf[STDINBUFSIZE+1], ch;
+	char	apubuf[STDINBUFSIZE+1];
 	fd_set	ready;
 
 	do {
