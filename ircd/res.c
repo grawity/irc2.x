@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.27 6/25/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.29 28 Jul 1993 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -75,6 +75,8 @@ static	struct	resinfo {
 	int	re_resends;
 	int	re_sent;
 	int	re_timeouts;
+	int	re_shortttl;
+	int	re_unkrep;
 } reinfo;
 
 int	init_resolver(op)
@@ -287,7 +289,7 @@ int	len, rcount;
 	if (!msg)
 		return -1;
 
-	max = (_res.nscount > rcount) ? rcount : _res.nscount;
+	max = MIN(_res.nscount, rcount);
 	if (_res.options & RES_PRIMARY)
 		max = 1;
 	if (!max)
@@ -437,8 +439,9 @@ char	*name;
 int	class, type;
 ResRQ	*rptr;
 {
+	struct	timeval	tv;
 	char	buf[MAXPACKET];
-	int	r,s;
+	int	r,s,k = 0;
 	HEADER	*hptr;
 
 	bzero(buf, sizeof(buf));
@@ -450,6 +453,12 @@ ResRQ	*rptr;
 		return r;
 	    }
 	hptr = (HEADER *)buf;
+	(void) gettimeofday(&tv, NULL);
+	do {
+		hptr->id = htons(ntohs(hptr->id) + k +
+				 (u_short)(tv.tv_usec & 0xffff));
+		k++;
+	} while (find_id(ntohs(hptr->id)));
 	rptr->id = ntohs(hptr->id);
 	rptr->sends++;
 	s = send_res_msg(buf, r, rptr->sends);
@@ -607,18 +616,19 @@ HEADER	*hptr;
 struct	hostent	*get_res(lp)
 char	*lp;
 {
+	static	char	buf[sizeof(HEADER) + MAXPACKET];
 	Reg1	HEADER	*hptr;
 	Reg2	ResRQ	*rptr = NULL;
 	aCache	*cp;
-	static	char	buf[sizeof(HEADER) + MAXPACKET];
-	int	rc, a;
+	struct	sockaddr_in	sin;
+	int	rc, a, len = sizeof(sin), max;
 
 	(void)alarm((unsigned)4);
-	rc = recv(resfd, buf, sizeof(buf), 0);
+	rc = recvfrom(resfd, buf, sizeof(buf), 0, (struct sockaddr *)&sin,
+		      &len);
 	(void)alarm((unsigned)0);
 	if (rc <= 0)
 		goto getres_err;
-
 	/*
 	 * convert DNS reply reader from Network byte order to CPU byte order.
 	 */
@@ -640,6 +650,25 @@ char	*lp;
 	rptr = find_id(hptr->id);
 	if (!rptr)
 		goto getres_err;
+	/*
+	 * check against possibly fake replies
+	 */
+	max = MIN(_res.nscount, rptr->sends);
+	if (_res.options & RES_PRIMARY)
+		max = 1;
+	if (!max)
+		max = 1;
+
+	for (a = 0; a < max; a++)
+		if (!bcmp((char *)&sin.sin_addr,
+			  (char *)&_res.nsaddr_list[a].sin_addr,
+			  sizeof(struct in_addr)))
+			break;
+	if (a == max)
+	    {
+		reinfo.re_unkrep++;
+		goto getres_err;
+	    }
 
 	if ((hptr->rcode != NOERROR) || (hptr->ancount == 0))
 	    {
@@ -725,7 +754,7 @@ char	*lp;
 	else
 		if (!rptr->sent)
 			rem_request(rptr);
-	return (struct hostent *)&cp->he;
+	return cp ? (struct hostent *)&cp->he : NULL;
 
 getres_err:
 	/*
@@ -765,12 +794,9 @@ getres_err:
 			else
 				resend_query(rptr);
 		    }
-		return (struct hostent *)NULL;
+		else if (lp)
+			bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
 	    }
-	if (!lp)
-		return (struct hostent *)NULL;
-	if (rptr)
-		bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
 	return (struct hostent *)NULL;
 }
 
@@ -1075,6 +1101,11 @@ ResRQ	*rptr;
 	Reg3	char	*s, **t;
 
 	/*
+	** shouldn't happen but it just might...
+	*/
+	if (!rptr->he.h_name || !rptr->he.h_addr.s_addr)
+		return NULL;
+	/*
 	** Make cache entry.  First check to see if the cache already exists
 	** and if so, return a pointer to it.
 	*/
@@ -1129,7 +1160,13 @@ ResRQ	*rptr;
 	hp->h_addrtype = rptr->he.h_addrtype;
 	hp->h_length = rptr->he.h_length;
 	hp->h_name = rptr->he.h_name;
-	cp->ttl = rptr->ttl;	/* set TTL to that returned by name server */
+	if (rptr->ttl < 600)
+	    {
+		reinfo.re_shortttl++;
+		cp->ttl = 600;
+	    }
+	else
+		cp->ttl = rptr->ttl;
 	cp->expireat = time(NULL) + cp->ttl;
 	rptr->he.h_name = NULL;
 #ifdef DEBUG
@@ -1300,10 +1337,11 @@ char	*parv[];
 		   cainfo.ca_lookups,
 		   cainfo.ca_na_hits, cainfo.ca_nu_hits, cainfo.ca_updates);
 
-sendto_one(sptr,"NOTICE %s :Re %d Rl %d/%d Rp %d Rq %d Rs %d(%d) Rt %d",
-		   sptr->name,
-		   reinfo.re_errors, reinfo.re_nu_look, reinfo.re_na_look,
-		   reinfo.re_replies, reinfo.re_requests, reinfo.re_sent,
+	sendto_one(sptr,"NOTICE %s :Re %d Rl %d/%d Rp %d Rq %d",
+		   sptr->name, reinfo.re_errors, reinfo.re_nu_look,
+		   reinfo.re_na_look, reinfo.re_replies, reinfo.re_requests);
+	sendto_one(sptr,"NOTICE %s :Ru %d Rsh %d Rs %d(%d) Rt %d", sptr->name,
+		   reinfo.re_unkrep, reinfo.re_shortttl, reinfo.re_sent,
 		   reinfo.re_resends, reinfo.re_timeouts);
 	return 0;
 }

@@ -212,7 +212,7 @@ typedef	struct	SMode	Mode;
 #define	TERMCAP_TERM	2
 
 struct	ConfItem	{
-	int	status;		/* If CONF_ILLEGAL, delete when no clients */
+	unsigned int	status;	/* If CONF_ILLEGAL, delete when no clients */
 	int	clients;	/* Number of *LOCAL* clients using this */
 	struct	in_addr ipnum;	/* ip number of host field */
 	char	*host;
@@ -439,8 +439,8 @@ struct Channel	{
 /*
  * Undefined here, these are used in conjunction with the above modes in
  * the source.
-#define	MODE_DEL       0x20000000
-#define	MODE_ADD       0x40000000
+#define	MODE_DEL       0x40000000
+#define	MODE_ADD       0x80000000
  */
 
 #define	HoldChannel(x)		(!(x))

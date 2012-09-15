@@ -26,7 +26,9 @@
 #endif
 
 #if !defined(mips) || defined(SGI) || defined(ULTRIX)
+# if !defined(NEXT)
 #include <unistd.h>
+# endif
 #endif
 #if defined(HPUX) || defined(sun)
 #include <stdlib.h>
@@ -47,14 +49,14 @@ extern char *inet_ntoa();
 #else 
 # if !defined(DYNIXPTX)
 #include <strings.h>
+#  if !defined(NEXT)
 extern	char	*index();
 extern	char	*rindex();
-#  ifndef	NEED_STRCASECMP
-extern	int	strcasecmp();
-extern	int	strncasecmp();
 #  endif
 # endif
 #endif
+#define	strcasecmp	mycmp
+#define	strncasecmp	myncmp
 
 #ifdef AIX
 #include <sys/select.h>
@@ -74,7 +76,7 @@ extern	int	strncasecmp();
 #define VOIDSIG void	/* whether signal() returns int of void */
 #endif
 
-extern VOIDSIG dummy(), restart();
+extern	VOIDSIG	dummy();
 
 #ifdef	DYNIXPTX
 #define	bcopy(a,b,s)	memcpy(b,a,s)

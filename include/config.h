@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef	__config_include__
+#define	__config_include__
+
 /* Type of host. These should be made redundant somehow. -avalon */
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
@@ -30,6 +33,7 @@
 #undef	DYNIXPTX		/* Sequents Brain-dead Posix implement. */
 #undef	SOL20			/* Solaris2 */
 #undef	ESIX			/* ESIX */
+#undef	NEXT			/* NeXTStep */
 
 /* Do these work? I dunno... */
 
@@ -56,7 +60,7 @@
  * If you get loader errors about unreferenced function calls, you must
  * define the following accordingly:
  */
-#if defined(NEXT) || defined(HPUX) || defined(AIX)
+#if defined(NEXT) || defined(HPUX) || defined(AIX) || defined (sequent)
 #undef	NEED_STRERROR
 #else
 #define	NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
@@ -68,8 +72,6 @@
 #undef	NEED_INET_ADDR  	/* You need inet_addr(3)	*/
 #undef	NEED_INET_NTOA  	/* You need inet_ntoa(3)	*/
 #undef	NEED_INET_NETOF 	/* You need inet_netof(3)	*/
-#undef	NEED_STRCASECMP		/* You need strcasecmp(3s)
-				 * which also implies strncasecmp(3s) */
 /*
  * NOTE: On some systems, valloc() causes many problems.
  */
@@ -369,25 +371,6 @@
                                  /*                    300000 for backbones */
 
 /*
- * Use our "ctype.h" defines (islower(),isupper(),tolower(),toupper(), etc).
- * These are all table referencing macros and are 'quicker' than on some
- * systems, and they provide consistant ANSI behavior for the Finnish character
- * set no mater how broken the host OS is or what language things are.
- * IRC expects []{}\| and A-Za-z to behave properly as upper/lower case,
- * and if this isn't true bad things can happen.
- *
- * THE CODE ASSUMES THAT tolower AND toupper DO NOT DESTROY CHARACTERS
- * THEY ARE NOT CHANGING. This is ANSI, but not old-style K&R. In particular,
- * you cannot just use the standard SunOS 4.1.1 ctype macros and have
- * the server work.
- *
- * Our code assumes EOF is -1. If that isn't true on your system, don't
- * use our ctype, but make sure yours understands { is lower case [, and
- * so on for }] and |\.
- */
-#define USE_OUR_CTYPE
-
-/*
  * use these to setup a Unix domain socket to connect clients/servers to.
  */
 #define	UNIXPORT
@@ -602,11 +585,6 @@ extern	void	debug();
 #  undef LEAST_IDLE
 #endif
 
-#ifndef DEBUGMODE
-#undef	GETRUSAGE_2
-#undef	TIMES_2
-#endif
-
 #if defined(mips) || defined(PCS)
 #undef SYSV
 #endif
@@ -648,9 +626,9 @@ error You stuffed up config.h signals #defines use only one.
 
 /*
  * safety margin so we can always have one spare fd, for motd/authd or
- * whatever else.
+ * whatever else.  -4 allows "safety" margin of 1 and space reserved.
  */
-#define	MAXCLIENTS	(MAXCONNECTIONS-1)
+#define	MAXCLIENTS	(MAXCONNECTIONS-4)
 
 #ifdef HAVECURSES
 # define DOCURSES
@@ -703,3 +681,5 @@ error CLIENT_FLOOD undefined
 #define Reg8 register
 #define Reg9 register
 #define Reg10 register
+
+#endif /* __config_include__ */

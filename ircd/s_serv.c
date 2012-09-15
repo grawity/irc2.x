@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.47 6/25/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.49 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -232,6 +232,9 @@ char	*parv[];
 		   parv[0], server, comment);
 #endif
 	  }
+	else if (MyConnect(acptr))
+		sendto_ops("Received SQUIT %s from %s (%s)",
+			   acptr->name, get_client_name(sptr,FALSE), comment);
 
 	return exit_client(cptr, acptr, sptr, comment);
     }
@@ -1094,9 +1097,7 @@ char	*parv[];
 		report_classes(sptr);
 		break;
 	case 'Z' : case 'z' :
-#ifdef	DEBUGMODE
 		count_memory(sptr, parv[0]);
-#endif
 		break;
 	default :
 		stat = '*';

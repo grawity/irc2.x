@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.3 6/18/93 (C) 1993 Darren Reed";
+static  char sccsid[] = "@(#)chkconf.c	1.6 07 Aug 1993 (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -59,7 +59,6 @@ int	argc;
 char	*argv[];
 {
 	new_class(0);
-	(void)sprintf(maxsendq, "%d", MAXSENDQLENGTH);
 
 	if (chdir(DPATH))
 	    {
@@ -125,10 +124,9 @@ static	int	openconf()
 static	int 	initconf(opt)
 int	opt;
 {
-	FILE	*fp;
 	int	fd;
-	char	line[512], *tmp, c[80];
-	int	ccount = 0, ncount = 0;
+	char	line[512], *tmp, c[80], *s;
+	int	ccount = 0, ncount = 0, dh;
 	aConfItem conf, *aconf = &conf;
 
 	(void)fprintf(stderr, "initconf(): ircd.conf = %s\n", configfile);
@@ -139,13 +137,13 @@ int	opt;
 #endif
 		return -1;
 	    }
-	fp = fdopen(fd, "r");
 
 	aconf->host = (char *)NULL;
 	aconf->passwd = (char *)NULL;
 	aconf->name = (char *)NULL;
 
-	while (fgets(line, sizeof(line) - 1, fp))
+	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
+	while ((dh = dgets(fd, line, sizeof(line) - 1)) > 0)
 	    {
 		if (aconf->host)
 			(void)free(aconf->host);
@@ -157,18 +155,52 @@ int	opt;
 		aconf->passwd = (char *)NULL;
 		aconf->name = (char *)NULL;
 		aconf->class = (aClass *)NULL;
-
-		if (line[0] == '#' || line[0] == '\n' ||
-		    line[0] == ' ' || line[0] == '\t')
-			continue;
 		if (tmp = (char *)index(line, '\n'))
 			*tmp = 0;
-		else while(fgets(c, sizeof(c) - 1, fp))
+		else while(dgets(fd, c, sizeof(c) - 1))
 			if (tmp = (char *)index(c, '\n'))
 			    {
 				*tmp = 0;
 				break;
 			    }
+		/*
+		 * Do quoting of characters and # detection.
+		 */
+		for (tmp = line; *tmp; tmp++)
+		    {
+			if (*tmp == '\\')
+			    {
+				switch (*(tmp+1))
+				{
+				case 'n' :
+					*tmp = '\n';
+					break;
+				case 'r' :
+					*tmp = '\r';
+					break;
+				case 't' :
+					*tmp = '\t';
+					break;
+				case '0' :
+					*tmp = '\0';
+					break;
+				default :
+					*tmp = *(tmp+1);
+					break;
+				}
+				if (!*(tmp+1))
+					break;
+				else
+					for (s = tmp; *s = *++s; )
+						;
+				tmp++;
+			    }
+			else if (*tmp == '#')
+				*tmp = '\0';
+		    }
+		if (!*line || *line == '#' || *line == '\n' ||
+		    *line == ' ' || *line == '\t')
+			continue;
 
 		/* Could we test if it's conf line at all?	-Vesa */
 		if (line[1] != ':')
@@ -179,6 +211,7 @@ int	opt;
                     }
 
 		(void)printf("\n%s\n",line);
+		(void)fflush(stdout);
 
 		tmp = getfield(line);
 		if (!tmp)
@@ -307,19 +340,23 @@ int	opt;
                 */
 		if (aconf->status & CONF_CLASS)
 		    {
+			int	class = 0;
+
 			if (!aconf->host)
 			    {
 				(void)fprintf(stderr,"\tERROR: no class #\n");
 				continue;
 			    }
-			if (!aconf->port)
+			if (!tmp)
 			    {
 				(void)fprintf(stderr,
 					"\tWARNING: missing sendq field\n");
 				(void)fprintf(stderr, "\t\t default: %d\n",
 					MAXSENDQLENGTH);
-				aconf->port = MAXSENDQLENGTH;
+				(void)sprintf(maxsendq, "%d", MAXSENDQLENGTH);
 			    }
+			else
+				(void)sprintf(maxsendq, "%d", atoi(tmp));
 			new_class(atoi(aconf->host));
 			aconf->class = get_class(atoi(aconf->host));
 			goto print_confline;
@@ -367,6 +404,7 @@ int	opt;
 
 		if (!aconf->class)
 			aconf->class = get_class(0);
+		(void)sprintf(maxsendq, "%d", aconf->class->class);
 
 		if (!aconf->name)
 			aconf->name = nullfield;
@@ -375,11 +413,11 @@ int	opt;
 		if (!aconf->host)
 			aconf->host = nullfield;
 print_confline:
-		(void)printf("(%d) (%s) (%s) (%s) (%d) (%d)\n",
+		(void)printf("(%d) (%s) (%s) (%s) (%d) (%s)\n",
 		      aconf->status, aconf->host, aconf->passwd,
-		      aconf->name, aconf->port, aconf->class->class);
+		      aconf->name, aconf->port, maxsendq);
+		(void)fflush(stdout);
 	    }
-	(void)fclose(fp);
 	(void)close(fd);
 #ifdef	M4_PREPROC
 	(void)wait(0);
@@ -441,4 +479,115 @@ char	*newline;
 		line = end + 1;
 	*end = '\0';
 	return(field);
+}
+
+
+/*
+** read a string terminated by \r or \n in from a fd
+**
+** Created: Sat Dec 12 06:29:58 EST 1992 by avalon
+** Returns:
+**	0 - EOF
+**	-1 - error on read
+**     >0 - number of bytes returned (<=num)
+** After opening a fd, it is necessary to init dgets() by calling it as
+**	dgets(x,y,0);
+** to mark the buffer as being empty.
+*/
+int	dgets(fd, buf, num)
+int	fd, num;
+char	*buf;
+{
+	static	char	dgbuf[8192];
+	static	char	*head = dgbuf, *tail = dgbuf;
+	register char	*s, *t;
+	register int	n, nr;
+
+	/*
+	** Sanity checks.
+	*/
+	if (head == tail)
+		*head = '\0';
+	if (!num)
+	    {
+		head = tail = dgbuf;
+		*head = '\0';
+		return 0;
+	    }
+	if (num > sizeof(dgbuf) - 1)
+		num = sizeof(dgbuf) - 1;
+dgetsagain:
+	if (head > dgbuf)
+	    {
+		for (nr = tail - head, s = head, t = dgbuf; nr > 0; nr--)
+			*t++ = *s++;
+		tail = t;
+		head = dgbuf;
+	    }
+	/*
+	** check input buffer for EOL and if present return string.
+	*/
+	if (head < tail &&
+	    ((s = index(head, '\n')) || (s = index(head, '\r'))) && s < tail)
+	    {
+		n = MIN(s - head + 1, num);	/* at least 1 byte */
+dgetsreturnbuf:
+		bcopy(head, buf, n);
+		head += n;
+		if (head == tail)
+			head = tail = dgbuf;
+		return n;
+	    }
+
+	if (tail - head >= num)		/* dgets buf is big enough */
+	    {
+		n = num;
+		goto dgetsreturnbuf;
+	    }
+
+	n = sizeof(dgbuf) - (tail - dgbuf) - 1;
+	nr = read(fd, tail, n);
+	if (nr == -1)
+	    {
+		head = tail = dgbuf;
+		return -1;
+	    }
+	if (!nr)
+	    {
+		if (head < tail)
+		    {
+			n = MIN(head - tail, num);
+			goto dgetsreturnbuf;
+		    }
+		head = tail = dgbuf;
+		return 0;
+	    }
+	tail += nr;
+	*tail = '\0';
+	for (t = head; (s = index(t, '\n')); )
+	    {
+		if ((s > head) && (s > dgbuf))
+		    {
+			t = s-1;
+			for (nr = 0; *t == '\\'; nr++)
+				t--;
+			if (nr & 1)
+			    {
+				t = s+1;
+				s--;
+				nr = tail - t;
+				while (nr--)
+					*s++ = *t++;
+				tail -= 2;
+				*tail = '\0';
+			    }
+			else
+				s++;
+		    }
+		else
+			s++;
+		t = s;
+	    }
+	*tail = '\0';
+	goto dgetsagain;
 }

@@ -455,8 +455,8 @@ Field: 1        2              3                4               5
    information, EDIT your "irc.conf" file and add the following command
    line to it:
 
-          O:<TARGET Host NAME>:<password>:<nickname>
-  Field:  1          2             3          4
+          O:<TARGET Host NAME>:<password>:<nickname>:<port>:<class>
+  Field:  1          2             3          4        5       6
 
   Explanation:
  
@@ -485,6 +485,13 @@ Field: 1        2              3                4               5
               you want.  It is better to make this a NICKNAME that no one
               else knows, but anything will do.  I usually use my own
               loginname.
+
+     Field 5: Unused.
+
+     Field 6: The class field should refer to an existing class (preferably
+	      having a lower number than that for the relevant I-line) and
+	      determines the maximum number of simultaneous uses of the
+	      O-line allowable through the max. links field in the Y-line.
 
   Example:
               O:orion.cair.du.edu:pyunxc:Jeff

@@ -20,7 +20,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_numeric.c	2.11 12/20/92 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_numeric.c	2.12 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -93,9 +93,9 @@ char	*parv[];
 			** And regretted. Dont do it that way. Make sure
 			** it goes only to non-servers. -avalon
 			*/
-		    if (!IsMe(acptr) && !IsServer(acptr))
-			sendto_prefix_one(acptr, sptr,":%s %d %s%s", parv[0],
-					  numeric, nick, buffer);
+			if (!IsMe(acptr))
+				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
+					parv[0], numeric, nick, buffer);
 		    }
 		else if ((chptr = find_channel(nick, (aChannel *)NULL)))
 			sendto_channel_butone(cptr,sptr,chptr,":%s %d %s%s",
@@ -104,5 +104,3 @@ char	*parv[];
 	    }
 	return 0;
 }
-
-

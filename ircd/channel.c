@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.43 6/21/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.44 6/28/93 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -144,15 +144,15 @@ Reg1	char	*nick, *name, *host;
 
 	bzero(namebuf, sizeof(namebuf));
 	nick = check_string(nick);
-	strncpyzt(namebuf, nick, NICKLEN);
+	strncpyzt(namebuf, nick, NICKLEN + 1);
 	s += strlen(s);
 	*s++ = '!';
 	name = check_string(name);
-	strncpyzt(s, name, USERLEN);
+	strncpyzt(s, name, USERLEN + 1);
 	s += strlen(s);
 	*s++ = '@';
 	host = check_string(host);
-	strncpyzt(s, host, HOSTLEN);
+	strncpyzt(s, host, HOSTLEN + 1);
 	s += strlen(s);
 	*s = '\0';
 	return (namebuf);
@@ -1351,7 +1351,7 @@ char	*parv[];
 
 	if (parc < 2 || parv[1][0] == '\0')
 	    {
-		sendto_one(sptr, rpl_str(ERR_NEEDMOREPARAMS),
+		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
 			   me.name, parv[0], "PART");
 		return 0;
 	    }

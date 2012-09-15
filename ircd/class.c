@@ -18,7 +18,7 @@
  */
 
 #ifndef	lint
-static char sccsid[] = "@(#)class.c	1.3 4/11/93 (C) 1990 Darren Reed";
+static char sccsid[] = "@(#)class.c	1.4 6/28/93 (C) 1990 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -62,17 +62,18 @@ aConfItem	*aconf;
 int	get_client_class(acptr)
 aClient	*acptr;
 {
-	int i = 0, retc = BAD_CLIENT_CLASS;
-	Link	*tmp;
+	Reg1	Link	*tmp;
+	Reg2	aClass	*cl;
+	int	i = 0, retc = BAD_CLIENT_CLASS;
 
 	if (acptr && !IsMe(acptr)  && (acptr->confs))
 		for (tmp = acptr->confs; tmp; tmp = tmp->next)
 		    {
-			if (!tmp->value.aconf)
+			if (!tmp->value.aconf ||
+			    !(cl = tmp->value.aconf->class))
 				continue;
-			i = get_conf_class(tmp->value.aconf);
-			if (i > retc)
-				retc = i;
+			if (Class(cl) > retc)
+				retc = Class(cl);
 		    }
 
 	Debug((DEBUG_DEBUG,"Returning Class %d For %s",retc,acptr->name));
@@ -218,12 +219,18 @@ aClient	*sptr;
 long	get_sendq(cptr)
 aClient	*cptr;
 {
-	Reg1	Link	*link;
-	Reg2	aConfItem	*aconf;
+	Reg1	int	sendq = MAXSENDQLENGTH, retc = BAD_CLIENT_CLASS;
+	Reg2	Link	*tmp;
+	Reg2	aClass	*cl;
 
-	if ((link = cptr->confs))
-		if ((aconf = link->value.aconf))
-			if (aconf->class)
-				return (ConfSendq(aconf));
-	return MAXSENDQLENGTH;
+	if (cptr && !IsMe(cptr)  && (cptr->confs))
+		for (tmp = cptr->confs; tmp; tmp = tmp->next)
+		    {
+			if (!tmp->value.aconf ||
+			    !(cl = tmp->value.aconf->class))
+				continue;
+			if (Class(cl) > retc)
+				sendq = MaxSendq(cl);
+		    }
+	return sendq;
 }

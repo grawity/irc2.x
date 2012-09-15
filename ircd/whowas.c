@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)whowas.c	2.13 6/16/93 (C) 1988 Markku Savela";
+static  char sccsid[] = "@(#)whowas.c	2.14 07 Aug 1993 (C) 1988 Markku Savela";
 #endif
 
 #include "struct.h"
@@ -180,7 +180,6 @@ char	*parv[];
     }
 
 
-#ifdef DEBUGMODE
 void	count_whowas_memory(wwu, wwa, wwam)
 int	*wwu, *wwa;
 u_long	*wwam;
@@ -212,4 +211,3 @@ u_long	*wwam;
 
 	return;
 }
-#endif

@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.13 6/24/93 (C) 1990, 1991 Armin Gruner";
+static  char sccsid[] = "@(#)support.c	2.16 07 Aug 1993 (C) 1990, 1991 Armin Gruner";
 #endif
 
 #include "struct.h"
@@ -322,10 +322,34 @@ dgetsreturnbuf:
 	    }
 	tail += nr;
 	*tail = '\0';
+	for (t = head; (s = index(t, '\n')); )
+	    {
+		if ((s > head) && (s > dgbuf))
+		    {
+			t = s-1;
+			for (nr = 0; *t == '\\'; nr++)
+				t--;
+			if (nr & 1)
+			    {
+				t = s+1;
+				s--;
+				nr = tail - t;
+				while (nr--)
+					*s++ = *t++;
+				tail -= 2;
+				*tail = '\0';
+			    }
+			else
+				s++;
+		    }
+		else
+			s++;
+		t = s;
+	    }
+	*tail = '\0';
 	goto dgetsagain;
 }
 
-#ifdef USE_OUR_CTYPE
 
 unsigned char tolowertab[] =
 		{ 0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
@@ -441,4 +465,3 @@ unsigned char char_atribs[] = {
 /* f0-ff */	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 		};
 
-#endif

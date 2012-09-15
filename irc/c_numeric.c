@@ -66,9 +66,9 @@ char	*parv[];
 	switch (numeric)
 	    {
 	    case ERR_NOSUCHNICK:
-		sprintf(mybuf, "*** Error: %s: No such nickname (%s)",
-			parv[0], parv[2]);
-		sendto_one(&me, "WHOWAS %s", parv[2]);
+		sprintf(mybuf, "*** Error: %s: %s (%s)",
+			parv[0], parv[3], parv[2]);
+		sendto_one(&me, "WHOWAS %s 1", parv[2]);
 		break;
 	    case ERR_WASNOSUCHNICK:
 		mybuf[0] = '\0';
@@ -148,8 +148,8 @@ char	*parv[];
 			"Magic locks open only with an invitation key");
 		break;
 	    case ERR_BANNEDFROMCHAN:
-		sprintf(mybuf,"*** Error: %s: You are banned from the channel",
-			parv[0]);
+		sprintf(mybuf,"*** Error: %s: %s %s",
+			parv[0], "You are banned from the channel", parv[2]);
 		break;
 	    case ERR_NOTREGISTERED:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],
@@ -157,8 +157,8 @@ char	*parv[];
 			"You have not registered yourself yet");
 		break;
 	    case ERR_NEEDMOREPARAMS:
-		sprintf(mybuf, "*** Error: %s: %s", parv[0],
-			(parv[2][0]) ? parv[2] : "Not enough parameters");
+		sprintf(mybuf, "*** Error: %s: %s: %s", parv[0], parv[2],
+			(parv[3][0]) ? parv[3] : "Not enough parameters");
 		break;
 	    case ERR_ALREADYREGISTRED:
 		sprintf(mybuf, "*** Error: %s: %s", parv[0],

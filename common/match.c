@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)match.c	2.1 12/20/92 2 %S (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)match.c	2.2 7/3/93 2 %S (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -42,13 +42,8 @@ char *ma, *na;
 
 	for (;; mask++, name++)
 	    {
-#ifdef USE_OUR_CTYPE
 		m = tolower(*mask);
 		c = tolower(*name);
-#else
-		m = islower(*mask) ? *mask : tolower(*mask);
-		c = islower(*mask) ? *mask : tolower(*name);
-#endif
 		if (c == '\0')
 			break;
 		if ((m != '?' && m != c) || c == '*')

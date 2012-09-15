@@ -34,7 +34,7 @@ char irc_id[]="irc.c v2.0 (c) 1988 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 
 #define DEPTH 10
-#define KILLMAX 10  /* Number of kills to accept to really die */
+#define KILLMAX 2  /* Number of kills to accept to really die */
                     /* this is to prevent looping with /unkill */
 
 #include "struct.h"
@@ -90,7 +90,7 @@ char	buf[BUFSIZE];
 int	portnum, termtype = CURSES_TERM;
 int	debuglevel = DEBUG_ERROR;
 int	unkill_flag = 0, cchannel = 0;
-int	intr() /* , timeout()	Used *nowhere*	Vesa */ ;
+int	intr();
 int	QuitFlag = 0;
 
 void	quit_intr();
@@ -120,19 +120,16 @@ char	*argv[];
 {
   static char usage[] =
     "Usage: %s [ -c channel ] [ -p port ] [ nickname [ server ] ]\n";
-	int	channel = 0;
+	char	channel[CHANNELLEN+1];
 	int	length;
 	struct	passwd	*userdata;
 	char	*cp, *argv0=argv[0], *nickptr, *servptr, *getenv(), ch;
-	/* What is this for? 	-Vesa */
-#if 0	/* ??? !defined(VMS) && !defined(SOL20) && !defined(HPUX) */
-	extern int exit();
-#endif
 
 	if ((cp = rindex(argv0, '/')) != NULL)
 		argv0 = ++cp;
 	portnum = PORTNUM;
 	*buf = *currserver = '\0';
+	channel[0] = '\0';
 	me.user = &meUser;
 	me.from = &me;
 	/* Let's drop this.. ?	-Vesa
@@ -143,28 +140,36 @@ char	*argv[];
 	while (argc > 1 && argv[1][0] == '-') {
 		switch(ch = argv[1][1])
 		{
+		case 'h':
+			printf(usage, argv0);
+			exit(1);
+			break;
 		case 'p':
-		case 'c':
 			length = 0;
 			if (argv[1][2] != '\0')
 				length = atoi(&argv[1][2]);
 			else if (argc > 2) {
-					length = atoi(argv[2]);
-					argv++;
-					argc--;
+				length = atoi(argv[2]);
+				argv++;
+				argc--;
 			}
-			if (ch == 'p') {
-				if (length <= 0) {
-					printf(usage, argv0);
-					exit(1);
-				}
-				cchannel = length;
-			} else {
-				if (length == 0) {
-					printf(usage, argv0);
-					exit(1);
-				} else
-					channel = length;
+			if (length <= 0) {
+				printf(usage, argv0);
+				exit(1);
+			}
+			cchannel = length;
+			break;
+		case 'c':
+			if (argv[1][2] != '\0')
+				strncpy(channel, &argv[1][2], CHANNELLEN);
+			else if (argc > 2) {
+				strncpy(channel, argv[2], CHANNELLEN);
+				argv++;
+				argc--;
+			}
+			if (!channel[0]) {
+				printf(usage, argv0);
+				exit(1);
 			}
 			break;
 #ifdef DOTERMCAP
@@ -279,13 +284,14 @@ char	*argv[];
 		if (me.passwd[0])
 			sendto_one(&me, "PASS %s", me.passwd);
 		sendto_one(&me, "NICK %s", me.name);
-		sendto_one(&me, "USER %s %s %s %s", meUser.username,
+		sendto_one(&me, "USER %s %s %s :%s", meUser.username,
 			   me.sockhost, meUser.server, me.info);
-		if (channel)
-			sendto_one(&me, "CHANNEL %d", channel);
+		if (channel[0])
+			do_channel(channel, "JOIN");
 		myloop(sock);
 		if (logfile)
 			do_log(NULL);
+        	getchar();
 #ifdef DOCURSES
 		if (termtype == CURSES_TERM) {
 			echo();
@@ -469,34 +475,47 @@ char	*buf, *tmp;
 	return (0);
 }
 
+/* KILL, PART, SQUIT, TOPIC	"CMD PARA1 [:PARA2]" */
 do_kill(buf1, tmp)	/* 9.1.1993	-Vesa */
 char    *buf1, *tmp;
 {
 	char *b2;
 
 	b2 = index(buf1, SPACE);		/* find end of servername */
-	if (b2)					/* comment required */
+	if (b2)					/* comment */
 	    {
-		sprintf(buf, "%%s %%.%ds :%%s", b2 - buf1);
-        	sendto_one(&me, buf, tmp, buf1, b2 + 1);
+		*b2 = 0;
+        	sendto_one(&me, "%s %s :%s", tmp, buf1, b2 + 1);
 	    }
+	else
+       		sendto_one(&me, "%s %s", tmp, buf1);
+	if (*tmp == 'P')			/* PART */
+		querychannel = me.name;
 }
 
+/* "CMD PARA1 PARA2 [:PARA3]" */
 do_kick(buf1, tmp)	/* 23.1.1993	-Vesa */
 char    *buf1, *tmp;
 {
 	char *b2, *b3;
 
 	b2 = index(buf1, SPACE);		/* find end of channel name */
-	if (!b2) return;
-	b3 = index(b2 + 1, SPACE);		/* find end of victim name */
+	if (b2)
+	    b3 = index(b2 + 1, SPACE);		/* find end of victim name */
 	if (b3)
 	    {
-		sprintf(buf, "%%s %%.%ds :%%s", b3 - buf1);
-       		sendto_one(&me, buf, tmp, buf1, b3 + 1);
+		*b3 = 0;
+       		sendto_one(&me, "%s %s :%s", tmp, buf1, b3 + 1);
 	    }
 	else
-       		sendto_one(&me, "%s %s", tmp, buf1);
+       		sendto_one(&me, "%s %s :No comment", tmp, buf1);
+}
+
+/* "CMD :PARA1" */
+do_away(buf1, tmp)	/* 27.6.1993	-Vesa */
+char    *buf1, *tmp;
+{
+	sendto_one(&me, "%s :%s", tmp, buf1);
 }
 
 int	do_server(buf, tmp)
@@ -714,13 +733,6 @@ int	unixuser()
 	return(!StrEq(me.sockhost,"OuluBox"));
 #endif
 }
-
-#if 0
-aClient	*make_client()
-{
-	return(NULL);
-}
-#endif /* 0	Useless?	-Vesa */
 
 do_log(ptr, temp)
 char	*ptr, *temp;

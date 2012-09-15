@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.25 6/21/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.28 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -40,7 +40,7 @@ Computing Center and Jarkko Oikarinen";
  */
 static	char	*para[MAXPARA+1];
 #ifndef	CLIENT_COMPILE
-static	int	cancel_clients PROTO((aClient *, aClient *));
+static	int	cancel_clients PROTO((aClient *, aClient *, char *));
 static	void	remove_unknown PROTO((aClient *, char *));
 #endif
 
@@ -51,21 +51,17 @@ char	userhost[USERLEN+HOSTLEN+2];
 static	char	sender[HOSTLEN+1];
 #endif
 
-#ifdef	NEED_STRCASECMP
 int	myncmp(str1, str2, n)
-Reg1	unsigned char	*str1;
-Reg2	unsigned char	*str2;
+char	*str1;
+char	*str2;
 int	n;
     {
-#ifdef USE_OUR_CTYPE
-	while (toupper(*str1) == toupper(*str2))
-#else
-	while ( (islower(*str1) ? *str1 : tolower(*str1)) ==
-		(islower(*str2) ? *str2 : tolower(*str2)))
-#endif
+	Reg1	unsigned char	*s1 = (unsigned char *)str1;
+	Reg2	unsigned char	*s2 = (unsigned char *)str2;
+	while (toupper(*s1) == toupper(*s2))
 	    {
-		str1++; str2++; n--;
-		if (n == 0 || (*str1 == '\0' && *str2 == '\0'))
+		s1++; s2++; n--;
+		if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
 			return 0;
 	    }
 	return (*str1 - *str2);
@@ -81,14 +77,10 @@ int	mycmp(s1, s2)
 char	*s1;
 char	*s2;
     {
-	Reg1 unsigned char *str1 = (unsigned char *)s1;
-	Reg2 unsigned char *str2 = (unsigned char *)s2;
-#ifdef USE_OUR_CTYPE
+	Reg1	unsigned char	*str1 = (unsigned char *)s1;
+	Reg2	unsigned char	*str2 = (unsigned char *)s2;
+
 	while (toupper(*str2) == toupper(*str1))
-#else
-	while ( (islower(*str1) ? *str1 : tolower(*str1)) ==
-		(islower(*str2) ? *str2 : tolower(*str2)))
-#endif
 	    {
 		if (*str1 == '\0')
 			return 0;
@@ -97,7 +89,6 @@ char	*s2;
 	    }
 	return (*str1 - *str2);
     }
-#endif
 
 /*
 **  Find a client (server or user) by name.
@@ -354,7 +345,7 @@ struct	Message *mptr;
 					"Message (%s) coming from (%s)",
 					buffer, cptr->name));
 #ifndef	CLIENT_COMPILE
-				return cancel_clients(cptr, from);
+				return cancel_clients(cptr, from, buffer);
 #else
 				return -1;
 #endif
@@ -495,18 +486,15 @@ struct	Message *mptr;
 	para[++i] = NULL;
 	if (mptr == NULL)
 		return (do_numeric(numeric, cptr, from, i, para));
-	else
-	    {
-		mptr->count++;
-		if (IsRegisteredUser(cptr) &&
+	mptr->count++;
+	if (IsRegisteredUser(cptr) &&
 #ifdef	IDLE_FROM_MSG
-		    mptr->func == m_private)
+	    mptr->func == m_private)
 #else
-		    mptr->func != m_ping && mptr->func != m_pong)
+	    mptr->func != m_ping && mptr->func != m_pong)
 #endif
-			from->user->last = time(NULL);
-		return (*mptr->func)(cptr, from, i, para);
-	    }
+		from->user->last = time(NULL);
+	return (*mptr->func)(cptr, from, i, para);
     }
 
 /*
@@ -537,15 +525,16 @@ char	*newline;
 }
 
 #ifndef	CLIENT_COMPILE
-static	int	cancel_clients(cptr, sptr)
+static	int	cancel_clients(cptr, sptr, cmd)
 aClient	*cptr, *sptr;
+char	*cmd;
 {
 	/*
 	 * kill all possible points that are causing confusion here,
 	 * I'm not sure I've got this all right...
 	 * - avalon
 	 */
-	sendto_ops("Message for %s[%s!%s@%s] from %s",
+	sendto_ops("Message (%s) for %s[%s!%s@%s] from %s", cmd,
 		   sptr->name, sptr->from->name, sptr->from->username,
 		   sptr->from->sockhost, get_client_name(cptr, TRUE));
 	/*

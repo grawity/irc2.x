@@ -97,7 +97,7 @@ char *infotext[] =
 	"Those who helped in prior versions and continue to be helpful:",
 	"",
  	"Stellan Klebom      Dan Goodwin         Mike Bolotski",
-	"Chelsea Dyerman     Markku Jarvinen     Kimmo Suominen",
+	"Ian Frechette       Markku Jarvinen     Kimmo Suominen",
 	"Jeff Trim           Vijay Subramaniam   Karl Kleinpaste",
 	"Bill Wisner         Tom Davis           Hugo Calendar",
 	"Tom Hopkins         Stephen van den Berg",

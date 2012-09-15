@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.57 6/11/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.60 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -291,6 +291,10 @@ char	*nick, *username;
 			return exit_client(cptr, sptr, sptr,
 					   "No Authorization");
 		      } 
+		if (IsUnixSocket(sptr))
+			strncpyzt(user->host, me.sockhost, HOSTLEN+1);
+		else
+			strncpyzt(user->host, sptr->sockhost, HOSTLEN+1);
 		aconf = sptr->confs->value.aconf;
 		if (sptr->flags & FLAGS_GOTID)
 			strncpyzt(sptr->user->username, sptr->username,
@@ -301,7 +305,7 @@ char	*nick, *username;
 			char	temp[USERLEN+1];
 
 			strncpyzt(temp, username, USERLEN+1);
-			*sptr->user->username = '#';
+			*sptr->user->username = '~';
 			(void)strncpy(&sptr->user->username[1], temp,
 				  USERLEN);
 			sptr->user->username[USERLEN] = '\0';
@@ -334,11 +338,6 @@ char	*nick, *username;
 			return exit_client(cptr, sptr, sptr , "R-lined");
 		    }
 #endif
-		if (IsUnixSocket(sptr))
-			strncpyzt(user->host, me.sockhost, HOSTLEN+1);
-		else
-			strncpyzt(user->host, sptr->sockhost, HOSTLEN+1);
-
 		if (oldstatus == STAT_MASTER && MyConnect(sptr))
 			m_oper(&me, sptr, 1, parv);
 	    }
@@ -730,7 +729,7 @@ int	notice;
 						      ":%s %s %s :%s",
 						      parv[0], cmd, nick,
 						      parv[2]);
-			else if (!notice && MyConnect(sptr))
+			else if (!notice)
 				sendto_one(sptr, err_str(ERR_CANNOTSENDTOCHAN),
 					   me.name, parv[0], nick);
 			continue;
@@ -1441,9 +1440,15 @@ char	*parv[];
 			BadPtr(parv[2]) ? sptr->name : parv[2]);
 	else
 	    {
-		if ((killer = index(path, ' ')) &&
-		    (killer = rindex(killer, '!')))
-			killer++;
+		if ((killer = index(path, ' ')))
+		    {
+			while (*killer && *killer != '!')
+				killer--;
+			if (!*killer)
+				killer = path;
+			else
+				killer++;
+		    }
 		else
 			killer = path;
 		(void)sprintf(buf2, "Killed (%s)", killer);
@@ -1591,7 +1596,9 @@ char	*parv[];
 	sptr->flags &= ~FLAGS_PINGSENT;
 
 	if (!BadPtr(destination) && mycmp(destination, me.name) != 0)
-		if ((acptr = find_server(destination, NULL)))
+	    {
+		if ((acptr = find_client(destination, NULL)) ||
+		    (acptr = find_server(destination, NULL)))
 			sendto_one(acptr,":%s PONG %s %s",
 				   parv[0], origin, destination);
 		else
@@ -1600,6 +1607,7 @@ char	*parv[];
 				   me.name, parv[0], destination);
 			return 0;
 		    }
+	    }
 #ifdef	DEBUGMODE
 	else
 		Debug((DEBUG_NOTICE, "PONG: %s %s", origin,
@@ -1732,9 +1740,11 @@ char	*parv[];
                     (logfile = open(FNAME_OPERLOG, O_WRONLY|O_APPEND)) != -1)
 		{
 		  (void)alarm(0);
-                        (void)sprintf(linebuf, "OPER (%s) (%s) by (%s!%s@%s)\n",
-				      name, encr,
-				      parv[0], sptr->username, sptr->sockhost);
+                        (void)sprintf(linebuf,
+				      "%s OPER (%s) (%s) by (%s!%s@%s)\n",
+				      myctime(time(NULL)), name, encr,
+				      parv[0], sptr->user->username,
+				      sptr->sockhost);
 		  (void)alarm(3);
 		  (void)write(logfile, linebuf, strlen(linebuf));
 		  (void)alarm(0);

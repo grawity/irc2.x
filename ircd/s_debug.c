@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.23 6/25/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.24 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -112,7 +112,6 @@ char	serveropts[] = {
 #endif
 '\0'};
 
-#ifdef DEBUGMODE
 #include "common.h"
 #include "sys.h"
 #include "whowas.h"
@@ -157,6 +156,7 @@ char	serveropts[] = {
 
 extern	etext;
 
+#ifdef DEBUGMODE
 static	char	debugbuf[1024];
 
 #ifndef	USE_VARARGS
@@ -299,6 +299,7 @@ char	*nick;
 		   writeb[5], writeb[6], writeb[7], writeb[8], writeb[9]);
 	return;
 }
+#endif
 
 void	count_memory(cptr, nick)
 aClient	*cptr;
@@ -460,4 +461,3 @@ char	*nick;
 #endif
 	return;
 }
-#endif

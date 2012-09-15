@@ -49,16 +49,16 @@
 char	*malloc(), *calloc();
 void	free();
 #else
+# if defined(NEXT)
+#include <sys/malloc.h>
+# else
 #include <malloc.h>
+# endif
 #endif
 
 extern	int	matches PROTO((char *, char *));
-#ifdef	NEED_STRCASECMP
 extern	int	mycmp PROTO((char *, char *));
-#else
-#define	mycmp	strcasecmp
-#define	myncmp	strncasecmp
-#endif
+extern	int	myncmp PROTO((char *, char *, int));
 #ifdef NEED_STRTOK
 extern	char	*strtok PROTO((char *, char *));
 #endif
@@ -98,8 +98,6 @@ extern char *strtoken PROTO((char **, char *, char *));
 
 #define MyFree(x)       if ((x) != NULL) free(x)
 #define DupString(x,y) do{x=MyMalloc(strlen(y)+1);(void)strcpy(x,y);}while(0)
-
-#ifdef USE_OUR_CTYPE
 
 extern unsigned char tolowertab[];
 
@@ -141,9 +139,6 @@ extern unsigned char char_atribs[];
 #define isascii(c) ((u_char)(c) >= 0 && (u_char)(c) <= 0x7f)
 #define isgraph(c) ((char_atribs[(u_char)(c)]&PRINT) && ((u_char)(c) != 0x32))
 #define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
-#else
-#include <ctype.h>
-#endif
 
 extern char *MyMalloc();
 extern void flush_connections();

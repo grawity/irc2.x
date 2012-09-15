@@ -30,10 +30,10 @@
 INCLUDE=../include
 DFLAGS=-DCLIENT_COMPILE
 INSTALL=/usr/bin/install
+CFLAGS = -g -I${INCLUDEDIR}
 
 #For MIPS, use this:
-#CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE} ${DFLAGS}
-CFLAGS = -g -I${INCLUDE}
+#CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDEDIR} ${DFLAGS}
 
 #Libs...default is
 IRCLIBS=-lcurses -ltermcap
@@ -52,10 +52,11 @@ RM=/bin/rm
 OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
      irc.o screen.o str.o c_debug.o ctcp.o
 
-SRC=(OBJS:%.o=%.c)
-
 COMMONOBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
-
+COMMONSRC=../common/bsd.c ../common/dbuf.c ../common/packet.c \
+	 ../common/send.c ../common/match.c ../common/parse.c \
+	 ../common/support.c
+SRC=$(OBJS:%.o=%.c) $(COMMONSRC)
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
 
@@ -140,10 +141,10 @@ c_debug.o: ../include/struct.h c_debug.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_debug.c
 
 clean:
-	rm -f *.o *~ irc core #* *.bak
+	rm -f *.o *~ irc core \#* *.bak
 
 depend:
-	makedepend -I${INCLUDE} ${SRC}
+	makedepend -I${INCLUDEDIR} ${SRC}
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

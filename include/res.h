@@ -56,8 +56,8 @@ typedef struct	cachetable {
 	aCache	*name_list;
 	} CacheTable;
 
-#define ARES_CACSIZE	51
+#define ARES_CACSIZE	101
 
-#define	MAXCACHED	30
+#define	MAXCACHED	81
 
 #endif /* __res_include__ */

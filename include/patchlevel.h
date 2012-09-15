@@ -17,5 +17,5 @@
  */
 
 #ifndef	PATCHLEVEL
-#define PATCHLEVEL "2.8.10"
+#define PATCHLEVEL "2.8.12"
 #endif

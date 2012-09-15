@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.57 6/26/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.60 07 Aug 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -57,9 +57,7 @@ Computing Center and Jarkko Oikarinen";
 #include <signal.h>
 #include <fcntl.h>
 #include <utmp.h>
-#if defined(GETRUSAGE_2)
-# include <sys/resource.h>
-#endif
+#include <sys/resource.h>
 #ifdef	AIX
 # include <time.h>
 # include <arpa/nameser.h>
@@ -139,17 +137,6 @@ int	size;
 }
 
 /*
-** AcceptNewConnections
-**	If TRUE, select() will be enabled for the listening socket
-**	(me.fd). If FALSE, it's not enabled and new connections are
-**	not accepted. This is needed, because select() seems to
-**	return "may do accept" even if the process has run out of
-**	available file descriptors (fd's). Thus, the server goes
-**	into a loop: select() OK -> accept() FAILS :(
-*/
-static	int	AcceptNewConnections = TRUE;
-
-/*
 ** Cannot use perror() within daemon. stderr is closed in
 ** ircd and cannot be used. And, worse yet, it might have
 ** been reassigned to a normal connection...
@@ -186,10 +173,12 @@ aClient *cptr;
 	 * This may only work when SO_DEBUG is enabled but its worth the
 	 * gamble anyway.
 	 */
+#ifdef	SO_ERROR
 	if (!IsMe(cptr) && cptr->fd >= 0)
 		if (!getsockopt(cptr->fd, SOL_SOCKET, SO_ERROR, &err, &len))
-			errtmp = err;
-
+			if (err)
+				errtmp = err;
+#endif
 	sendto_ops(text, host, strerror(errtmp));
 #ifdef USE_SYSLOG
 	syslog(LOG_WARNING, text, host, strerror(errtmp));
@@ -302,9 +291,8 @@ int	port;
  * Create a new client which is essentially the stub like 'me' to be used
  * for a socket that is passive (listen'ing for connections to be accepted).
  */
-int	add_listener(name, port)
-char	*name;
-int	port;
+int	add_listener(aconf)
+aConfItem *aconf;
 {
 	aClient	*cptr;
 
@@ -313,24 +301,33 @@ int	port;
 	cptr->acpt = cptr;
 	cptr->from = cptr;
 	SetMe(cptr);
-	strncpyzt(cptr->name, name, sizeof(cptr->name));
+	strncpyzt(cptr->name, aconf->host, sizeof(cptr->name));
 #ifdef	UNIXPORT
-	if (*name == '/')
+	if (*aconf->host == '/')
 	    {
-		if (unixport(cptr, name, port))
+		if (unixport(cptr, aconf->host, aconf->port))
 		    {
 			cptr->fd = -2;
 			free_client(cptr);
+			cptr = NULL;
 		    }
 	    }
 	else
 #endif
 	    {
-		if (inetport(cptr, name, port))
+		if (inetport(cptr, aconf->host, aconf->port))
 		    {
 			cptr->fd = -2;
 			free_client(cptr);
+			cptr = NULL;
 		    }
+	    }
+
+	if (cptr)
+	    {
+		cptr->confs = make_link();
+		cptr->confs->next = NULL;
+		cptr->confs->value.aconf = aconf;
 	    }
 	return 0;
 }
@@ -364,14 +361,14 @@ int	port;
 		return -1;
 	    }
 
-	(void)mkdir(path, 0755);
 	un.sun_family = AF_UNIX;
+	(void)mkdir(path, 0755);
 	(void)sprintf(unixpath, "%s/%d", path, port);
 	(void)unlink(unixpath);
-	errno = 0;
-	(void)strcpy(un.sun_path, unixpath);
-	get_sockhost(cptr, unixpath);
+	strncpyzt(un.sun_path, unixpath, sizeof(un.sun_path));
 	(void)strcpy(cptr->name, me.name);
+	errno = 0;
+	get_sockhost(cptr, unixpath);
 
 	if (bind(cptr->fd, (struct sockaddr *)&un, strlen(unixpath)+2) == -1)
 	    {
@@ -403,40 +400,39 @@ void	close_listeners()
 {
 	Reg1	aClient	*cptr;
 	Reg2	int	i;
-
-	/*
-	 * change the "accepted" from pointers to point back to me if they
-	 * were accepted from a strange socket.
-	 */
-	for (i = 0; i <= highest_fd; i++)
-	    {
-		if (!(cptr = local[i]))
-			continue;
-		if (cptr->acpt != &me)
-			cptr->acpt = &me;
-	    }
+	Reg3	aConfItem *aconf;
 
 	/*
 	 * close all 'extra' listening ports we have and unlink the file
 	 * name if it was a unix socket.
 	 */
-	for (i = 0; i <= highest_fd; i++)
+	for (i = MAXCONNECTIONS - 1; i; i--)
 	    {
 		if (!(cptr = local[i]))
 			continue;
 		if (!IsMe(cptr) || cptr == &me || !IsListening(cptr))
 			continue;
+		aconf = cptr->confs->value.aconf;
+		aconf->status |= CONF_ILLEGAL;
 
-		if (IsUnixSocket(cptr))
-			(void)unlink(cptr->sockhost);
-		close_connection(cptr);
-		/*
-		 * have to restart loop because it gets reordered :-/
-		 */
-		i = 0;
+		if (aconf->clients == 0)
+		    {
+#ifdef	UNIXPORT
+			if (IsUnixSocket(cptr))
+			    {
+				(void)sprintf(unixpath, "%s/%d", aconf->host,
+					aconf->port);
+				(void)unlink(unixpath);
+			    }
+#endif
+			close_connection(cptr);
+		    }
 	    }
 }
 
+/*
+ * init_sys
+ */
 void	init_sys()
 {
 	Reg1	int	fd;
@@ -445,7 +441,11 @@ void	init_sys()
 
 	if (!getrlimit(RLIMIT_FD_MAX, &limit))
 	    {
+# ifdef	pyr
+		if (limit.rlim_cur < MAXCONNECTIONS)
+#else
 		if (limit.rlim_max < MAXCONNECTIONS)
+# endif
 		    {
 			(void)fprintf(stderr,"ircd fd table too big\n");
 			(void)fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
@@ -453,6 +453,7 @@ void	init_sys()
 			(void)fprintf(stderr,"Fix MAXCONNECTIONS\n");
 			exit(-1);
 		    }
+# ifndef	pyr
 		limit.rlim_cur = limit.rlim_max; /* make soft limit the max */
 		if (setrlimit(RLIMIT_FD_MAX, &limit) == -1)
 		    {
@@ -460,16 +461,19 @@ void	init_sys()
 					limit.rlim_cur);
 			exit(-1);
 		    }
+# endif
 	    }
 #endif
 #ifdef sequent
 # ifndef	DYNIXPTX
-	(void)setdtablesize(SEQ_NOFILE);
-	if (SEQ_NOFILE < MAXCONNECTIONS)
+	int	fd_limit;
+
+	fd_limit = setdtablesize(MAXCONNECTIONS + 1);
+	if (fd_limit < MAXCONNECTIONS)
 	    {
 		(void)fprintf(stderr,"ircd fd table too big\n");
 		(void)fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
-			limit.rlim_max, MAXCONNECTIONS);
+			fd_limit, MAXCONNECTIONS);
 		(void)fprintf(stderr,"Fix MAXCONNECTIONS\n");
 		exit(-1);
 	    }
@@ -834,11 +838,25 @@ check_serverback:
 	 * It is quite possible to get here with the strange things that can
 	 * happen when using DNS in the way the irc server does. -avalon
 	 */
-	(void)sprintf(abuff, "%s@*", cptr->username);
-	if (!c_conf)
-		c_conf = find_conf_ip(lp, (char *)&cptr->ip, abuff, CFLAG);
-	if (!n_conf)
-		n_conf = find_conf_ip(lp, (char *)&cptr->ip, abuff, NFLAG);
+	if (!hp)
+	    {
+		if (!c_conf)
+			c_conf = find_conf_ip(lp, (char *)&cptr->ip,
+					      cptr->username, CFLAG);
+		if (!n_conf)
+			n_conf = find_conf_ip(lp, (char *)&cptr->ip,
+					      cptr->username, NFLAG);
+	    }
+	else
+		for (i = 0; hp->h_addr_list[i]; i++)
+		    {
+			if (!c_conf)
+				c_conf = find_conf_ip(lp, hp->h_addr_list[i],
+						      cptr->username, CFLAG);
+			if (!n_conf)
+				n_conf = find_conf_ip(lp, hp->h_addr_list[i],
+						      cptr->username, NFLAG);
+		    }
 	/*
 	 * detach all conf lines that got attached by attach_confs()
 	 */
@@ -979,6 +997,18 @@ aClient *cptr;
 		DBufClear(&cptr->sendQ);
 		DBufClear(&cptr->recvQ);
 		bzero(cptr->passwd, sizeof(cptr->passwd));
+		/*
+		 * clean up extra sockets from P-lines which have been
+		 * discarded.
+		 */
+		if (cptr->acpt != &me)
+		    {
+			aconf = cptr->acpt->confs->value.aconf;
+			if (aconf->clients > 0)
+				aconf->clients--;
+			if (!aconf->clients && IsIllegal(aconf))
+				close_connection(cptr->acpt);
+		    }
 	    }
 	for (; highest_fd > 0; highest_fd--)
 		if (local[highest_fd])
@@ -986,7 +1016,6 @@ aClient *cptr;
 
 	det_confs_butmask(cptr, 0);
 	cptr->from = NULL; /* ...this should catch them! >:) --msa */
-	AcceptNewConnections = TRUE; /* ...perhaps new ones now succeed? */
 
 	/*
 	 * fd remap to keep local[i] filled at the bottom.
@@ -1036,7 +1065,14 @@ aClient	*cptr;
 		report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
 #endif
 #ifdef	SO_SNDBUF
+# ifdef	_SEQUENT_
+/* seems that Sequent freezes up if the receving buffer is a different size
+ * to the sending buffer (maybe a tcp window problem too).
+ */
+	opt = 8192;
+# else
 	opt = 1400;
+# endif
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
@@ -1046,10 +1082,12 @@ int	get_sockerr(cptr)
 aClient	*cptr;
 {
 	int errtmp = errno, err = 0, len = sizeof(err);
-
+#ifdef	SO_ERROR
 	if (cptr->fd >= 0)
 		if (!getsockopt(cptr->fd, SOL_SOCKET, SO_ERROR, &err, &len))
-			errtmp = err;
+			if (err)
+				errtmp = err;
+#endif
 	return errtmp;
 }
 
@@ -1103,8 +1141,11 @@ int	fd;
 {
 	Link	lin;
 	aClient *acptr;
+	aConfItem *aconf = NULL;
 	acptr = make_client(NULL);
 
+	if (cptr != &me)
+		aconf = cptr->confs->value.aconf;
 	/* Removed preliminary access check. Full check is performed in
 	 * m_server and m_user instead. Also connection time out help to
 	 * get rid of unwanted connections.
@@ -1127,6 +1168,9 @@ add_con_refuse:
 			(void)close(fd);
 			return NULL;
 		    }
+		/* don't want to add "Failed in connecting to" here.. */
+		if (aconf && IsIllegal(aconf))
+			goto add_con_refuse;
 		/* Copy ascii address to 'sockhost' just in case. Then we
 		 * have something valid to put into error messages...
 		 */
@@ -1161,6 +1205,8 @@ add_con_refuse:
 		nextdnscheck = 1;
 	    }
 
+	if (aconf)
+		aconf->clients++;
 	acptr->fd = fd;
 	if (fd > highest_fd)
 		highest_fd = fd;
@@ -1179,6 +1225,7 @@ aClient	*cptr;
 int	fd;
 {
 	aClient *acptr;
+	aConfItem *aconf = NULL;
 
 	acptr = make_client(NULL);
 
@@ -1186,7 +1233,21 @@ int	fd;
 	 * have something valid to put into error messages...
 	 */
 	get_sockhost(cptr, me.sockhost);
-
+	if (cptr != &me)
+		aconf = cptr->confs->value.aconf;
+	if (aconf)
+	    {
+		if (IsIllegal(aconf))
+		    {
+			ircstp->is_ref++;
+			acptr->fd = -2;
+			free_client(acptr);
+			(void)close(fd);
+			return;
+		    }
+		else
+			aconf->clients++;
+	    }
 	acptr->fd = fd;
 	if (fd > highest_fd)
 		highest_fd = fd;
@@ -1359,10 +1420,9 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 				continue;
 			if (IsMe(cptr) && IsListening(cptr))
 			    {
-				if (AcceptNewConnections &&
-				    (now > cptr->lasttime + 2))
+				if ((now > cptr->lasttime + 2))
 					FD_SET(i, &read_set);
-				else if (AcceptNewConnections && delay2 > 2)
+				else if (delay2 > 2)
 					delay2 = 2;
 			    }
 			else if (!IsMe(cptr))
@@ -1459,7 +1519,6 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			    {
 				report_error("Cannot accept connections %s:%s",
 						cptr);
-				AcceptNewConnections = FALSE;
 				break;
 			    }
 			ircstp->is_ac++;
@@ -1481,6 +1540,8 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 #endif
 				(void)add_connection(cptr, fd);
 			nextping = time(NULL);
+			if (!cptr->acpt)
+				cptr->acpt = &me;
 		    }
 
 	for (i = 0; i <= highest_fd; i++)

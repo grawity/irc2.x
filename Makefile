@@ -29,7 +29,7 @@ IRCLIBS=-lcurses -ltermcap
 # use the following on MIPS:
 #CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
 # For Irix 4.x (SGI), use the following:
-#CFLAGS= -O -cckr -I${INCLUDE}
+#CFLAGS= -O -cckr -I$(INCLUDEDIR)
 #
 # on NEXT use:
 #CFLAGS=-bsd -I$(INCLUDEDIR)
@@ -37,7 +37,7 @@ IRCLIBS=-lcurses -ltermcap
 #IRCDLIBS=-lsys_s
 #
 # AIX 370 flags
-#CLFAGS=-D_BSD -Hxa
+#CFLAGS=-D_BSD -Hxa -I$(INCLUDEDIR)
 #IRCDLIBS=-lbsd
 #IRCLIBS=-lcurses -lcur
 #
@@ -57,7 +57,7 @@ IRCLIBS=-lcurses -ltermcap
 #IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
 #
 # ESIX
-#CFLAGS=-O -I${INCLUDE} -I/usr/ucbinclude
+#CFLAGS=-O -I$(INCLUDEDIR) -I/usr/ucbinclude
 #IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
 #
 # LDFLAGS - flags to send the loader (ld). SunOS users may want to add
@@ -82,9 +82,10 @@ BINDIR=$(IRCDDIR)
 MANDIR=/usr/local/man
 INSTALL=/usr/bin/install
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
-            'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}' 'BINDIR=${BINDIR}' \
-            'INSTALL=${INSTALL}' 'IRCLIBS=${IRCLIBS}' 'IRCDDIR=${IRCDDIR}'
+MAKE=make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
+	'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}' 'BINDIR=${BINDIR}' \
+	'INSTALL=${INSTALL}' 'IRCLIBS=${IRCLIBS}' 'INCLUDEDIR=${INCLUDEDIR}' \
+	'IRCDDIR=${IRCDDIR}'
 
 all:	build
 
@@ -125,6 +126,8 @@ install: all
 	done
 	./install -c -m 644 doc/ircd.8 ${MANDIR}/man8
 	./install -c -m 644 doc/irc.1 ${MANDIR}/man1
+	-./install -c doc/ircd.8 ${MANDIR}/man8
+	-./install -c doc/irc.1 ${MANDIR}/man1
 
 
 rcs:

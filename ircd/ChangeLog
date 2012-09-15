@@ -17,6 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Sat Jun 26 09:31:07 1993
+	* all		2.8.10 released.
+
 Sun Apr 11 02:28:56 1993
 	* s_serv.c, s_user.c
 			Local Operator (o-lines) 'power' is now more flexible

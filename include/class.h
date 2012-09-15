@@ -58,11 +58,11 @@ typedef struct Class {
 extern	aClass	*classes;
 
 extern	aClass	*find_class PROTO((int));
-extern	int	GetConfClass PROTO((aConfItem *));
-extern	int	GetClientClass PROTO((aClient *));
-extern	int	GetClientPing PROTO((aClient *));
-extern	int	GetConFreq PROTO((aClass *));
-extern	void	AddClass PROTO((int, int, int, int, long));
+extern	int	get_conf_class PROTO((aConfItem *));
+extern	int	get_client_class PROTO((aClient *));
+extern	int	get_client_ping PROTO((aClient *));
+extern	int	get_con_freq PROTO((aClass *));
+extern	void	add_class PROTO((int, int, int, int, long));
 extern	void	check_class PROTO((void));
 extern	void	initclass PROTO((void));
 

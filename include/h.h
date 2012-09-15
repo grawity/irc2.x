@@ -79,7 +79,7 @@ extern	int	dbufalloc, dbufblocks, debuglevel, errno, h_errno;
 extern	int	highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
 extern	int	readcalls, udpfd, resfd;
 extern	aClient	*add_connection PROTO((aClient *, int));
-extern	int	add_listener PROTO((char *, int));
+extern	int	add_listener PROTO((aConfItem *));
 extern	void	add_local_domain PROTO((char *, int));
 extern	int	check_client PROTO((aClient *));
 extern	int	check_server PROTO((aClient *, struct hostent *, \
@@ -175,13 +175,13 @@ extern	void	checklist PROTO(());
 extern	void	remove_client_from_list PROTO((aClient *));
 extern	void	initlists PROTO(());
 
-extern	void    add_class PROTO((int, int, int, int, long));
+extern	void	add_class PROTO((int, int, int, int, long));
 extern	long	get_sendq PROTO((aClient *));
 extern	int	get_con_freq PROTO((aClass *));
 extern	int	get_client_ping PROTO((aClient *));
-extern	int     get_client_class PROTO((aClient *));
-extern	int     get_conf_class PROTO((aConfItem *));
-extern	void    report_classes PROTO((aClient *));
+extern	int	get_client_class PROTO((aClient *));
+extern	int	get_conf_class PROTO((aConfItem *));
+extern	void	report_classes PROTO((aClient *));
 
 extern	struct	hostent	*get_res PROTO((char *));
 extern	struct	hostent	*gethost_byaddr PROTO((char *, Link *));
