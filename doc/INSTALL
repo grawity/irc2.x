@@ -133,6 +133,7 @@ Overview of this document:
    9.  Connection Classes       (Y)
   10.  Leaf connections         (L)
   11.  Service connections      (S)
+  12.  Port connections		(P)
 
 
    1. SERVER CONNECTIONS:  How to connect to other servers
@@ -395,6 +396,16 @@ Field: 1        2              3                4               5
       sockets per process your OS allows) clients to your machine
       and take your network ports. Of course the same things can be
       done by simply telnetting to your machine's SMTP port (for example).
+
+   NEW!!!
+      As of the 2.7.2d version of the server, the server is able to accept
+      connections on multiple ports. I-lines are required for each P-line
+      to allow connections to be accepted. For unix sockets, this means
+      either adding I:/path/port::/path/port or some variation (wildcards
+      are recognised here). For internet ports, there must be an I-line
+      which allows the host access as normal, but the port field of the
+      I-line must match that of the port of the socket accepting the
+      connectiion. A port number of 0 is a wildcard (matches all ports).
 
    4. DEFAULT HOSTS (for local clients)
 
@@ -723,6 +734,57 @@ Field: 1 2 3       4
    or issue certain commands although most are available to it. Services,
    however, are not affected by flood control. It is therefore wise to
    oversee the use of S-lines with some care.
+
+ 12. Port Connections
+
+  Introduction.
+   The port line adds flexibility to the server's ability to accept
+   connections. By use of this line in the ircd.conf file, it is easy
+   to setup both Unix Domain ports for the server to accept connections
+   on as well as extra internet ports.
+
+       P:<Internet IP# Mask>:<*>:<*>:<PORT>
+Field: 1        2             3   4     5
+
+or
+
+       P:<Directory>:<*>:<*>:<PORT>
+Field: 1        2             3   4     5
+
+  Explanation
+   Internet Ports
+    Field 1
+	The internet IP mask defines where connections may come from and
+	be accepted. The IP mask uses either *'s or 0's as wildcards. The
+	following two lines are the same:
+
+		P:128.2.*:::6664
+		P:128.2.0.0:::6664
+
+	The incoming isnt matched against the mask, rather the ip# string
+	is decoded and compared segment by segment. Thus
+		P:128.2*.1.2:::6664
+	will not match 128.20.1.2.
+
+    Field 5
+	The port number field tells the server which port number it should
+	listen on for incoming connections.
+
+    Unix Socket Ports.
+     Field 1
+	The path set in field 1 should be the directory name in which to
+	create the unix socket for later listening to. The server will
+	attempt to create the directory before creating the unix socket.
+
+     Field 5
+	The port field when used in combination with a pathname in a P-line
+	is the filename created in the directory set in Field 1.
+
+     Example:
+		P:/tmp/.ircd:::6667
+
+	Creates a unix socket in the /tmp/.ircd directory called "6667".
+	The unix socket (file) must be a numerical.
 
 Appendix A: Difference between IP addresses and hostnames
 

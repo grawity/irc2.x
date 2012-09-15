@@ -40,7 +40,10 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-#if defined(MIPS) || defined(pyr) || defined(apollo)
+/*
+ * Real BSD systems dont have a malloc.h. - avalon
+ */
+#if defined(BSD) || defined(MIPS) || defined(pyr) || defined(apollo)
 char *malloc(), *calloc();
 void free();
 #else

@@ -201,6 +201,14 @@
 
 #define MAXIMUM_LINKS 1
 
+/*
+ * If your server is running as a a HUB Server then define this.
+ * A HUB Server has many servers connect to it at the same as opposed
+ * to a leaf which just has 1 server (typically the uplink). Define this
+ * correctly for performance reasons.
+ */
+#undef	HUB
+
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
  * who is to sign on and when.  What the R line does is call an outside
@@ -266,6 +274,12 @@
 #undef	SYSLOG_OPER	/* log all users who successfully become an Op */
 
 /*
+ * If you want to log to a different facility than DAEMON, change
+ * this define.
+ */
+#define LOG_FACILITY LOG_DAEMON
+
+/*
  * If you want your server to be paranoid about IP# lookup, define GETHOST
  * so that a gethostbyname() is done for each gethostbyaddr() which returns
  * a hostname. If your system already has paranoid calls (SunOS 4.1.1 or
@@ -278,7 +292,7 @@
  * define this if you want to use crypted passwords for operators in your
  * ircd.conf file. See ircd/crypt/README for more details on this.
  */
-#undef	CRYPT_OPER_PASSWORD
+#define	CRYPT_OPER_PASSWORD
 
 /*
  * define this if you enable summon and if you want summon to look for the
@@ -313,6 +327,29 @@
 #define USE_OUR_CTYPE
 
 /*
+ * DNS.
+ *
+ * It is *very* important that if you are running an IRC server that the
+ * DNS (Domain Name Service) libraries work properly and that it be correctly
+ * setup on your host. However, on many hosts, its run with improper
+ * configurations. A simple test is to run the "hostname" command at any
+ * shell prompt. If it returns your FULL hostname (ie has your domainname in
+ * it) then it should be working and setup correctly. If not, then you *MUST*
+ * #define the following. If while running your server, you get clients which
+ * connect as just "host" with no ".local.domain" then you should also define
+ * this. There is nothing wrong with defining it just to be safe except that
+ * some operating systems may have compile time errors.
+ */
+#define	BAD_DNS
+
+/*
+ * Use these to setup a Unix domain socket to connect clients/servers to.
+ * See example.conf for how to setup P-lines to setup unix sockets to listen
+ * on.
+ */
+#undef	UNIXPORT
+
+/*
  * define IDENT to use the RFC931 identification server to verify usernames
  * note that you also need to edit ircd/Makefile to link (or not link) in
  * the authuser library code.
@@ -331,9 +368,9 @@
  *
  * I recommend defining IDENT and leaving AUTHTIMEOUT at 3.  -ckd@eff.org
  */
-#define IDENT
-#ifdef IDENT
-#define AUTHTIMEOUT 3
+#undef	IDENT
+#ifdef	IDENT
+#define	AUTHTIMEOUT 3
 #endif /* IDENT */
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
@@ -441,33 +478,6 @@
  */
 #define	SENDQ_ALWAYS
 
-/*
- * DNS.
- *
- * It is *very* important that if you are running an IRC server that the
- * DNS (Domain Name Service) libraries work properly and that it be correctly
- * setup on your host. However, on many hosts, its run with improper
- * configurations. A simple test is to run the "hostname" command at any
- * shell prompt. If it returns your FULL hostname (ie has your domainname in
- * it) then it should be working and setup correctly. If not, then you *MUST*
- * #define the following. If while running your server, you get clients which
- * connect as just "host" with no ".local.domain" then you should also define
- * this. There is nothing wrong with defining it just to be safe except that
- * some operating systems may have compile time errors.
- */
-#undef        BAD_DNS
-
-/*
- * use these to setup a Unix domain socket to connect clients/servers to.
- */
-#undef	UNIXPORT
-/*
- * This directory must be made *before* starting the server. The server
- * will create the unix sockets in here. This is only necessary if UNIXPORT
- * is defined.
- */
-#define	UNIXPORTPATH	"/tmp/.ircd"
-
 /* ------------------------- END CONFIGURATION SECTION -------------------- */
 #define MOTD MPATH
 #define	MYNAME SPATH
@@ -526,6 +536,12 @@ error You stuffed up config.h signals #defines use only one.
 
 #ifdef POSIX_SIGNALS
 #define	HAVE_RELIABLE_SIGNALS
+#endif
+
+#ifndef	HUB
+#define	MAXIMUM_LINKS	1
+#undef	MAXCONNECTIONS
+#define	MAXCONNECTIONS	15
 #endif
 
 #ifdef HAVECURSES

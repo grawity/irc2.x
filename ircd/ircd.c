@@ -34,7 +34,7 @@ aClient *client = &me;		/* Pointer to beginning of Client list */
 extern	aConfItem *conf, *find_me();
 extern	char	*get_client_name PROTO((aClient *, int));
 extern	aClient *find_name PROTO((char *, aClient *));
-extern	aClient	*add_connection PROTO((int));
+extern	aClient	*add_connection PROTO((aClient *, int));
 extern	aClient	*local[];
 extern	int find_kill PROTO((aClient *));
 #if defined(R_LINES) && defined(R_LINES_OFTEN)
@@ -100,7 +100,7 @@ VOIDSIG restart()
 #ifdef USE_SYSLOG
 	/* Have to reopen since it has been closed above */
 
-	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_DAEMON);
+	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
 	syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", MYNAME, myargv[0]);
 	closelog();
 #endif
@@ -188,10 +188,10 @@ long currenttime;
 static long check_pings(currenttime)
 long currenttime;
 {		
-  Reg1 aClient *cptr;
-  Reg2 int killflag;
-  int ping, smallp = 0, i, rflag = 0;
-  long oldest = 0;
+  Reg1	aClient	*cptr;
+  Reg2	int	killflag;
+  int	ping = 0, i, rflag = 0;
+  long	oldest = 0, timeout;
 
   for (i = 0; i < MAXCONNECTIONS; i++)
     {
@@ -204,6 +204,7 @@ long currenttime;
 	 ** already done when "FLAGS_DEADSOCKET" is set.
 	 */
 	exit_client((aClient *)NULL, cptr, &me, "Dead socket");
+	i = 0;
 	continue;
       }
       
@@ -212,10 +213,6 @@ long currenttime;
       rflag = IsPerson(cptr) ? find_restrict(cptr) : 0;
 #endif
       ping = get_client_ping(cptr);
-      if (smallp <= 0)
-	smallp = ping;
-      else if (ping < smallp)
-	smallp = ping;
       if (killflag || ((currenttime - cptr->lasttime) > ping) || rflag)
        {
 	/*
@@ -247,6 +244,11 @@ long currenttime;
 			 get_client_name(cptr,FALSE));
 #endif
 	  exit_client((aClient *)NULL, cptr, &me, "Ping timeout");
+	  /*
+	   * need to start loop over because the close can affect the ordering
+	   * of the local[] array.- avalon
+	   */
+	  i = 0;
 	  continue;
 	 } else if ((cptr->flags & FLAGS_PINGSENT) == 0) {
 	  /*
@@ -258,17 +260,16 @@ long currenttime;
 	  sendto_one(cptr, "PING %s", me.name);
 	}
       }
-      if (!oldest || oldest > (cptr->lasttime+ping))
-	oldest = cptr->lasttime+ping;
+      timeout = cptr->lasttime + ping;
+      while (timeout <= currenttime)
+	  timeout += ping;
+      if (timeout < oldest || !oldest)
+	      oldest = timeout;
     }
-    if (!oldest)
-      oldest = currenttime;
-    if (!smallp)
-      smallp = PINGFREQUENCY;
-    if (oldest == currenttime)
-      oldest += smallp;
+    if (!oldest || oldest < currenttime)
+      oldest = currenttime + PINGFREQUENCY;
     debug(DEBUG_NOTICE,"Next check_ping() call at: %s, %d %d %d",
-	  myctime(oldest + smallp),smallp,oldest,currenttime);
+	  myctime(oldest),ping,oldest,currenttime);
   return (oldest);
 }
 
@@ -421,7 +422,26 @@ char	*argv[];
 	clear_client_hash_table();
 	clear_channel_hash_table();
 	initclass();
-	res_init();
+	init_sys(bootopt);
+	if (portnum < 0)
+	  portnum = PORTNUM;
+	me.port = portnum;
+	get_my_name(me.name, me.sockhost,sizeof(me.sockhost)-1);
+	if (debugtty == -2)
+	    {
+		me.fd = 0;
+		local[0] = &me;
+		me.flags |= FLAGS_LISTEN;
+	    }
+	else
+	    {
+		if (inetport(&me, "*", portnum))
+			exit(1);
+	    }
+	open_log();
+#ifdef USE_SYSLOG
+	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
+#endif
 	if (initconf(bootopt & 2) == -1)
 	  {
 	    debug(DEBUG_FATAL,
@@ -429,47 +449,31 @@ char	*argv[];
 	    printf("Couldn't open configuration file %s\n", configfile);
 	    exit(-1);
 	  }
-	get_my_name(me.name, me.sockhost,sizeof(me.sockhost)-1);
-	init_sys(bootopt);
-	open_log();
-#ifdef USE_SYSLOG
-	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_DAEMON);
-#endif
 	/*
 	** If neither command line nor configuration defined any, use
 	** compiled default port and sockect hostname.
 	*/
 	if (me.name[0] == '\0')
 		strncpyzt(me.name,me.sockhost,sizeof(me.name));
-	if (portnum < 0)
-	  portnum = PORTNUM;
-	me.port = portnum;
 	me.hopcount = 0;
-	me.next = NULL;
-	me.from = &me;
-	me.user = NULL;
 	me.confs = NULL;
-	me.fd = (debugtty == -2) ? 0 : open_port(portnum);
+	me.next = NULL;
+	me.user = NULL;
+	me.from = &me;
 	SetMe(&me);
+
 	me.lasttime = me.since = me.firsttime = time(NULL);
 	add_to_client_hash_table(me.name, &me);
 
 	check_class();
 	if (debugtty == -1) {
-	  aClient *tmp = add_connection(0);
-	  if (tmp)
-	    SetMaster(tmp);
-	  else
+	  aClient *tmp = add_connection(&me, 0);
+	  if (tmp == (aClient *)NULL)
 	    exit(1);
+	  SetMaster(tmp);
 	}
 	else
 	  write_pidfile();
-
-#ifdef	UNIXPORT
-	cptr = make_client((aClient *)NULL);
-	if (unixport(portnum, cptr))
-		free(cptr);
-#endif
 
 	debug(DEBUG_NOTICE,"Server ready...");
 	for (;;)

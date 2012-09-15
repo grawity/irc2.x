@@ -124,6 +124,8 @@ int	len;
 	*/
 	to->sendM += 1;
 	me.sendM += 1;
+	if (to->acpt != &me)
+		to->acpt->sendM += 1;
 	/*
 	** This little bit is to stop the sendQ from growing too large when
 	** there is no need for it to. Thus we call send_queued() every time
@@ -166,8 +168,12 @@ int	len;
 	*/
 	to->sendM += 1;
 	me.sendM += 1;
+	if (to->acpt != &me)
+		to->acpt->sendM += 1;
 	to->sendB += rlen;
 	me.sendB += rlen;
+	if (to->acpt != &me)
+		to->acpt->sendB += 1;
 	return 0;
     }
 #endif
@@ -214,6 +220,8 @@ aClient *to;
 		to->lastsq = DBufLength(&to->sendQ)/2048;
 		to->sendB += rlen;
 		me.sendB += rlen;
+		if (to->acpt != &me)
+			to->acpt->sendB += rlen;
 		if (rlen < len) /* ..or should I continue until rlen==0? */
 			break;
 	    }
@@ -249,11 +257,16 @@ char	*par6, *par7, *par8, *par9, *par10, *par11;
 		      "Local socket %s with negative fd... AARGH!",
 		      to->name);
 	else if (IsMe(to))
+#ifndef	CLIENT_COMPILE
 		sendto_ops("Trying to send [%s] to myself!", sendbuf);
+#else
+		;
+#endif
 	else
 	    {
-		sendbuf[510] = '\0';
 		strcat(sendbuf, NEWLINE);
+		sendbuf[510] = '\n';
+		sendbuf[511] = '\0';
 		send_message(to, sendbuf, strlen(sendbuf));
 	    }
 

@@ -138,9 +138,10 @@ anUser	*user;
  * taken the code from ExitOneClient() for this and placed it here.
  * - avalon
  */
-int remove_client_from_list(cptr)
+int	remove_client_from_list(cptr)
 aClient	*cptr;
 {
+	checklist();
 	if (cptr->prev)
 		cptr->prev->next = cptr->next;
 	else {

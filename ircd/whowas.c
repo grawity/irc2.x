@@ -129,7 +129,9 @@ int	parc;
 char	*parv[];
     {
 	Reg1	aName	*nptr = (aName *)NULL;
-	Reg2	int	i;
+	Reg2	int	i, j = 0;
+	int	max = -1;
+	char	*p, *nick, *s;
 
  	if (parc < 2)
 	    {
@@ -137,39 +139,52 @@ char	*parv[];
 			   me.name, ERR_NONICKNAMEGIVEN, sptr->name);
 		return 0;
 	    }
+	if (parc > 2)
+		max = atoi(parv[2]);
+	if (parc > 3)
+		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s", 3,parc,parv))
+			return 0;
 
-	i = ww_index;
+	for (s = parv[1]; nick = strtoken(&p, s, ","); s = NULL)
+	    {
+		i = ww_index;
 
-	do {
-		if (mycmp(parv[1], was[i].ww_nick) == 0)
-		    {
-			nptr = &was[i];
+		do {
+			if (mycmp(nick, was[i].ww_nick) == 0)
+			    {
+				nptr = &was[i];
 
-			sendto_one(sptr,":%s %d %s %s %s %s * :%s",
-				   me.name, RPL_WHOWASUSER,
-				   sptr->name, nptr->ww_nick,
-				   nptr->ww_user->username,
-				   nptr->ww_user->host,
-				   nptr->ww_info);
-			sendto_one(sptr,":%s %d %s %s %s :Signoff: %s",
-				   me.name, RPL_WHOISSERVER,
-				   sptr->name, nptr->ww_nick,
-				   nptr->ww_user->server,
-				   myctime(nptr->ww_logout));
-			if (nptr->ww_user->away)
-				sendto_one(sptr,":%s %d %s %s :%s",
-					   me.name, RPL_AWAY,
+				sendto_one(sptr,":%s %d %s %s %s %s * :%s",
+					   me.name, RPL_WHOWASUSER,
 					   sptr->name, nptr->ww_nick,
-					   nptr->ww_user->away);
-		    }
-		i++;
-		if (i >= NICKNAMEHISTORYLENGTH)
-			i = 0;
-	} while (i != ww_index);
+					   nptr->ww_user->username,
+					   nptr->ww_user->host,
+					   nptr->ww_info);
+				sendto_one(sptr,":%s %d %s %s %s :Signoff: %s",
+					   me.name, RPL_WHOISSERVER,
+					   sptr->name, nptr->ww_nick,
+					   nptr->ww_user->server,
+					   myctime(nptr->ww_logout));
+				if (nptr->ww_user->away)
+					sendto_one(sptr,":%s %d %s %s :%s",
+						   me.name, RPL_AWAY,
+						   sptr->name, nptr->ww_nick,
+						   nptr->ww_user->away);
+				j++;
+			    }
+			if (max > 0 && j >= max)
+				break;
+			i++;
+			if (i >= NICKNAMEHISTORYLENGTH)
+				i = 0;
+		} while (i != ww_index);
 
-	if (nptr == (aName *)NULL)
-		sendto_one(sptr, ":%s %d %s %s :There was no such nickname",
-			   me.name, ERR_WASNOSUCHNICK, sptr->name, parv[1]);
+		if (nptr == (aName *)NULL)
+			sendto_one(sptr,
+				   ":%s %d %s %s :There was no such nickname",
+				   me.name, ERR_WASNOSUCHNICK, sptr->name,
+				   parv[1]);
+	    }
 	return 0;
     }
 

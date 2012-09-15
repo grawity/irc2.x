@@ -42,6 +42,8 @@ int	length;
  
 	me.receiveB += length; /* Update bytes received */
 	cptr->receiveB += length;
+	if (cptr->acpt != &me)
+		cptr->acpt->receiveB += length;
 	ch1 = cptr->buffer + cptr->count;
 	ch2 = buffer;
 	while (--length >= 0)
@@ -54,6 +56,8 @@ int	length;
 			*ch1 = '\0';
 			me.receiveM += 1; /* Update messages received */
 			cptr->receiveM += 1;
+			if (cptr->acpt != &me)
+				cptr->acpt->receiveM += 1;
 			cptr->count = 0; /* ...just in case parse returns with
 					 ** FLUSH_BUFFER without removing the
 					 ** structure pointed by cptr... --msa

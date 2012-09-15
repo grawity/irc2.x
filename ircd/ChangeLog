@@ -17,6 +17,37 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+Sat May 29 01:40:37 1992   Darren Reed <avalon@coombs.anu.edu.au>
+	* channel.c	Annoying problem with spaces in banid's fixed.
+
+Fri May 29 02:37:02 1992   Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c	Fixed access check problem for servers.
+
+Thu May 28 18:08:51 1992   Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c	bug fixed in m_user() with the ident code.
+
+Thu May 28 18:00:34 1992   Darren Reed <avalon@coombs.anu.edu.au>
+			Added patches from Jan L. Peterson <jlp@math.byu.edu>
+	* s_msg.c	MIPS needs errno in s_msg.c (not in errno.h)
+	* config.h, ircd.c
+			LOG_FACILITY added for more ease in customising
+			the use og syslogd in the server.
+
+	* s_msg.c	errno patched also for pyramids (same patch) - avalon
+
+Sun May 24 01:34:59 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_misc.c	Added patch from Chuck Kane (ckane@h.ece.uiuc.edu)
+			kOfor using getrusage(2) on HP-UX. its a nasty one! >:)
+
+Sun May 24 00:07:08 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_bsd.c, s_conf.c, ircd.c
+			P lines addded to allow multiple and easy setup
+			of unix sockets which server listens to. These also
+			provide a way for the server to listen on extra inet
+			ports. They are closed when the server rehashs and
+			then rebuilt.
+
 Thu May 21 00:37:21 1992  Christopher Davis <ckd@eff.org>
 
         * s_msg.c       Fixed the bug that prevented user modes (such as
@@ -25,8 +56,7 @@ Thu May 21 00:37:21 1992  Christopher Davis <ckd@eff.org>
 Wed May 20 21:52:19 1992  Christopher Davis <ckd@eff.org>
 
         * s_misc.c      Fixed dereferencing of NULL cptr
-                        (mycroft@gnu.ai.mit.edu,
-                        frechett@spot.colorado.edu)
+                        (mycroft@gnu.ai.mit.edu, frechett@spot.colorado.edu)
 
         * Makefile, s_bsd.c, s_msg.c
                         Added support for IDENT (RFC931) protocol for

@@ -18,8 +18,8 @@
 #*/
 
 # choose your poison
-#CC=cc
-CC=gcc -traditional
+CC=cc
+#CC=gcc -traditional
 RM=/bin/rm
 INCLUDEDIR=../include
 
@@ -75,6 +75,13 @@ build:
 		${MAKE} build; cd ..;\
 	done
 
+auth:
+	echo "Building common";\
+	cd common;\
+	${MAKE} build;\
+	cd ../ircd;\
+	${MAKE} auth;\
+	cd ..;
 clean:
 	${RM} -f *~ #* core
 	@for i in $(SUBDIRS); do \

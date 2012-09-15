@@ -44,7 +44,7 @@ CFLAGS= -g -I${INCLUDE}
 #IRCDLIBS=
 
 OBJS=channel.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o class.o hash.o note.o s_misc.o authuser.o
+     whowas.o s_debug.o class.o hash.o note.o s_misc.o
 
 SRC=channel.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
      whowas.c s_debug.c class.c note.c hash.c s_misc.c authuser.c
@@ -71,6 +71,12 @@ ircd: $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
 	$(CC) -g $(OBJS) $(COMMONOBJS) version.o -o ircd $(IRCDLIBS)
+	chmod $(IRCDMODE) ircd
+
+auth: $(OBJS) $(COMMONOBJS) authuser.o ../include/patchlevel.h
+	$(SHELL) version.c.SH
+	$(CC) $(CFLAGS) -c version.c
+	$(CC) -g $(OBJS) $(COMMONOBJS) authuser.o version.o -o ircd $(IRCDLIBS)
 	chmod $(IRCDMODE) ircd
 
 bindircd: $(RESOBJS) $(OBJS) $(COMMONOBJS) ../include/patchlevel.h

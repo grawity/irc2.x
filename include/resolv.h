@@ -26,7 +26,7 @@
  */
 
 #ifndef _PATH_RESCONF
-#define _PATH_RESCONF        "/etc/resolv.conf"
+#define _PATH_RESCONF        "/u3/407/avalon/etc/resolv.conf"
 #endif
 
 /*

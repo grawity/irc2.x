@@ -68,7 +68,7 @@ aConfItem	*conf = (aConfItem *)NULL;
 
 extern	int	portnum;
 extern	char	*configfile;
-extern	long	nextconnect;
+extern	long	nextconnect, nextping;
 
 static aConfItem *make_conf()
     {
@@ -462,6 +462,7 @@ int rehash()
 	for (cltmp = NextClass(FirstClass()); cltmp; cltmp = NextClass(cltmp))
 		MaxLinks(cltmp) = -1;
 
+	close_listeners();
 	conf = (aConfItem *) 0;
 	return initconf(1);
     }
@@ -571,6 +572,10 @@ int rehashing;
 		      aconf->status = CONF_RESTRICT;
 		      break;
 #endif
+		    case 'P': /* listen port line */
+		    case 'p':
+			aconf->status = CONF_LISTEN_PORT;
+			break;
 		    default:
 			debug(DEBUG_ERROR, "Error in config file: %s", line);
 			break;
@@ -614,6 +619,13 @@ int rehashing;
 		  continue;
 		}
 
+		if (aconf->status & CONF_LISTEN_PORT)
+		    {
+			add_listener(aconf->host, aconf->port);
+			conf = conf->next;
+			free_conf(aconf);
+			continue;
+		    }
 		if (aconf->status & CONF_SERVER_MASK) {
 		  if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
 		      aconf->host && index(aconf->host, '*')) {
@@ -684,7 +696,7 @@ int rehashing;
 	    }
 	fclose(fd);
 	check_class();
-	nextconnect = time(NULL);
+	nextping = nextconnect = time(NULL);
 	return (0);
     }
 

@@ -93,7 +93,7 @@ extern	aConfItem *find_conf_name PROTO((char *, int));
 extern	char	*get_client_name PROTO((aClient *, int));
 extern	char	*my_name_for_link PROTO((char *, aConfItem *));
 extern	int	portnum, debugtty, debuglevel;
-extern	long	nextconnect;
+extern	long	nextconnect, nextping;
 
 extern	int errno;
 
@@ -169,7 +169,7 @@ static	int	AcceptNewConnections = TRUE;
 #ifndef IDENT
 static
 #endif /* not IDENT */;
-int	report_error(text,cptr)
+int	report_error(text, cptr)
 char	*text;
 aClient *cptr;
     {
@@ -185,118 +185,203 @@ aClient *cptr;
 	return 0;
     }
 
-int	open_port(portnum)
-int	portnum;
+int	inetport(cptr, name, port)
+aClient	*cptr;
+char	*name;
+int	port;
     {
-	int	sock, length, sock2;
-	int	opt = 1;
 	static	struct sockaddr_in server;
+	int	length, ad[4], opt = 1;
+	char	ipname[20];
 
-	/* At first, open a new socket */
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
+	ad[0] = ad[1] = ad[2] = ad[3] = 0;
+
+	/*
+	 * do it this way because building ip# from separate values for each
+	 * byte requires endian knowledge or some nasty messing. Also means
+	 * easy conversion of "*" 0.0.0.0 or 134.* to 134.0.0.0 :-)
+	 */
+	sscanf(name, "%d.%d.%d.%d", &ad[0], &ad[1], &ad[2], &ad[3]);
+	sprintf(ipname, "%d.%d.%d.%d", ad[0], ad[1], ad[2], ad[3]);
+
+	if (cptr != &me)
 	    {
-		report_error("opening stream socket %s:%s",(aClient *)NULL);
-		exit(-1);
+		sprintf(cptr->sockhost, "%-.42s.%.5u",
+			name, (unsigned int)port);
+		strcpy(cptr->name, me.name);
+	    }
+	/*
+	 * At first, open a new socket
+	 */
+	cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (cptr->fd < 0)
+	    {
+		report_error("opening stream socket %s:%s", cptr);
+		return -1;
 	    }
 
 #ifdef SO_REUSEADDR
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+	if (setsockopt(cptr->fd, SOL_SOCKET, SO_REUSEADDR,
+			&opt, sizeof(opt)) < 0)
 	    {
-		report_error("setsockopt %s:%s", (aClient *) 0);
-		exit(-1);
+		report_error("setsockopt %s:%s", cptr);
+		close(cptr->fd);
+		return -1;
 	    }
 #endif
 
 	/* Bind a port to listen for new connections */
 	
+	cptr->ip.s_addr = inet_addr(ipname);
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(portnum);
+	server.sin_port = htons(port);
+
 	for (length = 0; length < 10; length++)
 	    {
-		if (bind(sock, (struct sockaddr *) &server, sizeof(server)))
+		if (bind(cptr->fd, &server, sizeof(server)))
 		    {
-			report_error("binding stream socket %s:%s",
-				    (aClient *)NULL);
+			report_error("binding stream socket %s:%s", cptr);
 			if (length >= 9)
-				exit(-1);
+			    {
+				close(cptr->fd);
+				return -1;
+			    }
 			sleep(20);
 		    }
 		else
 			break;
 	    }
-	{ /* KLUDGE to get it work... */
+	if (cptr == &me) /* KLUDGE to get it work... */
+	 {
 	  char buf[1024];
 	  int len = sizeof(server);
-	  if (getsockname(sock, &server, &len))
+	  if (getsockname(cptr->fd, &server, &len))
 	  	exit(1);
 
 	  sprintf(buf, ":%s %d %d :Port to local server is\n",
 		  me.name, RPL_MYPORTIS, server.sin_port);
 	  write(0, buf, strlen(buf));
-	}
-	if (sock > highest_fd)
-		highest_fd = sock;
-	local[sock] = &me;
-	listen(sock, 3);
+	 }
+	if (cptr->fd > highest_fd)
+		highest_fd = cptr->fd;
+	SetMe(cptr);
+	cptr->port = port;
+	cptr->from = cptr;
+	listen(cptr->fd, 3);
+	local[cptr->fd] = cptr;
+	cptr->flags |= FLAGS_LISTEN;
 
-	return(sock);
+	return 0;
     }
 
-#ifdef	UNIXPORT
-int	unixport(port, cptr)
+int	add_listener(name, port)
+char	*name;
 int	port;
+{
+	aClient	*cptr;
+
+#ifdef	UNIXPORT
+	if (*name == '/')
+	    {
+		cptr = make_client(NULL);
+		if (unixport(cptr, name, port))
+			free(cptr);
+	    }
+	else
+#endif
+	    {
+		cptr = make_client(NULL);
+		if (inetport(cptr, name, port))
+			free(cptr);
+	    }
+	cptr->acpt = cptr;
+	return 0;
+}
+
+#ifdef	UNIXPORT
+int	unixport(cptr, path, port)
 aClient	*cptr;
+char	*path;
+int	port;
 {
 	struct sockaddr_un un;
 
-	cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if ((cptr->fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+	    {
+		report_error("error opening unix domain socket %s:%s",NULL);
+		return -1;
+	    }
 
+	mkdir(path, 0755);
 	un.sun_family = AF_UNIX;
-	mkdir(UNIXPORTPATH, 0755);
-	sprintf(unixpath, "%s/%d", UNIXPORTPATH, port);
+	sprintf(unixpath, "%s/%d", path, port);
 	unlink(unixpath);
+	errno = 0;
 	strcpy(un.sun_path, unixpath);
+	strncpyzt(cptr->sockhost, unixpath, sizeof(cptr->sockhost));
+	strcpy(cptr->name, me.name);
+
 	if (bind(cptr->fd, (struct sockaddr *) &un, strlen(unixpath) + 2))
 	    {
-		perror("bind unix");
+		report_error("error binding unix socket %s:%s", cptr);
+		close(cptr->fd);
 		return -1;
 	    }
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
 	listen(cptr->fd, 3);
-	chmod(UNIXPORTPATH, 0755);
+	chmod(path, 0755);
+	chmod(unixpath, 0777);
 	SetMe(cptr);
-	SetUnixSock(cptr);
+	cptr->flags |= FLAGS_UNIX|FLAGS_LISTEN;
 	cptr->from = cptr;
 	cptr->port = 0;
-	strncpyzt(cptr->sockhost, unixpath, sizeof(cptr->sockhost));
-	strcpy(cptr->name, me.name);
 	local[cptr->fd] = cptr;
+debug(DEBUG_ERROR,"added %s fd %d %s",cptr->name,cptr->fd,cptr->sockhost);
 
 	return 0;
 }
+#endif
 
-rebuild_unix()
+close_listeners()
 {
-	Reg1	int	i;
-	Reg2	aClient	*cptr;
+	Reg1	aClient	*cptr;
+	Reg2	int	i;
 
+	/*
+	 * change the "accepted" from pointers to point back to me if they
+	 * were accepted from a strange socket.
+	 */
 	for (i = 0; i <= highest_fd; i++)
 	    {
 		if (!(cptr = local[i]))
 			continue;
-		if (!IsUnixSocket(cptr) || !IsMe(cptr))
+		if (cptr->acpt != &me)
+			cptr->acpt = &me;
+	    }
+
+	/*
+	 * close all 'extra' listening ports we have and unlink the file
+	 * name if it was a unix socket.
+	 */
+	for (i = 0; i <= highest_fd; i++)
+	    {
+		if (!(cptr = local[i]))
 			continue;
-		unlink(cptr->sockhost);
+		if (!IsMe(cptr) || cptr == &me ||
+		    !(cptr->flags & FLAGS_LISTEN))
+			continue;
+
+		if (IsUnixSocket(cptr))
+			unlink(cptr->sockhost);
 		close_connection(cptr);
-		cptr = make_client((aClient *)NULL);
-		if (unixport(me.port, cptr))
-			free(cptr);
+		/*
+		 * have to restart loop because it gets reordered :-/
+		 */
+		i = 0;
 	    }
 }
-#endif
 
 int	init_sys(bootopt)
 int	bootopt;
@@ -418,9 +503,9 @@ Reg3	struct	sockaddr_in *socka;
 #ifdef	UNIXPORT
 	if (IsUnixSocket(cptr))
 	    {
-		strncpyzt(full, unixpath, HOSTLEN+1);
-		strncpyzt(sockn, unixpath, HOSTLEN+1);
-		strncpyzt(cptr->sockhost, unixpath, HOSTLEN+1);
+		strncpyzt(full, cptr->acpt->sockhost, HOSTLEN+1);
+		strncpyzt(sockn, full, HOSTLEN+1);
+		strncpyzt(cptr->sockhost, full, HOSTLEN+1);
 		bcopy(&cptr->ip, &socka->sin_addr, sizeof(struct in_addr));
 		socka->sin_family = AF_INET;
 
@@ -445,7 +530,7 @@ Reg3	struct	sockaddr_in *socka;
 	else
 		strcpy(full, sockn);
 	bcopy(&socka->sin_addr, &cptr->ip, sizeof(struct in_addr));
-	cptr->port = socka->sin_port;
+	cptr->port = (int)(ntohs(socka->sin_port));
 
 	return 0;
 }
@@ -492,8 +577,9 @@ aClient	*cptr;
 int	flags;
 {
 	Reg1	char	*name;
-	Reg2	aConfItem *aconf;
-	char	sockname[16], fullname[HOSTLEN+1];
+	Reg2	Link	*link;
+	aConfItem *aconf;
+	char	sockname[HOSTLEN+1], fullname[HOSTLEN+1];
 	struct	hostent *hp = NULL;
 	struct	sockaddr_in sk;
 	int	i = 0;
@@ -537,7 +623,15 @@ int	flags;
 			cptr->name, fullname);
 		return -1;
 	    }
-	aconf = cptr->confs->value.aconf;
+
+	for (link = cptr->confs, aconf = NULL; link; link = link->next)
+	    {
+		aconf = link->value.aconf;
+		if (!aconf->port)
+			break;
+		if (aconf->port == cptr->acpt->port)
+			break;
+	    }
 	det_confs_butmask(cptr, 0);
 	attach_conf(cptr, aconf);
 	debug(DEBUG_DNS, "ch_cl: access ok: %s[%s]", cptr->name, fullname);
@@ -562,7 +656,7 @@ int	check_server(cptr)
 aClient	*cptr;
 {
 	Reg1	char	*name;
-	char	sockname[16], fullname[HOSTLEN+1];
+	char	sockname[HOSTLEN+1], fullname[HOSTLEN+1];
 	Reg2	aConfItem *c_conf = NULL, *n_conf = NULL;
 	Reg3	struct hostent *hp = NULL;
 	struct	sockaddr_in sk;
@@ -613,13 +707,22 @@ aClient	*cptr;
 	** real name, then check with it as the host. Use gethostbyname()
 	** to check for servername as hostname.
 	*/
-	if ((!c_conf || !n_conf) && gethostbyname(name))
+	if ((!c_conf || !n_conf) && (hp = gethostbyname(name)))
 	    {
-		strncpyzt(cptr->sockhost, name, sizeof(cptr->sockhost));
-		if (!c_conf)
-			c_conf = find_conf_host(links, name, CFLAG);
-		if (!n_conf)
-			n_conf = find_conf_host(links, name, NFLAG);
+		for (i = 0; hp->h_addr_list[i]; i++)
+			if (!bcmp(hp->h_addr_list[i], (char *)(&sk.sin_addr),
+				  sizeof(struct in_addr)))
+				break;
+		if (hp->h_addr_list[i])
+		    {
+			strncpyzt(cptr->sockhost, name,
+				  sizeof(cptr->sockhost));
+			if (!c_conf)
+				c_conf = find_conf_host(links, name, CFLAG);
+			if (!n_conf)
+				n_conf = find_conf_host(links, name, NFLAG);
+		    }
+		hp = (struct hostent *)NULL;
 	    }
 
 	if (!c_conf || !n_conf)
@@ -630,7 +733,7 @@ aClient	*cptr;
 		 * if we are missing a C or N line from above, search for
 		 * it under all known hostnames we have for this ip#.
 		 */
-		for (name = hp->h_name; name ; name = hp->h_aliases[i++])
+		for (i = 0,name = hp->h_name; name ; name = hp->h_aliases[i++])
 		    {
 			strncpyzt(fullname, name, sizeof(fullname));
 			add_local_domain(fullname,HOSTLEN-strlen(fullname));
@@ -810,20 +913,23 @@ aClient *cptr;
  * The client is added to the linked list of clients but isnt added to any
  * hash tables yuet since it doesnt have a name.
  */
-aClient *add_connection(fd)
+aClient *add_connection(cptr, fd)
+aClient	*cptr;
 int	fd;
 {
-	aClient *cptr;
-	cptr = make_client((aClient *)NULL);
+	aClient *acptr;
+	acptr = make_client((aClient *)NULL);
 
 	/* Removed preliminary access check. Full check is performed in
 	 * m_server and m_user instead. Also connection time out help to
 	 * get rid of unwanted connections.
 	 */
 	if (isatty(fd)) /* If descriptor is a tty, special checking... */
-		strncpyzt(cptr->sockhost, me.sockhost, sizeof(cptr->sockhost));
+		strncpyzt(acptr->sockhost, cptr->sockhost,
+			  sizeof(acptr->sockhost));
 	else
 	    {
+		register char *s, *t;
 		struct	sockaddr_in addr;
 		int	len = sizeof(struct sockaddr_in);
 
@@ -836,51 +942,70 @@ int	fd;
 		/* Copy ascii address to 'sockhost' just in case. Then we
 		 * have something valid to put into error messages...
 		 */
-		strncpyzt(cptr->sockhost, (char *)inet_ntoa(addr.sin_addr),
-			  sizeof(cptr->sockhost));
-		bcopy (&cptr->ip, &addr.sin_addr, sizeof(struct in_addr));
-		bcopy (&addr.sin_addr, &cptr->ip, sizeof(struct in_addr));
+		strncpyzt(acptr->sockhost, (char *)inet_ntoa(addr.sin_addr),
+			  sizeof(acptr->sockhost));
+		bcopy (&addr.sin_addr, &acptr->ip, sizeof(struct in_addr));
+
+		for (s = (char *)&cptr->ip, t = (char *)&acptr->ip, len = 4;
+		     len > 0; len--, s++, t++)
+		    {
+			if (!*s)
+				continue;
+			if (*s != *t)
+				break;
+		    }
+
+		if (len)
+		    {
+			free(acptr);
+			close(fd);
+			return (aClient *)NULL;
+		    }
 	    }
 
-	cptr->fd = fd;
+	acptr->fd = fd;
 	if (fd > highest_fd)
 		highest_fd = fd;
-	local[fd] = cptr;
-	add_client_to_list(cptr);
-	set_non_blocking(cptr);
-	return cptr;
+	local[fd] = acptr;
+	acptr->acpt = cptr;
+	add_client_to_list(acptr);
+	set_non_blocking(acptr);
+	return acptr;
 }
 
 #ifdef	UNIXPORT
-aClient *add_unixconnection(fd)
+aClient *add_unixconnection(cptr, fd)
+aClient	*cptr;
 int	fd;
 {
-	aClient *cptr;
+	aClient *acptr;
 	struct	sockaddr_un addr;
 	struct	hostent	*hp;
 	int	len = sizeof(struct sockaddr_un);
 
-	cptr = make_client((aClient *)NULL);
+	acptr = make_client((aClient *)NULL);
 
 	/* Copy ascii address to 'sockhost' just in case. Then we
 	 * have something valid to put into error messages...
 	 */
-	strncpyzt(cptr->sockhost, me.sockhost, sizeof(cptr->sockhost));
+	strncpyzt(acptr->sockhost, cptr->sockhost, sizeof(acptr->sockhost));
 
-	cptr->fd = fd;
+	acptr->fd = fd;
 	if (fd > highest_fd)
 		highest_fd = fd;
-	local[fd] = cptr;
-	SetUnixSock(cptr);
+	local[fd] = acptr;
+	acptr->acpt = cptr;
+	SetUnixSock(acptr);
 	hp = gethostbyname(me.sockhost);
 	if (hp)
-		bcopy(hp->h_addr_list[0], &cptr->ip, sizeof(struct in_addr));
+		bcopy(hp->h_addr_list[0], &acptr->ip, sizeof(struct in_addr));
 	else
-		cptr->ip.s_addr = inet_addr("127.0.0.1");
+		acptr->ip.s_addr = inet_addr("127.0.0.1");
 
-	add_client_to_list(cptr);
-	set_non_blocking(cptr);
-	return cptr;
+	add_client_to_list(acptr);
+	set_non_blocking(acptr);
+
+	return acptr;
 }
 #endif
 
@@ -915,23 +1040,27 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       tval = now + 5; /* +x - # of messages allowed in bursts */
       FD_ZERO(&read_set);
       FD_ZERO(&write_set);
-      for (i = 0; i <= highest_fd; i++)
-	if ((cptr = local[i]) && IsMe(cptr) && AcceptNewConnections &&
-	    (now > lastaccept + 1))
-	  FD_SET(i, &read_set);
+
       for (i = 0; i <= highest_fd; i++)
 	if (cptr = local[i])
 	  {
-	    if (!IsMe(cptr)) {
+	    if (IsMe(cptr) && AcceptNewConnections &&
+		(cptr->flags & FLAGS_LISTEN) && (now > lastaccept + 1))
+	     {
+		FD_SET(i, &read_set);
+	     }
+	    else
+	     {
 	      if (cptr->since > tval) /* find time till we can next read
 					 from this connection. -avalon */
 		delay2 = cptr->since - tval;
 	      else
 		FD_SET(i, &read_set);
-	    }
+	     }
 	    if (DBufLength(&cptr->sendQ) > 0 || IsConnecting(cptr))
 	      FD_SET(i, &write_set);
 	  }
+
       wait.tv_sec = MIN(delay2, delay);
       wait.tv_usec = 0;
       nfds = select(FD_SETSIZE, &read_set, &write_set, (fd_set *) 0, &wait);
@@ -944,7 +1073,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
        ** occurred. Perhaps should actually check the
        ** error code...? ---msa
        */
-      report_error("select %s:%s",(aClient *)NULL);
+      report_error("select %s:%s", cptr);
       res++;
       if (res > 5)
 	restart();
@@ -955,7 +1084,8 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
      the body. Not happy with this, but... --msa */
   
   for (i = 0; i <= highest_fd; i++)
-   if ((cptr = local[i]) && IsMe(cptr) && FD_ISSET(i, &read_set))
+   if ((cptr = local[i]) && IsMe(cptr) && FD_ISSET(i, &read_set) &&
+	(cptr->flags & FLAGS_LISTEN))
     {
       FD_CLR(i, &read_set);
       nfds--;
@@ -973,8 +1103,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	  ** point, just assume that connections cannot
 	  ** be accepted until some old is closed first.
 	  */
-	  report_error("Cannot accept new connections %s:%s",
-		      (aClient *)NULL);
+	  report_error("Cannot accept new connections %s:%s", cptr);
 	  AcceptNewConnections = FALSE;
 	  break;
 	}
@@ -986,14 +1115,14 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       /* Reuse of add_connection (which do never fail)  meLazy
        */
 #ifdef	UNIXPORT
-      if (i == me.fd)
-	add_connection(fd);
+      if (IsUnixSocket(cptr) && (cptr->flags & FLAGS_LISTEN))
+	add_unixconnection(local[i], fd);
       else
-	add_unixconnection(fd);
+	add_connection(local[i], fd);
 #else
-      add_connection(fd);
+      add_connection(local[i], fd);
 #endif
-
+      nextping = time(NULL);
       break; /* Really! This was not a loop, just faked "if" --msa */
     }	/* WARNING IS NORMAL HERE! */
 
@@ -1148,6 +1277,7 @@ aConfItem *aconf;
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
 	local[cptr->fd] = cptr;
+	cptr->acpt = &me;
 	SetConnecting(cptr);
 
 	strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
@@ -1197,8 +1327,8 @@ int	*lenp;
 		bcopy(hp->h_addr_list[0], &aconf->ipnum,
 		      sizeof(struct in_addr));
 	   	}
-	bcopy(&aconf->ipnum,&server.sin_addr,sizeof(struct in_addr));
-	server.sin_port = htons((aconf->port>0)?aconf->port:portnum);
+	bcopy(&aconf->ipnum, &server.sin_addr, sizeof(struct in_addr));
+	server.sin_port = htons((aconf->port > 0) ? aconf->port : portnum);
 
 	/* End FIX */
 

@@ -31,6 +31,10 @@ char smisc_id[]="s_misc.c v2.0 (c) 1988 University of Oulu, Computing Centers\
 #include "sys.h"
 #include "numeric.h"
 #include <sys/stat.h>
+#ifdef HPUX
+# include <sys/syscall.h>
+# define getrusage(a,b) syscall(SYS_GETRUSAGE, a, b)
+#endif
 #ifdef GETRUSAGE_2
 # include <sys/resource.h>
 #else
@@ -66,32 +70,27 @@ static char *weekdays[] = {
 char	*date(clock) 
 long	clock;
 {
-	static	char	buf[80];
+	static	char	buf[80], plus;
 	Reg1	struct	tm *ltbuf;
 	struct	timeval	tp;
 	struct	timezone tzp;
-	Reg2	char	*timezonename;
-#if !(defined(HPUX) || defined(AIX) || defined(PCS) || defined(SYSV) || \
-      defined(SGI))
-	extern char *timezone();
-#endif
+	int	minswest;
 
 	if (!clock) 
 		time(&clock);
 	ltbuf = localtime(&clock);
 	gettimeofday(&tp, &tzp);
 
-#if defined(HPUX) || defined(AIX) || defined(PCS) || defined(SYSV) || \
-      defined(SGI)
-	tzset();
-	timezonename = tzname[ltbuf->tm_isdst];
-#else
-	timezonename = timezone(tzp.tz_minuteswest, ltbuf->tm_isdst);
-#endif
+	minswest = tzp.tz_minuteswest;
 
-	sprintf(buf, "%s %s %d 19%02d -- %02d:%02d %s",
+	plus = (minswest > 0) ? '-' : '+';
+	if (minswest < 0)
+		minswest = -minswest;
+
+	sprintf(buf, "%s %s %d 19%02d -- %02d:%02d %c%02d:%02d",
 		weekdays[ltbuf->tm_wday], months[ltbuf->tm_mon],ltbuf->tm_mday,
-		ltbuf->tm_year, ltbuf->tm_hour,	ltbuf->tm_min, timezonename);
+		ltbuf->tm_year, ltbuf->tm_hour,	ltbuf->tm_min,
+		plus, minswest/60, minswest%60);
 
 	return buf;
 }
@@ -120,6 +119,7 @@ long value;
 
 	return buf;
 }
+
 /*
 ** check_registered_user is used to cancel message, if the
 ** originator is a server or not registered yet. In other
@@ -327,16 +327,16 @@ char	*comment;	/* Reason for the exit */
 # endif
 #endif
 		if (sptr->fd >= 0)
-                  {
-                    if (cptr != NULL)
-                      sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
-                                 get_client_name(sptr,FALSE),
-                                 cptr->name, comment);
-                    else
-                      sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
-                                 get_client_name(sptr,FALSE),
-                                 comment);
-                  }
+		    {
+		      if (cptr != NULL)
+			sendto_one(sptr, "ERROR :Closing Link: %s %s (%s)",
+				   get_client_name(sptr,FALSE),
+				   cptr->name, comment);
+		      else
+			sendto_one(sptr, "ERROR :Closing Link: %s (%s)",
+				   get_client_name(sptr,FALSE),
+				   comment);
+		    }
 		/*
 		** Currently only server connections can have
 		** depending remote clients here, but it does no
@@ -460,8 +460,6 @@ char *comment;
 		*/
 		if (sptr->user) {
 		  Link *tmp;
-		  add_history(sptr);
-		  off_history(sptr);
 		  sendto_common_channels(sptr, ":%s QUIT :%s",
 					 sptr->name, comment);
 		  for (link = sptr->user->channel; link; link = tmp) {
@@ -584,7 +582,7 @@ int	count_memory(cptr, nick)
 aClient	*cptr;
 char	*nick;
 {
-#ifndef AIX
+#if !defined(AIX) && !defined(NEXT)
 #  ifdef HPUX
 	extern	void	*etext;
 #  else
@@ -726,7 +724,7 @@ char	*nick;
 		   me.name, nick, totww, totch, totcl, com);
 	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
 		   me.name, nick, tot,
-#ifndef AIX
+#if !defined(AIX) && !defined(NEXT)
 		   (int)sbrk(0)-(int)etext);
 #else
 		   (int)sbrk(0));

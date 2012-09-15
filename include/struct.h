@@ -26,6 +26,17 @@
 #include <sys/syslog.h>
 #endif
 
+#ifdef  MAXIMUM_LINKS
+# if MAXIMUM_LINKS < 2
+#  define       AUTO
+# endif
+#endif
+#ifndef	AUTO
+#ifndef	HUB
+#define	AUTO
+#endif
+#endif
+
 typedef struct ConfItem aConfItem;
 typedef struct Client aClient;
 typedef struct Channel aChannel;
@@ -144,12 +155,13 @@ typedef struct User anUser;
 #define CONF_CLASS              0x0400
 #define CONF_SERVICE            0x0800
 #define CONF_LEAF		0x1000
-
-#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_CONNECT_SERVER | \
-				 CONF_OPERATOR | CONF_NOCONNECT_SERVER | \
-				 CONF_LOCOP | CONF_SERVICE)
+#define CONF_LISTEN_PORT	0x2000
 
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
+#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_CONNECT_SERVER | \
+				 CONF_LOCOP | CONF_NOCONNECT_SERVER | \
+				 CONF_OPERATOR | CONF_SERVICE)
+
 
 #define MATCH_SERVER  1
 #define MATCH_HOST    2
@@ -177,6 +189,7 @@ typedef struct User anUser;
 #define	FLAGS_BLOCKED    0x0200	/* socket is in a blocked condition */
 #define	FLAGS_UNIX	 0x0400	/* socket is in the unix domain, not inet */
 #define	FLAGS_CLOSING    0x0800	/* set when closing to suppress errors */
+#define	FLAGS_LISTEN     0x1000 /* used to mark clients which we listen() on */
 
 #define FLUSH_BUFFER   -2
 #define BUFSIZE		512
@@ -257,9 +270,10 @@ struct Client
 	long	sendB;		/* Statistics: total bytes send */
 	long	receiveM;	/* Statistics: protocol messages received */
 	long	receiveB;	/* Statistics: total bytes received */
+	aClient	*acpt;
 	struct	SLink *confs;	/* Configuration record associated */
 	struct	in_addr	ip;	/* keep real ip# too */
-	short	port;		/* and the remote port# too :-) */
+	int	port;		/* and the remote port# too :-) */
 	char	sockhost[HOSTLEN+1]; /* This is the host name from the socket
 				  ** and after which the connection was
 				  ** accepted.
@@ -334,12 +348,13 @@ extern struct Client *make_client();
 
 /* Channel Visibility macros */
 
-#define MODE_PRIVATE    0x1
-#define MODE_SECRET     0x2
+#define MODE_PRIVATE	0x1
+#define MODE_SECRET	0x2
 #define MODE_MODERATED  0x8
 #define MODE_TOPICLIMIT 0x10
 #define MODE_INVITEONLY 0x20
 #define MODE_NOPRIVMSGS 0x40
+#define MODE_VOICE	0x80
 
 
   /* name invisible */

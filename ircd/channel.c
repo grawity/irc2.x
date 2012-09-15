@@ -108,10 +108,19 @@ static	char *make_nick_user_host(nick, name, host)
 char	*nick, *name, *host;
 {
 	static	char	star[2] = "*";
+	Reg1	char	*s;
+
 
 	bzero(namebuf, sizeof(namebuf));
 	sprintf(namebuf, "%.9s!%.10s@%.50s", BadPtr(nick) ? star : nick,
 		     BadPtr(name) ? star : name, BadPtr(host) ? star : host);
+
+	for (s = namebuf; *s; s++)
+		if (*s < 33 || *s > 127)
+		    {
+			*s = '\0';
+			break;
+		    }
 	return (namebuf);
 }
 
@@ -494,6 +503,7 @@ char	*parabuf;
   static char flags[] = {   MODE_PRIVATE,    'p', MODE_SECRET,     's',
 			    MODE_MODERATED,  'm', MODE_NOPRIVMSGS, 'n',
 			    MODE_TOPICLIMIT, 't', MODE_INVITEONLY, 'i',
+			    MODE_VOICE,      'v',
 			    0x0, 0x0 };
   Mode	*mode;
 

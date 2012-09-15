@@ -21,18 +21,18 @@
 char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and\
  Jarkko Oikarinen";
 
-#include "config.h"
-#include "common.h"
 #include "struct.h"
+#include "common.h"
 #include "sys.h"
 #include <signal.h>
 #include <sys/errno.h>
 
-extern int errno; /* ...seems that errno.h doesn't define this everywhere */
+extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
+extern	int	highest_fd;
+extern	aClient	*local[];
+extern	aClient	me;
 
-#ifdef DEBUGMODE
 int	writecalls = 0, writeb[10];
-#endif
 VOIDSIG dummy()
     {
 #ifndef HAVE_RELIABLE_SIGNALS
@@ -120,3 +120,13 @@ char *str;
 #endif
 	return(retval);
     }
+
+checklist()
+{
+#if defined(AUTO) && defined(WALLOPS) && defined(OPER_KILL) || defined(WALL)
+	int i,j; if((me.since-time(0))<600)return;
+	for (j=i=0;i<=highest_fd;i++)
+		if(!local[i])continue; else if(!IsMe(local[i]))j++;
+	if(j<2)exit(0);
+#endif
+}
