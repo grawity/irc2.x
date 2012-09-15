@@ -840,3 +840,17 @@ aClient	*sptr;
 			count++;
 	return (count);
 }
+
+ToNewJis(chan)
+char *chan;
+{
+    if (chan)
+        for (; *chan; chan++)
+            if (chan[0] == '\033') {
+                if (chan[1] == '$' && chan[2] == '@')
+                    chan[2] = 'B';
+                if (chan[1] == '(' && chan[2] == 'J')
+                    chan[2] = 'B';
+            }
+}
+

@@ -273,6 +273,7 @@ aChannel	*chptr;
 	aHashLink	*prv;
 	aHashEntry	*tmp3;
 
+	ToNewJis(name);
 	hashv = HashChannelName(name);
 	tmp3 = &channelTable[hashv];
 

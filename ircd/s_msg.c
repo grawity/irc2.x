@@ -2936,6 +2936,7 @@ char *parv[];
 
 	/* First, do all visible channels (public and the one user self is) */
 
+        ToNewJis(para);
 	for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
 	        Link *link;
