@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.14 1997/11/11 19:11:52 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.14.2.2 1998/04/13 02:26:46 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -145,6 +145,9 @@ char	serveropts[] = {
 #ifdef MIRC_KLUDGE
 '$',
 #endif
+#ifdef INET6
+'6',
+#endif
 '\0'};
 
 #ifdef DEBUGMODE
@@ -166,10 +169,18 @@ void	debug(int level, char *form, ...)
 #if ! USE_STDARG
 		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
+# if HAVE_VSYSLOG
 		va_list va;
 		va_start(va, form);
 		vsyslog(LOG_ERR, form, va);
 		va_end(va);
+# else
+		va_list va;
+		va_start(va, form);
+		vsprintf(debugbuf, form, va);
+		va_end(va);
+		syslog(LOG_ERR, debugbuf);
+# endif
 #endif
 	    }
 #endif
