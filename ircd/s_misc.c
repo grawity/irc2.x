@@ -113,7 +113,7 @@ long value;
 	Reg1	char	*p;
 
 	strcpy(buf, ctime(&value));
-	if ((p = index(buf, '\n')) != NULL)
+	if ((p = (char *)index(buf, '\n')) != NULL)
 		*p = '\0';
 
 	return buf;
@@ -224,7 +224,7 @@ aConfItem *conf;
 	while (count-- && name)
 	    {
 		name++;
-		name = index(name, '.');
+		name = (char *)index(name, '.');
 	    }
 	if (!name)
 		return start;
@@ -313,6 +313,8 @@ char *comment;	/* Reason for the exit */
 	    }
 # endif
 #endif
+		if (sptr->fd >= 0)
+			sendto_one(sptr, "ERROR :Closing Link: %s", comment);
 		/*
 		** Currently only server connections can have
 		** depending remote clients here, but it does no
@@ -359,7 +361,7 @@ char *comment;	/* Reason for the exit */
 ** Exit one client, local or remote. Assuming all dependants have
 ** been already removed, and socket closed for local client.
 */
-static exit_one_client(cptr, sptr, from, comment)
+static	int	exit_one_client(cptr, sptr, from, comment)
 aClient *sptr;
 aClient *cptr;
 aClient *from;
@@ -444,7 +446,8 @@ char *comment;
 	/* Remove sptr from the client list */
 	if (del_from_client_hash_table(sptr->name, sptr) != 1)
 		debug(DEBUG_FATAL,"0x%x !in tab %s[%s] %x %x %x %d %d %x",
-			sptr, sptr->name, sptr->from->sockhost,
+			sptr, sptr->name,
+			sptr->from ? sptr->from->sockhost : "??host",
 			sptr->from, sptr->next, sptr->prev, sptr->fd,
 			sptr->status, sptr->user);
 	remove_client_from_list(sptr);
@@ -459,7 +462,7 @@ char *comment;
  * different field names for "struct rusage".
  * -avalon
  */
-send_usage(cptr, nick)
+int send_usage(cptr, nick)
 aClient *cptr;
 char *nick;
 {
@@ -540,13 +543,20 @@ char *nick;
 		   ":%s NOTICE %s :<128 %d <256 %d <512 %d <1024 %d >1024 %d",
 		   me.name, nick,
 		   writeb[5], writeb[6], writeb[7], writeb[8], writeb[9]);
+	return 0;
 }
 
-count_memory(cptr, nick)
+int	count_memory(cptr, nick)
 aClient	*cptr;
 char	*nick;
 {
+#ifndef AIX
+#  ifdef HPUX
+	extern	void	*etext;
+#  else
 	extern	int	etext;
+#  endif
+#endif
 	extern	aChannel	*channel;
 	extern	aClass	*classes;
 	extern	aConfItem	*conf;
@@ -681,6 +691,12 @@ char	*nick;
 	sendto_one(cptr, ":%s NOTICE %s :Totals: ww %d ch %d cl %d co %d",
 		   me.name, nick, totww, totch, totcl, com);
 	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
-		   me.name, nick, tot,  sbrk(0)-etext);
+		   me.name, nick, tot,
+#ifndef AIX
+		   (int)sbrk(0)-(int)etext);
+#else
+		   (int)sbrk(0));
+#endif
+	return 0;
 }
 #endif

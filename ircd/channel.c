@@ -51,7 +51,7 @@ extern	aClient	*get_history PROTO((char *, long));
 extern	aClient	me, *client;
 extern	Link	*find_user_link PROTO((Link *, aClient *));
 
-extern	aChannel *hash_find_channel PROTO((char *, aClient *));
+extern	aChannel *hash_find_channel PROTO((char *, aChannel *));
 static	void	sub1_from_channel PROTO((aChannel *));
 static	int	add_banid PROTO((aChannel *, char *));
 static	int	del_banid PROTO((aChannel *, char *));
@@ -110,9 +110,8 @@ char	*nick, *name, *host;
 	static	char	star[2] = "*";
 
 	bzero(namebuf, sizeof(namebuf));
-	sprintf(namebuf, "%s!%s@%s", BadPtr(nick) ? star : nick,
-				     BadPtr(name) ? star : name,
-				     BadPtr(host) ? star : host);
+	sprintf(namebuf, "%.9s!%.10s@%.50s", BadPtr(nick) ? star : nick,
+		     BadPtr(name) ? star : name, BadPtr(host) ? star : host);
 	return (namebuf);
 }
 
@@ -128,7 +127,7 @@ char	*banid;
 	Reg1 Link *ban;
 
 	for (ban = chptr->banlist; ban; ban = ban->next)
-		if (mycmp(banid, ban->value.cp)==0)
+		if (mycmp(banid, ban->value.cp) == 0)
 			return -1;
 	ban = (Link *)MyMalloc(sizeof(Link));
 	bzero(ban, sizeof(Link));
@@ -180,7 +179,7 @@ aChannel *chptr;
 			    cptr->user->host);
 
 	for (tmp = chptr->banlist; tmp; tmp = tmp->next)
-		if (matches(tmp->value.cp, namebuf)==0)
+		if (matches(tmp->value.cp, namebuf) == 0)
 			break;
 	return (tmp);
     }
@@ -215,19 +214,14 @@ aChannel *chptr;
   Reg1 Link **curr;
   Reg2 Link *tmp;
 
-  curr = &(chptr->members);
-  while (*curr)
-   {
+  for (curr = &(chptr->members); *curr; curr = &((*curr)->next))
     if ((*curr)->value.cptr == sptr)
      {
       tmp = *curr;
       *curr = tmp->next;
       free(tmp);
       break;
-    }
-     else
-      curr = &((*curr)->next);
-  }
+     }
   for (curr = &(sptr->user->channel); *curr; curr = &((*curr)->next))
     if ((*curr)->value.chptr == chptr)
      {
@@ -281,8 +275,7 @@ aChannel *chan;
       && !is_chan_op(user, chan) && member)
     return (MODE_MODERATED);
 
-  if (chan->mode.mode & MODE_NOPRIVMSGS
-      && !member)
+  if (chan->mode.mode & MODE_NOPRIVMSGS && !member)
     return (MODE_NOPRIVMSGS);
 
   return (0);
@@ -298,7 +291,7 @@ aChannel *para;
   return (ch2ptr == para) ? para : ch2ptr;
 }
 
-channel_modes(modebuf, parabuf, chptr)
+int channel_modes(modebuf, parabuf, chptr)
 char *modebuf, *parabuf;
 aChannel *chptr;
 {
@@ -321,6 +314,7 @@ aChannel *chptr;
     sprintf(parabuf,"%d", chptr->mode.limit);
   }
   modebuf[i] = '\0';
+  return i;
 }
 
 void send_channel_modes(cptr, chptr)
@@ -410,7 +404,7 @@ aChannel *chptr;
  * parv[1] - channel
  */
 
-m_mode(cptr, sptr, parc, parv)
+int m_mode(cptr, sptr, parc, parv)
 aClient *cptr;
 aClient *sptr;
 int parc;
@@ -419,7 +413,6 @@ char *parv[];
   int mcount = 0, chanop;
   char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
   aChannel *chptr;
-  aClient *acptr;
 
   if (check_registered(sptr))
     return 0;
@@ -489,7 +482,7 @@ char *parabuf;
   unsigned char new, old;
   int whatt = MODE_ADD;
   int limitset = 0;
-  int nusers, i = 0, ischop, count = 0;
+  int nusers, ischop, count = 0;
   int chasing = 0;
   Link *addops = (Link *)NULL, *delops = (Link *)NULL, *tmplink;
   Link *addban = (Link *)NULL, *delban = (Link *)NULL;
@@ -729,8 +722,8 @@ char *parabuf;
 	if (ischop) {
 	  char *nick, *user, *host, *buf;
 	  nick = tmplink->value.cp;
-	  user = index(nick, '!');
-	  if ((host = index(user ? user : nick, '@'))!=NULL)
+	  user = (char *)index(nick, '!');
+	  if ((host = (char *)index(user ? user : nick, '@'))!=NULL)
 	    *host++ = '\0';
 	  if (user)
 	    *user++ = '\0';
@@ -814,28 +807,21 @@ int flag;
     {
 	Reg1 aChannel *chptr;
 
-	if (chname == (char *) 0)
-		return NullChn;
+	if (chname == (char *)NULL)
+		return (aChannel *)NULL;
 
-	if (chptr = hash_find_channel(chname, NullChn))
+	if (chptr = hash_find_channel(chname, (aChannel *)NULL))
 		return (chptr);
 	if (flag == CREATE) {
 	  chptr = (aChannel *)MyMalloc(sizeof(aChannel) + strlen(chname));
 	  bzero(chptr, sizeof(aChannel));
 	  strcpy(chptr->chname, chname);
-	  /*chptr->topic[0] = '\0';
-	  chptr->users = 0;
-	  chptr->mode.limit = 0;
-	  chptr->members = (Link *)NULL;
-	  chptr->invites = (Link *)NULL;
-	  chptr->banlist = (Link *)NULL;*/
 	  if (channel)
 	    channel->prevch = chptr;
-	  chptr->prevch = NullChn;
+	  chptr->prevch = (aChannel *)NULL;
 	  chptr->nextch = channel;
 	  channel = chptr;
 	  add_to_channel_hash_table(chname, chptr);
-	  chptr->mode.mode = 0x0;
 	}
 	return chptr;
     }
@@ -903,39 +889,34 @@ aChannel *chptr;
 
 /*
 **  Subtract one user from channel i (and free channel
-**  block, if channel became empty). Currently negative
-**  channels don't have the channel block allocated. But,
-**  just in case they some day will have that, it's better
-**  call this for those too.
+**  block, if channel became empty).
 */
 static void sub1_from_channel(xchptr)
 aChannel *xchptr;
     {
 	Reg1 aChannel *chptr = xchptr;
-	Reg2 Link *btmp;
-	Link *oldinv, *inv;
+	Reg2 Link *tmp;
 	Link *obtmp;
 
 	if (--chptr->users <= 0) {
 	  /*
 	   * Now, find all invite links from channel structure
 	   */
-	  for (inv = chptr->invites; inv; inv = oldinv) {
-	    oldinv = inv->next;
-	    del_invite(inv->value.cptr, xchptr);
-	  }
-	  btmp = chptr->banlist;
-	  while (btmp != (Link *)NULL) {
-	    obtmp = btmp;
-	    btmp = btmp->next;
+	  while (tmp = chptr->invites)
+	    del_invite(tmp->value.cptr, xchptr);
+
+	  tmp = chptr->banlist;
+	  while (tmp != (Link *)NULL) {
+	    obtmp = tmp;
+	    tmp = tmp->next;
 	    free(obtmp->value.cp);
 	    free(obtmp);
 	  }
-	  if (chptr->prevch != NullChn)
+	  if (chptr->prevch != (aChannel *)NULL)
 	    chptr->prevch->nextch = chptr->nextch;
 	  else
 	    channel = chptr->nextch;
-	  if (chptr->nextch != NullChn)
+	  if (chptr->nextch != (aChannel *)NULL)
 	    chptr->nextch->prevch = chptr->prevch;
 	  del_from_channel_hash_table(chptr->chname, chptr);
 	  free(chptr);
@@ -948,7 +929,7 @@ aChannel *xchptr;
 **	parv[1] = channel
 **	parv[2] = new mode
 */
-m_join(cptr, sptr, parc, parv)
+int m_join(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
@@ -956,7 +937,6 @@ char *parv[];
 	aChannel *chptr;
 	int i, flags = 0;
 	Reg1 Link *link;
-	Reg2 Link **link2;
 	char modebuf[MODEBUFLEN], parabuf[MODEBUFLEN], *name, *p = NULL;
 
 	if (check_registered(sptr))
@@ -983,8 +963,7 @@ char *parv[];
 		*/
 		if (*name == '0' && !atoi(name))
 		  {
-		    link2 = &(sptr->user->channel);
-		    while (link = *link2)
+		    while ((link = sptr->user->channel) != NULL)
 		      {
 			chptr = link->value.chptr;
 			sendto_channel_butserv(chptr, sptr, PartFmt,
@@ -992,10 +971,7 @@ char *parv[];
 			sendto_serv_butone(chptr, PartFmt,
 					   parv[0], chptr->chname);
 			remove_user_from_channel(sptr, chptr);
-			*link2 = link->next;
-			free(link);
 		      }
-		    sptr->user->channel = (Link *) 0;
 		    continue;
 		  }
 		if (MyClient(sptr))
@@ -1039,9 +1015,7 @@ char *parv[];
 	    add_user_to_channel(chptr, sptr, flags);
 
 	    /* notify all other users on the new channel */
-	    sendto_channel_butserv(chptr, sptr, ":%s JOIN %s",
-				   parv[0], name);
-
+	    sendto_channel_butserv(chptr, sptr, ":%s JOIN %s", parv[0], name);
 	    sendto_serv_butone(cptr, ":%s JOIN %s", parv[0], name);
 	    if (parc > 2)
 		set_mode(sptr, chptr, parc - 2, parv + 2, modebuf, parabuf);
@@ -1065,7 +1039,7 @@ char *parv[];
 **	parv[0] = sender prefix
 **	parv[1] = channel
 */
-m_part(cptr, sptr, parc, parv)
+int m_part(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
@@ -1118,7 +1092,7 @@ char *parv[];
 **	parv[0] = sender prefix
 **	parv[1] = channel
 */
-m_kick(cptr, sptr, parc, parv)
+int m_kick(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
@@ -1201,7 +1175,7 @@ aClient	*sptr;
 **	parv[0] = sender prefix
 **	parv[1] = topic text
 */
-m_topic(cptr, sptr, parc, parv)
+int m_topic(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
@@ -1277,7 +1251,7 @@ char *parv[];
 **	parv[1] - user to invite
 **	parv[2] - channel number
 */
-m_invite(cptr, sptr, parc, parv)
+int m_invite(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
@@ -1355,7 +1329,7 @@ char *parv[];
 **      parv[0] = sender prefix
 **      parv[1] = channel
 */
-m_list(cptr, sptr, parc, parv)
+int m_list(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
@@ -1400,7 +1374,7 @@ char	*parv[];
 **	parv[0] = sender prefix
 **	parv[1] = channel
 */
-m_names(cptr, sptr, parc, parv)
+int m_names(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];

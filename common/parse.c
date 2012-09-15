@@ -43,10 +43,10 @@ char userhost[USERLEN+HOSTLEN+2];
 static char sender[HOSTLEN+1];
 #endif
 
-int myncmp(str1, str2, n)
-Reg1 u_char *str1;
-Reg2 u_char *str2;
-int n;
+int	myncmp(str1, str2, n)
+Reg1	u_char	*str1;
+Reg2	u_char	*str2;
+int	n;
     {
 #ifdef USE_OUR_CTYPE
 	while (toupper(*str1) == toupper(*str2))
@@ -68,10 +68,12 @@ int n;
 **	return	0, if equal
 **		1, if not equal
 */
-int mycmp(str1, str2)
-Reg1 u_char *str1;
-Reg2 u_char *str2;
+int mycmp(s1, s2)
+char *s1;
+char *s2;
     {
+	Reg1 u_char *str1 = (u_char *)s1;
+	Reg2 u_char *str2 = (u_char *)s2;
 #ifdef USE_OUR_CTYPE
 	while (toupper(*str2) == toupper(*str1))
 #else
@@ -97,7 +99,7 @@ Reg2 u_char *str2;
 */
 #ifndef CLIENT_COMPILE
 aClient *find_client(name, cptr)
-char *name;
+char	*name;
 aClient *cptr;
     {
 	Reg1 aClient *c2ptr;
@@ -238,7 +240,7 @@ aClient *cptr;
 		return cptr;
     }
 
-parse(cptr, buffer, length, mptr)
+int parse(cptr, buffer, length, mptr)
 aClient *cptr;
 char *buffer;
 int length;
@@ -332,7 +334,7 @@ struct Message *mptr;
 	/*
 	** Extract the command code from the packet
 	*/
-	ch2 = index(ch, ' '); /* ch2 -> End of the command code */
+	ch2 = (char *)index(ch, ' '); /* ch2 -> End of the command code */
 	len = (ch2) ? (ch2 - ch) : strlen(ch);
 	if (len == 3 &&
 	    isdigit(*ch) && isdigit(*(ch + 1)) && isdigit(*(ch + 2)))
@@ -431,7 +433,7 @@ struct Message *mptr;
 	    }
 	para[++i] = NULL;
 	if (mptr == NULL)
-		return (DoNumeric(numeric, cptr, from, i, para));
+		return (do_numeric(numeric, cptr, from, i, para));
 	else
 	    {
 		mptr->count++;
@@ -440,6 +442,7 @@ struct Message *mptr;
 		  from->user->last = time(NULL);
 		return (*mptr->func)(cptr, from, i, para);
 	    }
+	return 0;
     }
 
 
@@ -455,10 +458,10 @@ char *newline;
 		return(NULL);
 
 	field = line;
-	if ((end = index(line,':')) == NULL)
+	if ((end = (char *)index(line,':')) == NULL)
 	    {
 		line = NULL;
-		if ((end = index(field,'\n')) == NULL)
+		if ((end = (char *)index(field,'\n')) == NULL)
 			end = field + strlen(field);
 	    }
 	else

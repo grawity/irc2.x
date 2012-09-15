@@ -120,7 +120,7 @@ long int dbuf_get PROTO(( dbuf *, char *, long int));
 **	Note: 	delete can be used alone, there is no real binding
 **		between map and delete functions...
 */
-char *dbuf_map PROTO((dbuf *, long int *));
+char *dbuf_map PROTO((dbuf *, int *));
 	       				/* Dynamic buffer header */
 	       				/* Return number of bytes accessible */
 

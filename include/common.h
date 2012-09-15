@@ -17,18 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: common.h,v 6.1 1991/07/04 21:04:25 gruner stable gruner $
- *
- * $Log: common.h,v $
- * Revision 6.1  1991/07/04  21:04:25  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:04:59  gruner
- * frozen beta revision 2.6.1
- *
- */
-
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x
@@ -59,6 +47,12 @@ void free();
 #include <malloc.h>
 #endif
 
+extern	int	matches PROTO((char *, char *)), mycmp PROTO((char *, char *));
+
+#ifdef NEED_STRTOKEN
+extern	char	*strtok PROTO((char *, char *));
+extern	char	*strtoken PROTO((char **, char *, char *));
+#endif
 #ifdef NEED_INET_ADDR
 extern unsigned long inet_addr PROTO((char *));
 #endif
@@ -75,7 +69,6 @@ extern char *inet_ntoa PROTO((struct in_addr));
 extern int inet_netof PROTO((struct in_addr));
 #endif
 
-extern long time();
 extern char *myctime PROTO((long));
 extern char *strtoken PROTO((char **, char *, char *));
 
@@ -88,12 +81,12 @@ extern char *strtoken PROTO((char **, char *, char *));
 
 #ifdef USE_OUR_CTYPE
 
-extern char tolowertab[];
+extern unsigned char tolowertab[];
 
 #undef tolower
 #define tolower(c) (tolowertab[(u_char)(c)])
 
-extern char touppertab[];
+extern unsigned char touppertab[];
 
 #undef toupper
 #define toupper(c) (touppertab[(u_char)(c)])
@@ -109,7 +102,7 @@ extern char touppertab[];
 #undef isupper
 #undef isspace
 
-extern char char_atribs[];
+extern unsigned char char_atribs[];
 
 #define PRINT 1
 #define CNTRL 2

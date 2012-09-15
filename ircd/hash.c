@@ -16,7 +16,7 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-static char hash_id[] = "hash.c v1.2 (c) 1991 Darren Reed";
+char hash_id[] = "hash.c v1.2 (c) 1991 Darren Reed";
 
 #include "struct.h"
 #include "common.h"
@@ -114,7 +114,7 @@ aClient	*cptr;
 	clientTable[hashv].list = (void *)cptr;
 	clientTable[hashv].links++;
 	clientTable[hashv].hits++;
-	return 1;
+	return 0;
 }
 
 int	add_to_channel_hash_table(name, chptr)
@@ -128,6 +128,7 @@ aChannel	*chptr;
 	channelTable[hashv].list = (void *)chptr;
 	channelTable[hashv].links++;
 	channelTable[hashv].hits++;
+	return 0;
 }
 
 int	del_from_client_hash_table(name, cptr)
@@ -329,7 +330,7 @@ c_move_to_top:
  *       -avalon
  */
 
-m_hash(cptr, sptr, parc, parv)
+int m_hash(cptr, sptr, parc, parv)
 aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];

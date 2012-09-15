@@ -32,7 +32,7 @@ char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center\
 extern int debuglevel;
 
 #ifdef DEBUGMODE
-debug(level, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)
+int debug(level, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)
 int level;
 char *form, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
     {
@@ -43,11 +43,13 @@ char *form, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
 				p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
 			fputc('\n', stderr);
 		    }
+	return 0;
     }
 #else
-debug()
+int debug()
     {
 	/* do nothing so as not to waste much cpu.
 	 * would make gcc very unhappy :) -avalon */
+	return 0;
     }
 #endif

@@ -47,11 +47,11 @@ static char buffer[1024];
 **	sending back a neat error message -- big danger of creating
 **	a ping pong error message...
 */
-int DoNumeric(numeric, cptr, sptr, parc, parv)
-int numeric;
+int	do_numeric(numeric, cptr, sptr, parc, parv)
+int	numeric;
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
 	aClient *acptr;
 	aChannel *chptr;
@@ -60,6 +60,9 @@ char *parv[];
 
 	if (parc < 1 || !IsServer(sptr))
 		return 0;
+	/* Remap low number numerics. */
+	if (numeric < 100)
+		numeric += 100;
 	/*
 	** Prepare the parameter portion of the message into 'buffer'.
 	** (Because the buffer is twice as large as the message buffer

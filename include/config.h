@@ -50,16 +50,20 @@
  * define the following accordingly:
  */
 #if defined(NEXT) || defined(HPUX)
-#undef NEED_STRERROR
+#undef	NEED_STRERROR
 #else
-#define NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
+#define	NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
 				/* no strerror() */
 #endif
-#define NEED_STRTOKEN		/* Your libc.a does not have strtoken(3) */
+#define	NEED_STRTOKEN		/* Your libc.a does not have strtoken(3) */
+#undef	NEED_STRTOK		/* Your libc.a does not have strtok(3) */
 #undef	NEED_INET_ADDR  	/* You need inet_addr(3)	*/
 #undef	NEED_INET_NTOA  	/* You need inet_ntoa(3)	*/
 #undef	NEED_INET_NETOF 	/* You need inet_netof(3)	*/
 #undef	NEED_STRCASECMP		/* You need strcasecmp(3s)	*/
+/*
+ * NOTE: On some systems, valloc() causes many problems.
+ */
 #undef	VALLOC			/* Define this if you have valloc(3) */
 
 #define	HAVE_RELIABLE_SIGNALS
@@ -72,7 +76,7 @@
 				     behaviour (apollo sr10.1/bsd4.3 needs
 				     this) */
 
-#define DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
+#define	DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
 
 /*
  * If you have curses, and wish to use it, then define HAVECURSES. This is the
@@ -86,8 +90,8 @@
  * NOTE: These *ONLY* apply to the irc client in this package
  */
 
-#define HAVECURSES		/* If you have curses, and want to use it.  */
-#undef HAVETERMCAP		/* If you have termcap, and want to use it. */
+#define	HAVECURSES		/* If you have curses, and want to use it.  */
+#undef	HAVETERMCAP		/* If you have termcap, and want to use it. */
 
 /*
  * Full pathnames and defaults of irc system's support files. Please note that
@@ -95,11 +99,11 @@
  * You must define these to something, even if you don't really want them.
  */
 
-#define SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
-#define CPATH "/usr/local/lib/ircd.conf" /* IRC configuration file.  */
-#define MPATH "/usr/local/lib/ircd.motd" /* message of the day file. */
-#define LPATH "/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
-#define PPATH "/usr/local/lib/ircd.pid" /* where the server's pid is */
+#define	SPATH "/usr/local/bin/ircd" /* Where the server lives.  */
+#define	CPATH "/usr/local/lib/ircd.conf" /* IRC configuration file.  */
+#define	MPATH "/usr/local/lib/ircd.motd" /* message of the day file. */
+#define	LPATH "/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
+#define	PPATH "/usr/local/lib/ircd.pid" /* where the server's pid is */
 
 /* ENABLE_SUMMON
  *
@@ -153,9 +157,9 @@
  * The default is no R_LINES as most people probably don't need it. --Jto
  */
 
-#undef R_LINES
+#undef	R_LINES
 
-#ifdef R_LINES
+#ifdef	R_LINES
 /* Also, even if you have R lines defined, you might not want them to be 
    checked everywhere, since it could cost lots of time and delay.  Therefore, 
    The following two options are also offered:  R_LINES_REHASH rechecks for 
@@ -175,7 +179,7 @@
  *       starts up the server with a new conf file that has some extra
  *       O-lines. So don't use this unless you're debugging.
  */
-#undef CMDLINE_CONFIG /* allow conf-file to be specified on command line */
+#undef	CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
  * Define this filename to maintain a list of persons who log
@@ -194,7 +198,7 @@
  * and obtain their permission to send messages to the system log files.
  */
 
-#undef USE_SYSLOG
+#undef	USE_SYSLOG
 
 /*
  * If you use syslog above, you may want to turn some (none) of the
@@ -218,13 +222,13 @@
  * define this if you want to use crypted passwords for operators in your
  * ircd.conf file. See ircd/crypt/README for more details on this.
  */
-#undef CRYPT_OPER_PASSWORD
+#undef	CRYPT_OPER_PASSWORD
 
 /*
  * define this if you enable summon and if you want summon to look for the
  * least idle tty a user is logged in on.
  */
-#undef LEAST_IDLE
+#undef	LEAST_IDLE
 
 /*
  * Max amount of internal send buffering when socket is stuck (bytes)
@@ -296,7 +300,7 @@
  *           operators and other users who wish to listen for them. This is
  *           the prefered action.
  */
-#undef WALLOPS	 		 /* Define this if you want wallops */
+#undef	WALLOPS	 		 /* Define this if you want user wallops */
 
 /*
  * Time interval to wait and if no messages have been received, then check for
@@ -346,21 +350,8 @@
  */
 #define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
 
-#undef WALL /* Define this if you want walls */
+#undef	WALL /* Define this if you want walls */
 
-/*
- * Double buffering has been designed to increase the packet size of
- * individual packets sent out by the server. This is done by putting all
- * outbound messages (as many as will fit - if any) into an outbound
- * buffer before either adding to sendQ or writing. This also reduces the
- * number of write() calls the server makes. The outbound buffer is flushed
- * by the server regularly either onto the sendQ or down the connection.
- * Whether or not this idea is worth doing is yet to be seen but there is
- * no harm in trying it out.
- * It is not fully tested and may cause problems. Define it only for testing
- * or if you are sure you know what you are doing. Still dont work 100% -avalon
- */
-#undef	DOUBLE_BUFFER
 /*
  * SendQ-Always causes the server to put all outbound data into the sendq and
  * flushing the sendq at the end of input processing. This should cause more
@@ -370,10 +361,17 @@
  */
 #define	SENDQ_ALWAYS
 
+/*
+ * use these to setup a Unix domain socket to connect clients/servers to.
+ */
+#undef	UNIXPORT
+#define	UNIXPORTPATH	"/tmp/.ircd"
+
+/* ------------------------- END CONFIGURATION SECTION -------------------- */
 #define MOTD MPATH
-#define MYNAME SPATH
-#define CONFIGFILE CPATH
-#define IRCD_PIDFILE PPATH
+#define	MYNAME SPATH
+#define	CONFIGFILE CPATH
+#define	IRCD_PIDFILE PPATH
 
 #ifdef DEBUGMODE
 # define LOGFILE LPATH
@@ -392,6 +390,14 @@
 #ifndef DEBUGMODE
 #undef	GETRUSAGE_2
 #undef	TIMES_2
+#endif
+
+#ifdef	CLIENT_COMPILE
+#undef	SENDQ_ALWAYS
+#endif
+
+#ifndef		VALLOC
+#define		valloc  malloc
 #endif
 
 #if defined(mips) || defined(PCS)
@@ -417,6 +423,10 @@
 # define DOTERMCAP
 #else
 # undef DOTERMCAP
+#endif
+
+#ifndef	UNIXPORT
+#undef	UNIXPORTPATH
 #endif
 
 #define Reg1 register

@@ -32,10 +32,10 @@ extern aClient me;
 **	with cptr of "local" variation, which contains all the
 **	necessary fields (buffer etc..)
 */
-dopacket(cptr, buffer, length)
+int	dopacket(cptr, buffer, length)
 aClient *cptr;
-char *buffer;
-int length;
+char	*buffer;
+int	length;
     {
 	Reg1 char *ch1;
 	Reg2 char *ch2;

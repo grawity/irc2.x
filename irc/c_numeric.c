@@ -51,11 +51,11 @@ extern char mybuf[];
 			** least this many entries. It should, because
 			** some numerics need that many.
 			*/
-int DoNumeric(numeric, cptr, sptr, parc, parv)
-int numeric;
+int do_numeric(numeric, cptr, sptr, parc, parv)
+int	numeric;
 aClient *cptr, *sptr;
-int parc;
-char *parv[];
+int	parc;
+char	*parv[];
     {
 	char *nick, *tmp;
 	int i;

@@ -42,20 +42,22 @@
 **	return	0, if match
 **		1, if no match
 */
-int matches(mask, name)
-u_char *mask, *name;
+int	matches(mask, name)
+char	*mask, *name;
     {
-	Reg1 u_char m;
-	Reg2 u_char c;
+	Reg1 u_char m, *msk;
+	Reg2 u_char c, *nam;
 
-	for (;; mask++, name++)
+	msk = (u_char *)mask;
+	nam = (u_char *)name;
+	for (;; msk++, nam++)
 	    {
 #ifdef USE_OUR_CTYPE
-		m = tolower(*mask);
-		c = tolower(*name);
+		m = tolower(*msk);
+		c = tolower(*nam);
 #else
-		m = islower(*mask) ? *mask : tolower(*mask);
-		c = islower(*mask) ? *mask : tolower(*name);
+		m = islower(*msk) ? *msk : tolower(*msk);
+		c = islower(*nam) ? *nam : tolower(*nam);
 #endif
 		if (c == '\0')
 			break;
@@ -64,11 +66,11 @@ u_char *mask, *name;
 	    }
 	if (m == '*')
 	    {
-		for ( ; *mask == '*'; mask++);
-		if (*mask == '\0')
+		for ( ; *msk == '*'; msk++);
+		if (*msk == '\0')
 			return(0);
-		for (; *name && matches(mask, name); name++);
-		return(*name ? 0 : 1);
+		for (; *nam && matches((char *)msk, (char *)nam); nam++);
+		return(*nam ? 0 : 1);
 	    }
 	else
 		return ((m == '\0' && c == '\0') ? 0 : 1);

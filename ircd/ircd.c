@@ -264,6 +264,8 @@ long currenttime;
       oldest = currenttime;
     if (!smallp)
       smallp = PINGFREQUENCY;
+    if (oldest == currenttime)
+      oldest += smallp;
     debug(DEBUG_NOTICE,"Next check_ping() call at: %s, %d %d %d",
 	  myctime(oldest + smallp),smallp,oldest,currenttime);
   return (oldest);
@@ -289,9 +291,9 @@ static int bad_command()
   return -1;
 }
 
-main(argc, argv)
-int argc;
-char *argv[];
+int	main(argc, argv)
+int	argc;
+char	*argv[];
 {
 	aClient *cptr;
 	int	bootopt = 0, foo;
@@ -448,6 +450,11 @@ char *argv[];
 	SetMe(&me);
 	me.lasttime = me.since = me.firsttime = time(NULL);
 	add_to_client_hash_table(me.name, &me);
+
+#ifdef	UNIXPORT
+	cptr = make_client((aClient *)NULL);
+	unixport(portnum, cptr);
+#endif
 
 	check_class();
 	if (debugtty == -1) {

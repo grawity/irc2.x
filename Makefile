@@ -50,7 +50,7 @@ IRCDMODE = 4711
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}'\
 	'IRCDMODE=${IRCDMODE}'
 SHELL=/bin/sh
-SUBDIRS=common ircd irc
+SUBDIRS=common ircd res irc
 
 all:	build
 

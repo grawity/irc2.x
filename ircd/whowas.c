@@ -40,7 +40,7 @@ typedef struct aname {
 static	aName	was[NICKNAMEHISTORYLENGTH];
 static	int	ww_index = 0;
 
-add_history(cptr)
+int add_history(cptr)
 aClient	*cptr;
 {
 	aName	ntmp;
@@ -60,6 +60,7 @@ aClient	*cptr;
 	ww_index++;
 	if (ww_index >= NICKNAMEHISTORYLENGTH)
 		ww_index = 0;
+	return 0;
 }
 
 /*
@@ -95,7 +96,7 @@ u_long	timelimit;
 	return (NULL);
 }
 
-off_history(cptr)
+int off_history(cptr)
 aClient	*cptr;
 {
 	Reg1	int	i;
@@ -103,14 +104,16 @@ aClient	*cptr;
 	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
 		if (was[i].ww_online == cptr)
 			was[i].ww_online = (aClient *)NULL;
+	return 0;
 }
 
-init_whowas()
+int	init_whowas()
 {
 	Reg1	int	i;
 
 	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
 		bzero(&was[i], sizeof(aName));
+	return 0;
 }
 
 
@@ -172,7 +175,7 @@ char	*parv[];
 
 
 #ifdef DEBUGMODE
-count_whowas_memory(wwu, wwa, wwam)
+int count_whowas_memory(wwu, wwa, wwam)
 int	*wwu, *wwa;
 u_long	*wwam;
 {
@@ -191,9 +194,10 @@ u_long	*wwam;
 					am += (strlen(tmp->away)+1);
 				    }
 			    }
-
 	*wwu = u;
 	*wwa = a;
 	*wwam = am;
+
+	return 0;
 }
 #endif

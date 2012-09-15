@@ -17,7 +17,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-static char class_id[] = "class.c v1.4 (c) 1991 Darren Reed";
+#ifndef lint
+char class_id[] = "class.c v1.4 (c) 1991 Darren Reed";
+#endif
 
 #include "struct.h"
 #include "common.h"
@@ -222,7 +224,7 @@ void initclass()
 /*
  * Function to send reponses to the "STATS Y" command.
  */
-report_classes(sptr)
+int	report_classes(sptr)
 aClient *sptr;
 {
 	Reg1 aClass *cltmp;
@@ -232,4 +234,5 @@ aClient *sptr;
 			   me.name, RPL_STATSYLINE, sptr->name,
 			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
 			   MaxLinks(cltmp));
+	return 0;
 }

@@ -17,6 +17,8 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
+INCLUDE=../include
+CFLAGS= -g -I$(INCLUDE)
 RESOBJS= res_init.o res_query.o res_send.o res_mkquery.o res_comp.o \
 	res_debug.o gethostnamadr.o sethostent.o
 

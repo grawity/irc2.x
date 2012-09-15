@@ -138,22 +138,27 @@ typedef struct User anUser;
 #define ClearInvisible(x) ((x)->flags &= ~FLAGS_INVISIBLE)
 #define ClearWallops(x) ((x)->flags &= ~FLAGS_WALLOP)
 
-#define CONF_ILLEGAL            -1
-#define CONF_QUARANTINED_SERVER 1
-#define CONF_CLIENT             2
-#define CONF_CONNECT_SERVER     4
-#define CONF_NOCONNECT_SERVER   8
-#define CONF_LOCOP              16
-#define CONF_OPERATOR           32
-#define CONF_ME                 64
-#define CONF_KILL               128
-#define CONF_ADMIN              256
+#define CONF_ILLEGAL            0x80000000
+#define CONF_QUARANTINED_SERVER 0x0001
+#define CONF_CLIENT             0x0002
+#define CONF_CONNECT_SERVER     0x0004
+#define CONF_NOCONNECT_SERVER   0x0008
+#define CONF_LOCOP              0x0010
+#define CONF_OPERATOR           0x0020
+#define CONF_ME                 0x0040
+#define CONF_KILL               0x0080
+#define CONF_ADMIN              0x0100
 #ifdef R_LINES
-#define CONF_RESTRICT           512
+#define CONF_RESTRICT           0x0200
 #endif
-#define CONF_CLASS              1024
-#define CONF_SERVICE            2048
-#define CONF_LEAF		4096
+#define CONF_CLASS              0x0400
+#define CONF_SERVICE            0x0800
+#define CONF_LEAF		0x1000
+
+#define	CONF_CLIENT_MASK	(CONF_CLIENT| CONF_CONNECT_SERVER|CONF_LOCOP|\
+				 CONF_OPERATOR | CONF_NOCONNECT_SERVER)
+
+#define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
 
 #define MATCH_SERVER  1
 #define MATCH_HOST    2
@@ -179,6 +184,7 @@ typedef struct User anUser;
 #define FLAGS_WALLOP     128    /* send wallops to them */
 #define FLAGS_SERVNOTICE 256    /* server notices such as kill */
 #define	FLAGS_BLOCKED    512	/* socket is in a blocked condition */
+#define	FLAGS_UNIX	 1024	/* socket is in the unix domain, not inet */
 
 #define FLUSH_BUFFER   -2
 #define BUFSIZE		512
@@ -190,21 +196,21 @@ typedef struct User anUser;
 
 struct ConfItem
     {
-	int status;	/* If CONF_ILLEGAL, delete when no clients */
-	int clients;	/* Number of *LOCAL* clients using this */
-	struct in_addr ipnum;
-	char *host;
-	char *passwd;
-	char *name;
-	int port;
-	long hold;	/* Hold action until this time (calendar time) */
+	int	status;		/* If CONF_ILLEGAL, delete when no clients */
+	int	clients;	/* Number of *LOCAL* clients using this */
+	struct	in_addr ipnum;	/* ip number of host field */
+	char	*host;
+	char	*passwd;
+	char	*name;
+	int	port;
+	long	hold;	/* Hold action until this time (calendar time) */
 #ifndef VMSP
-	aClass *class;  /* Class of connection */
+	aClass	*class;  /* Class of connection */
 #endif
-	struct ConfItem *next;
+	struct	ConfItem *next;
     };
 
-#define	IsIllegal(x)	((x)->status < 0)
+#define	IsIllegal(x)	((x)->status & CONF_ILLEGAL)
 
 struct User
     {
@@ -227,22 +233,22 @@ struct User
 
 struct Client
     {
-	struct Client *next,*prev, *hnext;
-	short status;		/* Client type */
+	struct	Client *next,*prev, *hnext;
+	short	status;		/* Client type */
 	char name[HOSTLEN+1];	/* Unique name of the client, nick or host */
 	char info[REALLEN+1];	/* Free form additional client information */
-	anUser *user;		/* ...defined, if this is a User */
+	anUser	*user;		/* ...defined, if this is a User */
 #ifdef USE_SERVICES
 	aService *service;
 #endif
-	long lasttime;		/* ...should be only LOCAL clients? --msa */
-	long firsttime;
-	long since;		/* When this client entry was created */
-	int flags;
-	char *history;		/* (controlled by whowas--module) */
-	struct Client *from;	/* == self, if Local Client, *NEVER* NULL! */
-	int fd;			/* >= 0, for local clients */
-	int hopcount;		/* number of servers to this 0 = local */
+	long	lasttime;	/* ...should be only LOCAL clients? --msa */
+	long	firsttime;
+	long	since;	/* When this client entry was created */
+	int	flags;
+	char	*history;	/* (controlled by whowas--module) */
+	struct	Client *from;	/* == self, if Local Client, *NEVER* NULL! */
+	int	fd;		/* >= 0, for local clients */
+	int	hopcount;	/* number of servers to this 0 = local */
 	/*
 	** The following fields are allocated only for local clients
 	** (directly connected to *this* server with a socket.
@@ -250,28 +256,22 @@ struct Client
 	** to which the allocation is tied to! *Never* refer to
 	** these fields, if (from != self).
 	*/
-	int count;		/* Amount of data in buffer */
-	char buffer[512];	/* Incoming message buffer */
-#ifdef DOUBLE_BUFFER
-	int ocount;		/* Amount of data in outbound buffer */
-	char obuffer[2048+1];	/* Outgoing message buffer */
-#endif
+	int	count;		/* Amount of data in buffer */
+	char	buffer[512];	/* Incoming message buffer */
 #ifndef VMSP
-	dbuf sendQ;		/* Outgoing message queue--if socket full */
+	dbuf	sendQ;		/* Outgoing message queue--if socket full */
 #endif
-	long sendM;		/* Statistics: protocol messages send */
-	long sendB;		/* Statistics: total bytes send */
-	long receiveM;		/* Statistics: protocol messages received */
-	long receiveB;		/* Statistics: total bytes received */
-	/*
-	*/
-	struct SLink *confs;	/* Configuration record associated */
-	char sockhost[HOSTLEN+1]; /* This is the host name from the socket
+	long	sendM;		/* Statistics: protocol messages send */
+	long	sendB;		/* Statistics: total bytes send */
+	long	receiveM;	/* Statistics: protocol messages received */
+	long	receiveB;	/* Statistics: total bytes received */
+	struct	SLink *confs;	/* Configuration record associated */
+	struct	in_addr	ip;	/* keep real ip# too */
+	char	sockhost[HOSTLEN+1]; /* This is the host name from the socket
 				  ** and after which the connection was
 				  ** accepted.
 				  */
-	struct	in_addr	ip;	/* keep real ip# too */
-	char passwd[PASSWDLEN+1];
+	char	passwd[PASSWDLEN+1];
     };
 
 #define CLIENT_LOCAL_SIZE sizeof(aClient)
