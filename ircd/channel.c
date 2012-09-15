@@ -389,7 +389,7 @@ aChannel *chptr;
 	    }
 	for (link = chptr->banlist ; link; )
 	    {
-		if (strlen(parabuf) + strlen(acptr->name) + 10 <
+		if (strlen(parabuf) + strlen(link->value.cp) + 10 <
 		    MODEBUFLEN)
 		    {
 			strcat(parabuf, " ");
