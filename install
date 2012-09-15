@@ -5,11 +5,11 @@
 cmd=/bin/mv
 strip=""
 chmod="/bin/chmod 755"
-chown="/etc/chown -f root"
+chown="chown -f root"
 chgrp="/bin/chgrp -f bin"
 while true ; do
 	case $1 in
-		-s )	strip="/bin/strip"
+		-s )	strip="strip"
 			shift
 			;;
 		-c )	cmd="/bin/cp"

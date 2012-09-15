@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.67 17 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.68 07 Nov 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -1084,7 +1084,7 @@ char	*parv[];
 	aChannel *chptr;
 	char	*nick, *tmp, *name;
 	char	*p = NULL;
-	int	found;
+	int	found, len, mlen;
 
 	if (check_registered_user(sptr))
 		return 0;
@@ -1166,29 +1166,35 @@ char	*parv[];
 				   parv[0], name,
 				   user->username, user->host, acptr->info);
 			found = 1;
-			for (buf[0] = '\0', lp = user->channel; lp;
+			mlen = strlen(me.name) + strlen(parv[0]) + 6 +
+				strlen(name);
+			for (len = 0, *buf = '\0', lp = user->channel; lp;
 			     lp = lp->next)
 			    {
 				chptr = lp->value.chptr;
 				if (ShowChannel(sptr, chptr))
 				    {
-					if (strlen(buf) +
-					    strlen(chptr->chname)
-                                            > (size_t) 400)
+					if (len + strlen(chptr->chname)
+                                            > (size_t) BUFSIZE - 4 - mlen)
 					    {
 						sendto_one(sptr,
 							   ":%s %d %s %s :%s",
 							   me.name,
 							   RPL_WHOISCHANNELS,
 							   parv[0], name, buf);
-						buf[0] = '\0';
+						*buf = '\0';
+						len = 0;
 					    }
 					if (is_chan_op(acptr, chptr))
-						(void)strcat(buf, "@");
+						*(buf + len++) = '@';
 					else if (has_voice(acptr, chptr))
-						(void)strcat(buf, "+");
-					(void)strcat(buf, chptr->chname);
-					(void)strcat(buf, " ");
+						*(buf + len++) = '+';
+					if (len)
+						*(buf + len) = '\0';
+					(void)strcpy(buf + len, chptr->chname);
+					len += strlen(chptr->chname);
+					(void)strcat(buf + len, " ");
+					len++;
 				    }
 			    }
 			if (buf[0] != '\0')
@@ -1418,9 +1424,7 @@ char	*parv[];
 		if (!BadPtr(path))
 		    {
 			(void)sprintf(buf, "%s%s (%s)",
-				cptr->name,
-				IsOper(sptr) ? "" : "(L)",
-				path);
+				cptr->name, IsOper(sptr) ? "" : "(L)", path);
 			path = buf;
 		    }
 		else
@@ -1778,7 +1782,6 @@ char	*parv[];
 #endif
 #ifdef FNAME_OPERLOG
 	      {
-                char    linebuf[160];
                 int     logfile;
 
                 /*
@@ -1794,13 +1797,12 @@ char	*parv[];
                     (logfile = open(FNAME_OPERLOG, O_WRONLY|O_APPEND)) != -1)
 		{
 		  (void)alarm(0);
-                        (void)sprintf(linebuf,
-				      "%s OPER (%s) (%s) by (%s!%s@%s)\n",
+                        (void)sprintf(buf, "%s OPER (%s) (%s) by (%s!%s@%s)\n",
 				      myctime(time(NULL)), name, encr,
 				      parv[0], sptr->user->username,
 				      sptr->sockhost);
 		  (void)alarm(3);
-		  (void)write(logfile, linebuf, strlen(linebuf));
+		  (void)write(logfile, buf, strlen(buf));
 		  (void)alarm(0);
 		  (void)close(logfile);
 		}
@@ -1863,7 +1865,7 @@ aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
 {
-	char	uhbuf[USERHOST_REPLYLEN], *p = NULL;
+	char	*p = NULL;
 	aClient	*acptr;
 	Reg1	char	*s;
 	Reg2	int	i, len;
@@ -1883,22 +1885,22 @@ char	*parv[];
 
 	(void)sprintf(buf, rpl_str(RPL_USERHOST), me.name, parv[0]);
 	len = strlen(buf);
-	*uhbuf = '\0';
+	*buf2 = '\0';
 
 	for (i = 5, s = strtoken(&p, parv[1], " "); i && s;
 	     s = strtoken(&p, (char *)NULL, " "), i--)
 		if ((acptr = find_person(s, NULL)))
 		    {
-			if (*uhbuf)
+			if (*buf2)
 				(void)strcat(buf, " ");
-			(void)sprintf(uhbuf, "%s%s=%c%s@%s",
+			(void)sprintf(buf2, "%s%s=%c%s@%s",
 				acptr->name,
 				IsAnOper(acptr) ? "*" : "",
 				(acptr->user->away) ? '-' : '+',
 				acptr->user->username,
 				acptr->user->host);
-			(void)strncat(buf, uhbuf, sizeof(buf) - len);
-			len += strlen(uhbuf);
+			(void)strncat(buf, buf2, sizeof(buf) - len);
+			len += strlen(buf2);
 		    }
 	sendto_one(sptr, "%s", buf);
 	return 0;
@@ -1975,7 +1977,7 @@ char	*parv[];
 	nbuf[i] = 0;
 
 	if (IsOper(sptr) && wilds)
-		for (i = 0; i <= highest_fd; i++)
+		for (i = highest_fd; i >= 0; i--)
 		    {
 			if (!(acptr = local[i]))
 				continue;
@@ -2018,13 +2020,12 @@ char	*parv[];
 	Reg2	int	*s;
 	Reg3	char	**p, *m;
 	aClient	*acptr;
-	char	flagbuf[20];
 	int	what, setflags;
 
 	if (check_registered_user(sptr))
 		return 0;
 
-	what = MODE_NULL;
+	what = MODE_ADD;
 
 	if (parc < 2)
 	    {
@@ -2056,14 +2057,15 @@ char	*parv[];
  
 	if (parc < 3)
 	    {
-		m = flagbuf;
+		m = buf;
 		*m++ = '+';
-		for (s = user_modes; (flag = *s) && (m < flagbuf+18); s += 2)
+		for (s = user_modes; (flag = *s) && (m - buf < BUFSIZE - 4);
+		     s += 2)
 			if (sptr->flags & flag)
 				*m++ = (char)(*(s+1));
 		*m = '\0';
 		sendto_one(sptr, rpl_str(RPL_UMODEIS),
-			   me.name, parv[0], flagbuf);
+			   me.name, parv[0], buf);
 		return 0;
 	    }
 
@@ -2196,21 +2198,19 @@ void	send_umode_out(cptr, sptr, old)
 aClient *cptr, *sptr;
 int	old;
 {
-	char	flagbuf[20];
 	Reg1    int     i;
 	Reg2    aClient *acptr;
 
-	send_umode(NULL, sptr, old, SEND_UMODES, flagbuf);
+	send_umode(NULL, sptr, old, SEND_UMODES, buf);
 # ifdef NPATH
-        check_command((long)4, ":%s MODE %s :%s", sptr->name, 
-                      sptr->name, flagbuf);
+        check_command((long)4, ":%s MODE %s :%s", sptr->name, sptr->name, buf);
 # endif
 	for (i = highest_fd; i >= 0; i--)
 		if ((acptr = local[i]) && IsServer(acptr) &&
-		    (acptr != cptr) && (acptr != sptr) && *flagbuf)
+		    (acptr != cptr) && (acptr != sptr) && *buf)
 			sendto_one(acptr, ":%s MODE %s :%s",
-				   sptr->name, sptr->name, flagbuf);
+				   sptr->name, sptr->name, buf);
 
 	if (cptr && MyClient(cptr))
-		send_umode(cptr, sptr, old, ALL_UMODES, flagbuf);
+		send_umode(cptr, sptr, old, ALL_UMODES, buf);
 }

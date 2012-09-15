@@ -17,7 +17,7 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-CC=gcc -traditional
+CC=cc
 RM=/bin/rm
 CP=/bin/cp
 TOUCH=touch
@@ -41,7 +41,7 @@ CFLAGS= -g -I${INCLUDEDIR}
 #
 # use the following on SUN OS without nameserver libraries inside libc
 # NOTE: most dont have the resolver libraries inside libc
-#IRCDLIBS=-L. -lefence
+#IRCDLIBS=-lresolv
 #
 #on NeXT other than 2.0:
 #IRCDLIBS=-lsys_s
@@ -65,6 +65,7 @@ LINTFLAGS=-hba
 # -Bstatic here.
 #
 #LDFLAGS=-Bstatic
+#LDFLAGS=-Wl,-a,archive
 #
 # RES - if you are missing the resolv library (man 5 resolv.conf), or you
 # experience probems with ip# to hostname lookups for local machines or
@@ -154,64 +155,73 @@ depend:
 	makedepend -I${INCLUDEDIR} ${SRC}
 
 channel.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	   ../include/numeric.h ../include/channel.h
+	   ../include/numeric.h ../include/channel.h ../include/sys.h \
+	   ../include/common.h
 	$(CC) $(CFLAGS) -c channel.c
 
 class.o: ../include/struct.h ../include/class.h ../include/numeric.h \
-	 ../include/common.h ../include/config.h
+	 ../include/common.h ../include/config.h ../include/sys.h
 	$(CC) $(CFLAGS) -c class.c
 
-ircd.o: ircd.c ../include/struct.h ../include/config.h \
-	../include/dbuf.h ../include/numeric.h
+ircd.o: ircd.c ../include/struct.h ../include/config.h ../include/sys.h \
+	../include/dbuf.h ../include/numeric.h ../include/common.h
 	$(CC) $(CFLAGS) -c ircd.c
 
 list.o: list.c ../include/struct.h ../include/config.h ../include/dbuf.h \
-	../include/sys.h
+	../include/sys.h ../include/common.h
 	$(CC) $(CFLAGS) -c list.c
 
-res.o: res.c ../include/struct.h ../include/config.h ../include/res.h
+res.o: res.c ../include/struct.h ../include/config.h ../include/res.h \
+	   ../include/sys.h ../include/common.h
 	$(CC) $(CFLAGS) -c res.c
 
 s_bsd.o: s_bsd.c ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 ../include/sys.h
+	 ../include/sys.h ../include/common.h
 	$(CC) $(CFLAGS) -c s_bsd.c
 
 s_auth.o: s_auth.c ../include/struct.h ../include/config.h ../include/dbuf.h \
-	  ../include/sys.h
+	  ../include/sys.h ../include/common.h
 	$(CC) $(CFLAGS) -c s_auth.c
 
-s_conf.o: s_conf.c ../include/struct.h ../include/config.h \
-	  ../include/numeric.h  ../include/dbuf.h ../include/sys.h
+s_conf.o: s_conf.c ../include/struct.h ../include/config.h ../include/sys.h \
+	  ../include/common.h ../include/numeric.h  ../include/dbuf.h
 	$(CC) $(CFLAGS) -c s_conf.c
 
 s_debug.o: ../include/config.h ../include/struct.h ../include/common.h \
-	   ../include/sys.h s_debug.c
+	  ../include/sys.h s_debug.c
 	$(CC) $(CFLAGS) -c s_debug.c
 
-s_misc.o: s_misc.c ../include/struct.h ../include/config.h ../include/dbuf.h
+s_err.o: ../include/config.h ../include/struct.h ../include/common.h \
+	  ../include/sys.h ../include/numeric.h ../include/msg.h s_err.c
+	$(CC) $(CFLAGS) -c s_err.c
+
+s_misc.o: s_misc.c ../include/struct.h ../include/config.h ../include/dbuf.h \
+	  ../include/common.h ../include/sys.h ../include/numeric.h
 	$(CC) $(CFLAGS) -c s_misc.c
 
-s_user.o: s_user.c ../include/struct.h ../include/config.h \
-	  ../include/dbuf.h ../include/sys.h ../include/channel.h \
+s_user.o: s_user.c ../include/struct.h ../include/config.h ../include/sys.h \
+	  ../include/common.h ../include/dbuf.h ../include/channel.h \
 	  ../include/msg.h ../include/numeric.h ../include/whowas.h
 	$(CC) $(CFLAGS) -c s_user.c
 
-s_serv.o: s_serv.c ../include/struct.h ../include/config.h \
-	  ../include/dbuf.h ../include/sys.h ../include/channel.h \
+s_serv.o: s_serv.c ../include/struct.h ../include/config.h ../include/sys.h \
+	  ../include/common.h ../include/dbuf.h ../include/channel.h \
 	  ../include/msg.h ../include/numeric.h ../include/whowas.h
 	$(CC) $(CFLAGS) -c s_serv.c
 
 s_numeric.o: s_numeric.c ../include/config.h ../include/sys.h \
-	     ../include/struct.h ../include/dbuf.h ../include/numeric.h
+	  ../include/common.h ../include/struct.h ../include/dbuf.h \
+	  ../include/numeric.h
 	$(CC) $(CFLAGS) -c s_numeric.c
 
-whowas.o: ../include/struct.h ../include/config.h \
-	../include/dbuf.h ../include/sys.h ../include/numeric.h \
-	../include/whowas.h whowas.c
+whowas.o: ../include/struct.h ../include/config.h ../include/sys.h \
+	  ../include/common.h ../include/dbuf.h ../include/numeric.h \
+	  ../include/whowas.h whowas.c
 	$(CC) $(CFLAGS) -c whowas.c
 
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
-	../include/config.h s_bsd.c s_serv.c s_user.c channel.c s_misc.c
+	../include/common.h ../include/config.h s_bsd.c s_serv.c s_user.c \
+	channel.c s_misc.c
 	@crypt/sums
 	$(CC) $(CFLAGS) -c hash.c
 	@/bin/rm -f hash.c
@@ -235,6 +245,8 @@ s_auth.o: ../include/sys.h s_auth.c
 s_debug.o: ../include/config.h ../include/struct.h ../include/common.h
 s_debug.o: ../include/sys.h s_debug.c
 s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h
+s_err.o: ../include/struct.h ../include/config.h ../include/numeric.h
+s_err.o: ../include/dbuf.h ../include/sys.h s_err.c
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h s_conf.c
 s_user.o: ../include/struct.h ../include/config.h

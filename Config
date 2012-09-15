@@ -1,0 +1,621 @@
+#!/bin/sh
+#
+MV=/bin/mv
+RM=/bin/rm
+SETUP=include/setup.h
+#
+STDLIBH=undef
+STDDEFH=undef
+SYSSYSLOGH=undef
+MALLOCH=undef
+PARAMH=undef
+UNISTDH=undef
+STRINGH=undef
+STRINGSH=undef
+NSTRERROR=undef
+NSTRTOKEN=undef
+NSTRTOK=undef
+NINETADDR=undef
+NINETNTOA=undef
+NINETNETOF=undef
+GETTIMEOFDAY=undef
+LRAND48=undef
+CCPATH=''
+SIGNAL=''
+BLOCKING=''
+TMP=/tmp/.Configtmp$$.c
+EXEC=/tmp/.Configtmp$$
+PLATE=/tmp/.ConPlate$$
+c=''
+n=''
+#
+2>/dev/null
+if [ "`eval echo -n 'a'`" = "-n a" ] ; then
+	c='\c'
+else
+	n='-n'
+fi
+echo " "
+echo "   Welcome to autoconfigure for the IRC server."
+echo "Before running this script and expecting it to work, please fix the"
+echo "Makefile in this directory (I can only do so much without your help!)"
+echo "and I'll look into it for help and to checkup on your compiler"
+echo "preferences, etc"
+echo " "
+echo "Enter \"none\" at any prompt to effect a null entry."
+echo " "
+FOO=`egrep "^CC=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
+while [ -z "$CCPATH" ] ; do
+	MYP=`echo "$PATH" | sed -e 's/:/ /g'`
+	echo "Which compiler do you use, gcc or cc or...?"
+	echo $n "[$FOO] -> $c"
+	read cc
+	if [ -z "$cc" ] ; then
+		cc=$FOO
+		CCPATH=$FOO
+	elif [ -f $cc ] ; then
+		CCPATH=$cc
+	else
+		for i in $MYP; do
+			if [ -f $i/$cc -a -z "$CCPATH" ] ; then
+				CCPATH=$i/$cc
+			fi
+		done
+	fi
+done
+if [ "$FOO" != "$cc" ] ; then
+	MYP=`echo "$CCPATH" | sed -e 's@/@ @g'`
+	set $MYP
+	if [ $2 ] ; then
+		while [ $2 ] ; do
+			shift
+		done
+	fi
+	if [ $1 = "gcc" ] ; then
+		CCPATH="$CCPATH -traditional"
+	fi
+fi
+echo "Compiler selected: $CCPATH"
+echo " "
+echo "Enter additional flags to give to $CCPATH"
+FOO=`egrep "^CFLAGS=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
+INC=`egrep "^INCLUDEDIR=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
+FOO=`echo "$FOO" | sed -e "s@\$(INCLUDEDIR)@$INC@"`
+echo $n "[$FOO] -> $c"
+read cc
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ -z "$cc" ] ; then
+	cc=$FOO
+fi
+CFLAGS=$cc
+echo " "
+echo "If you need to use any extra libraries when compiling the server,"
+echo "please tell me now (might need to look at the Makefiles) and please"
+echo "include all the -l and -L flags (I'm lame)."
+LIBS=`egrep "^IRCDLIBS=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/' | tr -d "\012"`
+echo $n "[IRCDLIBS=$LIBS] -> $c"
+read cc;
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ -z "$cc" ] ; then
+	cc=$LIBS
+fi
+LIBS=$cc
+COMP="$CCPATH $CFLAGS $TMP -o $EXEC $LIBS >/dev/null 2>&1"
+#
+#
+echo 'Checking out /usr/include'
+echo $n "...Looking for /usr/include/stdlib.h...$c"
+if [ -r /usr/include/stdlib.h ] ; then
+	STDLIBH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for /usr/include/stddef.h...$c"
+if [ -r /usr/include/stddef.h ] ; then
+	STDDEFH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for /usr/include/sys/syslog.h...$c"
+if [ -r /usr/include/sys/syslog.h ] ; then
+	SYSSYSLOGH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for malloc.h...$c"
+if [ -r /usr/include/malloc.h ] ; then
+	MALLOCH=malloc.h
+	echo  'found!'
+elif [ -r /usr/include/sys/malloc.h ] ; then
+	MALLOCH=sys/malloc.h
+	echo  'found!'
+else
+	echo 'not found :('
+	MALLOCH=undef
+fi
+echo $n "...Looking for /usr/include/sys/param.h...$c"
+if [ -r /usr/include/sys/param.h ] ; then
+	PARAMH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for /usr/include/unistd.h...$c"
+if [ -r /usr/include/unistd.h ] ; then
+	UNISTDH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for /usr/include/string.h...$c"
+if [ -r /usr/include/string.h ] ; then
+	STRINGH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+echo $n "...Looking for /usr/include/strings.h...$c"
+if [ -r /usr/include/strings.h ] ; then
+	STRINGSH=define
+	echo  'found!'
+else
+	echo 'not found :('
+fi
+#
+# to b or not to b
+#
+echo " "
+echo $n "To be or not to be...$c"
+cat > $TMP <<_EOF_
+main()
+{
+	char	a[3], b[3];
+	bzero(b,3);
+	bcopy(a,b,3);
+	(void)bcmp(a,b,3);
+	exit(0);
+}
+_EOF_
+eval $COMP
+if [ $? -eq 0 ] ; then
+	echo "and so it shall be! bcopy/bzero/bcmp are about!"
+	BZERO=bzero
+else
+	echo "and it wasn't.  No bcopy/bzero/bcmp...hmpf"
+	BZERO=memset
+fi
+echo " "
+echo $n "Which one, gettimeofday, or lrand48..$c"
+cat > $TMP <<_EOF_
+#include <stdio.h>
+#include <sys/time.h>
+main()
+ {
+   struct timeval tv;
+   (void) gettimeofday(&tv, NULL);
+ }
+_EOF_
+eval $COMP
+if [ $? -eq 0 ] ; then
+	echo "We have a winner! gettimeofday found."
+	GETTIMEOFDAY=define
+else
+	echo "No gettimeofday. Lets try lrand48."
+cat > $TMP <<_EOF_
+main()
+{
+   int a;
+   a=lrand48();
+}
+_EOF_
+	eval $COMP
+	if [ $? -eq 0 ] ; then
+ 		echo "Bingo! lrand48!"
+		LRAND48=define
+	fi
+fi
+#
+# check for non-blocking fd style available..
+#
+echo " "
+echo 'Checking for POSIX/BSD/SYSV non-blocking stuff'
+if [ -f $TMP -o -d $TMP ] ; then
+	$RM -f $TMP
+fi
+cat > $PLATE <<_EOF_
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/file.h>
+main()
+{
+	int f;
+	f = fcntl(0, F_SETFL, BLOCKING);
+}
+_EOF_
+sed -e 's/BLOCKING/O_NONBLOCK/' $PLATE > $TMP
+`eval $COMP`
+if [ 0 -eq $? ] ; then
+	BLOCK=O_NONBLOCK
+else
+	echo 'O_NONBLOCK not present in fcntl.h or sys/ioctl.h'
+	if [ -f $TMP -o -d $TMP ] ; then
+		$RM -f $TMP $EXEC;
+	fi
+	sed -e 's/BLOCKING/O_NDELAY/' $PLATE > $TMP
+	eval $COMP
+	if [ 0 -eq $? ] ; then
+		BLOCK=O_NDELAY
+	else
+		echo 'O_NDELAY not present in fcntl.h or sys/ioctl.h'
+		if [ -f $TMP -o -d $TMP ] ; then
+			$RM -f $TMP $EXEC;
+		fi
+		sed -e 's/BLOCKING/FIONBIO/' $PLATE > $TMP
+		eval $COMP
+		if [ 0 -eq $? ] ; then
+			echo 'FIONBIO not found!  No option found!'
+			BLOCK=none
+		else
+			BLOCK=FIONBIO
+		fi
+	fi
+fi
+$RM -f $TMP $PLATE $EXEC
+echo "Blocking selected: $BLOCK";
+#
+# reliable signals ?
+#
+echo 'Looking for reliable signals...'
+echo "Hmmm...wonder if you have 'action from POSIX..."
+cat > $TMP <<_EOF_
+#include <signal.h>
+
+main()
+{	/* poor replacement for NULL but who cares here ? */
+	sigaction(SIGTERM, (struct sigaction *)0L, (struct sigaction *)0L);
+}
+_EOF_
+eval $COMP
+if [ $? -eq 0 ] ; then
+	echo "Ooooh, you are a lucky one! 'action from POSIX!"
+	SIGNAL=posix
+else
+	$RM -f $EXEC $TMP
+	cat > $TMP <<_EOF_
+#include <signal.h>
+int	calls = 0;
+void	handler()
+{
+	if (calls)
+		return;
+	calls++;
+	kill(getpid(), SIGTERM);
+	sleep(1);
+}
+main()
+{
+	signal(SIGTERM, handler);
+	kill(getpid(), SIGTERM);
+	exit (0);
+}
+_EOF_
+	echo $n "Nope, but you have...$c"
+	eval $COMP
+	$EXEC
+	if [ $? -eq 0 ] ; then
+		echo 'reliable signals! Cheers BSD!'
+		SIGNAL=bsd
+	else
+		echo "yucky, unreliable SYSV!"
+		SIGNAL=sysv
+	fi
+fi
+$RM -f $EXEC $TMP
+#
+echo 'Now those strings libraries...hmm...which one is it...'
+cat > $TMP <<_EOF_
+#$STRINGH STRINGH
+#$STRINGSH STRINGSH
+#ifdef STRINGH
+#include <string.h>
+#endif
+#ifdef STRINGSH
+#include <strings.h>
+#endif
+main()
+{
+	char *s = index("foo", 'o');
+	exit(0);
+}
+_EOF_
+eval $COMP
+if [ $? -eq 0 ] ; then
+	INDEX=index
+	echo "Cool...you have index()!"
+else
+	INDEX=strchr
+	echo "Grmpf...I guess there is a strchr() out there somewhere..."
+fi
+$RM -f $EXEC $TMP
+#
+# getrusage or times ?
+#
+echo $n "One for debugging, mainly, getrusage(2) or times(2)...$c"
+cat > $TMP <<_EOF_
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+main()
+{
+	struct	rusage	rus;
+	(void)getrusage(RUSAGE_SELF, &rus);
+}
+_EOF_
+eval $COMP
+if [ $? -eq 0 ] ; then
+	TIMES=getrusage
+	echo "getrusage()"
+else
+	$RM -f $EXEC $TMP
+	cat > $TMP <<_EOF_
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/times.h>
+main()
+{
+	struct	tms	tmsbuf;
+	(void)times(&tmsbuf);
+}
+_EOF_
+	eval $COMP
+	if [ $? -eq 0 ] ; then
+		TIMES=times
+		echo "times()"
+	else
+		echo "couldn't get either ?!"
+		TIMES=none
+	fi
+fi
+#
+# what do we need that isn't here already ?
+#
+echo "What else do I need that you don't have..."
+echo $n "Lets see...$c"
+cat > $TMP <<_EOF_
+main()
+{
+	char  *s = strerror(0);
+	exit(0);
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " strerror$c"
+	NSTRERROR=define
+fi
+$RM -f $EXEC $TMP
+cat > $TMP <<_EOF_
+#$STRINGH STRINGH
+#$STRINGSH STRINGSH
+#ifdef STRINGH
+#include <string.h>
+#endif
+#ifdef STRINGSH
+#include <strings.h>
+#endif
+main()
+{
+	char  *t = "a", **p = NULL, *s = strtoken(&p, t, ",");
+	if (!strcmp(t, s))
+		exit(0);
+	exit(1);
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " strtoken$c"
+	NSTRTOKEN=define
+else
+	$EXEC
+	if [ $? -ne 0 ] ; then
+		echo $n " strtoken$c"
+		NSTRTOKEN=define
+	fi
+fi
+$RM -f $EXEC $TMP
+cat > $TMP <<_EOF_
+#$STRINGH STRINGH
+#$STRINGSH STRINGSH
+#ifdef STRINGH
+#include <string.h>
+#endif
+#ifdef STRINGSH
+#include <strings.h>
+#endif
+main()
+{
+	char  *t = "a", *s = strtok(t, ",");
+	if (!strcmp(t, s))
+		exit(0);
+	exit(1);
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " strtok$c"
+	NSTRTOK=define
+else
+	$EXEC
+	if [ $? -ne 0 ] ; then
+		echo $n " strtok$c"
+		NSTRTOK=define
+	fi
+fi
+$RM -f $EXEC $TMP
+cat > $TMP << _EOF_
+#include <sys/types.h>
+#include <netinet/in.h>
+main()
+{
+	struct	in_addr in;
+	(void)inet_addr("1.2.3.4");
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " inet_addr$c"
+	NINETADDR=define
+fi
+$RM -f $EXEC $TMP
+cat > $TMP << _EOF_
+#include <sys/types.h>
+#include <netinet/in.h>
+main()
+{
+	struct	in_addr	in;
+	in.s_addr = 0x12345678;
+	(void)inet_ntoa(in);
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " inet_ntoa$c"
+fi
+$RM -f $EXEC $TMP
+cat > $TMP << _EOF_
+#include <sys/types.h>
+#include <netinet/in.h>
+main()
+{
+	struct	in_addr	in;
+	in.s_addr = 0x87654321;
+	(void)inet_netof(in);
+}
+_EOF_
+eval $COMP
+if [ $? -ne 0 ] ; then
+	echo $n " inet_netof$c"
+	NINETNETOF=define
+fi
+$RM -f $EXEC $TMP
+echo " "
+#
+#
+#
+echo " "
+echo "Ok, here's your chance...I think you should use $BLOCK, you want"
+echo "which of these ? O_NONBLOCK (POSIX) O_NDELAY (BSD) FIONBIO (SYSV)"
+echo $n "[$BLOCK] -> $c"
+read cc
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ -z "$cc" ] ; then
+	cc=$BLOCK
+fi
+BLOCK=$cc
+echo "I found $SIGNAL signals."
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ "$SIGNAL" = "posix" ] ; then
+	echo "Hmmm...I'm not sure if signal() is reliable or not either..."
+fi
+echo "You can choose between posix, bsd and sysv.  What'll it be ?"
+echo $n "[$SIGNAL] -> $c"
+read cc
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ -z "$cc" ] ; then
+	cc=$SIGNAL
+fi
+SIGNAL=$cc
+if [ "$TIMES" = "none" ] ; then
+	echo "I didn't find either getrusage or times earlier...If you do have"
+	echo "either of these, please tell me now."
+else
+	echo "I found $TIMES, out of getrusage and times.  getrusage is"
+	echo "more informative.  If you wish to swap your choice, please"
+	echo "do so now."
+fi
+echo $n "[$TIMES] -> $c"
+read cc
+if [ "$cc" = "none" ] ; then
+	cc=''
+elif [ -z "$cc" ] ; then
+	cc=$TIMES
+fi
+TIMES=$cc
+
+$RM -f $EXEC $TMP $PLATE
+$MV -f $SETUP $SETUP.bak 2>/dev/null
+cat > $SETUP  <<_EOF_
+#$PARAMH	PARAMH
+#$UNISTDH	UNISTDH
+#$STRINGH	STRINGH
+#$STRINGSH	STRINGSH
+#$STDLIBH	STDLIBH
+#$STDDEFH	STDDEFH
+#$SYSSYSLOGH	SYSSYSLOGH
+#$NSTRERROR	NEED_STRERROR
+#$NSTRTOKEN	NEED_STRTOKEN
+#$NSTRTOK	NEED_STRTOK
+#$NINETADDR	NEED_INET_ADDR
+#$NINETNTOA	NEED_INET_NTOA
+#$NINETNETOF	NEED_INET_NETOF
+#$GETTIMEOFDAY	GETTIMEOFDAY
+#$LRAND48	LRAND48
+_EOF_
+if [ "$MALLOCH" = "undef" ] ; then
+	echo "#undef	MALLOCH" >> $SETUP
+else
+	echo "#define	MALLOCH	<$MALLOCH>" >> $SETUP
+fi
+if [ "$BZERO" = "memset" ] ; then
+	cat >> $SETUP <<_EOF_
+#define	bzero(a,b)	memset(a,0,b)
+#define	bcopy(a,b,c)	memcpy(b,a,c)
+#define	bcmp	memcmp
+_EOF_
+fi
+if [ "$INDEX" = "strchr" ] ; then
+	echo "#define	index	strchr" >> $SETUP
+	echo "#define	rindex	strrchr" >> $SETUP
+fi
+if [ "$BLOCK" = "O_NONBLOCK" ] ; then
+	echo "#define	NBLOCK_POSIX" >> $SETUP
+elif [ "$BLOCK" = "O_NDELAY" ] ; then
+	echo "#define	NBLOCK_BSD" >> $SETUP
+else
+	echo "#define	NBLOCK_SYSV" >> $SETUP
+fi
+if [ "$SIGNAL" = "posix" ] ; then
+	echo "#define	POSIX_SIGNALS" >> $SETUP
+elif [ "$SIGNAL" = "bsd" ] ; then
+	echo "#define	BSD_RELIABLE_SIGNALS" >> $SETUP
+else
+	echo "#define	SYSV_UNRELIABLE_SIGNALS" >> $SETUP
+fi
+if [ "$TIMES" = "times" ] ; then
+	echo "#define	TIMES_2" >> $SETUP
+	echo "#undef	GETRUSAGE_2" >> $SETUP
+elif [ "$TIMES" = "getrusage" ] ; then
+	echo "#undef	TIMES_2" >> $SETUP
+	echo "#define	GETRUSAGE_2" >> $SETUP
+else
+	echo "#undef	TIMES_2" >> $SETUP
+	echo "#undef	GETRUSAGE_2" >> $SETUP
+fi
+touch include/config.h
+echo " "
+echo "If you would like to issue any shell commands before proceeding, do so"
+echo "now.  My findings are in include/setup.h if you wish to change them."
+echo $n "--> $c"
+read cc
+if [ ! -z "$cc" ] ; then
+	eval $cc
+fi
+exit 0

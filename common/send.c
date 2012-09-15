@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.28 17 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.30 07 Nov 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -66,13 +66,18 @@ aClient *to;
 char	*notice;
 {
 	to->flags |= FLAGS_DEADSOCKET;
+	/*
+	 * If because of BUFFERPOOL problem then clean dbuf's now so that
+	 * notices don't hurt operators below.
+	 */
+	DBufClear(&to->recvQ);
+	DBufClear(&to->sendQ);
 #ifndef CLIENT_COMPILE
 	if (notice != (char *)NULL && !IsPerson(to) && !IsUnknown(to) &&
 	    !(to->flags & FLAGS_CLOSING))
 		sendto_ops(notice, get_client_name(to, FALSE));
+	Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
 #endif
-	DBufClear(&to->recvQ);
-	DBufClear(&to->sendQ);
 	return -1;
 }
 
@@ -95,12 +100,12 @@ int	fd;
 
 	if (fd == me.fd)
 	    {
-		for (i = 0; i <= highest_fd; i++)
+		for (i = highest_fd; i >= 0; i--)
 			if ((cptr = local[i]) && DBufLength(&cptr->sendQ) > 0)
 				(void)send_queued(cptr);
 	    }
-	else if (fd >= 0 && local[fd])
-		(void)send_queued(local[fd]);
+	else if (fd >= 0 && (cptr = local[fd]) && DBufLength(&cptr->sendQ) > 0)
+		(void)send_queued(cptr);
 #endif
 }
 #endif

@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.27 17 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.28 07 Nov 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -132,6 +132,7 @@ char	serveropts[] = {
 #ifdef GETRUSAGE_2
 # ifdef SOL20
 #  include <sys/time.h>
+#  include <sys/rusage.h>
 # endif
 # include <sys/resource.h>
 #else

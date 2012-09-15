@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.18 15 Oct 1993 (C) 1990, 1991 Armin Gruner;\
+static  char sccsid[] = "@(#)support.c	2.19 22 Oct 1993 (C) 1990, 1991 Armin Gruner;\
 1992, 1993 Darren Reed";
 #endif
 
@@ -100,10 +100,10 @@ int err_no;
 	extern	char	*sys_errlist[];	 /* Sigh... hopefully on all systems */
 	extern	int	sys_nerr;
 
-	char *errp, buff[40];
+	static	char	buff[40];
+	char	*errp;
 
-	errp = (err_no > sys_nerr ? 
-		"Undefined system error" : sys_errlist[err_no]);
+	errp = (err_no > sys_nerr ? (char *)NULL : sys_errlist[err_no]);
 
 	if (errp == (char *)NULL)
 	    {

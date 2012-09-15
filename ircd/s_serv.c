@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.49 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.50 07 Nov 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -37,7 +37,7 @@ Computing Center and Jarkko Oikarinen";
 #include <utmp.h>
 #include "h.h"
 
-#define BIGBUFFERSIZE 2000
+static	char	buf[BUFSIZE];
 
 /*
 ** m_functions execute protocol messages on this server:
@@ -487,7 +487,7 @@ Reg1	aClient	*cptr;
 {
 	Reg2	aClient	*acptr;
 	Reg3	aConfItem	*aconf, *bconf;
-	char	*inpath, *host, *s, *encr, flagbuf[20];
+	char	*inpath, *host, *s, *encr;
 	int	split, i;
 
 	inpath = get_client_name(cptr,TRUE); /* "refresh" inpath with host */
@@ -689,7 +689,7 @@ Reg1	aClient	*cptr;
 			sendto_one(cptr,":%s USER %s %s %s :%s", acptr->name,
 				   acptr->user->username, acptr->user->host,
 				   acptr->user->server, acptr->info);
-			send_umode(cptr, acptr, 0, SEND_UMODES, flagbuf);
+			send_umode(cptr, acptr, 0, SEND_UMODES, buf);
 			send_user_joins(cptr, acptr);
 		    }
 		else if (IsService(acptr))

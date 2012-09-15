@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)whowas.c	2.15 15 Oct 1993 (C) 1988 Markku Savela";
+static  char sccsid[] = "@(#)whowas.c	2.16 08 Nov 1993 (C) 1988 Markku Savela";
 #endif
 
 #include "struct.h"
@@ -73,6 +73,7 @@ char	*nick;
 time_t	timelimit;
 {
 	Reg1	aName	*wp, *wp2;
+	Reg2	int	i = 0;
 
 	wp = wp2 = &was[ww_index];
 	timelimit = time(NULL)-timelimit;
@@ -82,10 +83,10 @@ time_t	timelimit;
 			break;
 		wp++;
 		if (wp == &was[NICKNAMEHISTORYLENGTH])
-			wp = was;
+			i = 1, wp = was;
 	} while (wp != wp2);
 
-	if (wp != NULL)
+	if (wp != wp2 || !i)
 		return (wp->ww_online);
 	return (NULL);
 }

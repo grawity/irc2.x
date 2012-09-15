@@ -33,7 +33,7 @@
 
 #ifdef USE_SYSLOG
 # include <syslog.h>
-# ifndef HPUX
+# ifdef SYSSYSLOGH
 #  include <sys/syslog.h>
 # endif
 #endif

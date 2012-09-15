@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.6 07 Aug 1993 (C) 1993 Darren Reed";
+static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -42,6 +42,7 @@ static  char sccsid[] = "@(#)chkconf.c	1.6 07 Aug 1993 (C) 1993 Darren Reed";
 #include <time.h>
 #endif
 
+#undef	free
 #define	MyMalloc(x)	malloc(x)
 
 static	void	new_class();

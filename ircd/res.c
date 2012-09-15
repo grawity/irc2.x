@@ -18,7 +18,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.31 10 Oct 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.34 03 Nov 1993 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -85,6 +85,9 @@ int	op;
 {
 	int	ret = 0;
 
+#ifdef	LRAND48
+	srand48(time(NULL));
+#endif
 	if (op & RES_INITLIST)
 	    {
 		bzero((char *)&reinfo, sizeof(reinfo));
@@ -184,14 +187,14 @@ Link	*lp;
 	bzero((char *)nreq, sizeof(ResRQ));
 	nreq->next = NULL; /* where NULL is non-zero ;) */
 	nreq->sentat = time(NULL);
-	nreq->retries = 4;
+	nreq->retries = 3;
 	nreq->resend = 1;
 	nreq->srch = -1;
 	if (lp)
 		bcopy((char *)lp, (char *)&nreq->cinfo, sizeof(Link));
 	else
 		bzero((char *)&nreq->cinfo, sizeof(Link));
-	nreq->timeout = nreq->sentat + RES_TIMEOUT;
+	nreq->timeout = 4;	/* start at 4 and exponential inc. */
 	nreq->he.h_addrtype = AF_INET;
 	nreq->he.h_name = NULL;
 	nreq->he.h_aliases[0] = NULL;
@@ -207,14 +210,15 @@ time_t	timeout_query_list(now)
 time_t	now;
 {
 	Reg1	ResRQ	*rptr, *r2ptr;
-	Reg2	time_t	next = 0;
+	Reg2	time_t	next = 0, tout;
 	aClient	*cptr;
 
 	Debug((DEBUG_DNS,"timeout_query_list at %s",myctime(now)));
 	for (rptr = first; rptr; rptr = r2ptr)
 	    {
 		r2ptr = rptr->next;
-		if (now >= rptr->timeout)
+		tout = rptr->sentat + rptr->timeout;
+		if (now >= tout)
 			if (--rptr->retries <= 0)
 			    {
 #ifdef DEBUG
@@ -250,7 +254,7 @@ time_t	now;
 			else
 			    {
 				rptr->sentat = now;
-				rptr->timeout = now + RES_TIMEOUT;
+				rptr->timeout += rptr->timeout;
 				resend_query(rptr);
 #ifdef DEBUG
 				Debug((DEBUG_INFO,"r %x now %d retry %d c %x",
@@ -258,8 +262,8 @@ time_t	now;
 					rptr->cinfo.value.cptr));
 #endif
 			    }
-		if (!next || rptr->timeout < next)
-			next = rptr->timeout;
+		if (!next || tout < next)
+			next = tout;
 	    }
 	return (next > now) ? next : (now + AR_TTL);
 }
@@ -379,23 +383,27 @@ Reg1	ResRQ	*rptr;
 	(void)strncpy(hname, name, sizeof(hname)-1);
 	len = strlen(hname);
 
-	if (rptr && (hname[len-1] != '.'))
+	if (rptr && !index(hname, '.') && _res.options & RES_DEFNAMES)
 	    {
 		(void)strncat(hname, dot, sizeof(hname)-len-1);
+		len++;
+		(void)strncat(hname, _res.defdname, sizeof(hname) - len -1);
+	    }
+	else if (rptr && (hname[len-1] != '.'))
+	    {
+		(void)strncat(hname, dot, sizeof(hname)-len-1);
+		len++;
 		/*
 		 * NOTE: The logical relationship between DNSRCH and DEFNAMES
 		 * is implies. ie no DEFNAMES, no DNSRCH.
+		 * Or So I thought...perhaps not anymore...
 		 */
-		if (_res.options & (RES_DEFNAMES|RES_DNSRCH) ==
-		    (RES_DEFNAMES|RES_DNSRCH))
+		if (_res.options & RES_DNSRCH)
 		    {
 			if (_res.dnsrch[rptr->srch])
 				(void)strncat(hname, _res.dnsrch[rptr->srch],
-					sizeof(hname) - ++len -1);
-		    }
-		else if (_res.options & RES_DEFNAMES)
-			(void)strncat(hname, _res.defdname,
 					sizeof(hname) - len -1);
+		    }
 	    }
 
 	/*
@@ -462,10 +470,16 @@ ResRQ	*rptr;
 		return r;
 	    }
 	hptr = (HEADER *)buf;
+#ifdef GETTIMEOFDAY
 	(void) gettimeofday(&tv, NULL);
 	do {
 		hptr->id = htons(ntohs(hptr->id) + k +
 				 (u_short)(tv.tv_usec & 0xffff));
+#endif /* GETTIMEOFDAY */
+#ifdef LRAND48
+        do {
+		hptr->id = htons(ntohs(hptr->id) + k + lrand48() & 0xffff);
+#endif /* LRAND48 */
 		k++;
 	} while (find_id(ntohs(hptr->id)));
 	rptr->id = ntohs(hptr->id);
@@ -1206,7 +1220,7 @@ aCache	*ocp;
 	** Cleanup any references to this structure by destroying the
 	** pointer.
 	*/
-	for (hashv = 0; hashv < highest_fd; hashv++)
+	for (hashv = highest_fd; hashv >= 0; hashv--)
 		if ((cptr = local[hashv]) && (cptr->hostp == hp))
 			cptr->hostp = NULL;
 	/*

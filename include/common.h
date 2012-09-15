@@ -20,6 +20,10 @@
 #ifndef	__common_include__
 #define __common_include__
 
+#ifdef	PARAMH
+#include <sys/param.h>
+#endif
+
 #ifndef PROTO
 #if __STDC__
 #	define PROTO(x)	x
@@ -43,17 +47,11 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-#if defined(mips) || defined(pyr) || defined(apollo) || (defined(sequent) &&\
-    !defined(DYNIXPTX)) || defined(__convex__) ||\
-    (defined(BSD) && !defined(sun) && !defined(ultrix) && !defined(__osf__))
+#ifndef	MALLOCH
 char	*malloc(), *calloc();
 void	free();
 #else
-# if defined(NEXT)
-#include <sys/malloc.h>
-# else
-#include <malloc.h>
-# endif
+#include MALLOCH
 #endif
 
 extern	int	matches PROTO((char *, char *));
@@ -84,11 +82,6 @@ extern int inet_netof PROTO((struct in_addr));
 extern char *myctime PROTO((time_t));
 extern char *strtoken PROTO((char **, char *, char *));
 
-#if defined(ULTRIX) || defined(SGI) || defined(sequent) || defined(HPUX) || \
-    defined(OSF)
-#include <sys/param.h>
-#endif
-
 #ifndef MAX
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 #endif
@@ -96,11 +89,6 @@ extern char *strtoken PROTO((char **, char *, char *));
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 #endif
 
-#if !defined(DEBUGMODE) || defined(CLIENT_COMPILE)
-#define MyFree(x)       if ((x) != NULL) free(x)
-#else
-#define	free(x)		MyFree(x)
-#endif
 #define DupString(x,y) do{x=MyMalloc(strlen(y)+1);(void)strcpy(x,y);}while(0)
 
 extern unsigned char tolowertab[];

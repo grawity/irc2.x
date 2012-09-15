@@ -541,4 +541,9 @@ Sat Jan  6 17:36:28 1990  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
 
 	Added HPUX-specific code since it lacks the timezone() function.
 
+Thu Oct 21 13:45:31 1993 Armin Gruner <gruner@informatik.tu-muenchen.de>
+
+      * s_conf.c, find_restrict. Added argv0 to execlp() call. login
+        name was not passed to external program
+
 

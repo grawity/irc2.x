@@ -64,6 +64,12 @@ IRCLIBS=-lcurses -ltermcap
 # -Bstatic here.
 #
 #LDFLAGS=-Bstatic
+#
+#Dell SVR4
+#CC=gcc
+#CFLAGS= -I$(INCLUDEDIR) -O2
+#IRCDLIBS=-lsocket -lnsl -lucb -lresolv
+#IRCLIBS=-lcurses -lsocket -lnsl -lucb
 
 # IRCDMODE is the mode you want the binary to be.
 # The 4 at the front is important (allows for setuidness)
@@ -85,7 +91,7 @@ INSTALL=/usr/bin/install
 MAKE=make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
 	'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}' 'BINDIR=${BINDIR}' \
 	'INSTALL=${INSTALL}' 'IRCLIBS=${IRCLIBS}' 'INCLUDEDIR=${INCLUDEDIR}' \
-	'IRCDDIR=${IRCDDIR}'
+	'IRCDDIR=${IRCDDIR}' 'MANDIR=${MANDIR}'
 
 all:	build
 
@@ -96,6 +102,11 @@ client:
 	@echo 'Making client'; cd irc; ${MAKE} build; cd ..;
 
 build:
+	-@if [ ! -f include/setup.h ] ; then \
+		echo "Hmm...doesn't look like you've run Config..."; \
+		echo "Doing so now."; \
+		sh Config; \
+	fi
 	@for i in $(SUBDIRS); do \
 		echo "Building $$i";\
 		cd $$i;\
@@ -109,6 +120,7 @@ clean:
 		cd $$i;\
 		${MAKE} clean; cd ..;\
 	done
+	@echo "To really restart installation, remove include/setup.h"
 
 depend:
 	@for i in $(SUBDIRS); do \
@@ -119,15 +131,11 @@ depend:
 
 install: all
 	chmod +x ./install
-	@for i in ircd irc; do \
+	@for i in ircd irc doc; do \
 		echo "Installing $$i";\
 		cd $$i;\
 		${MAKE} install; cd ..;\
 	done
-	./install -c -m 644 doc/ircd.8 ${MANDIR}/man8
-	./install -c -m 644 doc/irc.1 ${MANDIR}/man1
-	-./install -c doc/ircd.8 ${MANDIR}/man8
-	-./install -c doc/irc.1 ${MANDIR}/man1
 
 
 rcs:

@@ -36,7 +36,7 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.15 17 Oct 1993 (C) 1990 Markku Savela";
+static  char sccsid[] = "@(#)dbuf.c	2.16 20 Oct 1993 (C) 1990 Markku Savela";
 #endif
 
 #include <stdio.h>
@@ -138,7 +138,7 @@ dbuf *dyn;
 	while ((p = dyn->head) != NULL)
 	    {
 		dyn->head = p->next;
-		MyFree((char *)p);
+		dbuf_free(p);
 	    }
 	return -1;
     }

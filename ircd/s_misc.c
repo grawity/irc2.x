@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.38 15 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.39 27 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -213,7 +213,9 @@ int	showip;
 		    {
 			if (showip)
 				(void)sprintf(nbuf, "%s[%s@%s.%u]",
-					sptr->name, sptr->username,
+					sptr->name,
+					(!(sptr->flags & FLAGS_GOTID)) ? "" :
+					sptr->username,
 					inetntoa((char *)&sptr->ip),
 					(unsigned int)sptr->port);
 			else

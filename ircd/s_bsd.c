@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.64 17 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.68 07 Nov 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -1040,7 +1040,7 @@ aClient	*cptr;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_REUSEADDR) %s:%s", cptr);
 #endif
-#ifdef	SO_DEBUG
+#if  defined(SO_DEBUG) && defined(DEBUGMODE)
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_DEBUG, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_DEBUG) %s:%s", cptr);
@@ -1062,7 +1062,7 @@ aClient	*cptr;
  */
 	opt = 8192;
 # else
-	opt = 1400;
+	opt = 8192;
 # endif
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
@@ -1094,7 +1094,7 @@ void	set_non_blocking(fd, cptr)
 int	fd;
 aClient *cptr;
 {
-	int	res;
+	int	res, nonb = 0;
 
 	/*
 	** NOTE: consult ALL your relevant manual pages *BEFORE* changing
@@ -1102,20 +1102,23 @@ aClient *cptr;
 	**	 as can be seen by the PCS one.  They are *NOT* all the same.
 	**	 Heed this well. - Avalon.
 	*/
-#if defined(PCS) || defined(AIX)
+#ifdef	NBLOCK_POSIX
+	nonb |= O_NONBLOCK;
+#endif
+#ifdef	NBLOCK_BSD
+	nonb |= O_NDELAY;
+#endif
+#ifdef	NBLOCK_SYSV
 	/* This portion of code might also apply to NeXT.  -LynX */
 	res = 1;
 
 	if (ioctl (fd, FIONBIO, &res) < 0)
 		report_error("ioctl(fd,FIONBIO) failed for %s:%s", cptr);
 #else
-# if defined(O_NDELAY) && !defined(FNDELAY)
-#  define FNDELAY O_NDELAY
-# endif
 	if ((res = fcntl(fd, F_GETFL, 0)) == -1)
-		report_error("fcntl(fd,F_GETFL) failed for %s:%s",cptr);
-	else if (fcntl(fd, F_SETFL, res | FNDELAY) == -1)
-		report_error("fcntl(fd,F_SETL,FNDELAY) failed for %s:%s",cptr);
+		report_error("fcntl(fd, F_GETFL) failed for %s:%s",cptr);
+	else if (fcntl(fd, F_SETFL, res | nonb) == -1)
+		report_error("fcntl(fd, F_SETL, nonb) failed for %s:%s",cptr);
 #endif
 	return;
 }
@@ -1273,6 +1276,7 @@ fd_set	*rfd;
 	if (FD_ISSET(cptr->fd, rfd) &&
 	    !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090))
 	    {
+		errno = 0;
 		length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 
 		cptr->lasttime = now;
@@ -1565,7 +1569,9 @@ deadsocket:
 		length = 1;	/* for fall through case */
 		if (!NoNewLine(cptr) || FD_ISSET(i, &read_set))
 			length = read_packet(cptr, &read_set);
-		if (IsDead(cptr))
+		if (length > 0)
+			flush_connections(i);
+		if ((length != FLUSH_BUFFER) && IsDead(cptr))
 			goto deadsocket;
 		if (!FD_ISSET(i, &read_set) && length > 0)
 			continue;
@@ -1583,7 +1589,8 @@ deadsocket:
 		** in due course, select() returns that fd as ready
 		** for reading even though it ends up being an EOF. -avalon
 		*/
-		Debug((DEBUG_ERROR, "READ ERROR: fd = %d", i));
+		Debug((DEBUG_ERROR, "READ ERROR: fd = %d %d %d",
+			i, errno, length));
 
 		/*
 		** NOTE: if length == -2 then cptr has already been freed!
@@ -1640,13 +1647,17 @@ struct	hostent	*hp;
 		nextdnscheck = 1;
 		s = (char *)index(aconf->host, '@');
 		s++; /* should NEVER be NULL */
-		hp = gethost_byname(s, &lin);
-		Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
-			hp, aconf, aconf->name, s));
-		if (!hp)
-			return 0;
-		bcopy(hp->h_addr, (char *)&aconf->ipnum,
-			sizeof(struct in_addr));
+		if ((aconf->ipnum.s_addr = inet_addr(s)) == -1)
+		    {
+			aconf->ipnum.s_addr = 0;
+			hp = gethost_byname(s, &lin);
+			Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
+				hp, aconf, aconf->name, s));
+			if (!hp)
+				return 0;
+			bcopy(hp->h_addr, (char *)&aconf->ipnum,
+				sizeof(struct in_addr));
+		    }
 	    }
 	cptr = make_client(NULL);
 	cptr->hostp = hp;
@@ -1959,7 +1970,7 @@ char	*namebuf, *linebuf, *chname;
 	    }
 	(void)alarm(0);
 	(void)strcpy(line, "ircd: You are being summoned to Internet Relay \
-Chat by\n\r");
+Chat on\n\r");
 	(void)alarm(5);
 	if (write(fd, line, strlen(line)) != strlen(line))
 	    {
@@ -1969,8 +1980,8 @@ Chat by\n\r");
 		return;
 	    }
 	(void)alarm(0);
-	(void)sprintf(line, "ircd: Channel %s: %s@%s (%s) %s\n\r",
-		chname, who->username, who->user->host, who->name, who->info);
+	(void)sprintf(line, "ircd: Channel %s, by %s@%s (%s) %s\n\r",
+		chname, who->user->username, who->user->host, who->name, who->info);
 	(void)alarm(5);
 	if (write(fd, line, strlen(line)) != strlen(line))
 	    {
@@ -1991,7 +2002,7 @@ Chat by\n\r");
 	    }
 	(void)close(fd);
 	(void)alarm(0);
-	sendto_one(who, rpl_str(RPL_SUMMONING), who->name, namebuf);
+	sendto_one(who, rpl_str(RPL_SUMMONING), me.name, who->name, namebuf);
 	return;
 }
 #  endif

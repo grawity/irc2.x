@@ -20,6 +20,8 @@
 #ifndef	__config_include__
 #define	__config_include__
 
+#include "setup.h"
+
 /* Type of host. These should be made redundant somehow. -avalon */
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
@@ -43,65 +45,9 @@
 #undef	PCS			/* PCS Cadmus MUNIX, use with BSD flag! */
 
 /*
- * getrusage(2) is a BSDism used in s_misc.c. If you have both of these
- * use GETRUSEAGE_2 unless you get some compile time errors in which case
- * try TIMES_2. If both fail, #undef them both. -avalon
- */
-#define	GETRUSAGE_2             /* if your system supports getrusage(2) */
-#undef	TIMES_2                 /* or if it supports this. yuck. */
- 
-/*
- * The following are additional symbols to define. If you are not
- * sure about them, leave them all defined as they are.
- *
- * NOTE: *BEFORE* undefining NEED_STRERROR, check to see if your library
- *	 version returns NULL on an unknown error. If so, then I strongly
- *	 recommend you use this version as provided.
- *
- * If you get loader errors about unreferenced function calls, you must
- * define the following accordingly:
- */
-#if defined(NEXT) || defined(HPUX) || defined(AIX) || defined (sequent)
-#undef	NEED_STRERROR
-#else
-#define	NEED_STRERROR		/* Your libc.a not ANSI-compatible and has */
-				/* no strerror() */
-#endif
-
-#define	NEED_STRTOKEN		/* Your libc.a does not have strtoken(3) */
-#undef	NEED_STRTOK		/* Your libc.a does not have strtok(3) */
-#undef	NEED_INET_ADDR  	/* You need inet_addr(3)	*/
-#undef	NEED_INET_NTOA  	/* You need inet_ntoa(3)	*/
-#undef	NEED_INET_NETOF 	/* You need inet_netof(3)	*/
-/*
  * NOTE: On some systems, valloc() causes many problems.
  */
 #undef	VALLOC			/* Define this if you have valloc(3) */
-
-/*
- * The following is fairly system dependent and is important that you
- * get it right. Use *ONE* of these as your #define and *ONE ONLY*.
- * Where and if possible, check for and use POSIX_SIGNALS since any POSIX
- * compliant vendor is very unlikely to not have a working sigaction().
- *
- * define this if your signal() calls DONT get reset back to the default
- * action when a signal is trapped. BSD signals are by reliable.
- */
-#define	BSD_RELIABLE_SIGNALS
-/*
- * if you are on a sysv-ish system, your signals arent reliable.
- */
-#undef	SYSV_UNRELIABLE_SIGNALS
-/*
- * Define POSIX_SIGNALS if your system has the POSIX signal library.
- *
- * Dynix/ptx users should define POSIX_SIGNALS only, as well as DYNIXPTX
- * above.
- *
- * POSIX_SIGNALS are RELIABLE. NOTE: these may *NOT* be used automatically
- * by your system when you compile so define here to make sure.
- */
-#undef	POSIX_SIGNALS
 
 #ifdef APOLLO
 #define	RESTARTING_SYSTEMCALLS
@@ -550,11 +496,6 @@
 #ifdef _SEQUENT_		/* Dynix 1.4 or 2.0 Generic Define.. */
 #undef BSD
 #define SYSV			/* Also #define SYSV */
-#undef	BSD_RELIABLE_SIGNALS
-#undef	SYSV_UNRELIABLE_SIGNALS
-# ifndef POSIX_SIGNALS
-#define	POSIX_SIGNALS
-# endif
 #endif
 
 #ifdef	ultrix
@@ -604,8 +545,8 @@ extern	void	debug();
 #define SEQ_NOFILE    128        /* set to your current kernel impl, */
 #endif                           /* max number of socket connections */
 
-#if defined(DYNIXPTX) && !defined(POSIX_SIGNALS)
-#define	POSIX_SIGNALS
+#ifdef _SEQUENT_
+#define	DYNIXPTX
 #endif
 
 #ifdef	BSD_RELIABLE_SIGNALS
@@ -622,7 +563,7 @@ error You stuffed up config.h signals #defines use only one.
 #undef	HAVE_RELIABLE_SIGNALS
 #endif
 
-#ifdef POSIX_SIGNALS
+#ifdef	POSIX_SIGNALS
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
