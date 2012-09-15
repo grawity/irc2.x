@@ -23,6 +23,7 @@ char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and\
 
 #include "config.h"
 #include "common.h"
+#include "struct.h"
 #include "sys.h"
 #include <signal.h>
 #include <sys/errno.h>
@@ -34,7 +35,7 @@ int	writecalls = 0, writeb[10];
 #endif
 VOIDSIG dummy()
     {
-#if !HAVE_RELIABLE_SIGNALS
+#ifndef HAVE_RELIABLE_SIGNALS
 	signal(SIGALRM, dummy);
 #endif
     }
@@ -59,8 +60,9 @@ VOIDSIG dummy()
 **		work equally well whether blocking or non-blocking
 **		mode is used...
 */
-int deliver_it(fd, str, len)
-int fd, len;
+int deliver_it(cptr, str, len)
+aClient *cptr;
+int len;
 char *str;
     {
 	int retval;
@@ -72,10 +74,10 @@ char *str;
 	writecalls++;
 #endif
 	alarm(WRITEWAITDELAY);
-#if VMS
-	retval = netwrite(fd, str, len);
+#ifdef VMS
+	retval = netwrite(cptr->fd, str, len);
 #else
-	retval = write(fd, str, len);
+	retval = write(cptr->fd, str, len);
 	/*
 	** Convert WOULDBLOCK to a return of "0 bytes moved". This
 	** should occur only if socket was non-blocking. Note, that
@@ -85,7 +87,13 @@ char *str;
 	** ...now, would this work on VMS too? --msa
 	*/
 	if (retval < 0 && errno == EWOULDBLOCK)
+	    {
 		retval = 0;
+		cptr->flags |= FLAGS_BLOCKED;
+	    }
+	else if (retval > 0)
+		cptr->flags &= ~FLAGS_BLOCKED;
+
 #endif
 	alarm(0);
 #ifdef DEBUGMODE

@@ -17,159 +17,102 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- Jto -- 20 Jun 1990
- * extern void free() fixed as suggested by
- * gruner@informatik.tu-muenchen.de
- */
-
-/* hpiirai 17 May 1990
- * Fixed m_whowas() to produce the correct time.
- */
-
-/* -- Jto -- 12 May 1990
- * Added newline removal at the end of ctime().
- */
-
-/* -- Jto -- 10 May 1990
- * Changed memcpy into bcopy
- * Added sys.h include to get bcopy work.
- */
-
 /*
-** This module contains utilites for keeping the
-** history/database of recent users.
-*/
+ * --- avalon --- 6th April 1992
+ * rewritten to scrap linked lists and use a table of structures which
+ * is referenced like a circular loop. Should be faster and more efficient.
+ */
+
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
-
 #include "numeric.h"
-#include "whowas.h"
 
-typedef struct Home
-    {
-	int refcnt;
-	char info[REALLEN+1];
-	aClient *online; /* NULL, if user signed off */
-	anUser *user;
-    } aHome;
-	
-typedef struct Name
-    {
-	struct Name *next;
-	struct Name *prev;
-	struct Home *home;
-	unsigned long time;
-	char name[HOSTLEN+1];
-    } aName;
+typedef struct aname {
+	anUser	*ww_user;
+	aClient	*ww_online;
+	long	ww_logout;
+	char	ww_nick[NICKLEN+1];
+	char	ww_info[REALLEN+1];
+} aName;
 
-static aName *NameHistory = NULL, *LastHistory = NULL;
-static int HistoryLength = 0;
-/*
-** MaxHistoryLength
-**	Max number of name changes remembered. This is defined as
-**	a variable so that it will be easy to change it in runtime
-**	if needed (should even work if set to 0).
-*/
-static int MaxHistoryLength = NICKNAMEHISTORYLENGTH;
+
+static	aName	was[NICKNAMEHISTORYLENGTH];
+static	int	ww_index = 0;
 
 add_history(cptr)
-aClient *cptr;
-    {
-	Reg1 aName *new;
+aClient	*cptr;
+{
+	aName	ntmp;
 
-	if (cptr->name[0] == '\0')
-		return 0; /* No old name defined, no history to save */
-	if ((new = (aName *)MyMalloc(sizeof(aName))) == NULL)
-		return -1;
-	if ((new->home = (aHome *)cptr->history) == NULL)
-	    {
-		/*
-		** A fresh user. Allocate a Home block for the
-		** fixed user specific information.
-		*/
-		new->home = (aHome *)MyMalloc(sizeof(aHome));
-		cptr->history = (char *)new->home;
-		new->home->online = cptr;
-		new->home->user = cptr->user;
-		cptr->user->refcnt += 1;
-		bcopy(cptr->info,new->home->info,sizeof(new->home->info));
-		new->home->refcnt = 1;
-	    }
-	else
-		/*
-		** User changing nick. Just increment reference count
-		*/
-		new->home->refcnt += 1;
-	strncpyzt(new->name,cptr->name,sizeof(new->name));
-	new->time = time(NULL);
-	new->prev = NULL;
-	new->next = NameHistory;
-	if (NameHistory != NULL)
-		NameHistory->prev = new;
-	NameHistory = new;
-	if (LastHistory == NULL)
-		LastHistory = new;
-	HistoryLength += 1;
-	/*
-	** Release History blocks if max exeeded. (Note that this
-	** is only after 'new' is added--easier this way, because we
-	** don't need to worry about 'home' disappearing in case the
-	** users previous history entry get's now deleted...)
-	*/
-	if (HistoryLength > MaxHistoryLength && (new = LastHistory))
-	    {
-		if (--(new->home->refcnt) == 0)
-		    {
-			free_user(new->home->user);
-			if (new->home->online)
-				new->home->online->history = NULL;
-			free(new->home);
-		    }
-		LastHistory = new->prev;
-		if (LastHistory != NULL)
-			LastHistory->next = NULL;
-		HistoryLength -= 1;
-		free(new);
-	    }
-	return 0;
-    }
+	strncpyzt(ntmp.ww_nick, cptr->name, NICKLEN);
+	strncpyzt(ntmp.ww_info, cptr->info, REALLEN);
+	ntmp.ww_user = cptr->user;
+	ntmp.ww_logout = time(NULL);
+	ntmp.ww_online = cptr->from ? cptr : NULL;
+	ntmp.ww_user->refcnt++;
 
-/*
-** OffHistory
-**	This is called when client signs off the system.
-*/
-off_history(cptr)
-aClient *cptr;
-    {
-	add_history(cptr);
-	if (cptr->history)
-		((aHome *)(cptr->history))->online = NULL;
-    }
+	if (was[ww_index].ww_user)
+		free_user(was[ww_index].ww_user);
+
+	bcopy(&ntmp, &was[ww_index], sizeof(aName));
+
+	ww_index++;
+	if (ww_index >= NICKNAMEHISTORYLENGTH)
+		ww_index = 0;
+}
 
 /*
 ** GetHistory
-**	Return the current client that was using the given
-**	nickname within the timelimit. Returns NULL, if no
-**	one found...
+**      Return the current client that was using the given
+**      nickname within the timelimit. Returns NULL, if no
+**      one found...
 */
-aClient *get_history(nick,timelimit)
-char *nick;
-long timelimit;
-    {
-	Reg1 aName *next;
+aClient	*get_history(nick, timelimit)
+char	*nick;
+u_long	timelimit;
+{
+	Reg1	int	i;
+	aName	*wptr = NULL;
 
-	timelimit = time(NULL) - timelimit;
-	/*
-	** Note: history chain is in ordered by time
-	*/
-	for (next = NameHistory;
-	     next != NULL && next->time > timelimit;
-	     next = next->next)
-		if (mycmp(nick,next->name) == 0)
-			return next->home->online;
-	return NULL;
-    }
+	i = ww_index;
+	timelimit = time(NULL)-timelimit;
+
+	do {
+		if (!mycmp(nick, was[i].ww_nick) &&
+		    was[i].ww_logout >= timelimit)
+		    {
+			wptr = &was[i];
+			break;
+		    }
+		i++;
+		if (i >= NICKNAMEHISTORYLENGTH)
+			i = 0;
+	} while (i != ww_index);
+
+	if (wptr)
+		return (wptr->ww_online);
+	return (NULL);
+}
+
+off_history(cptr)
+aClient	*cptr;
+{
+	Reg1	int	i;
+
+	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
+		if (was[i].ww_online == cptr)
+			was[i].ww_online = (aClient *)NULL;
+}
+
+init_whowas()
+{
+	Reg1	int	i;
+
+	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
+		bzero(&was[i], sizeof(aName));
+}
+
 
 /*
 ** m_whowas
@@ -177,12 +120,13 @@ long timelimit;
 **	parv[1] = nickname queried
 */
 int m_whowas(cptr, sptr, parc, parv)
-aClient *cptr;
-aClient *sptr;
-int parc;
-char *parv[];
+aClient	*cptr;
+aClient	*sptr;
+int	parc;
+char	*parv[];
     {
-	aName *next;
+	Reg1	aName	*nptr = (aName *)NULL;
+	Reg2	int	i;
 
  	if (parc < 2)
 	    {
@@ -190,30 +134,66 @@ char *parv[];
 			   me.name, ERR_NONICKNAMEGIVEN, sptr->name);
 		return 0;
 	    }
-	for (next = NameHistory; next != NULL; next = next->next)
-		if (mycmp(parv[1],next->name) == 0)
+
+	i = ww_index;
+
+	do {
+		if (mycmp(parv[1], was[i].ww_nick) == 0)
 		    {
+			nptr = &was[i];
+
 			sendto_one(sptr,":%s %d %s %s %s %s * :%s",
 				   me.name, RPL_WHOWASUSER,
-				   sptr->name, next->name,
-				   next->home->user->username,
-				   next->home->user->host,
-				   next->home->info);
-			sendto_one(sptr,":%s %d %s %s %s :%s",
-				   me.name, 
-				   RPL_WHOISSERVER,
-				   sptr->name, next->name,
-				   next->home->user->server,
-				   myctime(next->time));
-			if (next->home->user->away)
+				   sptr->name, nptr->ww_nick,
+				   nptr->ww_user->username,
+				   nptr->ww_user->host,
+				   nptr->ww_info);
+			sendto_one(sptr,":%s %d %s %s %s :Signoff: %s",
+				   me.name, RPL_WHOISSERVER,
+				   sptr->name, nptr->ww_nick,
+				   nptr->ww_user->server,
+				   myctime(nptr->ww_logout));
+			if (nptr->ww_user->away)
 				sendto_one(sptr,":%s %d %s %s :%s",
 					   me.name, RPL_AWAY,
-					   sptr->name, next->name,
-					   next->home->user->away);
-			return 0;
+					   sptr->name, nptr->ww_nick,
+					   nptr->ww_user->away);
 		    }
-	sendto_one(sptr, ":%s %d %s %s :There was no such nickname",
-		   me.name, ERR_WASNOSUCHNICK, sptr->name, parv[1]);
+		i++;
+		if (i >= NICKNAMEHISTORYLENGTH)
+			i = 0;
+	} while (i != ww_index);
+
+	if (nptr == (aName *)NULL)
+		sendto_one(sptr, ":%s %d %s %s :There was no such nickname",
+			   me.name, ERR_WASNOSUCHNICK, sptr->name, parv[1]);
 	return 0;
     }
 
+
+#ifdef DEBUGMODE
+count_whowas_memory(wwu, wwa, wwam)
+int	*wwu, *wwa;
+u_long	*wwam;
+{
+	int	u = 0, a = 0, i = 0;
+	u_long	am = 0;
+	anUser	*tmp;
+
+	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
+		if (tmp = was[i].ww_user)
+			if (!was[i].ww_online)
+			    {
+				u++;
+				if (tmp->away)
+				    {
+					a++;
+					am += (strlen(tmp->away)+1);
+				    }
+			    }
+
+	*wwu = u;
+	*wwa = a;
+	*wwam = am;
+}
+#endif

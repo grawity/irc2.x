@@ -17,19 +17,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-typedef	struct	hashlink {
-	struct	hashlink	*next;
-	union
-	    {
-		aClient		*client;
-		aChannel	*channel;
-	    } ptr;
-	} aHashLink;
-
 typedef	struct	hashentry {
 	int	hits;
 	int	links;
-	aHashLink	*list;
+	void	*list;
 	} aHashEntry;
 
 #define	HASHSIZE	809	/* prime number */

@@ -18,7 +18,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- djr -- 20 Feb 1992
+/* -- avalon -- 20 Feb 1992
  * Reversed the order of the params for attach_conf().
  * detach_conf() and attach_conf() are now the same:
  * function_conf(aClient *, aConfItem *)
@@ -59,6 +59,9 @@ char conf_id[] = "conf.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/socket.h>
 #ifdef __hpux
 #include "inet.h"
+#endif
+#ifdef PCS
+#include <time.h>
 #endif
 
 aConfItem *conf = NULL;
@@ -702,8 +705,11 @@ aClient	*cptr;
 	aConfItem *tmp;
 	static	int	check_time_interval();
 
+	if (cptr->user == NULL)
+		return 0;
+
 	host = cptr->sockhost;
-	name = cptr->name;
+	name = cptr->user->username;
 
 	if (strlen(host)  > HOSTLEN || (name ? strlen(name) : 0) > HOSTLEN)
 		return (0);
@@ -749,8 +755,10 @@ aClient	*cptr;
 	FILE	*fp;
 	int	hlen, nlen, rc = 0;
 
+	if (cptr->user == NULL)
+		return 0;
+	name = cptr->user->username;
 	host = cptr->sockhost;
-	name = cptr->name;
 	hlen = strlen(host);
 	name = strlen(name);
 

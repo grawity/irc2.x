@@ -52,26 +52,26 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-#if MIPS || pyr || apollo
+#if defined(MIPS) || defined(pyr) || defined(apollo)
 char *malloc(), *calloc();
 void free();
 #else
 #include <malloc.h>
 #endif
 
-#if NEED_INET_ADDR
+#ifdef NEED_INET_ADDR
 extern unsigned long inet_addr PROTO((char *));
 #endif
 
-#if NEED_INET_NTOA || NEED_INET_NETOF
+#if defined(NEED_INET_NTOA) || defined(NEED_INET_NETOF)
 #include <netinet/in.h>
 #endif
 
-#if NEED_INET_NTOA
+#ifdef NEED_INET_NTOA
 extern char *inet_ntoa PROTO((struct in_addr));
 #endif
 
-#if NEED_INET_NETOF
+#ifdef NEED_INET_NETOF
 extern int inet_netof PROTO((struct in_addr));
 #endif
 
@@ -91,12 +91,12 @@ extern char *strtoken PROTO((char **, char *, char *));
 extern char tolowertab[];
 
 #undef tolower
-#define tolower(c) (tolowertab[1+(c)])
+#define tolower(c) (tolowertab[(u_char)(c)])
 
 extern char touppertab[];
 
 #undef toupper
-#define toupper(c) (touppertab[1+(c)])
+#define toupper(c) (touppertab[(u_char)(c)])
 
 #undef isalpha
 #undef isdigit
@@ -118,16 +118,16 @@ extern char char_atribs[];
 #define DIGIT 16
 #define SPACE 32
 
-#define isalpha(c) (char_atribs[1+(c)]&ALPHA)
-#define isspace(c) (char_atribs[1+(c)]&SPACE)
-#define islower(c) ((char_atribs[1+(c)]&ALPHA) && ((c) > 0x5f))
-#define isupper(c) ((char_atribs[1+(c)]&ALPHA) && ((c) < 0x60))
-#define isdigit(c) (char_atribs[1+(c)]&DIGIT)
-#define isalnum(c) (char_atribs[1+(c)]&(DIGIT|ALPHA))
-#define isprint(c) (char_atribs[1+(c)]&PRINT)
-#define isascii(c) ((c) >= 0 && (c) <= 0x7f)
-#define isgraph(c) ((char_atribs[1+(c)]&PRINT) && ((c) != 0x32))
-#define ispunct(c) (!(char_atribs[1+(c)]&(CNTRL|ALPHA|DIGIT)))
+#define isalpha(c) (char_atribs[(u_char)(c)]&ALPHA)
+#define isspace(c) (char_atribs[(u_char)(c)]&SPACE)
+#define islower(c) ((char_atribs[(u_char)(c)]&ALPHA) && ((u_char)(c) > 0x5f))
+#define isupper(c) ((char_atribs[(u_char)(c)]&ALPHA) && ((u_char)(c) < 0x60))
+#define isdigit(c) (char_atribs[(u_char)(c)]&DIGIT)
+#define isalnum(c) (char_atribs[(u_char)(c)]&(DIGIT|ALPHA))
+#define isprint(c) (char_atribs[(u_char)(c)]&PRINT)
+#define isascii(c) ((u_char)(c) >= 0 && (u_char)(c) <= 0x7f)
+#define isgraph(c) ((char_atribs[(u_char)(c)]&PRINT) && ((u_char)(c) != 0x32))
+#define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
 #else
 #include <ctype.h>
 #endif

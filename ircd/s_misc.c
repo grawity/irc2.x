@@ -32,11 +32,17 @@ char smisc_id[]="s_misc.c v2.0 (c) 1988 University of Oulu, Computing Centers\
 #include "numeric.h"
 #include <sys/stat.h>
 #ifdef GETRUSAGE_2
-#include <sys/resource.h>
+# include <sys/resource.h>
 #else
 #  ifdef TIMES_2
-#include <sys/times.h>
+#   include <sys/times.h>
 #  endif
+#endif
+#ifdef PCS
+# include <time.h>
+#endif
+#ifdef HPUX
+#include <unistd.h>
 #endif
 
 extern	aClient	*client, *local[];
@@ -65,7 +71,7 @@ long	clock;
 	struct	timeval	tp;
 	struct	timezone tzp;
 	Reg2	char	*timezonename;
-#if !(HPUX || AIX)
+#if !(defined(HPUX) || defined(AIX) || defined(PCS))
 	extern char *timezone();
 #endif
 
@@ -74,7 +80,7 @@ long	clock;
 	ltbuf = localtime(&clock);
 	gettimeofday(&tp, &tzp);
 
-#if HPUX || AIX
+#if defined(HPUX) || defined(AIX) || defined(PCS)
 	tzset();
 	timezonename = tzname[ltbuf->tm_isdst];
 #else
@@ -261,26 +267,15 @@ aClient *sptr;	/* Client exiting */
 aClient *from;	/* Client firing off this Exit, never NULL! */
 char *comment;	/* Reason for the exit */
     {
-	Reg1 aClient *acptr;
-	Reg2 aClient *next;
-	static int exit_one_client();
+	Reg1	aClient	*acptr;
+	Reg2	aClient	*next;
+	static	int	exit_one_client();
+	long	on_for;
 
 	if (MyConnect(sptr))
 	    {
-		/*
-		** Currently only server connections can have
-		** depending remote clients here, but it does no
-		** harm to check for all local clients. In
-		** future some other clients than servers might
-		** have remotes too...
-		**
-		** Close the Client connection first and mark it
-		** so that no messages are attempted to send to it.
-		** (The following *must* make MyConnect(sptr) == FALSE!).
-		** It also makes sptr->from == NULL, thus it's unnecessary
-		** to test whether "sptr != acptr" in the following loops.
-		*/
 #ifdef FNAME_USERLOG
+		on_for = time(NULL) - sptr->firsttime;
 # if defined(USE_SYSLOG) && defined(SYSLOG_USERS)
 			syslog(LOG_DEBUG, "%s (%3d:%02d:%02d): %s@%s\n",
 				myctime(sptr->firsttime),
@@ -291,7 +286,6 @@ char *comment;	/* Reason for the exit */
 	    {
 		FILE *userlogfile;
 		struct stat stbuf;
-		long	on_for;
 
 		/*
  		 * This conditional makes the logfile active only after
@@ -307,7 +301,6 @@ char *comment;	/* Reason for the exit */
 		    (userlogfile = fopen(FNAME_USERLOG, "a")))
 		    {
 			alarm(0);
-			on_for = time(NULL) - sptr->firsttime;
 			fprintf(userlogfile, "%s (%3d:%02d:%02d): %s@%s\n",
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
@@ -320,6 +313,19 @@ char *comment;	/* Reason for the exit */
 	    }
 # endif
 #endif
+		/*
+		** Currently only server connections can have
+		** depending remote clients here, but it does no
+		** harm to check for all local clients. In
+		** future some other clients than servers might
+		** have remotes too...
+		**
+		** Close the Client connection first and mark it
+		** so that no messages are attempted to send to it.
+		** (The following *must* make MyConnect(sptr) == FALSE!).
+		** It also makes sptr->from == NULL, thus it's unnecessary
+		** to test whether "sptr != acptr" in the following loops.
+		*/
 		close_connection(sptr);
 		/*
 		** First QUIT all NON-servers which are behind this link
@@ -436,8 +442,11 @@ char *comment;
 		}
 	    }
 	/* Remove sptr from the client list */
-	if (sptr->name[0])
-	    del_from_client_hash_table(sptr->name, sptr);
+	if (del_from_client_hash_table(sptr->name, sptr) != 1)
+		debug(DEBUG_FATAL,"0x%x !in tab %s[%s] %x %x %x %d %d %x",
+			sptr, sptr->name, sptr->from->sockhost,
+			sptr->from, sptr->next, sptr->prev, sptr->fd,
+			sptr->status, sptr->user);
 	remove_client_from_list(sptr);
 	return (0);
     }
@@ -474,26 +483,36 @@ char *nick;
 		   me.name, nick, secs/60, secs%60,
 		   rus.ru_utime.tv_sec/60, rus.ru_utime.tv_sec%60,
 		   rus.ru_stime.tv_sec/60, rus.ru_stime.tv_sec%60);
-
 	sendto_one(cptr, ":%s NOTICE %s :RSS %d ShMem %d Data %d Stack %d",
 		   me.name, nick, rus.ru_maxrss,
 		   rus.ru_ixrss/secs, rus.ru_idrss/secs, rus.ru_isrss/secs);
-
 	sendto_one(cptr, ":%s NOTICE %s :Swaps %d Reclaims %d Faults %d",
 		   me.name, nick, rus.ru_nswap, rus.ru_minflt, rus.ru_majflt);
-
 	sendto_one(cptr, ":%s NOTICE %s :Block in %d out %d",
 		   me.name, nick, rus.ru_inblock, rus.ru_oublock);
-
 	sendto_one(cptr, ":%s NOTICE %s :Msg Rcv %d Send %d",
 		   me.name, nick, rus.ru_msgrcv, rus.ru_msgsnd);
-
 	sendto_one(cptr, ":%s NOTICE %s :Signals %d Context Vol. %d Invol %d",
 		   me.name,nick,rus.ru_nsignals,rus.ru_nvcsw,rus.ru_nivcsw);
 #else
 #  ifdef TIMES_2
 	struct	tms	tmsbuf;
-	u_long	secs;
+	u_long	secs, mins;
+	int	hz = 1, ticpermin;
+	int	umin, smin, usec, ssec;
+
+#    ifdef HPUX
+	hz = sysconf(_SC_CLK_TCK);
+#    endif
+	ticpermin = hz * 60;
+
+	umin = tmsbuf.tms_utime / ticpermin;
+	usec = (tmsbuf.tms_utime%ticpermin)/(float)hz;
+	smin = tmsbuf.tms_stime / ticpermin;
+	ssec = (tmsbuf.tms_stime%ticpermin)/(float)hz;
+	secs = usec + ssec;
+	mins = (secs/60) + umin + smin;
+	secs %= hz;
 
 	if (times(&tmsbuf) == -1)
 	    {
@@ -502,13 +521,11 @@ char *nick;
 			   me.name, nick, strerror(errno));
 		return 0;
 	    }
-	secs = tms.tms_utime + tms.tms_stime;
+	secs = tmsbuf.tms_utime + tmsbuf.tms_stime;
 
 	sendto_one(cptr,
 		   ":%s NOTICE %s :CPU Secs %d:%d User %d:%d System %d:%d",
-		   me.name, nick, secs/60, secs%60,
-		   tms.tms_utime/60, tms.tms_utime%60,
-		   tms.tms_stime/60, tms.tms_stime%60);
+		   me.name, nick, mins, secs, umin, usec, smin, ssec);
 #  endif
 #endif
 	sendto_one(cptr, ":%s NOTICE %s :Reads %d Writes %d",
@@ -523,5 +540,147 @@ char *nick;
 		   ":%s NOTICE %s :<128 %d <256 %d <512 %d <1024 %d >1024 %d",
 		   me.name, nick,
 		   writeb[5], writeb[6], writeb[7], writeb[8], writeb[9]);
+}
+
+count_memory(cptr, nick)
+aClient	*cptr;
+char	*nick;
+{
+	extern	int	etext;
+	extern	aChannel	*channel;
+	extern	aClass	*classes;
+	extern	aConfItem	*conf;
+
+	Reg1 aClient *acptr;
+	Reg2 Link *link;
+	Reg3 aChannel *chptr;
+	Reg4 aConfItem *aconf;
+	Reg5 aClass *cltmp;
+
+	int	lc = 0,		/* local clients */
+		ch = 0,		/* channels */
+		lcc = 0,	/* local client conf links */
+		rc = 0,		/* remote clients */
+		us = 0,		/* user structs */
+		chu = 0,	/* channel users */
+		chi = 0,	/* channel invites */
+		chb = 0,	/* channel bans */
+		wwu = 0,	/* whowas users */
+		cl = 0,		/* classes */
+		co = 0;		/* conf lines */
+
+	int	usi = 0,	/* users invited */
+		usc = 0,	/* users in channels */
+		aw = 0,		/* aways set */
+		wwa = 0;	/* whowas aways */
+
+	u_long	chm = 0,	/* memory used by channels */
+		chbm = 0,	/* memory used by channel bans */
+		lcm = 0,	/* memory used by local clients */
+		rcm = 0,	/* memory used by remote clients */
+		awm = 0,	/* memory used by aways */
+		wwam = 0,	/* whowas away memory used */
+		com = 0,	/* memory used by conf lines */
+		totcl = 0,
+		totch = 0,
+		totww = 0,
+		tot = 0;
+
+	count_whowas_memory(&wwu, &wwa, &wwam);
+
+	for (acptr = client; acptr; acptr = acptr->next)
+	    {
+		if (MyConnect(acptr))
+		    {
+			lc++;
+			for (link = acptr->confs; link; link = link->next)
+				lcc++;
+		    }
+		else
+			rc++;
+		if (acptr->user)
+		   {
+			us++;
+			for (link = acptr->user->invited; link;
+			     link = link->next)
+				usi++;
+			for (link = acptr->user->channel; link;
+			     link = link->next)
+				usc++;
+			if (acptr->user->away)
+			    {
+				aw++;
+				awm += (strlen(acptr->user->away)+1);
+			    }
+		   }
+	    }
+	lcm = lc * CLIENT_LOCAL_SIZE;
+	rcm = rc * CLIENT_REMOTE_SIZE;
+
+	for (chptr = channel; chptr; chptr = chptr->nextch)
+	    {
+		ch++;
+		chm += (strlen(chptr->chname) + sizeof(aChannel));
+		for (link = chptr->members; link; link = link->next)
+			chu++;
+		for (link = chptr->invites; link; link = link->next)
+			chi++;
+		for (link = chptr->banlist; link; link = link->next)
+		    {
+			chb++;
+			chbm += (strlen(link->value.cp)+1+sizeof(Link));
+		    }
+	    }
+
+	for (aconf = conf; aconf; aconf = aconf->next)
+	    {
+		co++;
+		com += aconf->host ? strlen(aconf->host)+1 : 0;
+		com += aconf->passwd ? strlen(aconf->passwd)+1 : 0;
+		com += aconf->name ? strlen(aconf->name)+1 : 0;
+		com += sizeof(aConfItem);
+	    }
+
+	for (cltmp = classes; cltmp; cltmp = cltmp->next)
+		cl++;
+
+	sendto_one(cptr, ":%s NOTICE %s :Client Local %d(%d) Remote %d(%d)",
+		   me.name, nick, lc, lcm, rc, rcm);
+	sendto_one(cptr, ":%s NOTICE %s :Users %d(%d) Invites %d(%d)",
+		   me.name, nick, us, usi*sizeof(anUser), usi,
+		   usi * sizeof(Link));
+	sendto_one(cptr, ":%s NOTICE %s :User channels %d(%d) Aways %d(%d)",
+		   me.name, nick, usc, usc*sizeof(Link), aw, awm);
+	sendto_one(cptr, ":%s NOTICE %s :Attached confs %d(%d)",
+		   me.name, nick, lcc, lcc*sizeof(Link));
+
+	totcl = lcm + rcm + usi*sizeof(anUser) + usc*sizeof(Link) + awm;
+	totcl += lcc*sizeof(Link);
+
+	sendto_one(cptr, ":%s NOTICE %s :Conflines %d(%d)",
+		   me.name, nick, co, com);
+
+	sendto_one(cptr, ":%s NOTICE %s :Classes %d(%d)",
+		   me.name, nick, cl, cl*sizeof(aClass));
+
+	sendto_one(cptr, ":%s NOTICE %s :Channels %d(%d) Bans %d(%d)",
+		   me.name, nick, ch, chm, chb, chbm);
+	sendto_one(cptr, ":%s NOTICE %s :Channel membrs %d(%d) invite %d(%d)",
+		   me.name, nick, chu, chu*sizeof(Link),
+		   chi, chi*sizeof(Link));
+
+	totch = chm + chbm + chu*sizeof(Link) + chi*sizeof(Link);
+
+	sendto_one(cptr, ":%s NOTICE %s :Whowas users %d(%d) away %d(%d)",
+		   me.name, nick, wwu, wwu*sizeof(anUser), wwa, wwam);
+
+	totww = wwu*sizeof(anUser) + wwam;
+
+	tot = totww + totch + totcl + com + cl*sizeof(aClass);
+
+	sendto_one(cptr, ":%s NOTICE %s :Totals: ww %d ch %d cl %d co %d",
+		   me.name, nick, totww, totch, totcl, com);
+	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
+		   me.name, nick, tot,  sbrk(0)-etext);
 }
 #endif

@@ -44,7 +44,7 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
-#if defined(__hpux) || defined(apollo)
+#if defined(__hpux)
 #include "inet.h"
 #endif
 #include "netdb.h"
@@ -53,6 +53,7 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <fcntl.h>
 #include <utmp.h>
 #include <sys/errno.h>
+#include <sys/resource.h>
 #include "nameser.h"
 #include "resolv.h"
 #include "sock.h"	/* If FD_ZERO isn't define up to this point,  */
@@ -60,6 +61,15 @@ char s_bsd_id[] = "s_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 
 #ifndef IN_LOOPBACKNET
 #define IN_LOOPBACKNET 127
+#endif
+#ifdef RLIMIT_FDMAX
+#define	RLIMIT_FD_MAX	RLIMIT_FDMAX
+#else
+# ifdef RLIMIT_NOFILE
+#  define RLIMIT_FD_MAX RLIMIT_NOFILE
+# else
+#  undef RLIMIT_FD_MAX
+# endif
 #endif
 
 /*  ...should really start using *.h -files instead of these :-( --msa */
@@ -214,13 +224,37 @@ int portnum;
 init_sys(bootopt)
 int	bootopt;
     {
+	struct rlimit limit;
 	int fd;
 #ifdef sequent
 	setdtablesize(SEQ_NOFILE);
 #endif
-#if !HPUX
+#ifdef PCS
+	char logbuf[BUFSIZ];
+
+	setvbuf(stdout,logbuf,_IOLBF,sizeof(logbuf));
+	setvbuf(stderr,logbuf,_IOLBF,sizeof(logbuf));
+#else
+#ifndef HPUX
 	setlinebuf(stdout);
 	setlinebuf(stderr);
+# endif
+#endif
+
+#ifdef RLIMIT_FD_MAX
+	if (!getrlimit(RLIMIT_FD_MAX, &limit))
+	    {
+		if (limit.rlim_cur < MAXCONNECTIONS)
+		    {
+			fprintf(stderr,"ircd fd table too big\n");
+			fprintf(stderr,"Hard Limit: %d IRC max: %d\n",
+				limit.rlim_cur, MAXCONNECTIONS);
+			fprintf(stderr,"Fix MAXCONNECTIONS in config.h\n");
+			exit(-1);
+		    }
+		limit.rlim_cur = MAXCONNECTIONS;
+		setrlimit(RLIMIT_FD_MAX, &limit);
+	    }
 #endif
 
 	for (fd = 0; fd < MAXCONNECTIONS; fd++)
@@ -319,7 +353,7 @@ Reg3	struct	sockaddr_in *socka;
 		strncpy(full, me.sockhost, HOSTLEN);
 	else
 		strcpy(full, sockn);
-	cptr->ip.s_addr = socka->sin_addr.s_addr;
+	bcopy(&socka->sin_addr, &cptr->ip, sizeof(struct in_addr));
 
 	return 0;
 }
@@ -364,11 +398,11 @@ aClient	*cptr;
 int	flags;
 {
 	Reg1	char	*name;
-	Reg2	aConfItem *aconf = NULL;
+	Reg2	aConfItem *aconf;
 	char	sockname[16], fullname[HOSTLEN+1];
-	struct	hostent *hp = NULL, *hp2 = NULL;
+	struct	hostent *hp, *hp2;
 	struct	sockaddr_in sk;
-	int	i = 0, j = 0;
+	int	i = 0;
  
 	debug(DEBUG_DNS, "ch_cl: check access for %s[%s]",
 		cptr->name, fullname);
@@ -641,14 +675,18 @@ aClient *cptr;
     {
 	int res;
 
-	/*
-	** Do fcntl's return "-1" with F_GETFL in case of error?
-	** Or, are the following error tests bogus??? --msa
-	*/
+#ifdef PCS
+	/* This portion of code might also apply to NeXT and sun.  -LynX */
+	res = 1;
+
+	if (ioctl (cptr->fd, FIONBIO, &res) < 0)
+		report_error("ioctl(fd,FIONBIO) failed for %s:%s",cptr);
+#else
 	if ((res = fcntl(cptr->fd, F_GETFL, 0)) == -1)
 		report_error("fcntl(fd,F_GETFL) failed for %s:%s",cptr);
 	else if (fcntl(cptr->fd, F_SETFL, res | FNDELAY) == -1)
 		report_error("fcntl(fd,F_SETL,FNDELAY) failed for %s:%s",cptr);
+#endif
 	return 0;
     }
 
@@ -686,7 +724,8 @@ int	fd;
 		 */
 		strncpyzt(cptr->sockhost, inet_ntoa(addr.sin_addr),
 			  sizeof(cptr->sockhost));
-		cptr->ip.s_addr = addr.sin_addr.s_addr;
+		bcopy (&cptr->ip, &addr.sin_addr, sizeof(struct in_addr));
+		bcopy (&addr.sin_addr, &cptr->ip, sizeof(struct in_addr));
 	    }
 
 	cptr->fd = fd;
@@ -796,8 +835,6 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       break; /* Really! This was not a loop, just faked "if" --msa */
     }	/* WARNING IS NORMAL HERE! */
 
-  tval = now;
-
   for (i = 0; (i <= highest_fd) && nfds > 0; i++)
     {
       if (!(cptr = local[i]) || IsMe(cptr))
@@ -847,8 +884,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	    sendto_ops("Server %s closed the connection",
 		       get_client_name(cptr,FALSE));
 	  else
-	    report_error("Lost server connection to %s:%s",
-			cptr);
+	    report_error("Lost server connection to %s:%s", cptr);
 	}
       else
 	debug(DEBUG_DEBUG,"READ ERROR: fd = %d", cptr->fd);
@@ -891,7 +927,7 @@ aConfItem *aconf;
 			   aconf->name, c2ptr->name);
 		return -1;
 	    }
-	cptr = make_client(NULL);
+	cptr = make_client((aClient *)NULL);
 	/*
 	 * might as well get sockhost from here, the connection is attempted
 	 * with it so if it fails its useless.
@@ -922,7 +958,7 @@ aConfItem *aconf;
 		    }
 		bcopy(hp->h_addr, &aconf->ipnum, sizeof(struct in_addr));
 	    }
-	server.sin_addr.s_addr = aconf->ipnum.s_addr;
+	bcopy(&aconf->ipnum, &server.sin_addr, sizeof(struct in_addr));
 	server.sin_port = htons((aconf->port > 0) ? aconf->port : portnum);
 	
 	/* End FIX */
@@ -980,7 +1016,7 @@ aConfItem *aconf;
 /*
  * The following section of code performs summoning of users to irc.
  */
-#ifdef ENABLE_SUMMON
+#if defined(ENABLE_SUMMON) || defined(ENABLE_USER)
 int utmp_open()
 {
   return (open(UTMP,O_RDONLY));
@@ -1017,7 +1053,7 @@ int fd;
     {
 	return(close(fd));
     }
-
+#  ifdef ENABLE_SUMMON
 summon(who, namebuf, linebuf)
 aClient *who;
 char *namebuf, *linebuf;
@@ -1037,7 +1073,7 @@ char *namebuf, *linebuf;
 	/* UTMP is for some silly reason writable to everyone... */
 	if ((linebuf[0] != 't' || linebuf[1] != 't' || linebuf[2] != 'y')
 	    && (linebuf[0] != 'c' || linebuf[1] != 'o' || linebuf[2] != 'n')
-#if HPUX
+#ifdef HPUX
 	    && (linebuf[0] != 'p' || linebuf[1] != 't' || linebuf[2] != 'y' ||
 		linebuf[3] != '/')
 #endif
@@ -1102,6 +1138,7 @@ char *namebuf, *linebuf;
 		   who->name, namebuf);
 	return 0;
     }
+#  endif
 #endif /* ENABLE_SUMMON */
 
 get_my_name(conf_name, name, len)

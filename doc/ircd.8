@@ -3,7 +3,7 @@
 .SH NAME
 ircd \- The Internet Relay Chat Program Server 
 .SH SYNOPSIS
-\fBircd\fP [-adti] [-f configfile] [-x debuglevel] [-h hostname] [-p portnum]
+\fBircd\fP [-acdiqt] [-f configfile] [-x debuglevel] [-h hostname] [-p portnum]
 .SH DESCRIPTION
 .LP
 \fIircd\fP is the server (daemon) program for the Internet Relay Chat
@@ -56,6 +56,18 @@ allows inetd to start up ircd on request.
 .B \-f filename
 Specifies the ircd.conf file to be used for this ircdaemon. The option
 is used to override the default ircd.conf given at compile time.
+.TP
+.B \-c
+This flag must be given if you are running ircd from \fI/dev/console\fP or
+any other situation where fd 0 isnt a tty and you want the server to fork
+off and run in the background. This needs to be given if you are starting
+\fIircd\fP from an \fIrc\fP (such as \fI/etc/rc.local\fP) file.
+.TP
+.B \-q
+Using the -q option stops the server from doing DNS lookups on all the
+servers in your \fIircd.conf\fP file when it boots. This can take a lengthy
+amount of time if you have a large number of servers and they are not all
+close by.
 .TP
 .B \-h hostname
 Allows the user to manually set the server name at startup. The default

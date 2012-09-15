@@ -142,14 +142,13 @@ s_conf.o: ../include/dbuf.h ../include/sys.h
 s_misc.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_msg.o: ../include/struct.h ../include/config.h
 s_msg.o: ../include/dbuf.h ../include/sys.h channel.h
-s_msg.o: ../include/msg.h ../include/numeric.h ../include/whowas.h
+s_msg.o: ../include/msg.h ../include/numeric.h
 s_numeric.o: ../include/config.h ../include/sys.h
 s_numeric.o: ../include/struct.h
 s_numeric.o: ../include/dbuf.h ../include/numeric.h
 whowas.o: ../include/struct.h ../include/config.h
 whowas.o: ../include/dbuf.h ../include/sys.h
 whowas.o: ../include/numeric.h
-whowas.o: ../include/whowas.h
 s_debug.o: ../include/struct.h
 class.o: ../include/struct.h ../include/class.h
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h

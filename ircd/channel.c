@@ -39,37 +39,40 @@ char channel_id[] = "channel.c v2.0 (c) 1990 University of Oulu, Computing\
 #include "sys.h"
 #include "common.h"
 #include "numeric.h"
-#include "whowas.h"
 #include "channel.h"
 
 aChannel *channel = NullChn;
 
-extern char *get_client_name();
-extern int maxusersperchannel;
-extern aClient *find_person(), me, *find_client(), *client;
-extern Link *find_user_link();
+extern	char	*get_client_name PROTO((aClient *, int));
+extern	int	maxusersperchannel;
+extern	aClient	*find_person PROTO((char *, aClient *));
+extern	aClient	*find_client PROTO((char *, aClient *));
+extern	aClient	*get_history PROTO((char *, long));
+extern	aClient	me, *client;
+extern	Link	*find_user_link PROTO((Link *, aClient *));
 
-extern aChannel *hash_find_channel();
-static void sub1_from_channel();
-static int add_banid(), del_banid();
-static int set_mode();
-static Link *is_banned();
+extern	aChannel *hash_find_channel PROTO((char *, aClient *));
+static	void	sub1_from_channel PROTO((aChannel *));
+static	int	add_banid PROTO((aChannel *, char *));
+static	int	del_banid PROTO((aChannel *, char *));
+static int set_mode PROTO((aClient *,aChannel *,int,char **,char *,char *));
+static	Link	*is_banned PROTO((aClient *, aChannel *));
 
-static char *PartFmt = ":%s PART %s";
-static char namebuf[NICKLEN+USERLEN+HOSTLEN+3];
+static	char	*PartFmt = ":%s PART %s";
+static	char	namebuf[NICKLEN+USERLEN+HOSTLEN+3];
 #define BIGBUFFERSIZE 2000
-static char buf[BIGBUFFERSIZE];
+static	char	buf[BIGBUFFERSIZE];
 
-static int list_length(tlink)
-Link *tlink;
+static	int	list_length(tlink)
+Link	*tlink;
 {
-  Reg1 Link *link;
-  int count = 0;
+	Reg1	Link *link;
+	int	count = 0;
 
-  for (link = tlink; link; link = link->next)
-      count++;
+	for (link = tlink; link; link = link->next)
+		count++;
 
-  return count;
+	return count;
 }
 
 /*
@@ -79,10 +82,10 @@ Link *tlink;
 **	message (NO SUCH NICK) is generated. If the client was found
 **	through the history, chasing will be 1 and otherwise 0.
 */
-static aClient *find_chasing(sptr, user, chasing)
+static	aClient *find_chasing(sptr, user, chasing)
 aClient *sptr;
-char *user;
-int *chasing;
+char	*user;
+int	*chasing;
     {
 	aClient *who = find_client(user, (aClient *) 0);
 
@@ -101,8 +104,8 @@ int *chasing;
 	return who;
     }
 
-static char *make_nick_user_host(nick, name, host)
-char *nick, *name, *host;
+static	char *make_nick_user_host(nick, name, host)
+char	*nick, *name, *host;
 {
 	static	char	star[2] = "*";
 
@@ -118,9 +121,9 @@ char *nick, *name, *host;
  */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
-static int add_banid(chptr, banid)
+static	int	add_banid(chptr, banid)
 aChannel *chptr;
-char *banid;
+char	*banid;
     {
 	Reg1 Link *ban;
 
@@ -142,10 +145,10 @@ char *banid;
  */
 static int del_banid(chptr, banid)
 aChannel *chptr;
-char *banid;
+char	*banid;
     {
-	Reg1 Link **ban = NULL;
-	Reg2 Link *tmp = NULL;
+	Reg1 Link **ban;
+	Reg2 Link *tmp;
 
 	if (!chptr || !banid)
 		return -1;
@@ -205,7 +208,7 @@ unsigned char flags;
     }
 }
 
-void remove_user_from_channel(sptr, chptr)
+void	remove_user_from_channel(sptr, chptr)
 aClient *sptr;
 aChannel *chptr;
 {
@@ -483,10 +486,10 @@ char *parabuf;
 {
   char *curr = parv[0];
   char *tmp;
-  unsigned char new = '\0', old = '\0';
+  unsigned char new, old;
   int whatt = MODE_ADD;
   int limitset = 0;
-  int nusers, i = 0, ischop = 0, count = 0;
+  int nusers, i = 0, ischop, count = 0;
   int chasing = 0;
   Link *addops = (Link *)NULL, *delops = (Link *)NULL, *tmplink;
   Link *addban = (Link *)NULL, *delban = (Link *)NULL;
@@ -507,7 +510,7 @@ char *parabuf;
   ischop = is_chan_op(cptr, chptr) || IsServer(cptr);
   new = old = mode->mode;
 
-  while (curr && *curr && count >= 0 && i < MODEBUFLEN - 1) {
+  while (curr && *curr && count >= 0) {
     switch (*curr) {
     case '+':
       whatt = MODE_ADD;
@@ -633,48 +636,46 @@ char *parabuf;
 	if (MyClient(cptr))
 	  sendto_one(cptr, ":%s %d %s %c is unknown mode char to me",
 		     me.name, ERR_UNKNOWNMODE, cptr->name, *curr);
-	modebuf[i] = '\0';
       }
     }
     curr++;
   } /* end of while loop for MODE processing */
   whatt = 0;
-  parabuf[0] = '\0';
   for (tmp = flags; tmp[0]; tmp += 2) {
     if ((tmp[0] & new) && !(tmp[0] & old)) {
       if (whatt == 0) {
-	*(modebuf++) = '+';
+	*modebuf++ = '+';
 	whatt = 1;
       }
       if (ischop)
 	mode->mode |= tmp[0];
-      *(modebuf++) = tmp[1];
+      *modebuf++ = tmp[1];
     }
   }
   for (tmp = flags; tmp[0]; tmp += 2) {
     if ((tmp[0] & old) && !(tmp[0] & new)){
       if (whatt != -1) {
-	*(modebuf++) = '-';
+	*modebuf++ = '-';
 	whatt = -1;
       }
       if (ischop)
 	mode->mode &= ~tmp[0];
-      *(modebuf++) = tmp[1];
+      *modebuf++ = tmp[1];
     }
   }
   if (limitset) {
     if (nusers == 0) {
       if (whatt != -1) {
-	*(modebuf++) = '-';
+	*modebuf++ = '-';
 	whatt = -1;
       }
-      *(modebuf++) = 'l';
+      *modebuf++ = 'l';
     } else {
       if (whatt != 1) {
-	*(modebuf++) = '+';
+	*modebuf++ = '+';
 	whatt = 1;
       }
-      *(modebuf++) = 'l';
+      *modebuf++ = 'l';
       sprintf(parabuf, "%d ", nusers);
     }
     if (ischop)
@@ -682,14 +683,14 @@ char *parabuf;
   }
   if (addops) {
     if (whatt != 1) {
-      *(modebuf++) = '+';
+      *modebuf++ = '+';
       whatt = 1;
     }
     while (addops) {
       tmplink = addops;
       addops = addops->next;
       if (strlen(parabuf) + strlen(tmplink->value.cp) + 10 < MODEBUFLEN) {
-	*(modebuf++) = 'o';
+	*modebuf++ = 'o';
 	if (ischop)
 	  set_chan_op(tmplink->value.cptr, chptr);
 	strcat(parabuf, tmplink->value.cptr->name);
@@ -700,14 +701,14 @@ char *parabuf;
   }
   if (delops) {
     if (whatt != -1) {
-      *(modebuf++) = '-';
+      *modebuf++ = '-';
       whatt = -1;
     }
     while (delops) {
       tmplink = delops;
       delops = delops->next;
       if (strlen(parabuf) + strlen(tmplink->value.cp) + 10 < MODEBUFLEN) {
-	*(modebuf++) = 'o';
+	*modebuf++ = 'o';
 	if (ischop)
 	  clear_chan_op(tmplink->value.cptr, chptr);
 	strcat(parabuf, tmplink->value.cptr->name);
@@ -718,7 +719,7 @@ char *parabuf;
   }
   if (addban) {
     if (whatt != 1) {
-      *(modebuf++) = '+';
+      *modebuf++ = '+';
       whatt = 1;
     }
     while (addban) {
@@ -735,7 +736,7 @@ char *parabuf;
 	    *user++ = '\0';
 	  buf = make_nick_user_host(nick, user, host);
 	  if (!add_banid(chptr, buf)) {
-	    *(modebuf++) = 'b';
+	    *modebuf++ = 'b';
 	    strcat(parabuf, buf);
 	    strcat(parabuf, " ");
 	  }
@@ -744,17 +745,15 @@ char *parabuf;
     }
   }
   if (delban) {
-    if (whatt != -1) {
-      *(modebuf++) = '-';
-      whatt = -1;
-    }
+    if (whatt != -1)
+      *modebuf++ = '-';
     while (delban) {
       tmplink = delban;
       delban = delban->next;
       if (strlen(parabuf) + strlen(tmplink->value.cp) + 10 < MODEBUFLEN)
 	if (ischop) {
 	  del_banid(chptr, tmplink->value.cp);
-	  *(modebuf++) = 'b';
+	  *modebuf++ = 'b';
 	  strcat(parabuf, tmplink->value.cp);
 	  strcat(parabuf, " ");
 	}
@@ -813,7 +812,7 @@ aClient *cptr;
 char *chname;
 int flag;
     {
-	Reg1 aChannel *chptr = channel;
+	Reg1 aChannel *chptr;
 
 	if (chname == (char *) 0)
 		return NullChn;
@@ -914,7 +913,7 @@ aChannel *xchptr;
     {
 	Reg1 aChannel *chptr = xchptr;
 	Reg2 Link *btmp;
-	Link *oldinv = (Link *)NULL, *inv = (Link *)NULL;
+	Link *oldinv, *inv;
 	Link *obtmp;
 
 	if (--chptr->users <= 0) {
@@ -1284,7 +1283,7 @@ int parc;
 char *parv[];
     {
 	aClient *acptr;
-	aChannel *chptr = NullChn;
+	aChannel *chptr;
 
 	if (check_registered(sptr))
 		return 0;

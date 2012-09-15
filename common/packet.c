@@ -66,11 +66,13 @@ int length;
 				** that cptr structure *does*
 				** not exist anymore!!! --msa
 				*/
-				return(0);
+				return(1);
 #ifndef CLIENT_COMPILE
 			if (cptr->flags & FLAGS_DEADSOCKET)
-				return (exit_client(cptr,cptr,&me,
-						    "Dead Socket"));
+			    {
+				exit_client(cptr,cptr,&me,"Dead Socket");
+				return (-1);
+			    }
 #endif
 			ch1 = cptr->buffer;
 		    }

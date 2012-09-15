@@ -31,7 +31,6 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
-#include "whowas.h"
 #include "numeric.h"
 #include "msg.h"
 #include "channel.h"
@@ -43,7 +42,7 @@ extern	aClient	*client, me, *local[];
 extern	aClient	*find_server PROTO((char *, aClient *));
 extern	aClient	*find_person PROTO((char *, aClient *));
 extern	aClient	*find_service PROTO((char *, aClient *));
-extern	aClient *find_userhost();
+extern	aClient *find_userhost(), *get_history();
 extern	aClient	*find_client PROTO((char *, aClient *));
 extern	aClient	*find_name PROTO((char *, aClient *));
 extern	aConfItem *conf, *find_conf();
@@ -61,11 +60,11 @@ extern	int	find_restrict PROTO((aClient *));
 
 extern char *date PROTO((long));
 extern char *strerror();
-extern void send_channel_modes PROTO((aChannel *));
+extern void send_channel_modes PROTO((aClient *, aChannel *));
 extern void terminate();
 extern struct SLink *find_user_link();
 
-void send_umode PROTO((aClient *));
+void send_umode PROTO((aClient *, aClient *));
 
 #define BIGBUFFERSIZE 2000
 
@@ -238,7 +237,7 @@ char	*nick;
 {
 	Reg1 char *ch;
 
-	if (*nick == '-' || isdigit(*nick)) /* first character in [0-9-] */
+	if (*nick == '-' || isdigit(*nick)) /* first character in [0..9-] */
 		return 0;
 
 	for (ch = nick; *ch && (ch - nick) < NICKLEN; ch++)
@@ -281,14 +280,13 @@ char	*nick;
 	Reg1	int	i;
         char	*parv[3];
 	short	oldstatus = sptr->status;
-	aConfItem *aconf = NULL;
+	aConfItem *aconf;
 	anUser	*user;
 
 	sptr->user->last = time((long *) 0);
 	parv[0] = sptr->name;
 	parv[1] = parv[2] = NULL;
 
-	add_history(sptr);
 	if (MyConnect(sptr))
 	  {
 	    if (check_client(cptr, CONF_CLIENT))
@@ -363,7 +361,7 @@ int parc;
 char *parv[];
     {
 	aClient *acptr;
-	char *nick;
+	char	nick[NICKLEN+2], *s;
 	
 	if (parc < 2)
 	    {
@@ -371,15 +369,45 @@ char *parv[];
 			   me.name, ERR_NONICKNAMEGIVEN, parv[0]);
 		return 0;
 	    }
-	if (MyConnect(sptr) && (nick = (char *)index(parv[1], '~')))
-		*nick = '\0';
-	nick = parv[1];
-	if (do_nick_name(nick) == 0)
+	if (MyConnect(sptr) && (s = (char *)index(parv[1], '~')))
+		*s = '\0';
+	strncpyzt(nick, parv[1], NICKLEN+1);
+	/*
+	 * if do_nick_name() returns a null name OR if the server sent a nick
+	 * name and do_nick_name() changed it in some way (due to rules of nick
+	 * creation) then reject it. If from a server and we reject it,
+	 * KILL it. -avalon 4/4/92
+	 */
+	if (do_nick_name(nick) == 0 || IsServer(cptr) && strcmp(nick, parv[1]))
 	    {
 		sendto_one(sptr,":%s %d %s %s :Erroneus Nickname", me.name,
 			   ERR_ERRONEUSNICKNAME, parv[0], parv[1]);
+
+		if (IsServer(cptr))
+		    {
+			sendto_ops("Bad Nick: %s From: %s %s",
+				   parv[1], parv[0],
+				   get_client_name(cptr, FALSE));
+			sendto_one(cptr, ":%s KILL %s :%s(%s <- %s[%s])",
+				   me.name, parv[1], me.name, parv[1],
+				   nick, cptr->name);
+			if (sptr != cptr) /* bad nick change */
+			    {
+				sendto_serv_butone(cptr,
+					":%s KILL %s :%s(%s <- %s!%s@%s)",
+					me.name, sptr->name, me.name,
+					get_client_name(cptr, FALSE),
+					parv[0],
+					sptr->user?sptr->user->username:"",
+					sptr->user?sptr->user->server:
+						   cptr->name);
+				sptr->flags |= FLAGS_KILLED;
+				exit_client(NULL,sptr,&me,"BadNick");
+			    }
+		    }
 		return 0;
 	    }
+
 	/*
 	** Check against nick name collisions.[a 'for' loop is used here
 	** only to be able to use 'break', these tests and actions
@@ -417,17 +445,17 @@ char *parv[];
 			sendto_ops("Nick collision on %s(%s <- %s)",
 				   sptr->name, acptr->from->name,
 				   get_client_name(cptr, FALSE));
-			sendto_serv_butone((aClient *)NULL, /* all servers */
-					   "KILL %s :%s (%s <- %s)",
-					   sptr->name,
-					   me.name,
-					   sptr->from->name,
-					   /* NOTE: Cannot use get_client_name
-					   ** twice here, it returns static
-					   ** string pointer--the other info
-					   ** would be lost
-					   */
-					   get_client_name(cptr, FALSE));
+			sendto_one(cptr, ":%s KILL %s :%s (%s <- %s)",
+				   me.name,
+				   sptr->name,
+				   me.name,
+				   acptr->from->name,
+				   /* NOTE: Cannot use get_client_name
+				   ** twice here, it returns static
+				   ** string pointer--the other info
+				   ** would be lost
+				   */
+				   get_client_name(cptr, FALSE));
 			sptr->flags |= FLAGS_KILLED;
 			exit_client((aClient *)NULL,sptr,&me,
 				    "Nick/Server collision");
@@ -440,7 +468,7 @@ char *parv[];
 		** when it differs only in case, but only if we have
 		** properly defined source client (acptr == sptr).
 		*/
-		if (strncmp(acptr->name, nick, NICKLEN) != 0 && acptr == sptr)
+		if (!mycmp(acptr->name, nick) && acptr == sptr)
 			break;
 		/*
 		** If the older one is "non-person", the new entry is just
@@ -500,8 +528,8 @@ char *parv[];
 			** server (e.g. message type "NICK new" received)
 			*/
 			sendto_serv_butone((aClient *)NULL, /* all servers */
-					   "KILL %s :%s (%s <- %s)",
-					   acptr->name,
+					   ":%s KILL %s :%s (%s <- %s)",
+					   me.name, acptr->name,
 					   me.name,
 					   acptr->from->name,
 					   /* NOTE: Cannot use get_client_name
@@ -525,15 +553,15 @@ char *parv[];
 			   sptr->name, acptr->name, acptr->from->name,
 			   get_client_name(cptr, FALSE));
 		sendto_serv_butone(cptr, /* KILL old from outgoing servers */
-				   "KILL %s :%s (%s(%s) <- %s)",
-				   sptr->name,
+				   ":%s KILL %s :%s (%s(%s) <- %s)",
+				   me.name, sptr->name,
 				   me.name,
 				   acptr->from->name,
 				   acptr->name,
 				   get_client_name(cptr, FALSE));
 		sendto_one(cptr, /* Kill new from incoming link */
-			   "KILL %s :%s (%s <- %s(%s))",
-			   acptr->name,
+			   ":%s KILL %s :%s (%s <- %s(%s))",
+			   me.name, acptr->name,
 			   me.name,
 			   acptr->from->name,
 			   get_client_name(cptr, FALSE),
@@ -549,6 +577,8 @@ char *parv[];
 
 		sptr = make_client(cptr);
 		add_client_to_list(sptr);
+debug(DEBUG_FATAL,"add to list sptr %x next %x prev %x hn %x cptr %x",
+sptr, sptr->next, sptr->prev, sptr->hnext, cptr);
 		if (parc > 2)
 			sptr->hopcount = atoi(parv[2]);
 	    }
@@ -569,9 +599,7 @@ char *parv[];
 		/* Client setting NICK the first time */
 
 		/* This had to be copied here to avoid problems.. */
-		strcpy(sptr->name, nick); /* correctness guaranteed
-					     by 'DoNickName' */
-
+		strcpy(sptr->name, nick);
 		if (sptr->user != NULL)
 			/*
 			** USER already received, now we have NICK.
@@ -579,15 +607,15 @@ char *parv[];
 			** user message (giving USER before NICK is possible
 			** only for local client connection!).
 			*/
-			register_user(cptr,sptr,nick);
+			register_user(cptr, sptr, nick);
 	    }
 	/*
 	**  Finally set new nick name.
 	*/
 	if (sptr->name[0])
 		del_from_client_hash_table(sptr->name, sptr);
-	strcpy(sptr->name, nick); /* correctness guaranteed by 'DoNickName' */
-	add_to_client_hash_table(sptr->name, sptr);
+	strcpy(sptr->name, nick);
+	add_to_client_hash_table(nick, sptr);
 
 	return 0;
     }
@@ -1109,15 +1137,19 @@ char	*parv[];
 	    {
 		sendto_one(sptr,":%s %d * :Not enough parameters", 
 	    		   me.name, ERR_NEEDMOREPARAMS);
-		return 0;
+		if (IsServer(cptr))
+			sendto_ops("bad USER param count for %s from %s",
+				   parv[0], get_client_name(cptr, FALSE));
+		else
+			return 0;
 	    }
   
 	/* Copy parameters into better documenting variables */
   
-	username = parv[1];
-	host = parv[2];
-	server = parv[3];
-	realname = parv[4];
+	username = (parc < 2 || BadPtr(parv[1])) ? "<bad boy>" : parv[1];
+	host = (parc < 3 || BadPtr(parv[2])) ? "<nohost>" : parv[2];
+	server = (parc < 4 || BadPtr(parv[3])) ? "<noserver>" : parv[3];
+	realname = (parc < 5 || BadPtr(parv[4])) ? "<bad realname>" : parv[4];
 
 	if (MyConnect(sptr))
 	    {
@@ -1730,6 +1762,7 @@ char *parv[];
 	if (sptr != acptr)     /* Suicide kills are NOT passed on --SRB */
 		sendto_serv_butone(chasing ? NULL : cptr,":%s KILL %s :%s!%s",
 				   parv[0], acptr->name, inpath, path);
+
 	/*
 	** Tell the victim she/he has been zapped, but *only* if
 	** the victim is on current server--no sense in sending the
@@ -1842,18 +1875,20 @@ char *parv[];
     {
 	aClient *acptr;
 	char namebuf[10],linebuf[10],hostbuf[17],*host,*user;
+#ifdef ENABLE_SUMMON
 #ifdef LEAST_IDLE
         char linetmp[10], ttyname[15]; /* Ack */
         struct stat stb;
         time_t ltime = (time_t)0;
 #endif
 	int fd, flag = 0;
+#endif
 
 	if (check_registered_user(sptr))
 		return 0;
 	if (parc < 2 || *parv[1] == '\0')
 	    {
-		sendto_one(sptr,":%s %d %s (Summon) No recipient given",
+		sendto_one(sptr,":%s %d %s :(Summon) No recipient given",
 			   me.name, ERR_NORECIPIENT,
 			   parv[0]);
 		return 0;
@@ -1998,18 +2033,26 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	static char Lheading[] = ":%s %d %s %s %s %s %s %s %s :%s";
-	static char Lformat[]  = ":%s %d %s %s %u %u %u %u %u :%s";
-	struct Message *mptr;
-	aClient *acptr;
-	char *stat = parc > 1 ? parv[1] : "M";
-	Reg1 int i;
+	static	char	Lheading[] = ":%s %d %s %s %s %s %s %s %s :%s";
+	static	char	Lformat[]  = ":%s %d %s %s %u %u %u %u %u :%s";
+	struct	Message	*mptr;
+	aClient	*acptr;
+	char	*stat = parc > 1 ? parv[1] : "M";
+	Reg1	int	i;
+	int	doall;
+	char	*name = parc > 2 ? parv[2] : me.name;
 
 	if (check_registered(sptr))
 		return 0;
 
 	if (hunt_server(cptr,sptr,":%s STATS %s :%s",2,parc,parv)!= HUNTED_ISME)
 		return 0;
+
+	if (parc > 2)
+		if (matches(name, me.name) == 0)
+			doall = 1;
+		else
+			doall = 0;
 
 	switch (*stat)
 	{
@@ -2025,6 +2068,7 @@ char *parv[];
 			   "RcveM", "RcveBytes", "Open since");
 		for (i = 0; i <= highest_fd; i++)
 			if ((acptr = local[i]) && /* Includes IsMe! */
+			    (doall || !mycmp(acptr->name, name)) &&
 			    (IsOper(sptr) || !IsPerson(acptr) ||
 			     (sptr == acptr) ||
 			     IsLocOp(sptr) && IsLocOp(acptr))) {
@@ -2032,7 +2076,7 @@ char *parv[];
 					   me.name,RPL_STATSLINKINFO,parv[0],
 					   (isupper(*stat)) ?
 					   get_client_name(acptr, TRUE) :
-					   get_client_name(acptr,FALSE),
+					   get_client_name(acptr, FALSE),
 					   (int)DBufLength(&acptr->sendQ),
 					   (int)acptr->sendM,
 					   (int)acptr->sendB,
@@ -2060,11 +2104,16 @@ char *parv[];
 	case 'I' : case 'i' :
 		report_configured_links(sptr,CONF_CLIENT);
 		break;
-#ifdef DEBUGMODE
 	case 'R' : case 'r' :
+#ifdef DEBUGMODE
 		send_usage(sptr,parv[0]);
-		break;
 #endif
+		break;
+	case 'Z' : case 'z' :
+#ifdef	DEBUGMODE
+		count_memory(sptr, parv[0]);
+#endif
+		break;
 	case 'U' : case 'u' :
 	    {
 		register long now;
@@ -2100,15 +2149,17 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
 {
+#ifdef ENABLE_USER
     char namebuf[10],linebuf[10],hostbuf[17];
     int fd, flag = 0;
+#endif
 
     if (check_registered_user(sptr))
 	return 0;
 
     if (hunt_server(cptr,sptr,":%s USERS %s",1,parc,parv) == HUNTED_ISME)
 	{
-#ifdef ENABLE_SUMMON
+#ifdef ENABLE_USER
 	if ((fd = utmp_open()) == -1)
 	    {
 	    sendto_one(sptr,":%s NOTICE %s Cannot open %s",
@@ -3134,7 +3185,7 @@ char *parv[];
 	Reg1 int flag;
 	Reg2 int *s;
 	aClient *acptr;
-	int what = 0, setflags = 0;
+	int what, setflags;
 	char flagbuf[20];
 	char **p, *m;
 

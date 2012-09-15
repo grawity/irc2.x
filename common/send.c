@@ -65,7 +65,7 @@ char *notice;
 	to->flags |= FLAGS_DEADSOCKET;
 	if (notice != NULL && !IsPerson(to) && !IsUnknown(to))
 #ifndef CLIENT_COMPILE
-		sendto_ops(notice,to->sockhost);
+		sendto_ops(notice, get_client_name(to, FALSE));
 #else
 		;
 #endif
@@ -122,12 +122,12 @@ aClient *to;
 char *msg;	/* if msg is a null pointer, we are flushing connection */
 int len;
     {
-	int rlen = 0;
+	int rlen;
 
 	if (to->flags & FLAGS_DEADSOCKET)
 		return 0; /* This socket has already been marked as dead */
 #if !defined(CLIENT_COMPILE) && defined(DOUBLE_BUFFER)
-
+	rlen = 0;
 	/* increment message count now and never again for this message */
 	to->sendM += 1;
 	me.sendM += 1;
@@ -142,7 +142,7 @@ int len;
 			to->ocount += len;
 			return 0;
 		    }
-		if ((rlen = deliver_it(to->fd, to->obuffer, to->ocount)) < 0)
+		if ((rlen = deliver_it(to, to->obuffer, to->ocount)) < 0)
 		    {
 			dead_link(to,"Write error to %s, closing link");
 			return 0;
@@ -201,14 +201,19 @@ int len;
 	*/
 	to->sendM += 1;
 	me.sendM += 1;
+
+	if (DBufLength(&to->sendQ) > 8192 &&
+	    !(to->flags & FLAGS_BLOCKED)) /* bad magic for the moment */
+		send_queued(to);
 	return 0;
     }
 # else
+	rlen = 0;
 	/*
 	** DeliverIt can be called only if SendQ is empty...
 	*/
 	if ((DBufLength(&to->sendQ) == 0) &&
-	    (rlen = deliver_it(to->fd, msg, len)) < 0)
+	    (rlen = deliver_it(to, msg, len)) < 0)
 		dead_link(to,"Write error to %s, closing link");
 	else if (rlen < len)
 	    {
@@ -255,7 +260,9 @@ aClient *to;
 		/* Actually, we should *NEVER* get here--something is
 		   not working correct if send_queued is called for a
 		   dead socket... --msa */
+#ifndef SENSQ_ALWAYS
 		dead_link(to,"send_queued called for a DEADSOCKET %s :-(");
+#endif
 		dbuf_delete(&(to->sendQ), DBufLength(&(to->sendQ)));
 		return 0;
 	    }
@@ -263,7 +270,7 @@ aClient *to;
 	    {
 		msg = dbuf_map(&to->sendQ, &len);
 					/* Returns always len > 0 */
-		if ((rlen = deliver_it(to->fd, msg, len)) < 0)
+		if ((rlen = deliver_it(to, msg, len)) < 0)
 		    {
 			dead_link(to,"Write error to %s, closing link");
 			break;
@@ -530,7 +537,7 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 		i = cptr->from->fd;	/* find connection oper is on */
 		if (sentalong[i])	/* sent message along it already ? */
 			continue;
-		if (cptr == one)
+		if (cptr->from == one)
 			continue;	/* ...was the one I should skip */
 		sentalong[i] = 1;
       		sendto_prefix_one(cptr->from, from, pattern,

@@ -314,7 +314,7 @@ struct Message *mptr;
 			}
 		      if (from->from != cptr)
 			{
-			  debug(DEBUG_FATAL,
+			  debug(DEBUG_ERROR,
 				"Message (%s) coming from (%s)",
 				buffer, cptr->name);
 			  return (-1);

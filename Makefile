@@ -26,13 +26,16 @@ INCLUDEDIR=../include
 # on NEXT use:
 # CFLAGS=-bsd -I$(INCLUDEDIR)
 #otherwise this:
-CFLAGS= -I$(INCLUDEDIR) -g
+CFLAGS= -I$(INCLUDEDIR) -gx
 
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
 #
 # HPUX: (was IRCDLIBS= -lBSD but apparently its not needed)
 # IRCDLIBS=
+#
+# PCS MUNIX:
+# IRCDLIBS= -lresolv -lbsd -lc_s
 #
 #and otherwise:
 #IRCDLIBS=

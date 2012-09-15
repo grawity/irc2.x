@@ -59,7 +59,8 @@ static	dbufbuf	*freelist = NULL;
 */
 static dbufbuf *dbuf_alloc()
 {
-	Reg1	dbufbuf	*dbptr;
+	Reg1	dbufbuf	*dbptr, *db2ptr;
+	Reg2	int	num;
 
 	dbufalloc++;
 	if (dbptr = freelist)
@@ -67,8 +68,29 @@ static dbufbuf *dbuf_alloc()
 		freelist = freelist->next;
 		return dbptr;
 	    }
+
+#ifdef	VALLOC
+	num = getpagesize()/sizeof(dbufbuf);
+	if (num < 0)
+		num = 1;
+
+	dbufblocks += num;
+
+	dbptr = (dbufbuf *)valloc(num*sizeof(dbufbuf));
+	if (!dbptr)
+		return (dbufbuf *)NULL;
+
+	for (db2ptr = dbptr; num > 1; num--)
+	    {
+		db2ptr = (dbufbuf *)((char *)dbptr + sizeof(dbufbuf));
+		db2ptr->next = freelist;
+		freelist = db2ptr;
+	    }
+	return dbptr;
+#else
 	dbufblocks++;
-	return (dbufbuf *)calloc(1,sizeof(dbufbuf));
+	return (dbufbuf *)MyMalloc(sizeof(dbufbuf));
+#endif
 }
 /*
 ** dbuf_free - return a dbufbuf structure to the freelist

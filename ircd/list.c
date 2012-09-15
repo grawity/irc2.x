@@ -77,20 +77,18 @@ aClient *from;
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
 	cptr->next = NULL; /* For machines with NON-ZERO NULL pointers >;) */
 	cptr->prev = NULL;
+	cptr->hnext = NULL;
 	cptr->user = NULL;
 	cptr->history = NULL;
 	cptr->status = STAT_UNKNOWN;
 	cptr->fd = -1;
-	cptr->hopcount = 0;
 	if (size == CLIENT_LOCAL_SIZE) {
 	  cptr->since = cptr->lasttime = cptr->firsttime = time(NULL);
 	  cptr->confs = (Link *) 0;
 	  cptr->sockhost[0] = '\0';
 #ifdef DOUBLE_BUFFER
-	  cptr->ocount = 0;
 	  cptr->obuffer[0] = '\0';
 #endif
-	  cptr->count = 0;
 	  cptr->buffer[0] = '\0';
 	}
 	return (cptr);
@@ -119,15 +117,18 @@ aClient *sptr;
 **	Decrease user reference count by one and realease block,
 **	if count reaches 0
 */
-free_user(user)
-anUser *user;
+anUser	*free_user(user)
+anUser	*user;
     {
 	if (--user->refcnt == 0)
 	    {
 		if (user->away)
 			free(user->away);
 		free(user);
+		return NULL;
 	    }
+	else
+		return user;
     }
 
 /*
@@ -146,6 +147,7 @@ aClient	*cptr;
 	if (cptr->next)
 		cptr->next->prev = cptr->prev;
 	if (cptr->user) {
+		add_history(cptr);
 		off_history(cptr);
 		free_user(cptr->user);
 	}

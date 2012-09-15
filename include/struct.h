@@ -74,7 +74,7 @@ typedef struct User anUser;
 #define MAXRECIPIENTS 	20
 
 #ifdef USE_SERVICES
-#include <service.h>
+#include "service.h"
 #endif
 
 #define STAT_MASTER     -5    /* Local ircd master before identification */
@@ -178,10 +178,10 @@ typedef struct User anUser;
 #define FLAGS_INVISIBLE  64     /* makes user invisible */
 #define FLAGS_WALLOP     128    /* send wallops to them */
 #define FLAGS_SERVNOTICE 256    /* server notices such as kill */
+#define	FLAGS_BLOCKED    512	/* socket is in a blocked condition */
 
 #define FLUSH_BUFFER   -2
 #define BUFSIZE		512
-#define MAXFD        32
 #define UTMP         "/etc/utmp"
 
 #define DUMMY_TERM     0
@@ -227,13 +227,13 @@ struct User
 
 struct Client
     {
-	struct Client *next,*prev;
+	struct Client *next,*prev, *hnext;
 	short status;		/* Client type */
 	char name[HOSTLEN+1];	/* Unique name of the client, nick or host */
 	char info[REALLEN+1];	/* Free form additional client information */
 	anUser *user;		/* ...defined, if this is a User */
 #ifdef USE_SERVICES
-	aService *service;	/* service record */
+	aService *service;
 #endif
 	long lasttime;		/* ...should be only LOCAL clients? --msa */
 	long firsttime;
@@ -300,7 +300,7 @@ typedef struct SLink {
 
 struct Channel
     {
-	struct Channel *nextch, *prevch;
+	struct Channel *nextch, *prevch, *hnextch;
 	Mode mode;
 	char topic[CHANNELLEN+1];
 	int users;

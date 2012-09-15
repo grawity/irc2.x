@@ -17,6 +17,27 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Tue Apr  7 01:43:52 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c	fixed USER bug/vulnerability.
+
+Mon Apr  6 19:28:09 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_misc.c,whowas.c,s_msg.c
+			added code to calculate memory used by server for
+			storing its data. Option added to STATS command for
+			this.
+
+Mon Arp  6 10:23:13 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c	fixed nickname bug for ascii >0x80.
+
+Tue Mar 17 00:20:32 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* whowas.c	rewritten to be more efficient in memory use and speed
+
+Mon Mar 16 23:45:29 1992  Darren Reed <avalon@coombs.anu.edu.au>
+	* s_misc.c, s_bsd.c, s_conf.c, ircd.c
+			Included patches for PCS MUNIX from Lynx and some
+			patches to allow the server to run set-uid from
+			Stephan.
+
 Wed Mar  4 16:58:35 1992  Darren Reed <avalon@coombs.anu.edu.au>
 	* s_msg.c, s_misc.c
 		      - added R/U options to stats. R works only with

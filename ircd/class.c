@@ -65,7 +65,7 @@ aConfItem	*aconf;
 int	get_client_class(acptr)
 aClient	*acptr;
 {
-	int i = 0, retc = BAD_CLIENT_CLASS;
+	int i, retc = BAD_CLIENT_CLASS;
 	Link	*tmp;
 
 	if (acptr && !IsMe(acptr)  && (acptr->confs))

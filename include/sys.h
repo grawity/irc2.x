@@ -29,7 +29,7 @@
  *
  */
 
-#if HPUX | VMS | AIX
+#if defined(HPUX) || defined(VMS) || defined(AIX)
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
@@ -43,19 +43,19 @@ extern char *inet_ntoa();
 #endif
 #include <pwd.h>
 
-#if AIX
+#ifdef AIX
 #include <sys/select.h>
 #endif
-#if HPUX | AIX
+#if defined(HPUX )|| defined(AIX)
 #include <time.h>
-#if AIX
+#ifdef AIX
 #include <sys/time.h>
 #endif
 #else
 #include <sys/time.h>
 #endif
 
-#if NEXT
+#ifdef NEXT
 #define VOIDSIG int	/* whether signal() returns int of void */
 #else
 #define VOIDSIG void	/* whether signal() returns int of void */
