@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.43 5/17/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.44 5/26/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -1055,7 +1055,7 @@ char	*parv[];
 					   mptr->count, mptr->bytes);
 		break;
 	case 'o' : case 'O' :
-		report_configured_links(sptr, CONF_OPERATOR|CONF_LOCOP);
+		report_configured_links(sptr, CONF_OPS);
 		break;
 	case 'Q' : case 'q' :
 		report_configured_links(sptr, CONF_QUARANTINED_SERVER);

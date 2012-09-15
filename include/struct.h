@@ -32,9 +32,8 @@
 #endif
 
 #ifdef USE_SYSLOG
-# ifdef HPUX
-#  include <syslog.h>
-# else
+# include <syslog.h>
+# ifndef HPUX
 #  include <sys/syslog.h>
 # endif
 #endif
@@ -154,6 +153,7 @@ typedef	struct	SMode	Mode;
 #define	FLAGS_LOCAL	0x10000 /* set for local clients */
 #define	FLAGS_GOTID	0x20000	/* successful ident lookup achieved */
 #define	FLAGS_DOID	0x40000	/* I-lines say must use ident return */
+#define	FLAGS_NONL	0x80000 /* No \n in buffer */
 
 #define	SEND_UMODES	(FLAGS_INVISIBLE|FLAGS_OPER|FLAGS_WALLOP)
 #define	ALL_UMODES	(SEND_UMODES|FLAGS_SERVNOTICE)
@@ -183,6 +183,7 @@ typedef	struct	SMode	Mode;
 #define	DoingDNS(x)		((x)->flags & FLAGS_DOINGDNS)
 #define	SetAccess(x)		((x)->flags |= FLAGS_CHKACCESS)
 #define	DoingAuth(x)		((x)->flags & FLAGS_AUTH)
+#define	NoNewLine(x)		((x)->flags & FLAGS_NONL)
 
 #define	ClearOper(x)		((x)->flags &= ~FLAGS_OPER)
 #define	ClearInvisible(x)	((x)->flags &= ~FLAGS_INVISIBLE)
@@ -244,10 +245,10 @@ struct	ConfItem	{
 #define	CONF_LISTEN_PORT	0x2000
 #define	CONF_HUB		0x4000
 
+#define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
-#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_CONNECT_SERVER | \
-				 CONF_LOCOP | CONF_NOCONNECT_SERVER | \
-				 CONF_OPERATOR | CONF_SERVICE)
+#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_SERVICE | CONF_OPS | \
+				 CONF_SERVER_MASK)
 
 #define	IsIllegal(x)	((x)->status & CONF_ILLEGAL)
 

@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.53 5/17/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.54 5/26/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -1653,7 +1653,9 @@ char	*parv[];
 		return 0;
 	    }
 	if (!(aconf = find_conf_exact(name, sptr->username, sptr->sockhost,
-				      CONF_OPERATOR|CONF_LOCOP)))
+				      CONF_OPS)) &&
+	    !(aconf = find_conf_exact(name, sptr->username,
+				      inetntoa((char *)&cptr->ip), CONF_OPS)))
 	    {
 		sendto_one(sptr, err_str(ERR_NOOPERHOST), me.name, parv[0]);
 		return 0;
@@ -1676,7 +1678,7 @@ char	*parv[];
 	encr = password;
 #endif  /* CRYPT_OPER_PASSWORD */
 
-	if ((aconf->status & (CONF_OPERATOR | CONF_LOCOP)) &&
+	if ((aconf->status & CONF_OPS) &&
 	    StrEq(encr, aconf->passwd) && !attach_conf(sptr, aconf))
 	    {
 		int old = (sptr->flags & ALL_UMODES);
@@ -2036,8 +2038,7 @@ char	*parv[];
 		sptr->flags &= ~FLAGS_LOCOP;
 	if ((setflags & FLAGS_OPER|FLAGS_LOCOP) && !IsAnOper(sptr) &&
 	    MyConnect(sptr))
-		det_confs_butmask(sptr,
-				  CONF_CLIENT & ~(CONF_OPERATOR|CONF_LOCOP));
+		det_confs_butmask(sptr, CONF_CLIENT & ~CONF_OPS);
 #ifdef	USE_SERVICES
 	if (IsOper(sptr) && !(setflags & FLAGS_OPER))
 		check_services_butone(SERVICE_WANT_OPER, sptr,

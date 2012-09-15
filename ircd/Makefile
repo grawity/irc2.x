@@ -228,6 +228,8 @@ s_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_bsd.o: ../include/sys.h
 s_auth.o: ../include/struct.h ../include/config.h ../include/dbuf.h
 s_auth.o: ../include/sys.h
+s_debug.o: ../include/config.h ../include/struct.h ../include/common.h
+s_debug.o: ../include/sys.h s_debug.c
 s_conf.o: ../include/struct.h ../include/config.h ../include/numeric.h
 s_conf.o: ../include/dbuf.h ../include/sys.h
 s_user.o: ../include/struct.h ../include/config.h
@@ -247,4 +249,6 @@ s_debug.o: ../include/struct.h ../include/common.h ../include/sys.h
 class.o: ../include/struct.h ../include/class.h ../include/numeric.h
 class.o: ../include/common.h
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h
+hash.o: ../include/struct.h ../include/sys.h ../include/hash.h s_serv.c
+hash.o: s_user.c channel.c s_misc.c s_bsd.c ircd.c hash.c version.c.SH
 version.o: version.c.SH

@@ -58,6 +58,6 @@ typedef struct	cachetable {
 
 #define CACHESIZE	51
 
-#define	MAXCACHED	30
+#define	MAXCACHED	2 /*30*/
 
 #endif /* __res_include__ */

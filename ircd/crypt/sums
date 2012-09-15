@@ -1,4 +1,5 @@
 #!/bin/sh
+# trap "" 1 2 3 13 14 15 21 22
 trap "" 1 2 3 13 14 15 21
 /bin/cp hash.c hash.c.old 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1

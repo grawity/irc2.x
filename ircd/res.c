@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.22 5/17/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.23 5/26/93 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -655,7 +655,7 @@ char	*lp;
 		switch (hptr->rcode)
 		{
 		case NXDOMAIN:
-			h_errno = HOST_NOT_FOUND;
+			h_errno = TRY_AGAIN;
 			break;
 		case SERVFAIL:
 			h_errno = TRY_AGAIN;
@@ -677,7 +677,8 @@ char	*lp;
 		*/
 		if (h_errno != TRY_AGAIN)
 		    {
-			Debug((DEBUG_DNS, "Fatal DNS error %d", hptr->rcode));
+			Debug((DEBUG_DNS, "Fatal DNS error %d for %d",
+				h_errno, hptr->rcode));
 			rptr->resend = 0;
 			rptr->retries = 0;
 		    }
@@ -741,8 +742,6 @@ getres_err:
 	 */
 	if (rptr)
 	    {
-		if (lp)
-			bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
 		if (h_errno != TRY_AGAIN)
 		    {
 			/*
@@ -772,6 +771,8 @@ getres_err:
 				rptr->resend = 1;
 				resend_query(rptr);
 			    }
+			else
+				resend_query(rptr);
 		    }
 		return (struct hostent *)NULL;
 	    }
@@ -1080,6 +1081,7 @@ ResRQ	*rptr;
 {
 	Reg1	aCache	*cp;
 	Reg2	int	i, n;
+	Reg3	struct	hostent	*hp;
 	Reg3	char	*s, **t;
 
 	/*
@@ -1098,6 +1100,7 @@ ResRQ	*rptr;
 	*/ 
 	cp = (aCache *)MyMalloc(sizeof(aCache));
 	bzero((char *)cp, sizeof(aCache));
+	hp = &cp->he;
 	for (i = 0; i < MAXADDRS; i++)
 		if (!rptr->he.h_addr_list[i].s_addr)
 			break;
@@ -1105,20 +1108,19 @@ ResRQ	*rptr;
 	/*
 	** build two arrays, one for IP#'s, another of pointers to them.
 	*/
-	t = cp->he.h_addr_list = (char **)MyMalloc(sizeof(char *) * (i+1));
+	t = hp->h_addr_list = (char **)MyMalloc(sizeof(char *) * (i+1));
 	bzero((char *)t, sizeof(char *) * (i+1));
 
-	t = (char **)MyMalloc(sizeof(struct in_addr) * i);
-	*cp->he.h_addr_list = (char *)t;
-	bzero((char *)t, sizeof(struct in_addr) * i);
+	s = (char *)MyMalloc(sizeof(struct in_addr) * i);
+	bzero(s, sizeof(struct in_addr) * i);
 
 	for (n = 0; n < i; n++)
 	    {
-		s = cp->he.h_addr_list[n] = (char *)(t + n *
-						     sizeof(struct in_addr));
-		bcopy((char *)&(rptr->he.h_addr_list[n]),
-		      s, sizeof(struct in_addr));
+		hp->h_addr_list[n] = (char *)(s + n * sizeof(struct in_addr));
+		bcopy((char *)&(rptr->he.h_addr_list[n].s_addr),
+		      hp->h_addr_list[n], sizeof(struct in_addr));
 	    }
+	hp->h_addr_list[n] = (char *)NULL;
 
 	/*
 	** an array of pointers to CNAMEs.
@@ -1127,16 +1129,16 @@ ResRQ	*rptr;
 		if (!rptr->he.h_aliases[i])
 			break;
 	i++;
-	t = cp->he.h_aliases = (char **)MyMalloc(sizeof(char *) * i);
+	t = hp->h_aliases = (char **)MyMalloc(sizeof(char *) * i);
 	for (n = 0; n < i; n++, t++)
 	    {
 		*t = rptr->he.h_aliases[n];
 		rptr->he.h_aliases[n] = NULL;
 	    }
 
-	cp->he.h_addrtype = rptr->he.h_addrtype;
-	cp->he.h_length = rptr->he.h_length;
-	cp->he.h_name = rptr->he.h_name;
+	hp->h_addrtype = rptr->he.h_addrtype;
+	hp->h_length = rptr->he.h_length;
+	hp->h_name = rptr->he.h_name;
 	cp->ttl = rptr->ttl;	/* set TTL to that returned by name server */
 	cp->expireat = time(NULL) + cp->ttl;
 	rptr->he.h_name = NULL;

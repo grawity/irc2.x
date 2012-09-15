@@ -17,19 +17,19 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-CC=cc 
+CC=cc
 RM=/bin/rm
 INCLUDEDIR=../include
 
 # Default flags:
-CFLAGS= -I$(INCLUDEDIR) -g
+CFLAGS= -I$(INCLUDEDIR) -O
 IRCDLIBS=
 IRCLIBS=-lcurses -ltermcap
 #
 # use the following on MIPS:
 #CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
 # For Irix 4.x (SGI), use the following:
-#CFLAGS= -g -cckr -I${INCLUDE}
+#CFLAGS= -O -cckr -I${INCLUDE}
 #
 # on NEXT use:
 #CFLAGS=-bsd -I$(INCLUDEDIR)
