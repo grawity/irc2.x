@@ -24,23 +24,15 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)whowas.c	2.12 2/23/93 (C) 1988 Markku Savela";
+static  char sccsid[] = "@(#)whowas.c	2.13 6/16/93 (C) 1988 Markku Savela";
 #endif
 
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "whowas.h"
 #include "h.h"
-
-typedef struct aname {
-	anUser	*ww_user;
-	aClient	*ww_online;
-	time_t	ww_logout;
-	char	ww_nick[NICKLEN+1];
-	char	ww_info[REALLEN+1];
-} aName;
-
 
 static	aName	was[NICKNAMEHISTORYLENGTH];
 static	int	ww_index = 0;
@@ -148,7 +140,7 @@ char	*parv[];
 		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s :%s", 3,parc,parv))
 			return 0;
 
-	for (s = parv[1]; nick = strtoken(&p, s, ","); s = NULL)
+	for (s = parv[1]; (nick = strtoken(&p, s, ",")); s = NULL)
 	    {
 		wp = wp2 = &was[ww_index - 1];
 
@@ -199,7 +191,7 @@ u_long	*wwam;
 	u_long	am = 0;
 
 	for (i = 0; i < NICKNAMEHISTORYLENGTH; i++)
-		if (tmp = was[i].ww_user)
+		if ((tmp = was[i].ww_user))
 			if (!was[i].ww_online)
 			    {
 				for (j = 0; j < i; j++)

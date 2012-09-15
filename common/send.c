@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.24 5/10/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.26 6/21/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -33,7 +33,11 @@ Computing Center and Jarkko Oikarinen";
 #include "h.h"
 #include <stdio.h>
 
+#ifdef	IRCII_KLUDGE
+#define	NEWLINE	"\n"
+#else
 #define NEWLINE	"\r\n"
+#endif
 
 static	char	sendbuf[2048];
 static	int	send_message PROTO((aClient *, char *, int));
@@ -57,7 +61,7 @@ static	int	sentalong[MAXCONNECTIONS];
 **	Also, the notice is skipped for "uninteresting" cases,
 **	like Persons and yet unknown connections...
 */
-static	int	dead_link(to,notice)
+static	int	dead_link(to, notice)
 aClient *to;
 char	*notice;
 {
@@ -109,16 +113,23 @@ static	int	send_message(to, msg, len)
 aClient	*to;
 char	*msg;	/* if msg is a null pointer, we are flushing connection */
 int	len;
-{
 #ifdef SENDQ_ALWAYS
+{
 	if (to->flags & FLAGS_DEADSOCKET)
 		return 0; /* This socket has already been marked as dead */
-#ifdef	CLIENT_COMPILE
+# ifdef	CLIENT_COMPILE
 	if (DBufLength(&to->sendQ) > MAXSENDQLENGTH)
-#else
-	if (DBufLength(&to->sendQ) > get_sendq(to))
-#endif
 		return dead_link(to,"Max SendQ limit exceeded for %s");
+# else
+	if (DBufLength(&to->sendQ) > get_sendq(to))
+	    {
+		if (IsServer(to))
+			sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
+			   	get_client_name(to, FALSE),
+				DBufLength(&to->sendQ), get_sendq(to));
+		return dead_link(to, NULL);
+	    }
+# endif
 	else if (dbuf_put(&to->sendQ, msg, len) < 0)
 		return dead_link(to, "Buffer allocation error for %s");
 	/*
@@ -138,11 +149,12 @@ int	len;
 	** trying to flood that link with data (possible during the net
 	** relinking done by servers with a large load).
 	*/
-	if (DBufLength(&to->sendQ)/2048 > to->lastsq)
+	if (DBufLength(&to->sendQ)/1024 > to->lastsq)
 		send_queued(to);
 	return 0;
 }
 #else
+{
 	int	rlen = 0;
 
 	if (to->flags & FLAGS_DEADSOCKET)
@@ -160,12 +172,18 @@ int	len;
 		** Was unable to transfer all of the requested data. Queue
 		** up the remainder for some later time...
 		*/
-#ifdef	CLIENT_COMPILE
+# ifdef	CLIENT_COMPILE
 		if (DBufLength(&to->sendQ) > MAXSENDQLENGTH)
-#else
-		if (DBufLength(&to->sendQ) > get_sendq(to))
-#endif
 			return dead_link(to,"Max SendQ limit exceeded for %s");
+# else
+		if (DBufLength(&to->sendQ) > get_sendq(to))
+		    {
+			sendto_ops("Max SendQ limit exceeded for %s : %d > %d",
+				   get_client_name(to, FALSE),
+				   DBufLength(&to->sendQ), get_sendq(to));
+			return dead_link(to, NULL);
+		    }
+# endif
 		else if (dbuf_put(&to->sendQ,msg+rlen,len-rlen) < 0)
 			return dead_link(to,"Buffer allocation error for %s");
 	    }
@@ -222,7 +240,7 @@ aClient *to;
 		if ((rlen = deliver_it(to, msg, len)) < 0)
 			return dead_link(to,"Write error to %s, closing link");
 		(void)dbuf_delete(&to->sendQ, rlen);
-		to->lastsq = DBufLength(&to->sendQ)/2048;
+		to->lastsq = DBufLength(&to->sendQ)/1024;
 		to->sendB += rlen;
 		me.sendB += rlen;
 		if (to->acpt != &me)
@@ -289,7 +307,9 @@ va_dcl
 	    }
 #endif
 	(void)strcat(sendbuf, NEWLINE);
+#ifndef	IRCII_KLUDGE
 	sendbuf[510] = '\r';
+#endif
 	sendbuf[511] = '\n';
 	sendbuf[512] = '\0';
 	(void)send_message(to, sendbuf, strlen(sendbuf));
@@ -849,12 +869,12 @@ va_dcl
 		(void)strcpy(sender, from->name);
 		if (user)
 		    {
-			if (user->username && *user->username)
+			if (*user->username)
 			    {
 				(void)strcat(sender, "!");
 				(void)strcat(sender, user->username);
 			    }
-			if (user->host && *user->host && !MyConnect(from))
+			if (*user->host && !MyConnect(from))
 			    {
 				(void)strcat(sender, "@");
 				(void)strcat(sender, user->host);
@@ -865,7 +885,7 @@ va_dcl
 		** flag is used instead of index(sender, '@') for speed and
 		** also since username/nick may have had a '@' in them. -avalon
 		*/
-		if (!flag && MyConnect(from))
+		if (!flag && MyConnect(from) && *user->host)
 		    {
 			(void)strcat(sender, "@");
 			if (IsUnixSocket(from))

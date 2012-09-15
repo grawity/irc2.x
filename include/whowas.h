@@ -41,13 +41,24 @@
 #endif /* ! PROTO */
 
 /*
+** WHOWAS structure moved here from whowas.c
+*/
+typedef struct aname {
+	anUser	*ww_user;
+	aClient	*ww_online;
+	time_t	ww_logout;
+	char	ww_nick[NICKLEN+1];
+	char	ww_info[REALLEN+1];
+} aName;
+
+/*
 ** add_history
 **	Add the currently defined name of the client to history.
 **	usually called before changing to a new name (nick).
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
-int add_history PROTO((aClient *));
+void	add_history PROTO((aClient *));
 
 /*
 ** off_history
@@ -56,7 +67,7 @@ int add_history PROTO((aClient *));
 **	structures and it must know when they cease to exist. This
 **	also implicitly calls AddHistory.
 */
-int off_history PROTO((aClient *));
+void	off_history PROTO((aClient *));
 
 /*
 ** get_history
@@ -64,10 +75,15 @@ int off_history PROTO((aClient *));
 **	nickname within the timelimit. Returns NULL, if no
 **	one found...
 */
-aClient *get_history PROTO((char *, time_t));
+aClient	*get_history PROTO((char *, time_t));
 					/* Nick name */
 					/* Time limit in seconds */
 
-int m_whowas PROTO((aClient *, aClient *, int, char *[]));
+int	m_whowas PROTO((aClient *, aClient *, int, char *[]));
+
+/*
+** for debugging...counts related structures stored in whowas array.
+*/
+void	count_whowas_memory PROTO((int *, int *, u_long *));
 
 #endif /* __whowas_include__ */

@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.12 4/3/93 (C) 1990, 1991 Armin Gruner";
+static  char sccsid[] = "@(#)support.c	2.13 6/24/93 (C) 1990, 1991 Armin Gruner";
 #endif
 
 #include "struct.h"
@@ -321,7 +321,7 @@ dgetsreturnbuf:
 		return 0;
 	    }
 	tail += nr;
-	*(tail + 1) = '\0';
+	*tail = '\0';
 	goto dgetsagain;
 }
 

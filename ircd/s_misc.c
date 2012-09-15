@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.31 5/6/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.33 6/11/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -33,10 +33,11 @@ Computing Center and Jarkko Oikarinen";
 #include "numeric.h"
 #include <sys/stat.h>
 #include <fcntl.h>
-#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent)
+#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
+    !defined(__convex__)
 # include <sys/param.h>
 #endif
-#ifdef PCS
+#if defined(PCS) || defined(AIX)
 # include <time.h>
 #endif
 #ifdef HPUX
@@ -226,7 +227,7 @@ Reg1	aClient	*cptr;
 Reg2	char	*host;
 {
 	Reg3	char	*s;
-	if (s = (char *)index(host, '@'))
+	if ((s = (char *)index(host, '@')))
 		s++;
 	else
 		s = host;
@@ -508,24 +509,16 @@ char	*comment;
 		*/
 		if (sptr->user)
 		    {
-			Reg1	Link	*tmp;
-
 			sendto_common_channels(sptr, ":%s QUIT :%s",
 						sptr->name, comment);
-			for (lp = sptr->user->channel; lp; lp = tmp)
-			    {
-				tmp = lp->next;
-				remove_user_from_channel(sptr,
-							 lp->value.chptr);
-				/* this is all that is needed here. */
-			    }
+
+			while ((lp = sptr->user->channel))
+				remove_user_from_channel(sptr,lp->value.chptr);
+
 			/* Clean up invitefield */
-			for (lp = sptr->user->invited; lp; lp = tmp)
-			    {
-				tmp = lp->next;
+			while ((lp = sptr->user->invited))
 				del_invite(sptr, lp->value.chptr);
 				/* again, this is all that is needed */
-			    }
 		    }
 	    }
 

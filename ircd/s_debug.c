@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.20 4/14/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.23 6/25/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -39,6 +39,12 @@ char	serveropts[] = {
 #endif
 #ifdef	DEBUGMODE
 'D',
+#endif
+#ifdef	LOCOP_REHASH
+'e',
+#endif
+#ifdef	OPER_REHASH
+'E',
 #endif
 #ifdef	HUB
 'H',
@@ -74,7 +80,7 @@ char	serveropts[] = {
 #ifdef	NPATH
 'N',
 #endif
-#ifdef	OPER_REHASH
+#ifdef	LOCOP_RESTART
 'r',
 #endif
 #ifdef	OPER_RESTART
@@ -82,6 +88,12 @@ char	serveropts[] = {
 #endif
 #ifdef	ENABLE_SUMMON
 'S',
+#endif
+#ifdef	OPER_REMOTE
+'t',
+#endif
+#ifdef	IRCII_KLUDGE
+'u',
 #endif
 #ifdef	ENABLE_USERS
 'U',
@@ -95,15 +107,22 @@ char	serveropts[] = {
 #ifdef	USE_SYSLOG
 'Y',
 #endif
+#ifdef	V28PlusOnly
+'8',
+#endif
 '\0'};
+
 #ifdef DEBUGMODE
 #include "common.h"
 #include "sys.h"
+#include "whowas.h"
+#include "hash.h"
 #include <sys/file.h>
 #ifdef HPUX
 #include <fcntl.h>
 #endif
-#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent)
+#if !defined(ULTRIX) && !defined(SGI) && !defined(sequent) && \
+    !defined(__convex__)
 # include <sys/param.h>
 #endif
 #ifdef HPUX
@@ -159,14 +178,17 @@ va_dcl
 	if (debuglevel >= 0)
 		if (level <= debuglevel)
 		    {
-			local[2]->sendM++;
 #ifndef	USE_VARARGS
 			(void)sprintf(debugbuf, form,
 				p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
 			(void)vsprintf(debugbuf, form, vl);
 #endif
-			local[2]->sendB += strlen(debugbuf);
+			if (local[2])
+			    {
+				local[2]->sendM++;
+				local[2]->sendB += strlen(debugbuf);
+			    }
 			(void)fprintf(stderr, "%s", debugbuf);
 			(void)fputc('\n', stderr);
 		    }
@@ -179,7 +201,7 @@ va_dcl
  * different field names for "struct rusage".
  * -avalon
  */
-int	send_usage(cptr, nick)
+void	send_usage(cptr, nick)
 aClient *cptr;
 char	*nick;
 {
@@ -205,7 +227,7 @@ char	*nick;
 		extern char *sys_errlist[];
 		sendto_one(cptr,":%s NOTICE %s :Getruseage error: %s.",
 			   me.name, nick, sys_errlist[errno]);
-		return 0;
+		return;
 	    }
 	secs = rus.ru_utime.tv_sec + rus.ru_stime.tv_sec;
 	rup = time(NULL) - me.since;
@@ -254,7 +276,7 @@ char	*nick;
 		extern char *sys_errlist[];
 		sendto_one(cptr,":%s NOTICE %s :times(2) error: %s.",
 			   me.name, nick, strerror(errno));
-		return 0;
+		return;
 	    }
 	secs = tmsbuf.tms_utime + tmsbuf.tms_stime;
 
@@ -275,7 +297,7 @@ char	*nick;
 		   ":%s NOTICE %s :<128 %d <256 %d <512 %d <1024 %d >1024 %d",
 		   me.name, nick,
 		   writeb[5], writeb[6], writeb[7], writeb[8], writeb[9]);
-	return 0;
+	return;
 }
 
 void	count_memory(cptr, nick)
@@ -315,13 +337,16 @@ char	*nick;
 		rcm = 0,	/* memory used by remote clients */
 		awm = 0,	/* memory used by aways */
 		wwam = 0,	/* whowas away memory used */
+		wwm = 0,	/* whowas array memory used */
 		com = 0,	/* memory used by conf lines */
+		db = 0,		/* memory used by dbufs */
 		totcl = 0,
 		totch = 0,
 		totww = 0,
 		tot = 0;
 
 	count_whowas_memory(&wwu, &wwa, &wwam);
+	wwm = sizeof(aName) * NICKNAMEHISTORYLENGTH;
 
 	for (acptr = client; acptr; acptr = acptr->next)
 	    {
@@ -408,13 +433,24 @@ char	*nick;
 
 	sendto_one(cptr, ":%s NOTICE %s :Whowas users %d(%d) away %d(%d)",
 		   me.name, nick, wwu, wwu*sizeof(anUser), wwa, wwam);
+	sendto_one(cptr, ":%s NOTICE %s :Whowas array %d(%d)",
+		   me.name, nick, NICKNAMEHISTORYLENGTH, wwm);
 
-	totww = wwu*sizeof(anUser) + wwam;
+	totww = wwu*sizeof(anUser) + wwam + wwm;
 
-	tot = totww + totch + totcl + com + cl*sizeof(aClass);
+	sendto_one(cptr, ":%s NOTICE %s :Hash: client %d(%d) chan %d(%d)",
+		   me.name, nick, HASHSIZE, sizeof(aHashEntry) * HASHSIZE,
+		   CHANNELHASHSIZE, sizeof(aHashEntry) * CHANNELHASHSIZE);
+	db = dbufblocks * sizeof(dbufbuf);
+	sendto_one(cptr, ":%s NOTICE %s :Dbuf blocks %d(%d)",
+		   me.name, nick, dbufblocks, db);
 
-	sendto_one(cptr, ":%s NOTICE %s :Totals: ww %d ch %d cl %d co %d",
-		   me.name, nick, totww, totch, totcl, com);
+	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db;
+	tot += sizeof(aHashEntry) * HASHSIZE;
+	tot += sizeof(aHashEntry) * CHANNELHASHSIZE;
+
+	sendto_one(cptr, ":%s NOTICE %s :Total: ww %d ch %d cl %d co %d db %d",
+		   me.name, nick, totww, totch, totcl, com, db);
 	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
 		   me.name, nick, tot,
 #if !defined(AIX) && !defined(NEXT)

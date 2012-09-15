@@ -87,13 +87,13 @@ extern char *strtoken PROTO((char **, char *, char *));
 #if defined(ULTRIX) || defined(SGI) || defined(sequent) || defined(HPUX) || \
     defined(OSF)
 #include <sys/param.h>
-#else
-# ifndef MAX
-#  define MAX(a, b)	((a) > (b) ? (a) : (b))
-# endif
-# ifndef MIN
-#  define MIN(a, b)	((a) < (b) ? (a) : (b))
-# endif
+#endif
+
+#ifndef MAX
+#define MAX(a, b)	((a) > (b) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
 #endif
 
 #define MyFree(x)       if ((x) != NULL) free(x)

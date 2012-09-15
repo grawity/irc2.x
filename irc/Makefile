@@ -28,21 +28,23 @@
 # Check the curses libraries if your systems wants them differently...
 
 INCLUDE=../include
-DFLAGS =-DCLIENT_COMPILE
+DFLAGS=-DCLIENT_COMPILE
 INSTALL=/usr/bin/install
 
 #For MIPS, use this:
 #CFLAGS =-O -systype bsd43 -DSYSTYPE_BSD43 -I${INCLUDE} ${DFLAGS}
 CFLAGS = -g -I${INCLUDE}
 
+#Libs...default is
+IRCLIBS=-lcurses -ltermcap
 # For AIX, use the following:
 #IRCLIBS=-lcurses -lcur
 #
-# Solaris 2.0
+# Solaris 2
 #IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
 #
-# Otherwise
-IRCLIBS=-lcurses -ltermcap
+# Sequent Dynix 1.4/2.0
+#IRCLIBS=-lcurses -ltermcap -lsocket -linet -lnsl -lseq
 
 #CC=/bin/cc
 CC=cc
@@ -62,7 +64,7 @@ all: build
 build: irc
 
 install: all
-	$(INSTALL) -csm 711 irc $(BINDIR)
+	../install -c -s -m 711 irc $(BINDIR)
 
 irc: $(OBJS) $(COMMONOBJS)
 	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(IRCLIBS) $(LIBFLAGS)

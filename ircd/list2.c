@@ -37,7 +37,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)list.c	2.19 6/25/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)list.c	2.17 3/30/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -51,28 +51,35 @@ Computing Center and Jarkko Oikarinen";
 void	free_link PROTO((Link *));
 Link	*make_link PROTO(());
 
-#ifdef	DEBUGMODE
 static	struct	liststats {
 	int	inuse;
-} cloc, crem, users, servs, links, classs, aconfs;
+	int	free;
+} listc[8];
 
-#endif
+#define	LC_CLOC	0
+#define	LC_CREM 1
+#define	LC_SERV	2
+#define	LC_LINK	3
+#define	LC_USER	4
+#define	LC_CONF	5
+#define	LC_CLAS	6
+#define	LC_DBUF	7
 
 void	outofmemory();
+
+static	aClient	*clofree = NULL;
+static	aClient	*crefree = NULL;
+static	aClass	*clfree = NULL;
+static	aConfItem *cofree = NULL;
+static	anUser	*ufree = NULL;
+static	Link	*lfree = NULL;
+static	aServer	*sfree = NULL;
 
 int	numclients = 0;
 
 void	initlists()
 {
-#ifdef	DEBUGMODE
-	bzero((char *)&cloc, sizeof(cloc));
-	bzero((char *)&crem, sizeof(crem));
-	bzero((char *)&users, sizeof(users));
-	bzero((char *)&servs, sizeof(servs));
-	bzero((char *)&links, sizeof(links));
-	bzero((char *)&classs, sizeof(classs));
-	bzero((char *)&aconfs, sizeof(aconfs));
-#endif
+	bzero(listc, sizeof(struct liststats)* 7);
 }
 
 void	outofmemory()
@@ -103,18 +110,34 @@ aClient	*from;
 	 * having to call malloc.
 	 */
 	if (!from)
+	    {
 		size = CLIENT_LOCAL_SIZE;
+		if (cptr = clofree)
+		    {
+			clofree = cptr->next;
+			listc[LC_CLOC].free--;
+		    }
+	    }
+	else if (cptr = crefree)
+	    {
+			crefree = cptr->next;
+			listc[LC_CREM].free--;
+	    }
 
-	if (!(cptr = (aClient *)MyMalloc(size)))
-		outofmemory();
+	if (!cptr)
+	    {
+		if (!(cptr = (aClient *)malloc(size)))
+			outofmemory();
+		else
+		    {
+			if (size == CLIENT_LOCAL_SIZE)
+				listc[LC_CLOC].inuse++;
+			else
+				listc[LC_CREM].inuse++;
+		    }
+	    }
+
 	bzero((char *)cptr, (int)size);
-
-#ifdef	DEBUGMODE
-	if (size == CLIENT_LOCAL_SIZE)
-		cloc.inuse++;
-	else
-		crem.inuse++;
-#endif
 
 	/* Note:  structure is zero (calloc) */
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
@@ -140,7 +163,20 @@ aClient	*from;
 void	free_client(cptr)
 aClient	*cptr;
 {
-	(void)free((char *)cptr);
+	if (cptr->fd != -1)
+	    {
+		bzero((char *)cptr, CLIENT_LOCAL_SIZE);
+		listc[LC_CLOC].free++;
+		cptr->next = clofree;
+		clofree = cptr;
+	    }
+	else
+	    {
+		bzero((char *)cptr, CLIENT_REMOTE_SIZE);
+		listc[LC_CREM].free++;
+		cptr->next = crefree;
+		crefree = cptr;
+	    }
 }
 
 /*
@@ -154,11 +190,16 @@ aClient *cptr;
 
 	user = cptr->user;
 	if (!user)
+		if (user = ufree)
+		    {
+			ufree = user->nextu;
+			listc[LC_USER].free--;
+			cptr->user = user;
+		    }
+	if (!user)
 	    {
 		user = (anUser *)MyMalloc(sizeof(anUser));
-#ifdef	DEBUGMODE
-		users.inuse++;
-#endif
+		listc[LC_USER].inuse++;
 		user->away = NULL;
 		user->refcnt = 1;
 		user->channel = NULL;
@@ -174,11 +215,16 @@ aClient	*cptr;
 	Reg1	aServer	*serv = cptr->serv;
 
 	if (!serv)
+		if (serv = sfree)
+		    {
+			cptr->serv = serv;
+			sfree = serv->nexts;
+			listc[LC_SERV].free--;
+		    }
+	if (!serv)
 	    {
 		serv = (aServer *)MyMalloc(sizeof(aServer));
-#ifdef	DEBUGMODE
-		servs.inuse++;
-#endif
+		listc[LC_SERV].inuse++;
 		serv->user = NULL;
 		serv->nexts = NULL;
 		*serv->by = '\0';
@@ -200,10 +246,10 @@ Reg1	anUser	*user;
 	    {
 		if (user->away)
 			(void)free((char *)user->away);
-		(void)free((char *)user);
-#ifdef	DEBUGMODE
-		users.inuse--;
-#endif
+		bzero((char *)user, sizeof(*user));
+		user->nextu = ufree;
+		ufree = user;
+		listc[LC_USER].free++;
 	    }
 }
 
@@ -234,19 +280,11 @@ Reg1	aClient	*cptr;
 	    {
 		if (cptr->serv->user)
 			free_user(cptr->serv->user);
-		(void)free((char *)cptr->serv);
-#ifdef	DEBUGMODE
-		servs.inuse--;
-#endif
+		listc[LC_SERV].free++;
+		cptr->serv->nexts = sfree;
+		sfree = cptr->serv;
 	    }
-#ifdef	DEBUGMODE
-	if (cptr->fd == -2)
-		cloc.inuse--;
-	else
-		crem.inuse--;
-#endif
-	(void)free_client(cptr);
-	numclients--;
+	free_client(cptr);
 	return;
 }
 
@@ -290,20 +328,31 @@ Link	*make_link()
 {
 	Reg1	Link	*lp;
 
-	lp = (Link *)MyMalloc(sizeof(Link));
-#ifdef	DEBUGMODE
-	links.inuse++;
-#endif
+	if (lp = lfree)
+	    {
+		lfree = lp->next;
+		listc[LC_LINK].free--;
+	    }
+	else
+	    {
+		lp = (Link *)MyMalloc(sizeof(Link)*3);
+		lp->next = lp+1;
+		lp->next->next = lp+2;
+		lp->next->next->next = lfree;
+		lfree = lp->next;
+		listc[LC_LINK].inuse += 3;
+		listc[LC_LINK].free += 2;
+	    }
 	return lp;
 }
 
 void	free_link(lp)
 Reg1	Link	*lp;
 {
-	(void)free((char *)lp);
-#ifdef	DEBUGMODE
-	links.inuse--;
-#endif
+	bzero((char *)lp, sizeof(*lp));
+	lp->next = lfree;
+	lfree = lp;
+	listc[LC_LINK].free++;
 }
 
 
@@ -311,99 +360,91 @@ aClass	*make_class()
 {
 	Reg1	aClass	*tmp;
 
-	tmp = (aClass *)MyMalloc(sizeof(aClass));
-#ifdef	DEBUGMODE
-	classs.inuse++;
-#endif
+	if (tmp = clfree)
+	    {
+		listc[LC_CLAS].free--;
+		clfree = tmp->next;
+	    }
+	else
+	    {
+		tmp = (aClass *)MyMalloc(sizeof(aClass));
+		listc[LC_CLAS].inuse++;
+	    }
 	return tmp;
 }
 
 void	free_class(tmp)
 Reg1	aClass	*tmp;
 {
-	(void)free((char *)tmp);
-#ifdef	DEBUGMODE
-	classs.inuse--;
-#endif
+	bzero((char *)tmp, sizeof(*tmp));
+	tmp->next = clfree;
+	clfree = tmp;
+	listc[LC_CLAS].free++;
 }
 
 aConfItem	*make_conf()
 {
 	Reg1	aConfItem *aconf;
 
-	aconf = (struct ConfItem *)MyMalloc(sizeof(aConfItem));
-#ifdef	DEBUGMODE
-	aconfs.inuse++;
-#endif
-	bzero((char *)&aconf->ipnum, sizeof(struct in_addr));
-	aconf->next = NULL;
-	aconf->host = aconf->passwd = aconf->name = NULL;
-	aconf->status = CONF_ILLEGAL;
-	aconf->clients = 0;
-	aconf->port = 0;
-	aconf->hold = 0;
-	Class(aconf) = 0;
+	if (aconf = cofree)
+	    {
+		cofree = aconf->next;
+		listc[LC_CONF].free--;
+	    }
+	else
+	    {
+		aconf = (struct ConfItem *)MyMalloc(sizeof(aConfItem));
+		listc[LC_CONF].inuse++;
+		bzero((char *)&aconf->ipnum, sizeof(struct in_addr));
+		aconf->next = NULL;
+		aconf->host = aconf->passwd = aconf->name = NULL;
+		aconf->status = CONF_ILLEGAL;
+		Class(aconf) = 0;
+	    }
 	return (aconf);
 }
 
 void	free_conf(aconf)
 aConfItem *aconf;
 {
-	del_queries((char *)aconf);
 	MyFree(aconf->host);
 	if (aconf->passwd)
 		bzero(aconf->passwd, strlen(aconf->passwd));
 	MyFree(aconf->passwd);
 	MyFree(aconf->name);
-	(void)free((char *)aconf);
-#ifdef	DEBUGMODE
-	aconfs.inuse--;
-#endif
+	bzero((char *)aconf, sizeof(*aconf));
+	aconf->next = cofree;
+	cofree = aconf;
+	listc[LC_CONF].free++;
 	return;
 }
 
-#ifdef	DEBUGMODE
 void	send_listinfo(cptr, name)
 aClient	*cptr;
 char	*name;
 {
-	int	inuse = 0, mem = 0, tmp = 0;
+	static	char	*labels[] = { "Local", "Remote", "Servs", "Links",
+				      "Users", "Confs", "Classes", "dbufs" };
+	static	int	sizes[] = { CLIENT_LOCAL_SIZE, CLIENT_REMOTE_SIZE,
+				    sizeof(aServer), sizeof(Link),
+				    sizeof(anUser), sizeof(aConfItem),
+				    sizeof(aClass), sizeof(dbufbuf)};
 
-	sendto_one(cptr, ":%s NOTICE %s :Local: inuse: %d(%d)",
-		   me.name, name, inuse += cloc.inuse,
-		   tmp = cloc.inuse * CLIENT_LOCAL_SIZE);
-	mem += tmp;
-	sendto_one(cptr, ":%s NOTICE %s :Remote: inuse: %d(%d)",
-		   me.name, name,
-		   crem.inuse, tmp = crem.inuse * CLIENT_REMOTE_SIZE);
-	mem += tmp;
-	inuse += crem.inuse;
-	sendto_one(cptr, ":%s NOTICE %s :Users: inuse: %d(%d)",
-		   me.name, name, users.inuse,
-		   tmp = users.inuse * sizeof(anUser));
-	mem += tmp;
-	inuse += users.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Servs: inuse: %d(%d)",
-		   me.name, name, servs.inuse,
-		   tmp = servs.inuse * sizeof(aServer));
-	mem += tmp;
-	inuse += servs.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Links: inuse: %d(%d)",
-		   me.name, name, links.inuse,
-		   tmp = links.inuse * sizeof(Link));
-	mem += tmp;
-	inuse += links.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Classes: inuse: %d(%d)",
-		   me.name, name, classs.inuse,
-		   tmp = classs.inuse * sizeof(aClass));
-	mem += tmp;
-	inuse += classs.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Confs: inuse: %d(%d)",
-		   me.name, name, aconfs.inuse,
-		   tmp = aconfs.inuse * sizeof(aConfItem));
-	mem += tmp;
-	inuse += aconfs.inuse,
+	struct	liststats *ls = listc;
+	int	inuse = 0, mem = 0, tmp = 0, i;
+
+	listc[LC_DBUF].inuse = dbufblocks;
+	listc[LC_DBUF].free = dbufblocks - dbufalloc;
+	for (i = 0; i < 8; i++, ls++)
+	    {
+		tmp = sizes[i] * ls->inuse;
+		sendto_one(cptr, ":%s NOTICE %s :%s: inuse: %d(%d) free: %d",
+			   me.name, cptr->name,
+			   labels[i], ls->inuse, tmp, ls->free);
+		inuse += ls->inuse;
+		mem += tmp;
+	    }
+
 	sendto_one(cptr, ":%s NOTICE %s :Totals: inuse %d %d",
 		   me.name, name, inuse, mem);
 }
-#endif

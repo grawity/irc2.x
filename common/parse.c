@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.24 5/11/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.25 6/21/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -567,7 +567,7 @@ aClient	*cptr, *sptr;
 				   sptr->name, sptr->from->name,
 				   get_client_name(cptr, TRUE));
 		sptr->flags |= FLAGS_KILLED;
-		return exit_client(sptr, sptr, &me, "Fake Prefix");
+		return exit_client(cptr, sptr, &me, "Fake Prefix");
 	    }
 	return exit_client(cptr, cptr, &me, "Fake prefix");
 }
@@ -583,8 +583,6 @@ char	*sender;
 	 */
 	if (!IsServer(cptr))
 		return;
-	sendto_ops("Got unknown prefix (%s) from %s",
-		   sender, get_client_name(cptr, FALSE));
 	/*
 	 * Do kill if it came from a server because it means there is a ghost
 	 * user on the other server which needs to be removed. -avalon

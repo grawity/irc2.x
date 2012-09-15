@@ -93,6 +93,7 @@ extern	int	get_sockerr PROTO((aClient *));
 extern	int	inetport PROTO((aClient *, char *, int));
 extern	void	init_sys PROTO(());
 extern	int	read_message PROTO((time_t));
+extern	void	report_error PROTO((char *, aClient *));
 extern	void	set_non_blocking PROTO((int, aClient *));
 extern	int	setup_ping PROTO(());
 extern	void	summon PROTO((aClient *, char *, char *, char *));
@@ -157,6 +158,7 @@ extern	void	send_umode PROTO((aClient *, aClient *, int, int, char *));
 extern	void	send_umode_out PROTO((aClient*, aClient *, int));
 #endif
 
+extern	void	free_client PROTO((aClient *));
 extern	void	free_link PROTO((Link *));
 extern	void	free_conf PROTO((aConfItem *));
 extern	void	free_class PROTO((aClass *));
@@ -188,7 +190,7 @@ extern	void	flush_cache PROTO(());
 extern	int	init_resolver PROTO((int));
 extern	time_t	timeout_query_list PROTO((time_t));
 extern	time_t	expire_cache PROTO((time_t));
-extern	void    del_queries PROTO((aClient *));
+extern	void    del_queries PROTO((char *));
 
 extern	void	clear_channel_hash_table PROTO(());
 extern	void	clear_client_hash_table PROTO(());
@@ -214,3 +216,8 @@ extern	char	*mycncmp PROTO((char *, char *));
 
 /*VARARGS2*/
 extern	void	debug();
+#if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
+extern	void	send_usage PROTO((aClient *, char *));
+extern	void	send_listinfo PROTO((aClient *, char *));
+extern	void	count_memory PROTO((aClient *, char *));
+#endif

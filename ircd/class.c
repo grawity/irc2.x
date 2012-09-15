@@ -221,8 +221,8 @@ aClient	*cptr;
 	Reg1	Link	*link;
 	Reg2	aConfItem	*aconf;
 
-	if (link = cptr->confs)
-		if (aconf = link->value.aconf)
+	if ((link = cptr->confs))
+		if ((aconf = link->value.aconf))
 			if (aconf->class)
 				return (ConfSendq(aconf));
 	return MAXSENDQLENGTH;

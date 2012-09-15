@@ -215,7 +215,7 @@ del_ch_left()
 
 suspend_irc()
 {
-#if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20)
+#if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20) || defined (_SEQUENT_)
 #ifdef SIGSTOP
 	kill(getpid(), SIGSTOP);
 #endif

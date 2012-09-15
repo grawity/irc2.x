@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.53 5/24/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.57 6/26/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -48,7 +48,8 @@ Computing Center and Jarkko Oikarinen";
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
-#if defined(UNIXPORT) && (!defined(SVR3) || defined(sgi))
+#if defined(UNIXPORT) && (!defined(SVR3) || defined(sgi) || \
+    defined(_SEQUENT_))
 # include <sys/un.h>
 #endif
 #include "inet.h"
@@ -60,6 +61,7 @@ Computing Center and Jarkko Oikarinen";
 # include <sys/resource.h>
 #endif
 #ifdef	AIX
+# include <time.h>
 # include <arpa/nameser.h>
 #else
 # include "nameser.h"
@@ -78,13 +80,13 @@ int	highest_fd = 0, readcalls = 0, udpfd = -1, resfd = -1;
 static	struct	sockaddr_in	mysk;
 static	void	polludp();
 
-static	struct	sockaddr *connect_unix PROTO((aConfItem *, aClient *, int *));
 static	struct	sockaddr *connect_inet PROTO((aConfItem *, aClient *, int *));
 static	int	completed_connection PROTO((aClient *));
 static	int	check_init PROTO((aClient *, char *));
 static	void	do_dns_async PROTO(()), set_sock_opts PROTO((int, aClient *));
-static	void	add_unixconnection PROTO((aClient *, int));
 #ifdef	UNIXPORT
+static	struct	sockaddr *connect_unix PROTO((aConfItem *, aClient *, int *));
+static	void	add_unixconnection PROTO((aClient *, int));
 static	char	unixpath[256];
 #endif
 static	char	readbuf[8192];
@@ -286,13 +288,10 @@ int	port;
 	    }
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
-	SetMe(cptr);
 	cptr->ip.s_addr = inet_addr(ipname);
 	cptr->port = (int)ntohs(server.sin_port);
-	cptr->from = cptr;
 	(void)listen(cptr->fd, 1);
 	local[cptr->fd] = cptr;
-	cptr->flags |= FLAGS_LISTEN;
 
 	return 0;
 }
@@ -309,21 +308,30 @@ int	port;
 {
 	aClient	*cptr;
 
+	cptr = make_client(NULL);
+	cptr->flags = FLAGS_LISTEN;
+	cptr->acpt = cptr;
+	cptr->from = cptr;
+	SetMe(cptr);
+	strncpyzt(cptr->name, name, sizeof(cptr->name));
 #ifdef	UNIXPORT
 	if (*name == '/')
 	    {
-		cptr = make_client(NULL);
 		if (unixport(cptr, name, port))
-			(void)free((char *)cptr);
+		    {
+			cptr->fd = -2;
+			free_client(cptr);
+		    }
 	    }
 	else
 #endif
 	    {
-		cptr = make_client(NULL);
 		if (inetport(cptr, name, port))
-			(void)free((char *)cptr);
+		    {
+			cptr->fd = -2;
+			free_client(cptr);
+		    }
 	    }
-	cptr->acpt = cptr;
 	return 0;
 }
 
@@ -376,9 +384,7 @@ int	port;
 	(void)listen(cptr->fd, 1);
 	(void)chmod(path, 0755);
 	(void)chmod(unixpath, 0777);
-	SetMe(cptr);
-	cptr->flags |= (FLAGS_UNIX|FLAGS_LISTEN);
-	cptr->from = cptr;
+	cptr->flags |= FLAGS_UNIX;
 	cptr->port = 0;
 	local[cptr->fd] = cptr;
 
@@ -581,7 +587,10 @@ Reg2	char	*sockn;
 	    }
 	(void)strcpy(sockn, (char *)inetntoa((char *)&sk.sin_addr));
 	if (inet_netof(sk.sin_addr) == IN_LOOPBACKNET)
+	    {
+		cptr->hostp = NULL;
 		(void)strncpy(sockn, me.sockhost, HOSTLEN);
+	    }
 	bcopy((char *)&sk.sin_addr, (char *)&cptr->ip,
 		sizeof(struct in_addr));
 	cptr->port = (int)(ntohs(sk.sin_port));
@@ -626,7 +635,7 @@ Reg1	aClient	*cptr;
 		    {
 			sendto_ops("IP# Mismatch: %s != %s[%08x]",
 				   inetntoa((char *)&cptr->ip), hp->h_name,
-				   *((u_long *)hp->h_addr));
+				   *((unsigned long *)hp->h_addr));
 			hp = NULL;
 		    }
 	    }
@@ -734,7 +743,7 @@ aClient	*cptr;
 			lin.value.aconf = aconf;
 			lin.flags = ASYNC_CONF;
 			nextdnscheck = 1;
-			if (s = index(aconf->host, '@'))
+			if ((s = index(aconf->host, '@')))
 				s++;
 			else
 				s = aconf->host;
@@ -772,7 +781,7 @@ check_serverback:
 		    {
 			sendto_ops("IP# Mismatch: %s != %s[%08x]",
 				   inetntoa((char *)&cptr->ip), hp->h_name,
-				   *((u_long *)hp->h_addr));
+				   *((unsigned long *)hp->h_addr));
 			hp = NULL;
 		    }
 	    }
@@ -937,13 +946,13 @@ aClient *cptr;
 	/*
 	 * remove outstanding DNS queries.
 	 */
-	del_queries(cptr);
+	del_queries((char *)cptr);
 	/*
 	 * If the connection has been up for a long amount of time, schedule
 	 * a 'quick' reconnect, else reset the next-connect cycle.
 	 */
-	if (aconf = find_conf_exact(cptr->name, cptr->username,
-				    cptr->sockhost, CONF_CONNECT_SERVER))
+	if ((aconf = find_conf_exact(cptr->name, cptr->username,
+				    cptr->sockhost, CONF_CONNECT_SERVER)))
 	    {
 		/*
 		 * Reschedule a faster reconnect, if this was a automaticly
@@ -1027,7 +1036,7 @@ aClient	*cptr;
 		report_error("setsockopt(SO_RCVBUF) %s:%s", cptr);
 #endif
 #ifdef	SO_SNDBUF
-	opt = 8192;
+	opt = 1400;
 	if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_SNDBUF) %s:%s", cptr);
 #endif
@@ -1113,7 +1122,8 @@ int	fd;
 			report_error("Failed in connecting to %s :%s", cptr);
 add_con_refuse:
 			ircstp->is_ref++;
-			(void)free((char *)acptr);
+			acptr->fd = -2;
+			free_client(acptr);
 			(void)close(fd);
 			return NULL;
 		    }
@@ -1209,7 +1219,7 @@ fd_set	*rfd;
 	time_t	now = time(NULL);
 
 	if (FD_ISSET(cptr->fd, rfd) &&
-	    !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 4088))
+	    !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 6090))
 	    {
 		length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 
@@ -1234,7 +1244,7 @@ fd_set	*rfd;
 	    IsService(cptr))
 	    {
 		if (length > 0)
-			if (done = dopacket(cptr, readbuf, length))
+			if ((done = dopacket(cptr, readbuf, length)))
 				return done;
 	    }
 	else
@@ -1247,11 +1257,9 @@ fd_set	*rfd;
 		if (dbuf_put(&cptr->recvQ, readbuf, length) < 0)
 			return exit_client(cptr, cptr, cptr, "dbuf_put fail");
 
-#ifdef	CLIENT_FLOOD
 		if (IsPerson(cptr) &&
 		    DBufLength(&cptr->recvQ) > CLIENT_FLOOD)
 			return exit_client(cptr, cptr, cptr, "Excess Flood");
-#endif
 
 		while (DBufLength(&cptr->recvQ) && !NoNewLine(cptr) &&
 		       ((cptr->status < STAT_UNKNOWN) ||
@@ -1267,7 +1275,7 @@ fd_set	*rfd;
 						 sizeof(readbuf));
 				if (dolen <= 0)
 					break;
-				if (done = dopacket(cptr, readbuf, length))
+				if ((done = dopacket(cptr, readbuf, length)))
 					return done;
 				break;
 			    }
@@ -1556,7 +1564,7 @@ struct	hostent	*hp;
 	Debug((DEBUG_NOTICE,"Connect to %s[%s] @%s",
 		aconf->name, aconf->host, inetntoa((char *)&aconf->ipnum)));
 
-	if (c2ptr = find_server(aconf->name, NULL))
+	if ((c2ptr = find_server(aconf->name, NULL)))
 	    {
 		sendto_ops("Server %s already present from %s",
 			   aconf->name, get_client_name(c2ptr, TRUE));
@@ -1605,7 +1613,8 @@ struct	hostent	*hp;
 	    {
 		if (cptr->fd != -1)
 			(void)close(cptr->fd);
-		(void)free((char *)cptr);
+		cptr->fd = -2;
+		free_client(cptr);
 		return -1;
 	    }
 
@@ -1619,7 +1628,8 @@ struct	hostent	*hp;
 		(void)alarm(0);
 		report_error("Connect to host %s failed: %s",cptr);
 		(void)close(cptr->fd);
-		(void)free((char *)cptr);
+		cptr->fd = -2;
+		free_client(cptr);
 		errno = errtmp;
 		if (errno == EINTR)
 			errno = ETIMEDOUT;
@@ -1644,7 +1654,8 @@ struct	hostent	*hp;
 			   aconf->host);
 		det_confs_butmask(cptr, 0);
 		(void)close(cptr->fd);
-		(void)free((char *)cptr);
+		cptr->fd = -2;
+		free_client(cptr);
                 return(-1);
 	    }
 	/*
@@ -2111,7 +2122,7 @@ static	void	do_dns_async()
 	ln.flags = -1;
 	hp = get_res((char *)&ln);
 
-	Debug((DEBUG_DNS,"%x = get_res(%d,%x)", hp, ln.flags, ln.value.cptr));
+	Debug((DEBUG_DNS,"%#x = get_res(%d,%#x)",hp,ln.flags,ln.value.cptr));
 
 	switch (ln.flags)
 	{
@@ -2122,7 +2133,7 @@ static	void	do_dns_async()
 		 */
 		break;
 	case ASYNC_CLIENT :
-		if (cptr = ln.value.cptr)
+		if ((cptr = ln.value.cptr))
 		    {
 			ClearDNS(cptr);
 			if (!DoingAuth(cptr))

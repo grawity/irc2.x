@@ -136,7 +136,7 @@
 #endif /* BYTE_ORDER */
 
 #ifndef BYTE_ORDER
-	/* you must determine what the correct bit order is for your compiler */
+/* you must determine what the correct bit order is for your compiler */
 	UNDEFINED_BIT_ORDER;
 #endif
 /*
@@ -204,9 +204,9 @@ struct rrec {
 
 extern	u_short	_getshort();
 #ifdef __alpha
-extern	u_long	_getlong();
-#else
 extern	u_int	_getlong();
+#else
+extern	u_long	_getlong();
 #endif
 
 /*

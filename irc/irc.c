@@ -748,11 +748,13 @@ char	*ptr, *temp;
 				putline(buf);
 			} else {
 #ifndef VMS
-# ifdef HPUX
+# ifdef HPUX 
 				setvbuf(logfile,logbuf,_IOLBF,sizeof(logbuf));
 # else
-#  ifndef SOL20
+#  ifndef _SEQUENT_
+#   ifndef SOL20
 				setlinebuf(logfile);
+#   endif
 #  endif
 # endif
 #endif

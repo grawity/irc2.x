@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.44 5/26/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.47 6/25/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -160,10 +160,15 @@ char	*parv[];
 		** The following allows wild cards in SQUIT. Only usefull
 		** when the command is issued by an oper.
 		*/
-		for (acptr = client; acptr = next_client(acptr, server);
+		for (acptr = client; (acptr = next_client(acptr, server));
 		     acptr = acptr->next)
-			if (IsServer(acptr))
+			if (IsServer(acptr) || IsMe(acptr))
 				break;
+		if (acptr && IsMe(acptr))
+		    {
+			acptr = cptr;
+			server = cptr->sockhost;
+		    }
 	    }
 	else
 	    {
@@ -307,20 +312,24 @@ char	*parv[];
 	/* *WHEN* can it be that "cptr != sptr" ????? --msa */
 	/* When SERVER command (like now) has prefix. -avalon */
 	
-	if (acptr = find_name(host, NULL))
+	if ((acptr = find_name(host, NULL)))
 	    {
 		/*
-		** This link is trying feed me a server that I
-		** already have access through another path--
-		** multiple paths not accepted currently, kill
-		** this link immeatedly!!
+		** This link is trying feed me a server that I already have
+		** access through another path -- multiple paths not accepted
+		** currently, kill this link immeatedly!!
+		**
+		** Rather than KILL the link which introduced it, KILL the
+		** youngest of the two links. -avalon
 		*/
-		sendto_one(cptr,"ERROR :Server %s already exists", host);
+		acptr = acptr->from;
+		acptr = (cptr->firsttime > acptr->firsttime) ? cptr : acptr;
+		sendto_one(acptr,"ERROR :Server %s already exists", host);
 		sendto_ops("Link %s cancelled, server %s already exists",
-			   inpath, host);
-		return exit_client(cptr, cptr, cptr, "Server Exists");
+			   get_client_name(acptr, TRUE), host);
+		return exit_client(acptr, acptr, acptr, "Server Exists");
 	    }
-	if (acptr = find_client(host, NULL))
+	if ((acptr = find_client(host, NULL)))
 	    {
 		/*
 		** Server trying to use the same name as a person. Would
@@ -384,7 +393,7 @@ char	*parv[];
 		**
 		** Example:  Q:*:for the hell of it:eris.Berkeley.EDU
 		*/
-		if (aconf = find_conf_name(host, CONF_QUARANTINED_SERVER))
+		if ((aconf = find_conf_name(host, CONF_QUARANTINED_SERVER)))
 		    {
 			sendto_ops_butone(NULL, &me,
 				":%s WALLOPS * :%s brought in %s, %s %s",
@@ -795,9 +804,8 @@ aClient *sptr, *cptr;
 int	parc;
 char	*parv[];
 {
-	aClient *acptr;
 	char	*host, *user, *chname;
-#ifdef ENABLE_SUMMON
+#ifdef	ENABLE_SUMMON
 	char	hostbuf[17], namebuf[10], linebuf[10];
 #  ifdef LEAST_IDLE
         char	linetmp[10], ttyname[15]; /* Ack */
@@ -818,8 +826,16 @@ char	*parv[];
 	user = parv[1];
 	host = (parc < 3 || BadPtr(parv[2])) ? me.name : parv[2];
 	chname = (parc > 3) ? parv[3] : "*";
-
-	if (matches(host, me.name) == 0)
+	/*
+	** Summoning someone on remote server, find out which link to
+	** use and pass the message there...
+	*/
+	parv[1] = user;
+	parv[2] = host;
+	parv[3] = chname;
+	parv[4] = NULL;
+	if (hunt_server(cptr, sptr, ":%s SUMMON %s %s %s", 2, parc, parv) ==
+	    HUNTED_ISME)
 	    {
 #ifdef ENABLE_SUMMON
 		if ((fd = utmp_open()) == -1)
@@ -880,18 +896,7 @@ char	*parv[];
 		sendto_one(sptr, err_str(ERR_SUMMONDISABLED),
 			   me.name, parv[0]);
 #endif /* ENABLE_SUMMON */
-		return 0;
 	    }
-	/*
-	** Summoning someone on remote server, find out which link to
-	** use and pass the message there...
-	*/
-	if (!(acptr = find_server(host, NULL)))
-		sendto_one(sptr, err_str(ERR_NOSUCHSERVER),
-			   me.name, parv[0], host);
-	else if (!IsMe(acptr))
-		sendto_prefix_one(acptr, sptr, ":%s SUMMON %s %s %s",
-				  parv[0], user, host, chname);
 	return 0;
 }
 
@@ -1343,7 +1348,7 @@ char	*parv[];
 		return -1;
 	    }
 
-	if (acptr = find_server(parv[1], NULL))
+	if ((acptr = find_server(parv[1], NULL)))
 	    {
 		sendto_one(sptr, ":%s NOTICE %s :Connect: Server %s %s %s.",
 			   me.name, parv[0], parv[1], "already exists from",
@@ -1435,15 +1440,24 @@ aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
     {
-	char	*message = parc > 1 ? parv[1] : NULL;
+	char	*message, *pv[4];
 
-	if (!IsServer(sptr))
-		return 0;
+	message = parc > 1 ? parv[1] : NULL;
+
 	if (BadPtr(message))
 	    {
 		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
 			   me.name, parv[0], "WALLOPS");
 		return 0;
+	    }
+
+	if (!IsServer(sptr))
+	    {
+		pv[0] = parv[0];
+		pv[1] = "#wallops";
+		pv[2] = message;
+		pv[3] = NULL;
+		return m_private(cptr, sptr, 3, pv);
 	    }
 	sendto_ops_butone(IsServer(cptr) ? cptr : NULL, sptr,
 			":%s WALLOPS :%s", parv[0], message);
@@ -1490,7 +1504,7 @@ char	*parv[];
 
 	if (hunt_server(cptr,sptr,":%s ADMIN :%s",1,parc,parv) != HUNTED_ISME)
 		return 0;
-	if (aconf = find_admin())
+	if ((aconf = find_admin()))
 	    {
 		sendto_one(sptr, rpl_str(RPL_ADMINME),
 			   me.name, parv[0], me.name);
@@ -1785,9 +1799,9 @@ char	*parv[];
 	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
 	while (dgets(fd, line, sizeof(line)-1) > 0)
 	    {
-		if (tmp = (char *)index(line,'\n'))
+		if ((tmp = (char *)index(line,'\n')))
 			*tmp = '\0';
-		if (tmp = (char *)index(line,'\r'))
+		if ((tmp = (char *)index(line,'\r')))
 			*tmp = '\0';
 		sendto_one(sptr, rpl_str(RPL_MOTD), me.name, parv[0], line);
 	    }
@@ -1868,5 +1882,6 @@ char	*parv[];
 				   me.name, get_client_name(sptr, TRUE));
 	    }
 	(void)s_die();
+	return 0;
 }
 #endif

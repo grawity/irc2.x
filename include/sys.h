@@ -32,7 +32,8 @@
 #include <stdlib.h>
 #endif
 
-#if defined(HPUX) || defined(VMS) || defined(AIX) || defined(SOL20)
+#if defined(HPUX) || defined(VMS) || defined(AIX) || defined(SOL20) || \
+    defined(ESIX) || defined(DYNIXPTX)
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)
@@ -44,11 +45,15 @@ extern char *inet_ntoa();
 #define rindex strrchr
 # endif
 #else 
+# if !defined(DYNIXPTX)
 #include <strings.h>
 extern	char	*index();
 extern	char	*rindex();
+#  ifndef	NEED_STRCASECMP
 extern	int	strcasecmp();
 extern	int	strncasecmp();
+#  endif
+# endif
 #endif
 
 #ifdef AIX

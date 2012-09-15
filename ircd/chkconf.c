@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.1 5/5/93 (C) 1993 Darren Reed";
+static  char sccsid[] = "@(#)chkconf.c	1.3 6/18/93 (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -52,12 +52,15 @@ static	aClass	*get_class();
 static	int	numclasses = 0, *classarr = (int *)NULL;
 static	char	*configfile = CONFIGFILE;
 static	char	nullfield[] = "";
+static	char	maxsendq[12];
 
 main(argc, argv)
 int	argc;
 char	*argv[];
 {
 	new_class(0);
+	(void)sprintf(maxsendq, "%d", MAXSENDQLENGTH);
+
 	if (chdir(DPATH))
 	    {
 		perror("chdir");
@@ -128,7 +131,7 @@ int	opt;
 	int	ccount = 0, ncount = 0;
 	aConfItem conf, *aconf = &conf;
 
-	(void)printf("initconf(): ircd.conf = %s\n", configfile);
+	(void)fprintf(stderr, "initconf(): ircd.conf = %s\n", configfile);
 	if ((fd = openconf()) == -1)
 	    {
 #ifdef	M4_PREPROC
@@ -170,7 +173,8 @@ int	opt;
 		/* Could we test if it's conf line at all?	-Vesa */
 		if (line[1] != ':')
 		    {
-                        (void)printf("Bad config line (%s)\n", line);
+                        (void)fprintf(stderr, "ERROR: Bad config line (%s)\n",
+				line);
                         continue;
                     }
 
@@ -178,7 +182,10 @@ int	opt;
 
 		tmp = getfield(line);
 		if (!tmp)
+		    {
+                        (void)fprintf(stderr, "\tERROR: no fields found\n");
 			continue;
+		    }
 
 		aconf->status = CONF_ILLEGAL;
 
@@ -258,8 +265,9 @@ int	opt;
 			        aconf->status = CONF_CLASS;
 		        	break;
 		    default:
-			(void)printf("\tunknown conf line letter (%c)\n",
-					*tmp);
+			(void)fprintf(stderr,
+				"\tERROR: unknown conf line letter (%c)\n",
+				*tmp);
 			break;
 		    }
 
@@ -286,41 +294,65 @@ int	opt;
 				aconf->class = get_class(atoi(tmp));
 			break;
 		    }
+		if (!aconf->class && (aconf->status & (CONF_CONNECT_SERVER|
+		     CONF_NOCONNECT_SERVER|CONF_OPS|CONF_CLIENT)))
+		    {
+			(void)fprintf(stderr,
+				"\tWARNING: No class.  Default 0\n");
+			aconf->class = get_class(0);
+		    }
 		/*
                 ** If conf line is a class definition, create a class entry
                 ** for it and make the conf_line illegal and delete it.
                 */
 		if (aconf->status & CONF_CLASS)
 		    {
+			if (!aconf->host)
+			    {
+				(void)fprintf(stderr,"\tERROR: no class #\n");
+				continue;
+			    }
+			if (!aconf->port)
+			    {
+				(void)fprintf(stderr,
+					"\tWARNING: missing sendq field\n");
+				(void)fprintf(stderr, "\t\t default: %d\n",
+					MAXSENDQLENGTH);
+				aconf->port = MAXSENDQLENGTH;
+			    }
 			new_class(atoi(aconf->host));
-			continue;
+			aconf->class = get_class(atoi(aconf->host));
+			goto print_confline;
 		    }
 
 		if (aconf->status & CONF_LISTEN_PORT)
-			continue;
+		    {
+			aconf->class = get_class(0);
+			goto print_confline;
+		    }
 
 		if (aconf->status & CONF_SERVER_MASK &&
 		    (!aconf->host || index(aconf->host, '*') ||
 		     index(aconf->host, '?')))
 		    {
-			(void)fprintf(stderr, "\tbad host field\n");
+			(void)fprintf(stderr, "\tERROR: bad host field\n");
 			continue;
 		    }
 
 		if (aconf->status & CONF_SERVER_MASK && BadPtr(aconf->passwd))
 		    {
-			(void)fprintf(stderr, "\tempty/no password field\n");
+			(void)fprintf(stderr,
+					"\tERROR: empty/no password field\n");
 			continue;
 		    }
 
 		if (aconf->status & CONF_SERVER_MASK && !aconf->name)
 		    {
-			(void)fprintf(stderr, "\tbad name field\n");
+			(void)fprintf(stderr, "\tERROR: bad name field\n");
 			continue;
 		    }
 
-		if (aconf->status &
-		    (CONF_SERVER_MASK|CONF_LOCOP|CONF_OPERATOR))
+		if (aconf->status & (CONF_SERVER_MASK|CONF_OPS))
 			if (!index(aconf->host, '@'))
 			    {
 				char	*newhost;
@@ -334,7 +366,7 @@ int	opt;
 			    }
 
 		if (!aconf->class)
-			aconf->class = get_class(-1);
+			aconf->class = get_class(0);
 
 		if (!aconf->name)
 			aconf->name = nullfield;
@@ -342,7 +374,7 @@ int	opt;
 			aconf->passwd = nullfield;
 		if (!aconf->host)
 			aconf->host = nullfield;
-
+print_confline:
 		(void)printf("(%d) (%s) (%s) (%s) (%d) (%d)\n",
 		      aconf->status, aconf->host, aconf->passwd,
 		      aconf->name, aconf->port, aconf->class->class);
@@ -364,7 +396,12 @@ int	cn;
 	cls.class = -1;
 	for (; i >= 0; i--)
 		if (classarr[i] == cn)
+		    {
 			cls.class = cn;
+			break;
+		    }
+	if (i == -1)
+		(void)fprintf(stderr,"\tWARNING: class %d not found\n", cn);
 	return &cls;
 }
 

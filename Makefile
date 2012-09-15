@@ -41,16 +41,25 @@ IRCLIBS=-lcurses -ltermcap
 #IRCDLIBS=-lbsd
 #IRCLIBS=-lcurses -lcur
 #
-# Dynix/ptx V1.3.1
-#IRCDLIBS= -lsocket -linet -lseq -lnsl
+# Dynix/ptx V2.0.x
+#CFLAGS= -I$(INCLUDEDIR) -O -Xo
+#IRCDLIBS= -lsocket -linet -lnsl -lseq
+#IRCLIBS=-ltermcap -lcurses -lsocket -linet -lnsl -lseq
+# 
+# Dynix/ptx V1.x.x
+#IRCDLIBS= -lsocket -linet -lnsl -lseq
 #
 #use the following on SUN OS without nameserver libraries inside libc
 #IRCDLIBS= -lresolv
 #
-# Solaris 2.0
-#IRCDLIBS= -lsocket -lnsl
+# Solaris 2
+#IRCDLIBS= -lresolv -lsocket -lnsl
 #IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
-
+#
+# ESIX
+#CFLAGS=-O -I${INCLUDE} -I/usr/ucbinclude
+#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
+#
 # LDFLAGS - flags to send the loader (ld). SunOS users may want to add
 # -Bstatic here.
 #
@@ -69,7 +78,7 @@ IRCDDIR=/usr/local/lib/ircd
 
 SHELL=/bin/sh
 SUBDIRS=common ircd irc
-BINDIR=/usr/local/bin
+BINDIR=$(IRCDDIR)
 MANDIR=/usr/local/man
 INSTALL=/usr/bin/install
 
@@ -114,8 +123,8 @@ install: all
 		cd $$i;\
 		${MAKE} install; cd ..;\
 	done
-	./install -cm 644 doc/ircd.8 ${MANDIR}/man8
-	./install -cm 644 doc/irc.1 ${MANDIR}/man1
+	./install -c -m 644 doc/ircd.8 ${MANDIR}/man8
+	./install -c -m 644 doc/irc.1 ${MANDIR}/man1
 
 
 rcs:

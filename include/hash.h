@@ -40,8 +40,8 @@ typedef	struct	hashentry {
 
 #define	CHANNELHASHSIZE	607	/* prime number */
 #else
-int	HASHSIZE = 2003;
-int	CHANNELHASHSIZE = 607;
+extern	int	HASHSIZE;
+extern	int	CHANNELHASHSIZE;
 #endif
 
 #endif	/* __hash_include__ */

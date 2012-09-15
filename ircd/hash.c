@@ -17,23 +17,22 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static char sccsid[] = "@(#)hash.c	2.8 3/27/93 (C) 1991 Darren Reed";
+static char sccsid[] = "@(#)hash.c	2.9 6/16/93 (C) 1991 Darren Reed";
 #endif
 
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 #include "hash.h"
-
-extern  char *MyMalloc();
-extern	aClient	*client;
-extern	aChannel	*channel;
+#include "h.h"
 
 #ifdef	DEBUGMODE
 static	aHashEntry	*clientTable = NULL;
 static	aHashEntry	*channelTable = NULL;
 static	int	clhits, clmiss;
 static	int	chhits, chmiss;
+int	HASHSIZE = 2003;
+int	CHANNELHASHSIZE = 607;
 #else
 static	aHashEntry	clientTable[HASHSIZE];
 static	aHashEntry	channelTable[CHANNELHASHSIZE];

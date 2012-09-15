@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.23 5/26/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.27 6/25/93 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -34,7 +34,7 @@ extern	aClient	*local[];
 static	char	hostbuf[HOSTLEN+1];
 static	char	dot[] = ".";
 static	int	incache = 0;
-static	CacheTable	hashtable[CACHESIZE];
+static	CacheTable	hashtable[ARES_CACSIZE];
 static	aCache	*cachetop = NULL;
 static	ResRQ	*last, *first;
 
@@ -113,10 +113,11 @@ ResRQ *new;
 		return -1;
 	if (!first)
 		first = last = new;
-	else {
+	else
+	    {
 		last->next = new;
 		last = new;
-	}
+	    }
 	new->next = NULL;
 	reinfo.re_requests++;
 	return 0;
@@ -127,45 +128,35 @@ ResRQ *new;
  * been allocated for temporary storage of DNS results.
  */
 static	void	rem_request(old)
-ResRQ *old;
+ResRQ	*old;
 {
-	Reg1	ResRQ	*rptr, *r2ptr;
-	Reg2	char	**s;
+	Reg1	ResRQ	**rptr, *r2ptr = NULL;
+	Reg2	int	i;
+	Reg3	char	*s;
 
 	if (!old)
 		return;
-	for (rptr = first, r2ptr = NULL; rptr; rptr = rptr->next)
-	    {
-		if (rptr == old)
+	for (rptr = &first; *rptr; r2ptr = *rptr, rptr = &(*rptr)->next)
+		if (*rptr == old)
 		    {
-			if (rptr == first)
-			    {
-				first = first->next;
-				break;
-			    }
-			else if (rptr == last)
-			    {
-				if (last = r2ptr)
-					last->next = NULL;
-				break;
-			    }
-			else
-				r2ptr->next = rptr->next;
+			*rptr = old->next;
+			if (last == old)
+				last = r2ptr;
+			break;
 		    }
-		r2ptr = rptr;
-	    }
 #ifdef	DEBUG
-	Debug((DEBUG_INFO,"rem_request:Remove %x at %x %x", old, rptr, r2ptr));
+	Debug((DEBUG_INFO,"rem_request:Remove %#x at %#x %#x",
+		old, *rptr, r2ptr));
 #endif
-	if (!rptr)
-		return;
-	if (!first)
-		last = first;
-	if (rptr->he.h_name)
-		(void)free((char *)rptr->he.h_name);
-	if (s = rptr->he.h_aliases)
-		for (; *s; s++)
-			(void)free(*s);
+	r2ptr = old;
+	if (r2ptr->he.h_name)
+		(void)free((char *)r2ptr->he.h_name);
+	for (i = 0; i < MAXALIASES; i++)
+		if ((s = r2ptr->he.h_aliases[i]))
+			(void)free(s);
+	if (r2ptr->name)
+		(void)free(r2ptr->name);
+	(void)free(r2ptr);
 
 	return;
 }
@@ -209,7 +200,7 @@ time_t	now;
 	aClient	*cptr;
 
 	Debug((DEBUG_DNS,"timeout_query_list at %s",myctime(now)));
-	for (rptr = first, r2ptr = NULL; rptr; rptr = r2ptr)
+	for (rptr = first; rptr; rptr = r2ptr)
 	    {
 		r2ptr = rptr->next;
 		if (now >= rptr->timeout)
@@ -264,17 +255,17 @@ time_t	now;
 
 /*
  * del_queries - called by the server to cleanup outstanding queries for
- * which there no longer exist clients.
+ * which there no longer exist clients or conf lines.
  */
-void	del_queries(cptr)
-aClient	*cptr;
+void	del_queries(cp)
+char	*cp;
 {
 	Reg1	ResRQ	*rptr, *r2ptr;
 
 	for (rptr = first, r2ptr = NULL; rptr; rptr = r2ptr)
 	    {
 		r2ptr = rptr->next;
-		if (cptr == rptr->cinfo.value.cptr)
+		if (cp == rptr->cinfo.value.cp)
 			rem_request(rptr);
 	    }
 }
@@ -304,6 +295,7 @@ int	len, rcount;
 
 	for (i = 0; i < max; i++)
 	    {
+		_res.nsaddr_list[i].sin_family = AF_INET;
 		if (sendto(resfd, msg, len, 0, &(_res.nsaddr_list[i]),
 			   sizeof(struct sockaddr)) == len)
 		    {
@@ -340,15 +332,13 @@ char	*name;
 Link	*lp;
 {
 	Reg1	aCache	*cp;
-	char	host[HOSTLEN+6];
 
 	reinfo.re_na_look++;
-	strncpyzt(host, name, HOSTLEN);
-	if (cp = find_cache_name(NULL, host))
+	if ((cp = find_cache_name(NULL, name)))
 		return (struct hostent *)&(cp->he);
 	if (!lp)
 		return NULL;
-	(void)do_query_name(lp, host, NULL);
+	(void)do_query_name(lp, name, NULL);
 	return NULL;
 }
 
@@ -359,7 +349,7 @@ Link	*lp;
 	aCache	*cp;
 
 	reinfo.re_nu_look++;
-	if (cp = find_cache_number(NULL, addr))
+	if ((cp = find_cache_number(NULL, addr)))
 		return (struct hostent *)&(cp->he);
 	if (!lp)
 		return NULL;
@@ -375,7 +365,8 @@ Reg1	ResRQ	*rptr;
 	char	hname[HOSTLEN+1];
 	int	len;
 
-	len = strlen(strncpy(hname, name, sizeof(hname)-1));
+	(void)strncpy(hname, name, sizeof(hname)-1);
+	len = strlen(hname);
 
 	if (rptr && (hname[len-1] != '.'))
 	    {
@@ -500,10 +491,10 @@ ResRQ	*rptr;
 char	*buf, *eob;
 HEADER	*hptr;
 {
-	char	*cp, **alias;
+	Reg1	char	*cp, **alias;
+	Reg2	struct	hent	*hp;
 	int	class, type, dlen, len, ans = 0, n;
 	struct	in_addr	dr, *adr;
-	struct	hent	*hp;
 
 	cp = buf + sizeof(HEADER);
 	hp = (struct hent *)&(rptr->he);
@@ -700,7 +691,7 @@ char	*lp;
 		 * type we automatically gain the use of the cache with no
 		 * extra kludges.
 		 */
-		if (hp2 = gethost_byname(rptr->he.h_name, &rptr->cinfo))
+		if ((hp2 = gethost_byname(rptr->he.h_name, &rptr->cinfo)))
 			if (lp)
 				bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
 		/*
@@ -793,7 +784,7 @@ Reg1 unsigned char *ip;
 	hashv += hashv + (int)*ip++;
 	hashv += hashv + (int)*ip++;
 	hashv += hashv + (int)*ip++;
-	hashv %= CACHESIZE;
+	hashv %= ARES_CACSIZE;
 	return (hashv);
 }
 
@@ -804,7 +795,7 @@ register	char	*name;
 
 	for (; *name && *name != '.'; name++)
 		hashv += *name;
-	hashv %= CACHESIZE;
+	hashv %= ARES_CACSIZE;
 	return (hashv);
 }
 
@@ -830,7 +821,7 @@ Reg1	aCache	*ocp;
 	ocp->hname_next = hashtable[hashv].name_list;
 	hashtable[hashv].name_list = ocp;
 
-	hashv = hash_number((char *)ocp->he.h_addr);
+	hashv = hash_number((u_char *)ocp->he.h_addr);
 	ocp->hnum_next = hashtable[hashv].num_list;
 	hashtable[hashv].num_list = ocp;
 
@@ -869,7 +860,7 @@ aCache	*cachep;
 	Reg1	aCache	**cpp, *cp = cachep;
 	Reg2	char	*s, *t, **base;
 	Reg3	int	i, j;
-	int	found, addrcount;
+	int	addrcount;
 
 	/*
 	** search for the new cache item in the cache list by hostname.
@@ -888,6 +879,11 @@ aCache	*cachep;
 	if (!rptr)
 		return;
 
+#ifdef	DEBUG
+	Debug((DEBUG_DEBUG,"u_l:cp %#x na %#x al %#x ad %#x",
+		cp,cp->he.h_name,cp->he.h_aliases,cp->he.h_addr));
+	Debug((DEBUG_DEBUG,"u_l:rptr %#x h_n %#x", rptr, rptr->he.h_name));
+#endif
 	/*
 	 * Compare the cache entry against the new record.  Add any
 	 * previously missing names for this entry.
@@ -895,33 +891,28 @@ aCache	*cachep;
 	for (i = 0; cp->he.h_aliases[i]; i++)
 		;
 	addrcount = i;
-	for (i = 0, s = rptr->he.h_name; s && i < MAXADDRS;
+	for (i = 0, s = rptr->he.h_name; s && i < MAXALIASES;
 	     s = rptr->he.h_aliases[i++])
 	    {
-		found = 0;
-		for (j = 0, t = cp->he.h_name; t && j < MAXADDRS;
+		for (j = 0, t = cp->he.h_name; t && j < MAXALIASES;
 		     t = cp->he.h_aliases[j++])
 			if (!mycmp(t, s))
-			    {
-				found = 1;
 				break;
-			    }
-		if (!found && j < MAXADDRS-1)
+		if (!t && j < MAXALIASES-1)
 		    {
 			base = cp->he.h_aliases;
 
 			addrcount++;
 			base = (char **)MyRealloc((char *)base,
 					sizeof(char *) * (addrcount + 1));
-			t = (char *)MyMalloc(strlen(s)+1);
-			(void)strcpy(t, s);
 			cp->he.h_aliases = base;
 #ifdef	DEBUG
 			Debug((DEBUG_DNS,"u_l:add name %s hal %x ac %d",
 				s, cp->he.h_aliases, addrcount));
 #endif
-			base[addrcount-1] = t;
+			base[addrcount-1] = s;
 			base[addrcount] = NULL;
+			rptr->he.h_aliases[i-1] = NULL;
 		    }
 	    }
 	for (i = 0; cp->he.h_addr_list[i]; i++)
@@ -934,9 +925,11 @@ aCache	*cachep;
 	for (s = (char *)&rptr->he.h_addr.s_addr;
 	     ((struct in_addr *)s)->s_addr; s += sizeof(struct in_addr))
 	    {
-		for (i = 0; (t = cp->he.h_addr_list[i]) && (i < MAXADDRS); i++)
+		for (i = 0; (t = cp->he.h_addr_list[i]); i++)
 			if (!bcmp(s, t, sizeof(struct in_addr)))
 				break;
+		if (i >= MAXADDRS || addrcount >= MAXADDRS)
+			break;
 		/*
 		 * Oh man this is bad...I *HATE* it. -avalon
 		 *
@@ -945,10 +938,9 @@ aCache	*cachep;
 		 * the IP array *MUST* be preserved and the pointers into
 		 * it recalculated.
 		 */
-		if (!t && (addrcount < MAXADDRS))
+		if (!t)
 		    {
 			base = cp->he.h_addr_list;
-
 			addrcount++;
 			t = (char *)MyRealloc(*base,
 					addrcount * sizeof(struct in_addr));
@@ -969,8 +961,6 @@ aCache	*cachep;
 			*base = NULL;
 			bcopy(s, *--base, sizeof(struct in_addr));
 		    }
-		if (addrcount == MAXADDRS)
-			break;
 	    }
 	return;
 }
@@ -1032,7 +1022,7 @@ char	*numb;
 	struct	in_addr	*ip = (struct in_addr *)numb;
 #endif
 
-	hashv = hash_number(numb);
+	hashv = hash_number((u_char *)numb);
 
 	cp = hashtable[hashv].num_list;
 #ifdef DEBUG
@@ -1062,7 +1052,7 @@ char	*numb;
 		 * if the first IP# has the same hashnumber as the IP# we
 		 * are looking for, its been done already.
 		 */
-		if (hashv == hash_number(cp->he.h_addr_list[0]))
+		if (hashv == hash_number((u_char *)cp->he.h_addr_list[0]))
 			continue;
 		for (i = 1; cp->he.h_addr_list[i]; i++)
 			if (!bcmp(cp->he.h_addr_list[i], numb,
@@ -1088,11 +1078,11 @@ ResRQ	*rptr;
 	** Make cache entry.  First check to see if the cache already exists
 	** and if so, return a pointer to it.
 	*/
-	if (cp = find_cache_number(rptr, (char *)&rptr->he.h_addr.s_addr))
+	if ((cp = find_cache_number(rptr, (char *)&rptr->he.h_addr.s_addr)))
 		return cp;
 	for (i = 1; rptr->he.h_addr_list[i].s_addr; i++)
-		if (cp = find_cache_number(rptr,
-				(char *)&(rptr->he.h_addr_list[i].s_addr)))
+		if ((cp = find_cache_number(rptr,
+				(char *)&(rptr->he.h_addr_list[i].s_addr))))
 			return cp;
 
 	/*
@@ -1114,13 +1104,13 @@ ResRQ	*rptr;
 	s = (char *)MyMalloc(sizeof(struct in_addr) * i);
 	bzero(s, sizeof(struct in_addr) * i);
 
-	for (n = 0; n < i; n++)
+	for (n = 0; n < i; n++, s += sizeof(struct in_addr))
 	    {
-		hp->h_addr_list[n] = (char *)(s + n * sizeof(struct in_addr));
-		bcopy((char *)&(rptr->he.h_addr_list[n].s_addr),
-		      hp->h_addr_list[n], sizeof(struct in_addr));
+		*t++ = s;
+		bcopy((char *)&(rptr->he.h_addr_list[n].s_addr), s,
+		      sizeof(struct in_addr));
 	    }
-	hp->h_addr_list[n] = (char *)NULL;
+	*t = (char *)NULL;
 
 	/*
 	** an array of pointers to CNAMEs.
@@ -1161,6 +1151,10 @@ aCache	*ocp;
 	Reg3	int	hashv;
 	Reg4	aClient	*cptr;
 
+#ifdef	DEBUG
+	Debug((DEBUG_DNS, "rem_cache: ocp %#x hp %#x l_n %#x aliases %#x",
+		ocp, hp, ocp->list_next, hp->h_aliases));
+#endif
 	/*
 	** Cleanup any references to this structure by destroying the
 	** pointer.
@@ -1181,6 +1175,11 @@ aCache	*ocp;
 	 * remove cache entry from hashed name lists
 	 */
 	hashv = hash_name(hp->h_name);
+#ifdef	DEBUG
+	Debug((DEBUG_DEBUG,"rem_cache: h_name %s hashv %d next %#x first %#x",
+		hp->h_name, hashv, ocp->hname_next,
+		hashtable[hashv].name_list));
+#endif
 	for (cp = &hashtable[hashv].name_list; *cp; cp = &((*cp)->hname_next))
 		if (*cp == ocp)
 		    {
@@ -1190,7 +1189,12 @@ aCache	*ocp;
 	/*
 	 * remove cache entry from hashed number list
 	 */
-	hashv = hash_number(hp->h_addr);
+	hashv = hash_number((u_char *)hp->h_addr);
+#ifdef	DEBUG
+	Debug((DEBUG_DEBUG,"rem_cache: h_addr %s hashv %d next %#x first %#x",
+		inetntoa(hp->h_addr), hashv, ocp->hnum_next,
+		hashtable[hashv].num_list));
+#endif
 	for (cp = &hashtable[hashv].num_list; *cp; cp = &((*cp)->hnum_next))
 		if (*cp == ocp)
 		    {
@@ -1261,7 +1265,7 @@ void	flush_cache()
 {
 	Reg1	aCache	*cp;
 
-	while (cp = cachetop)
+	while ((cp = cachetop))
 		rem_cache(cp);
 }
 

@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.41 5/21/93 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.43 6/21/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -31,9 +31,7 @@ Computing Center and Jarkko Oikarinen";
 #include <sys/stat.h>
 #include <pwd.h>
 #include <signal.h>
-#if defined(DYNIXPTX) || defined(SOL20) || defined(SVR3)
 #include <fcntl.h>
-#endif
 #include "h.h"
 
 aClient me;			/* That's me */
@@ -50,6 +48,7 @@ int	debuglevel = -1;		/* Server debug level */
 int	bootopt = 0;			/* Server boot option flags */
 char	*debugmode = "";		/*  -"-    -"-   -"-  */
 static	int	dorehash = 0;
+static	char	*dpath = DPATH;
 
 time_t	nextconnect = 1;	/* time for next try_connections call */
 time_t	nextping = 1;		/* same as above for check_pings() */
@@ -233,7 +232,7 @@ time_t	currenttime;
 	    {
 		if (con_conf->next)  /* are we already last? */
 		    {
-			for (pconf = &conf; aconf = *pconf;
+			for (pconf = &conf; (aconf = *pconf);
 			     pconf = &(aconf->next))
 				/* put the current one at the end and
 				 * make sure we try all connections
@@ -313,7 +312,7 @@ time_t	currenttime;
 				    }
 				Debug((DEBUG_NOTICE,"DNS/AUTH timeout %s",
 					get_client_name(cptr,TRUE)));
-				del_queries(cptr);
+				del_queries((char *)cptr);
 				ClearAuth(cptr);
 				ClearDNS(cptr);
 				SetAccess(cptr);
@@ -405,7 +404,7 @@ char	*argv[];
 	(void)signal(SIGUSR1, s_monitor);
 #endif
 
-	if (chdir(DPATH))
+	if (chdir(dpath))
 	    {
 		perror("chdir");
 		exit(-1);
@@ -455,7 +454,11 @@ char	*argv[];
 		    case 'q':
 			bootopt |= BOOT_QUICK;
 			break;
-		    case 'd': /* Per user local daemon... */
+		    case 'd' :
+                        (void)setuid((uid_t)getuid());
+			dpath = p;
+			break;
+		    case 'o': /* Per user local daemon... */
                         (void)setuid((uid_t)getuid());
 			bootopt |= BOOT_OPER;
 		        break;
@@ -711,8 +714,8 @@ static	void	open_debugfile()
 		local[2] = cptr;
 		(void)strcpy(cptr->sockhost, me.sockhost);
 
-		(void)printf("isatty = %d ttyname = %x\n",
-			isatty(2),ttyname(2));
+		(void)printf("isatty = %d ttyname = %#x\n",
+			isatty(2), (u_int)ttyname(2));
 		if (!(bootopt & BOOT_TTY)) /* leave debugging output on fd 2 */
 		    {
 			(void)truncate(LOGFILE, 0);

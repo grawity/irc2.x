@@ -43,13 +43,21 @@
 ** implementation of this package without changing the
 ** interface.
 */
+#if !defined(_SEQUENT_)
 typedef struct dbuf
     {
 	u_int	length;	/* Current number of bytes stored */
 	u_int	offset;	/* Offset to the first byte */
 	struct	dbufbuf *head;	/* First data buffer, if length > 0 */
     } dbuf;
-
+#else
+typedef struct dbuf
+    {
+        uint   length; /* Current number of bytes stored */
+        uint   offset; /* Offset to the first byte */
+        struct  dbufbuf *head;  /* First data buffer, if length > 0 */
+    } dbuf;
+#endif
 /*
 ** And this 'dbufbuf' should never be referenced outside the
 ** implementation of 'dbuf'--would be "hidden" if C had such

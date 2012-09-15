@@ -20,7 +20,7 @@
 CC=/bin/cc
 RM=/bin/rm
 CP=/bin/cp
-TOUCH=/bin/touch
+TOUCH=touch
 SHELL=/bin/sh
 BINDIR=/usr/local/lib/ircd
 INSTALL=/usr/bin/install
@@ -49,8 +49,12 @@ IRCDLIBS=
 # HPUX:
 #IRCDLIBS=-lBSD
 #
-# Solaris 2.0
-#IRCDLIBS= -lsocket -lnsl
+# Solaris 2
+#IRCDLIBS= -lsocket -lnsl -lresolv
+#
+# ESIX
+#CFLAGS=-O -I${INCLUDE} -I/usr/ucbinclude
+#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
 #
 #When profiling:
 #IRCDLIBS=-lc_p
@@ -131,11 +135,11 @@ lint:
 	(cd ../common; $(MAKE) build);
 
 install: all
-	if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
-		mkdir ${IRCDDIR}; \
+	-if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
+		-mkdir ${IRCDDIR}; \
 	fi
-	../install -csm ${IRCDMODE} ircd ${BINDIR}
-	../install -csm 700 chkconf ${BINDIR}
+	../install -c -s -m ${IRCDMODE} ircd ${BINDIR}
+	../install -c -s -m 700 chkconf ${BINDIR}
 	$(CP) ../doc/example.conf ${IRCDDIR}
 	$(TOUCH) ${IRCDDIR}/ircd.motd
 	$(RM) -f ${IRCDDIR}/ircd.m4
@@ -144,7 +148,7 @@ install: all
 	./buildm4 ${IRCDDIR}
 
 clean:
-	$(RM) -f *.o *~ core ircd version.c #* *.bak
+	$(RM) -f *.o *~ core ircd version.c #* *.bak chkconf
 
 depend:
 	makedepend -I${INCLUDE} ${SRC}

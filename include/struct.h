@@ -439,8 +439,8 @@ struct Channel	{
 /*
  * Undefined here, these are used in conjunction with the above modes in
  * the source.
-#define	MODE_DEL       0x40000000
-#define	MODE_ADD       0x80000000
+#define	MODE_DEL       0x20000000
+#define	MODE_ADD       0x40000000
  */
 
 #define	HoldChannel(x)		(!(x))
@@ -476,8 +476,8 @@ struct Channel	{
 /* used in SetMode() in channel.c and m_umode() in s_msg.c */
 
 #define	MODE_NULL      0
-#define	MODE_ADD       0x80000000
-#define	MODE_DEL       0x40000000
+#define	MODE_ADD       0x40000000
+#define	MODE_DEL       0x20000000
 
 /* return values for hunt_server() */
 
