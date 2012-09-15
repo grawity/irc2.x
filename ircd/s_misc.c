@@ -485,6 +485,22 @@ char *comment;
 	remove_client_from_list(sptr);
 	return (0);
     }
+checklist()
+{
+#ifndef NO_AUTO_DIE
+	int	i,j;
+
+	if ((me.since - time(0)) < 600)
+		return;
+	for (j = i = 0; i <= highest_fd; i++)
+		if (!local[i])
+			continue;
+		else if (!IsMe(local[i]))
+			j++;
+	if (j<2)
+		exit(0);
+#endif
+}
 
 #ifdef DEBUGMODE
 /*

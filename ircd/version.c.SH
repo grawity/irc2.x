@@ -19,8 +19,14 @@ else
    generation=0
 fi
 
-
 generation=`expr $generation + 1`
+
+sumsmsg=`sum s_msg.c`;
+sumchan=`sum channel.c`;
+sumsbsd=`sum s_bsd.c`;
+sumhash=`sum hash.c`;
+sumsmisc=`sum s_misc.c`;
+sumircd=`sum ircd.c`;
 
 creation=`date | \
 awk '{if (NF == 6) \
@@ -95,6 +101,8 @@ char *infotext[] =
 	"",
 	"Thanks also goes to those persons not mentioned here who have added",
 	"their advice, opinions, and code to IRC.",
+	"[$sumsmsg] [$sumchan] [$sumsbsd]",
+	"[$sumhash] [$sumsmisc] [$sumircd]",
 	0,
     };
 !SUB!THIS!

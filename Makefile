@@ -28,9 +28,9 @@ INCLUDEDIR=../include
 # on NEXT use:
 # CFLAGS=-bsd -I$(INCLUDEDIR)
 #otherwise this:
-CFLAGS= -I$(INCLUDEDIR) -g
+CFLAGS= -I$(INCLUDEDIR) -O
 # with GCC 2.1, you can use this instead
-#CFLAGS= -I$(INCLUDEDIR) -g -O
+#CFLAGS= -I$(INCLUDEDIR) -O
 
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
@@ -82,6 +82,21 @@ auth:
 	cd ../ircd;\
 	${MAKE} auth;\
 	cd ..;
+
+bindircd:
+	echo "Building common";\
+	cd common;\
+	${MAKE} build;\
+	cd ../ircd;\
+	${MAKE} bindircd;\
+
+authbind:
+	echo "Building common";\
+	cd common;\
+	${MAKE} build;\
+	cd ../ircd;\
+	${MAKE} authbind;\
+
 clean:
 	${RM} -f *~ #* core
 	@for i in $(SUBDIRS); do \

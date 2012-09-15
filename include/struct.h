@@ -26,17 +26,6 @@
 #include <sys/syslog.h>
 #endif
 
-#ifdef  MAXIMUM_LINKS
-# if MAXIMUM_LINKS < 2
-#  define       AUTO
-# endif
-#endif
-#ifndef	AUTO
-#ifndef	HUB
-#define	AUTO
-#endif
-#endif
-
 typedef struct ConfItem aConfItem;
 typedef struct Client aClient;
 typedef struct Channel aChannel;

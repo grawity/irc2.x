@@ -142,14 +142,16 @@ char	*parv[];
 	if (parc > 2)
 		max = atoi(parv[2]);
 	if (parc > 3)
-		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s", 3,parc,parv))
+		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s %s", 3,parc,parv))
 			return 0;
 
 	for (s = parv[1]; nick = strtoken(&p, s, ","); s = NULL)
 	    {
-		i = ww_index;
+		i = ww_index - 1;
 
 		do {
+			if (i < 0)
+				i = NICKNAMEHISTORYLENGTH - 1;
 			if (mycmp(nick, was[i].ww_nick) == 0)
 			    {
 				nptr = &was[i];
@@ -174,10 +176,8 @@ char	*parv[];
 			    }
 			if (max > 0 && j >= max)
 				break;
-			i++;
-			if (i >= NICKNAMEHISTORYLENGTH)
-				i = 0;
-		} while (i != ww_index);
+			i--;
+		} while (i != ww_index - 1);
 
 		if (nptr == (aName *)NULL)
 			sendto_one(sptr,

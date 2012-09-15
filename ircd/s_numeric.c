@@ -21,10 +21,9 @@
 
 char numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 
-#include "config.h"
+#include "struct.h"
 #include "common.h"
 #include "sys.h" 
-#include "struct.h"
 #include "numeric.h"
 
 extern aClient *find_client();

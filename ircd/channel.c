@@ -104,23 +104,36 @@ int	*chasing;
 	return who;
     }
 
-static	char *make_nick_user_host(nick, name, host)
-char	*nick, *name, *host;
+static	char	*check_string(s)
+register	char *s;
 {
 	static	char	star[2] = "*";
-	Reg1	char	*s;
+	char	*str = s;
 
+	if (BadPtr(s))
+		return star;
 
-	bzero(namebuf, sizeof(namebuf));
-	sprintf(namebuf, "%.9s!%.10s@%.50s", BadPtr(nick) ? star : nick,
-		     BadPtr(name) ? star : name, BadPtr(host) ? star : host);
-
-	for (s = namebuf; *s; s++)
-		if (*s < 33 || *s > 127)
+	for ( ;*s; s++)
+		if (isspace(*s))
 		    {
 			*s = '\0';
 			break;
 		    }
+
+	return (BadPtr(str)) ? star : str;
+}
+
+static	char *make_nick_user_host(nick, name, host)
+char	*nick, *name, *host;
+{
+	Reg1	char	*s;
+
+	bzero(namebuf, sizeof(namebuf));
+	nick = check_string(nick);
+	name = check_string(name);
+	host = check_string(host);
+	sprintf(namebuf, "%.9s!%.10s@%.50s", nick, name, host);
+
 	return (namebuf);
 }
 
@@ -503,7 +516,6 @@ char	*parabuf;
   static char flags[] = {   MODE_PRIVATE,    'p', MODE_SECRET,     's',
 			    MODE_MODERATED,  'm', MODE_NOPRIVMSGS, 'n',
 			    MODE_TOPICLIMIT, 't', MODE_INVITEONLY, 'i',
-			    MODE_VOICE,      'v',
 			    0x0, 0x0 };
   Mode	*mode;
 
@@ -532,7 +544,7 @@ char	*parabuf;
 	who = find_chasing(cptr, parv[0], &chasing);
 	if (who) {
 	  if (IsMember(who, chptr)) {
-	    if (chasing) {
+	    if (chasing && ischop) {
 	      /*
 	      ** If this server noticed the nick change, the information
 	      ** must be propagated back upstream.
@@ -1434,7 +1446,7 @@ char	*parv[];
 		else if (SecretChannel(chptr))
 			*buf = '@';
 		idx = strlen(buf);
-		flag = 0;
+		flag = 1;
 		for (link = chptr->members; link; link = link->next)
 		    {
 			c2ptr = link->value.cptr;

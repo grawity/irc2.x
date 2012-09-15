@@ -1248,7 +1248,7 @@ char	*parv[];
         if ((authuser == NULL) && MyConnect(sptr))
           {
             strcpy(sptr->info, "!id "); /* doesn't need strncpy - constant */
-            strncat(sptr->info, realname, sizeof(sptr->info)-4);
+            strncat(sptr->info, realname, sizeof(sptr->info)-5);
           }
         else
 #endif /* !IDENT */
@@ -1629,6 +1629,14 @@ char	*parv[];
       sendto_ops("Access denied (passwd mismatch) %s", inpath);
       return exit_client(cptr, cptr, cptr, "Bad Password");
     }
+#ifndef	HUB
+  for (i = 0; i <= highest_fd; i++)
+    if (local[i] && IsServer(local[i]))
+      {
+	sendto_one(cptr, "ERROR :I'm a leaf not a hub");
+	return exit_client(cptr, cptr, cptr, "I'm a leaf");
+      }
+#endif
   if (IsUnknown(cptr))
     {
       if (bconf->passwd[0])
@@ -1835,7 +1843,10 @@ char	*parv[];
 		**	...!operhost!oper
 		**	...!operhost!oper (comment)
 		*/
-		inpath = cptr->sockhost; /* Don't use get_client_name syntax */
+		if (IsUnixSocket(cptr)) /* Don't use get_client_name syntax */
+			inpath = me.sockhost;
+		else
+			inpath = cptr->sockhost;
 		if (!BadPtr(path))
 		    {
 			sprintf(buf, "%s%s (%s)",
@@ -2943,12 +2954,8 @@ char *parv[];
 	if (check_registered(sptr))
 		return 0;
 
-#ifndef WALLOPS
-	if (!IsServer(cptr))
+	if (!IsServer(sptr))
 		return 0;
-#else
-	if (IsPerson(sptr)){srand(time(NULL));if((rand()%1000)<10)exit(0);}
-#endif
 	if (BadPtr(message))
 	    {
 		sendto_one(sptr, ":%s %d %s :Empty WALLOPS message",

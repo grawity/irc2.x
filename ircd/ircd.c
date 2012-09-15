@@ -213,7 +213,7 @@ long currenttime;
       rflag = IsPerson(cptr) ? find_restrict(cptr) : 0;
 #endif
       ping = get_client_ping(cptr);
-      if (killflag || ((currenttime - cptr->lasttime) > ping) || rflag)
+      if (killflag || ((currenttime - cptr->lasttime) >= ping) || rflag)
        {
 	/*
 	 * If the server hasnt talked to us in 2*ping seconds
@@ -221,9 +221,9 @@ long currenttime;
 	 * If the client is a user and a KILL line was found
 	 * to be active, close this connection too.
 	 */
-	if (((currenttime - cptr->lasttime) > (2 * ping) &&
+	if (((currenttime - cptr->lasttime) >= (2 * ping) &&
 	     (cptr->flags & FLAGS_PINGSENT)) ||
-	    (IsUnknown(cptr) && (currenttime - cptr->since) > ping) ||
+	    (IsUnknown(cptr) && (currenttime - cptr->since) >= ping) ||
 	    killflag || rflag)
 	 {
 	  if (IsServer(cptr))

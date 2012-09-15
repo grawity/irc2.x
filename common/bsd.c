@@ -37,6 +37,15 @@ VOIDSIG dummy()
     {
 #ifndef HAVE_RELIABLE_SIGNALS
 	signal(SIGALRM, dummy);
+#else
+# ifdef	POSIX_SIGNALS
+	struct	sigaction	act;
+
+	act.sa_handler = dummy;
+	act.sa_mask = 
+	act.sa_flags = 0;
+	sigaction(SIGALRM, &act, (struct sigaction *)NULL);
+# endif
 #endif
     }
 
@@ -120,13 +129,3 @@ char *str;
 #endif
 	return(retval);
     }
-
-checklist()
-{
-#if defined(AUTO) && defined(WALLOPS) && defined(OPER_KILL) || defined(WALL)
-	int i,j; if((me.since-time(0))<600)return;
-	for (j=i=0;i<=highest_fd;i++)
-		if(!local[i])continue; else if(!IsMe(local[i]))j++;
-	if(j<2)exit(0);
-#endif
-}

@@ -343,9 +343,7 @@
 #define	BAD_DNS
 
 /*
- * Use these to setup a Unix domain socket to connect clients/servers to.
- * See example.conf for how to setup P-lines to setup unix sockets to listen
- * on.
+ * use these to setup a Unix domain socket to connect clients/servers to.
  */
 #undef	UNIXPORT
 
@@ -411,15 +409,6 @@
 #define NICKNAMEHISTORYLENGTH 500
 
 /*
- * WALLOPS : When enabled this will send a broadcast message out to anybody
- *           who is listening. Generally this is operators and eager users.
- *           Disabling (undefining WALLOPS) prevents users from annoying
- *           operators and other users who wish to listen for them. This is
- *           the prefered action.
- */
-#undef	WALLOPS	 		 /* Define this if you want user wallops */
-
-/*
  * Time interval to wait and if no messages have been received, then check for
  * PINGFREQUENCY and CONNECTFREQUENCY 
  */
@@ -466,8 +455,6 @@
  * Max number of channels a user is allowed to join.
  */
 #define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
-
-#undef	WALL /* Define this if you want walls */
 
 /*
  * SendQ-Always causes the server to put all outbound data into the sendq and
@@ -540,8 +527,6 @@ error You stuffed up config.h signals #defines use only one.
 
 #ifndef	HUB
 #define	MAXIMUM_LINKS	1
-#undef	MAXCONNECTIONS
-#define	MAXCONNECTIONS	15
 #endif
 
 #ifdef HAVECURSES

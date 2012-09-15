@@ -514,16 +514,14 @@ char	*pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 	Reg1	int	i;
 	Reg2	aClient *cptr;
 
+	if (IsPerson(from))
+		return 0;
 	for (i=0; i <= highest_fd; i++)
 		sentalong[i] = 0;
 	for (cptr = client; cptr; cptr = cptr->next)
 	    {
 		if (!SendWallops(cptr))
 			continue;
-#ifndef WALLOPS
-		if (MyClient(cptr) && !(IsServer(from) || IsMe(from)))
-			continue;
-#endif
 		i = cptr->from->fd;	/* find connection oper is on */
 		if (sentalong[i])	/* sent message along it already ? */
 			continue;
@@ -582,7 +580,10 @@ char	*pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 		if (!flag && MyConnect(from))
 		    {
 			strcat(sender, "@");
-			strcat(sender, from->sockhost);
+			if (IsUnixSocket(from))
+				strcat(sender, user->host);
+			else
+				strcat(sender, from->sockhost);
 		    }
 		par1 = sender;
 	    }

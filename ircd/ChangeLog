@@ -18,6 +18,16 @@
  */
 
 
+Sat Jun  6 06:00:00 1992   Darren Reed <avalon@coombs.anu.edu.au>
+	* general	Checksum checking introduced.
+
+Sat Jun  6 02:03:36 1992   Darren Reed <avalon@coombs.anu.edu.au>
+	* s_msg.c	User WALLOPs removed - too much abuse. They are
+			dropped silently to avoid generating more wasted
+			bandwidth.
+	* channel.c	Previous fix for spaces in banid didnt work and was
+			stuffed. fixed now.
+
 Sat May 29 01:40:37 1992   Darren Reed <avalon@coombs.anu.edu.au>
 	* channel.c	Annoying problem with spaces in banid's fixed.
 

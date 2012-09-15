@@ -381,7 +381,7 @@ struct Message *mptr;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
-		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr) && !IsOper(cptr)))
+		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr)))
 		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
 				      * (on average) to prevent dumping.
 				      * to keep the response rate up,

@@ -476,6 +476,14 @@ char	*parv[];
 				   parv[0], l, i, tmp->chname);
 		return (0);
 	    }
+	case 'S' :
+	    sendto_one(sptr, "NOTICE %s :s_bsd.c SBSDC ircd.c IRCDC",
+			parv[0]);
+	    sendto_one(sptr, "NOTICE %s :channel.c CHANC s_misc.c SMISC",
+			parv[0]);
+	    sendto_one(sptr, "NOTICE %s :hash.c HASHC version.c.SH VERSH",
+			parv[0]);
+	    return 0;
 	default :
 		break;
 	}
