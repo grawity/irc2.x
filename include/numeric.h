@@ -166,6 +166,7 @@
 /* rpl_endofnames above (366) */
 #define RPL_BANLIST          367
 #define RPL_ENDOFBANLIST     368
+#define	RPL_ENDWHOWAS        369
 
 #define RPL_INFO             371
 #define RPL_MOTD             372

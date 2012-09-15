@@ -74,7 +74,7 @@ int	length;
 #ifndef CLIENT_COMPILE
 			if (cptr->flags & FLAGS_DEADSOCKET)
 			    {
-				exit_client(cptr,cptr,&me,"Dead Socket");
+				exit_client(NULL, cptr, &me, "Dead Socket");
 				return (-1);
 			    }
 #endif

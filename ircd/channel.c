@@ -458,10 +458,7 @@ char	*parv[];
 
 	chanop = is_chan_op(sptr, chptr);
 
-	if (parc > 2)
-		mcount = set_mode(sptr, chptr, parc - 2, parv + 2,
-				  modebuf, parabuf);
-	else if (parc < 3)
+	if (parc < 3 || (!chanop && MyClient(sptr)))
 	    {
 		*modebuf = *parabuf = '\0';
 		modebuf[1] = '\0';
@@ -471,6 +468,8 @@ char	*parv[];
 		chptr->chname, modebuf, parabuf);
 		return 0;
 	    }
+	mcount = set_mode(sptr, chptr, parc - 2, parv + 2,
+			  modebuf, parabuf);
 
 	if (strlen(modebuf) > 1)
 	    {
@@ -485,6 +484,9 @@ char	*parv[];
 		if ((IsServer(cptr) && !IsServer(sptr) && !chanop) ||
 		    mcount == -1)
 			sendto_ops("Hack: %s MODE %s %s %s",
+				   parv[0], parv[1], modebuf, parabuf);
+		if (MyConnect(sptr) && (!chanop || mcount == -1))
+			sendto_one(sptr, "Hack: %s MODE %s %s %s",
 				   parv[0], parv[1], modebuf, parabuf);
 		sendto_serv_butone(sptr, ":%s MODE %s %s %s", parv[0],
 				   chptr->chname, modebuf, parabuf);
@@ -997,7 +999,7 @@ char *parv[];
 			chptr = link->value.chptr;
 			sendto_channel_butserv(chptr, sptr, PartFmt,
 						parv[0], chptr->chname);
-			sendto_serv_butone(chptr, PartFmt,
+			sendto_serv_butone(cptr, PartFmt,
 					   parv[0], chptr->chname);
 			remove_user_from_channel(sptr, chptr);
 		      }
@@ -1015,8 +1017,7 @@ char *parv[];
 		** local client is first to enter prviously nonexistant
 		** channel so make them (rightfully) the Channel Operator.
 		*/
-		if (!ChannelExists(parv[1]))
-		    flags = FLAG_CHANOP;
+		flags = (ChannelExists(parv[1])) ? 0 : FLAG_CHANOP;
 
 		if (list_length(sptr->user->channel) >= MAXCHANNELSPERUSER)
 		  {

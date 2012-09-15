@@ -257,6 +257,7 @@ long currenttime;
 	   * it is still alive.
 	   */
 	  cptr->flags |= FLAGS_PINGSENT;
+	  cptr->lasttime = currenttime - ping;	/* not nice but does the job */
 	  sendto_one(cptr, "PING %s", me.name);
 	}
       }
@@ -433,22 +434,27 @@ char	*argv[];
 		local[0] = &me;
 		me.flags |= FLAGS_LISTEN;
 	    }
-	else
-	    {
-		if (inetport(&me, "*", portnum))
-			exit(1);
-	    }
+
 	open_log();
 #ifdef USE_SYSLOG
 	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
 #endif
 	if (initconf(bootopt & 2) == -1)
-	  {
-	    debug(DEBUG_FATAL,
-		  "Failed in reading configuration file %s", configfile);
-	    printf("Couldn't open configuration file %s\n", configfile);
-	    exit(-1);
-	  }
+	    {
+		debug(DEBUG_FATAL,
+			"Failed in reading configuration file %s", configfile);
+		printf("Couldn't open configuration file %s\n", configfile);
+		exit(-1);
+	    }
+	if (debugtty != -2)
+	    {
+		aConfItem	*aconf;
+
+		if (aconf = find_me())
+			portnum = aconf->port;
+		if (inetport(&me, "*", portnum))
+			exit(1);
+	    }
 	/*
 	** If neither command line nor configuration defined any, use
 	** compiled default port and sockect hostname.

@@ -373,7 +373,7 @@ int	statmask;
 		** matches *either* host or name field of the configuration.
 		*/
 		if ((tmp->status & statmask) &&
-		    (matches(tmp->name, name) == 0))
+		    (!tmp->name || (matches(tmp->name, name) == 0)))
 			break;
 	    }
 	return(tmp);
@@ -762,7 +762,7 @@ aClient	*cptr;
 	name = cptr->user->username;
 	host = cptr->sockhost;
 	hlen = strlen(host);
-	name = strlen(name);
+	nlen = strlen(name);
 
 	for (tmp = conf; tmp; tmp = tmp->next)
 	  if (tmp->status == CONF_RESTRICT &&

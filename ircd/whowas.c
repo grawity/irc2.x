@@ -158,19 +158,19 @@ char	*parv[];
 
 				sendto_one(sptr,":%s %d %s %s %s %s * :%s",
 					   me.name, RPL_WHOWASUSER,
-					   sptr->name, nptr->ww_nick,
+					   parv[0], nptr->ww_nick,
 					   nptr->ww_user->username,
 					   nptr->ww_user->host,
 					   nptr->ww_info);
 				sendto_one(sptr,":%s %d %s %s %s :Signoff: %s",
 					   me.name, RPL_WHOISSERVER,
-					   sptr->name, nptr->ww_nick,
+					   parv[0], nptr->ww_nick,
 					   nptr->ww_user->server,
 					   myctime(nptr->ww_logout));
 				if (nptr->ww_user->away)
 					sendto_one(sptr,":%s %d %s %s :%s",
 						   me.name, RPL_AWAY,
-						   sptr->name, nptr->ww_nick,
+						   parv[0], nptr->ww_nick,
 						   nptr->ww_user->away);
 				j++;
 			    }
@@ -182,9 +182,11 @@ char	*parv[];
 		if (nptr == (aName *)NULL)
 			sendto_one(sptr,
 				   ":%s %d %s %s :There was no such nickname",
-				   me.name, ERR_WASNOSUCHNICK, sptr->name,
+				   me.name, ERR_WASNOSUCHNICK, parv[0],
 				   parv[1]);
 	    }
+	sendto_one(sptr, ":%s %d %s :End of WHOWAS",
+		   me.name, RPL_ENDWHOWAS, parv[0]);
 	return 0;
     }
 

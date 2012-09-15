@@ -19,7 +19,7 @@
 #include "config.h"
 
 #ifdef	IDENT
-#define	PATCHLEVEL	"2.7.2f.ID"
+#define	PATCHLEVEL	"2.7.2g.ID"
 #else
-#define	PATCHLEVEL	"2.7.2f"
+#define	PATCHLEVEL	"2.7.2g"
 #endif

@@ -502,6 +502,7 @@ char *parv[];
 		** nickname or somesuch)
 		*/
 		if (acptr == sptr)
+		    {
 			if (strcmp(acptr->name, nick) != 0)
 				/*
 				** Allows change of case in his/her nick
@@ -516,6 +517,7 @@ char *parv[];
 				** version would treat it as nick collision.
 				*/
 				return 0; /* NICK Message ignored */
+		    }
 		/*
 		** Note: From this point forward it can be assumed that
 		** acptr != sptr (point to different client structures).
@@ -528,7 +530,7 @@ char *parv[];
 		*/
 		if (IsUnknown(acptr) && MyConnect(acptr))
 		    {
-			exit_client((aClient *)NULL,acptr,&me,"Overridden");
+			exit_client(cptr, acptr, &me, "Overridden");
 			break;
 		    }
 		/*
@@ -618,7 +620,7 @@ char *parv[];
 			   get_client_name(cptr, FALSE),
 			   sptr->name);
 		acptr->flags |= FLAGS_KILLED;
-		exit_client((aClient *)NULL,acptr,&me,"Nick collision(new)");
+		exit_client(cptr,acptr,&me,"Nick collision(new)");
 		sptr->flags |= FLAGS_KILLED;
 		return exit_client(cptr,sptr,&me,"Nick collision(old)");
 	    }
@@ -992,7 +994,8 @@ char *parv[];
 				showperson = 1;
 				break;
 			    }
-			if (HiddenChannel(chptr) && !isinvis)
+			if (HiddenChannel(chptr) && !isinvis &&
+			    !SecretChannel(chptr))
 				showperson = 1;
 		    }
 		if (!acptr->user->channel && !isinvis)
@@ -1064,7 +1067,9 @@ char *parv[];
 		  NULL,	/* away */
 		};
 	      Reg3 anUser *user;
-	      
+
+	      if (wilds && !MyConnect(acptr) && !MyConnect(sptr))
+		continue;
 	      if (IsServer(acptr) || IsMe(acptr))
 		continue;
 	      user = acptr->user ? acptr->user : &UnknownUser;
@@ -1227,9 +1232,7 @@ char	*parv[];
                   {
                     errtmp=errno;
                     report_error("authfd2 blew, host %s: %s",sptr);
-                    close(sptr->fd);
-                    free(sptr);
-                    return(errtmp);
+                    return exit_client(sptr, sptr, sptr, "authfd2 blew");
                   }
                 authuser = auth_tcpuser3(authlocaladdr,authremoteaddr,
                                          authlocalport,authremoteport,
@@ -1609,8 +1612,7 @@ char	*parv[];
   split = mycmp(cptr->name, cptr->sockhost);
   if (!(aconf = find_conf(cptr->confs,host,CONF_NOCONNECT_SERVER)))
     {
-      sendto_one(cptr,
-		 "ERROR :Access denied. No N field for server %s",
+      sendto_one(cptr, "ERROR :Access denied. No N field for server %s",
 		 inpath);
       sendto_ops("Access denied. No N field for server %s",
 		 inpath);
@@ -3007,8 +3009,9 @@ char *parv[];
 
 #if defined(R_LINES_REHASH) && !defined(R_LINES_OFTEN)
 	{
-	  Reg1 aClient *acptr;
-	  Reg2 int i;
+	  Reg1	aClient	*acptr;
+	  Reg2	int	i;
+
 	  
 	  for (i = 0; i <= highest_fd; i++)
 	    

@@ -28,22 +28,23 @@ char bsd_id[] = "bsd.c v2.0 (c) 1988 University of Oulu, Computing Center and\
 #include <sys/errno.h>
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
-extern	int	highest_fd;
-extern	aClient	*local[];
-extern	aClient	me;
+extern	char	*sys_errlist[];
 
+#ifdef DEBUGMODE
 int	writecalls = 0, writeb[10];
+#endif
 VOIDSIG dummy()
     {
 #ifndef HAVE_RELIABLE_SIGNALS
 	signal(SIGALRM, dummy);
 #else
-# ifdef	POSIX_SIGNALS
-	struct	sigaction	act;
+# ifdef POSIX_SIGNALS
+	struct  sigaction       act;
 
 	act.sa_handler = dummy;
-	act.sa_mask = 
 	act.sa_flags = 0;
+	sigemptyset(&act.sa_mask);
+	sigaddset(&act.sa_mask, SIGALRM);
 	sigaction(SIGALRM, &act, (struct sigaction *)NULL);
 # endif
 #endif
@@ -69,12 +70,12 @@ VOIDSIG dummy()
 **		work equally well whether blocking or non-blocking
 **		mode is used...
 */
-int deliver_it(cptr, str, len)
+int	deliver_it(cptr, str, len)
 aClient *cptr;
-int len;
-char *str;
+int	len;
+char	*str;
     {
-	int retval;
+	int	retval;
 
 #ifdef DEBUGMODE
 	if (writecalls == 0)
@@ -82,7 +83,7 @@ char *str;
 			writeb[retval] = 0;
 	writecalls++;
 #endif
-	alarm(WRITEWAITDELAY);
+	(void) alarm(WRITEWAITDELAY);
 #ifdef VMS
 	retval = netwrite(cptr->fd, str, len);
 #else
@@ -104,11 +105,13 @@ char *str;
 		cptr->flags &= ~FLAGS_BLOCKED;
 
 #endif
-	alarm(0);
+	(void )alarm(0);
 #ifdef DEBUGMODE
-	if (retval < 0)
+	if (retval < 0) {
 		writeb[0]++;
-	else if (retval == 0)
+		debug(DEBUG_ERROR,"write error (%s) to %s",
+			sys_errlist[errno], cptr->name);
+	} else if (retval == 0)
 		writeb[1]++;
 	else if (retval < 16)
 		writeb[2]++;

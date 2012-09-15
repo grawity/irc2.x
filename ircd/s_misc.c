@@ -705,15 +705,15 @@ char	*nick;
 	sendto_one(cptr, ":%s NOTICE %s :Client Local %d(%d) Remote %d(%d)",
 		   me.name, nick, lc, lcm, rc, rcm);
 	sendto_one(cptr, ":%s NOTICE %s :Users %d(%d) Invites %d(%d)",
-		   me.name, nick, us, usi*sizeof(anUser), usi,
+		   me.name, nick, us, us*sizeof(anUser), usi,
 		   usi * sizeof(Link));
 	sendto_one(cptr, ":%s NOTICE %s :User channels %d(%d) Aways %d(%d)",
 		   me.name, nick, usc, usc*sizeof(Link), aw, awm);
 	sendto_one(cptr, ":%s NOTICE %s :Attached confs %d(%d)",
 		   me.name, nick, lcc, lcc*sizeof(Link));
 
-	totcl = lcm + rcm + usi*sizeof(anUser) + usc*sizeof(Link) + awm;
-	totcl += lcc*sizeof(Link);
+	totcl = lcm + rcm + us*sizeof(anUser) + usc*sizeof(Link) + awm;
+	totcl += lcc*sizeof(Link) + usi*sizeof(Link);
 
 	sendto_one(cptr, ":%s NOTICE %s :Conflines %d(%d)",
 		   me.name, nick, co, com);

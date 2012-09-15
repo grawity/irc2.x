@@ -338,7 +338,6 @@ int	port;
 	cptr->from = cptr;
 	cptr->port = 0;
 	local[cptr->fd] = cptr;
-debug(DEBUG_ERROR,"added %s fd %d %s",cptr->name,cptr->fd,cptr->sockhost);
 
 	return 0;
 }
@@ -836,20 +835,17 @@ aClient *cptr;
         Reg1 aConfItem *aconf;
 	Reg2 int i,j;
 
-        if (IsServer(cptr))
-		{
-                if (aconf = find_conf_name(get_client_name(cptr,FALSE),
-                                     CONF_CONNECT_SERVER))
-               		aconf->hold = MIN(aconf->hold,
-					  time(NULL) + ConfConFreq(aconf));
-                }
-	if (cptr->fd >= 0) {
+	if (aconf = find_conf(cptr->confs, cptr->name, CONF_CONNECT_SERVER))
+		aconf->hold = time(NULL) + ConfConFreq(aconf);
+
+	if (cptr->fd >= 0)
+	    {
 		flush_connections(cptr->fd);
 		local[cptr->fd] = (aClient *)NULL;
 		close(cptr->fd);
 		cptr->fd = -1;
 		DBufClear(&cptr->sendQ);
-	}
+	    }
 	for (; highest_fd > 0; highest_fd--)
 		if (local[highest_fd])
 			break;
@@ -1045,7 +1041,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	if (cptr = local[i])
 	  {
 	    if (IsMe(cptr) && AcceptNewConnections &&
-		(cptr->flags & FLAGS_LISTEN) && (now > lastaccept + 1))
+		(cptr->flags & FLAGS_LISTEN) && (now > cptr->lasttime + 1))
 	     {
 		FD_SET(i, &read_set);
 	     }
@@ -1089,7 +1085,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
     {
       FD_CLR(i, &read_set);
       nfds--;
-      lastaccept = time(NULL);
+      cptr->lasttime = time(NULL);
       if ((fd = accept(i, (struct sockaddr *)0, (int *)0)) < 0)
 	{
 	  /*
@@ -1148,7 +1144,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	      nfds--;
 	      FD_CLR(i, &read_set);
 	     }
-	    exit_client(cptr,cptr,&me,"write error");
+	    exit_client((aClient *)NULL, cptr, &me, "write error");
 	    continue;
 	   }
 	}
@@ -1158,7 +1154,9 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
       readcalls++;
       if ((length = read(i, buffer, buflen)) > 0) {
 	*from = cptr;
-	cptr->since = cptr->lasttime = time(NULL);
+	cptr->lasttime = time(NULL);
+	if (cptr->lasttime > cptr->since)
+	  cptr->since = cptr->lasttime;
 	cptr->flags &= ~FLAGS_PINGSENT;
 	dopacket(cptr, buffer, length);
 	continue;
@@ -1189,18 +1187,16 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
        ** a rehash in between, the status has been changed to
        ** CONF_ILLEGAL). But only do this if it was a "good" link.
        */
-      if (cptr->confs)
-	aconf = cptr->confs->value.aconf;
-      if (aconf && aconf->status == CONF_CONNECT_SERVER)
+      if (aconf = find_conf(cptr->confs, cptr->name, CONF_CONNECT_SERVER))
 	{
 	  aconf->hold = now;
 	  aconf->hold +=
-	    (aconf->hold - cptr->since > HANGONGOODLINK) ?
+	    (aconf->hold - cptr->firsttime > HANGONGOODLINK) ?
 	      HANGONRETRYDELAY : ConfConFreq(aconf);
 	  if (nextconnect > aconf->hold)
 	    nextconnect = aconf->hold;
 	}
-      exit_client(cptr, cptr, &me, "Bad link?");
+      exit_client((aClient *)NULL, cptr, &me, "Bad link?");
       continue;
     }
   return -1;
@@ -1320,8 +1316,7 @@ int	*lenp;
 		    {
 			close(cptr->fd);
 			free(cptr);
-			debug(DEBUG_FATAL, "%s: unknown host",
-			      aconf->host);
+			debug(DEBUG_FATAL, "%s: unknown host", aconf->host);
 			return (struct sockaddr *)NULL;
 		    }
 		bcopy(hp->h_addr_list[0], &aconf->ipnum,

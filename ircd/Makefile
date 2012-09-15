@@ -90,7 +90,7 @@ bindircd: $(RESOBJS) $(OBJS) $(COMMONOBJS) ../include/patchlevel.h
 authbind: $(OBJS) $(COMMONOBJS) $(RESOBJS) authuser.o ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
-	$(CC) $(CFLAgS) $(OBJS) $(COMMONOBJS) $(RESOBJS) authuser.o \
+	$(CC) $(CFLAgS) $(OBJS) $(COMMONOBJS) $(RESOBJS) authuser.o version.o \
 		-o ircd $(IRCDLIBS)
 	chmod $(IRCDMODE) ircd
 
