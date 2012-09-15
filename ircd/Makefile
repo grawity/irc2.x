@@ -90,13 +90,17 @@ MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
 
 all: build
 
-build: ircd
+build: ircd chkconf
 
 ircd: $(OBJS) ../include/patchlevel.h
 	$(SHELL) version.c.SH
 	$(CC) $(CFLAGS) -c version.c
 	$(CC) $(CFLAGS) $(OBJS) version.o $(LDFLAGS) $(IRCDLIBS) -o ircd
 	chmod $(IRCDMODE) ircd
+
+chkconf: ../include/struct.h ../include/config.h ../include/sys.h \
+	 ../include/common.h chkconf.c
+	$(CC) $(CFLAGS) chkconf.c -o chkconf
 
 saber: $(SRC)
 	#load $(SRC) $(COMMONSRC) version.c $(IRCDLIBS)
@@ -131,6 +135,7 @@ install: all
 		mkdir ${IRCDDIR}; \
 	fi
 	$(INSTALL) -csm ${IRCDMODE} ircd ${BINDIR}
+	$(INSTALL) -csm 700 chkconf ${BINDIR}
 	$(CP) ../doc/example.conf ${IRCDDIR}
 	$(TOUCH) ${IRCDDIR}/ircd.motd
 	$(RM) -f ${IRCDDIR}/ircd.m4

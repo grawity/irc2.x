@@ -108,8 +108,8 @@ struct Message msgtab[] = {
   { MSG_NICK,    m_nick,     0, MAXPARA, 1 ,0L },
   { MSG_NOTICE,  m_notice,   0, MAXPARA, 1 ,0L },
   { MSG_USER,    m_user,     0, MAXPARA, 1 ,0L },
-  { MSG_JOIN,    m_join,     0, 6, 1 ,0L },
-  { MSG_MODE,    m_mode,     0, 6, 1 },
+  { MSG_JOIN,    m_join,     0, MAXPARA, 1 ,0L },
+  { MSG_MODE,    m_mode,     0, MAXPARA, 1 ,0L },
   { MSG_QUIT,    m_quit,     0, MAXPARA, 1 ,0L },
   { MSG_PART,    m_part,     0, MAXPARA, 1 ,0L },
   { MSG_AWAY,    m_away,     0, MAXPARA, 1 ,0L },
@@ -151,22 +151,22 @@ struct Message msgtab[] = {
 #endif
 #undef USE_SERVICES
 #ifdef USE_SERVICES
-  { MSG_SERVICE, m_service,  0, 7, 1 ,0L },
-  { MSG_SERVSET, m_servset,  0, 3, 1 ,0L },
-  { MSG_SQUERY,  m_squery,   0, 3, 1 ,0L },
-  { MSG_SERVLIST,m_servlist, 0, 4, 1 ,0L },
+  { MSG_SERVICE, m_service,  0, MAXPARA, 1 ,0L },
+  { MSG_SERVSET, m_servset,  0, MAXPARA, 1 ,0L },
+  { MSG_SQUERY,  m_squery,   0, MAXPARA, 1 ,0L },
+  { MSG_SERVLIST,m_servlist, 0, MAXPARA, 1 ,0L },
 #endif
 #ifndef CLIENT_COMPILE
   { MSG_HASH,    m_hash,     0, MAXPARA, 1 ,0L },
   { MSG_DNS,     m_dns,      0, MAXPARA, 1 ,0L },
 #endif
-#if defined(OPER_REHASH) || defined(LOCOP_RESTART)
+#if defined(OPER_REHASH) || defined(LOCOP_REHASH)
   { MSG_REHASH,  m_rehash,   0, MAXPARA, 1 ,0L },
 #endif
 #if defined(OPER_RESTART) || defined(LOCOP_RESTART)
   { MSG_RESTART, m_restart,  0, MAXPARA, 1 ,0L },
 #endif
-#if defined(OPER_DIE) || defined(LOCOP_RESTART)
+#if defined(OPER_DIE) || defined(LOCOP_DIE)
   { MSG_DIE, m_die,  0, MAXPARA, 1 ,0L },
 #endif
   { (char *) 0, (int (*)()) 0 , 0, 0, 0, 0L}

@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.40 4/25/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.41 5/4/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -60,7 +60,7 @@ Computing Center and Jarkko Oikarinen";
 **			have the prefix.
 **
 **			(sptr != cptr && IsServer(sptr) means
-**			the prefix specified servername. (??)
+**			the prefix specified servername. (?)
 **
 **			(sptr != cptr && !IsServer(sptr) means
 **			that message originated from a remote
@@ -147,7 +147,7 @@ char	*parv[];
 		** name is expanded if the incoming mask is the same as
 		** the server name for that link to the name of link.
 		*/
-		while (*server == '*')
+		while ((*server == '*') && IsServer(cptr))
 		    {
 			aconf = cptr->serv->nline;
 			if (!aconf)
@@ -387,11 +387,11 @@ char	*parv[];
 		if (aconf = find_conf_name(host, CONF_QUARANTINED_SERVER))
 		    {
 			sendto_ops_butone(NULL, &me,
-					  "WALLOPS * :%s brought in %s, %s %s",
-					  me.name,get_client_name(cptr,FALSE),
-					  host,"closing link because",
-					  BadPtr(aconf->passwd) ?
-					  "reason unspecified":aconf->passwd);
+				":%s WALLOPS * :%s brought in %s, %s %s",
+				me.name, me.name, get_client_name(cptr,FALSE),
+				host, "closing link because",
+				BadPtr(aconf->passwd) ? "reason unspecified" :
+				aconf->passwd);
 
 			sendto_one(cptr,
 				   "ERROR :%s is not welcome: %s. %s",
@@ -1193,7 +1193,8 @@ char	*parv[];
 	int i;
 
 	for (i = 0; msgtab[i].cmd; i++)
-		sendto_one(sptr,"NOTICE %s :%s",parv[0],msgtab[i].cmd);
+		sendto_one(sptr,":%s NOTICE %s :%s",
+			   me.name, parv[0], msgtab[i].cmd);
 	return 0;
     }
 
@@ -1377,8 +1378,8 @@ char	*parv[];
 	    }
 	else if (port <= 0 && (port = PORTNUM) <= 0)
 	    {
-		sendto_one(sptr, "NOTICE %s :Connect: Port number required",
-			   parv[0]);
+		sendto_one(sptr, ":%s NOTICE %s :Connect: missing port number",
+			   me.name, parv[0]);
 		return 0;
 	    }
 	/*
@@ -1387,8 +1388,8 @@ char	*parv[];
 	if (!IsAnOper(cptr))
 	    {
 		sendto_ops_butone(NULL, &me,
-				  "WALLOPS :Remote 'CONNECT %s %s' from %s",
-				   parv[1], parv[2] ? parv[2] : "",
+				  ":%s WALLOPS :Remote CONNECT %s %s from %s",
+				   me.name, parv[1], parv[2] ? parv[2] : "",
 				   get_client_name(sptr,FALSE));
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONNECT)
 		syslog(LOG_DEBUG, "CONNECT From %s : %s %d", parv[0], parv[1], parv[2] ? parv[2] : "");

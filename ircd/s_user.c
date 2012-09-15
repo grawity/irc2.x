@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.49 4/30/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.52 5/5/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -114,12 +114,19 @@ aClient *next_client(next, ch)
 Reg1	aClient *next;	/* First client to check */
 Reg2	char	*ch;	/* search string (may include wilds) */
 {
+	Reg3	aClient	*tmp = next;
+
+	next = find_client(ch, tmp);
+	if (tmp && tmp->prev == next)
+		return NULL;
+	if (next != tmp)
+		return next;
 	for ( ; next; next = next->next)
 	    {
 		if (IsService(next))
 			continue;
-		if (matches(ch,next->name) == 0 || matches(next->name,ch) == 0)
-			return next;
+		if (!matches(ch,next->name) || !matches(next->name,ch))
+			break;
 	    }
 	return next;
 }
@@ -164,13 +171,12 @@ int	server, parc;
 	** message to go in the wrong direction while doing quick fast
 	** non-matching lookups.
 	*/
-	acptr = find_client(parv[server], NULL);
-	if (acptr->from == sptr->from && !MyConnect(acptr))
-		acptr = NULL;
-	if (!acptr)
-		acptr = find_server(parv[server], NULL);
-	if (acptr->from == sptr->from && !MyConnect(acptr))
-		acptr = NULL;
+	if (acptr = find_client(parv[server], NULL))
+		if (acptr->from == sptr->from && !MyConnect(acptr))
+			acptr = NULL;
+	if (!acptr && (acptr = find_server(parv[server], NULL)))
+		if (acptr->from == sptr->from && !MyConnect(acptr))
+			acptr = NULL;
 	if (!acptr)
 		for (acptr = client;
 		     acptr = next_client(acptr, parv[server]);
@@ -178,8 +184,6 @@ int	server, parc;
 		    {
 			if (acptr->from == sptr->from && !MyConnect(acptr))
 				continue;
-			if (IsMe(acptr) || MyClient(acptr))
-				return (HUNTED_ISME);
 			/*
 			 * Fix to prevent looping in case the parameter for
 			 * some reason happens to match someone from the from
@@ -189,7 +193,9 @@ int	server, parc;
 				break;
 		    }
 	 if (acptr)
-	    { 
+	    {
+		if (IsMe(acptr) || MyClient(acptr))
+			return HUNTED_ISME;
 		if (matches(acptr->name, parv[server]))
 			parv[server] = acptr->name;
 		sendto_one(acptr, command, parv[0],
@@ -365,7 +371,8 @@ char	*nick, *username;
 	sendto_serv_butone(cptr, ":%s USER %s %s %s :%s", nick,
 			   sptr->user->username, user->host,
 			   user->server, sptr->info);
-	send_umode_out(cptr, sptr, 0);
+	if (MyConnect(sptr))
+		send_umode_out(cptr, sptr, 0);
 #ifdef	USE_SERVICES
 	check_services_butone(SERVICE_WANT_NICK, sptr, "NICK %s :%d",
 				nick, sptr->hopcount);
@@ -1024,7 +1031,7 @@ char	*parv[];
 		1,      /* refcount */
 		"<Unknown>",	/* user */
 		"<Unknown>",	/* host */
-		NULL,	/* server */
+		"<Unknown>"	/* server */
 	    };
 	Reg2	Link	*lp;
 	Reg3	anUser	*user;
@@ -1084,14 +1091,14 @@ char	*parv[];
 
 			invis = IsInvisible(acptr);
 			member = (user->channel) ? 1 : 0;
-			showperson = !(invis && !member) || !wilds;
+			showperson = (wilds && !invis && !member) || !wilds;
 			for (lp = user->channel; lp; lp = lp->next)
 			    {
 				chptr = lp->value.chptr;
 				member = IsMember(sptr, chptr);
 				if (invis && !member)
 					continue;
-				if (!invis && ShowChannel(sptr, chptr))
+				if (member || (!invis && PubChannel(chptr)))
 				    {
 					showperson = 1;
 					break;
@@ -1337,7 +1344,7 @@ char	*parv[];
 	    }
 
 #ifdef	LOCAL_KILL_ONLY
-	if (!MyConnect(acptr))
+	if (MyConnect(sptr) && !MyConnect(acptr))
 	    {
 		sendto_one(sptr, ":%s NOTICE %s :Nick %s isnt on your server",
 			   me.name, parv[0], acptr->name);
@@ -1805,7 +1812,7 @@ char	*parv[];
 		    {
 			(void)sprintf(uhbuf, "%s%s=%c%s@%s ",
 				acptr->name,
-				IsOper(acptr) ? "*" : "",
+				IsAnOper(acptr) ? "*" : "",
 				(acptr->user->away) ? '-' : '+',
 				acptr->user->username,
 				acptr->user->host);
@@ -2118,7 +2125,7 @@ int	old;
 # endif
 	for (i = 0; i <= highest_fd; i++)
 		if ((acptr = local[i]) && IsServer(acptr) &&
-		    (acptr != cptr) && (acptr != sptr) && flagbuf[1])
+		    (acptr != cptr) && (acptr != sptr) && *flagbuf)
 			sendto_one(acptr, ":%s MODE %s :%s",
 				   sptr->name, sptr->name, flagbuf);
 

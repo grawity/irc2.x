@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.49 4/30/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.51 5/6/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -648,7 +648,10 @@ Reg1	aClient	*cptr;
 		cptr->name, fullname));
 	if (inet_netof(cptr->ip) == IN_LOOPBACKNET || IsUnixSocket(cptr) ||
 	    inet_netof(cptr->ip) == inet_netof(mysk.sin_addr))
+	    {
+		ircstp->is_loc++;
 		cptr->flags |= FLAGS_LOCAL;
+	    }
 	return 0;
 }
 
@@ -1211,13 +1214,14 @@ fd_set	*rfd;
 {
 	Reg1	int	dolen = 0, length = 0, done;
 	Reg2	char	*readptr;
+	time_t	now = time(NULL);
 
 	if (FD_ISSET(cptr->fd, rfd) &&
 	    !(IsPerson(cptr) && DBufLength(&cptr->recvQ) > 4088))
 	    {
 		length = recv(cptr->fd, readbuf, sizeof(readbuf), 0);
 
-		cptr->lasttime = time(NULL);
+		cptr->lasttime = now;
 		if (cptr->lasttime > cptr->since)
 			cptr->since = cptr->lasttime;
 		cptr->flags &= ~FLAGS_PINGSENT;
@@ -1234,7 +1238,8 @@ fd_set	*rfd;
 	** For server connections, we process as many as we can without
 	** worrying about the time of day or anything :)
 	*/
-	if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr))
+	if (IsServer(cptr) || IsConnecting(cptr) || IsHandshake(cptr) ||
+	    IsService(cptr))
 	    {
 		if (length > 0)
 			if (done = dopacket(cptr, readbuf, length))
@@ -1252,16 +1257,30 @@ fd_set	*rfd;
 
 		while (DBufLength(&cptr->recvQ) &&
 		       ((cptr->status < STAT_UNKNOWN) ||
-			(cptr->since - cptr->lasttime < 10)))
+			(cptr->since - now < 10)))
 		    {
+			/*
+			** If it has become registered as a Service or Server
+			** then skip the per-message parsing below.
+			*/
+			if (IsService(cptr) || IsServer(cptr))
+			    {
+				dolen = dbuf_get(&cptr->recvQ, readbuf,
+						 sizeof(readbuf));
+				if (dolen <= 0)
+					break;
+				if (done = dopacket(cptr, readbuf, length))
+					return done;
+				break;
+			    }
 			dolen = dbuf_getmsg(&cptr->recvQ, readbuf,
 					    sizeof(readbuf));
 			/*
 			** Devious looking...whats it do ? well..if a client
 			** sends a *long* message without any CR or LF, then
 			** dbuf_getmsg fails and we pull it out using this
-			** loop which just gets the next 512 bytes.  Keep
-			** looping until its all gone or something fails.
+			** loop which just gets the next 512 bytes and then
+			** deletes the rest of the buffer contents.
 			** -avalon
 			*/
 			while (dolen <= 0)
@@ -1269,12 +1288,16 @@ fd_set	*rfd;
 				if (dolen < 0)
 					return exit_client(cptr, cptr, cptr,
 							   "dbuf_getmsg fail");
-				if (DBufLength(&cptr->recvQ) < 512)
+				if (DBufLength(&cptr->recvQ) < 510)
 					break;
-				dolen = dbuf_get(&cptr->recvQ, readbuf, 512);
+				dolen = dbuf_get(&cptr->recvQ, readbuf, 511);
+				if (dolen > 0 && DBufLength(&cptr->recvQ))
+					(void)dbuf_delete(&cptr->recvQ,
+						    DBufLength(&cptr->recvQ));
 			    }
 
-			if (dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER)
+			if (dolen > 0 &&
+			    (dopacket(cptr, readbuf, dolen) == FLUSH_BUFFER))
 				return FLUSH_BUFFER;
 		    }
 	    }
@@ -2054,6 +2077,7 @@ static	void	polludp()
 			return;
 		    }
 	    }
+	ircstp->is_udp++;
 	if (n  < 8)
 		return;
 

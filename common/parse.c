@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.22 4/30/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.23 5/3/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -437,8 +437,8 @@ struct	Message *mptr;
 		paramcount = mptr->parameters;
 		i = bufend - ((s) ? s : ch);
 		mptr->bytes += i;
-		if ((mptr->flags & 1) && (!IsServer(cptr) && !IsService(cptr)))
-			cptr->since += i / 120;
+		if ((mptr->flags & 1) && !(IsServer(cptr) || IsService(cptr)))
+			cptr->since += (2 + i / 120);
 					/* Allow only 1 msg per 2 seconds
 					 * (on average) to prevent dumping.
 					 * to keep the response rate up,

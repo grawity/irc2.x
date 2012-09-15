@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.35 4/30/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.37 5/6/93 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -50,7 +50,8 @@ static	void	add_invite PROTO((aClient *, aChannel *));
 static	int	add_banid PROTO((aChannel *, char *));
 static	int	del_banid PROTO((aChannel *, char *));
 static	int	check_channelmask PROTO((aClient *, aClient *, char *));
-static	int set_mode PROTO((aClient *,aChannel *,int,char **,char *,char *));
+static	int	set_mode PROTO((aClient *, aClient *, aChannel *, int,\
+			        char **, char *,char *));
 static	Link	*is_banned PROTO((aClient *, aChannel *));
 static	int	can_join PROTO((aClient *, aChannel *, char *));
 
@@ -513,7 +514,7 @@ char	*parv[];
 			   chptr->chname, modebuf, parabuf);
 		return 0;
 	    }
-	mcount = set_mode(sptr, chptr, parc - 2, parv + 2,
+	mcount = set_mode(cptr, sptr, chptr, parc - 2, parv + 2,
 			  modebuf, parabuf);
 
 	if ((mcount < 0) && MyConnect(sptr) && !IsServer(sptr))
@@ -547,8 +548,8 @@ char	*parv[];
  * the client ccptr to channel chptr.  The resultant changes are printed
  * into mbuf and pbuf (if any) and applied to the channel.
  */
-static	int	set_mode(cptr, chptr, parc, parv, mbuf, pbuf)
-Reg2	aClient *cptr;
+static	int	set_mode(cptr, sptr, chptr, parc, parv, mbuf, pbuf)
+Reg2	aClient *cptr, *sptr;
 aChannel *chptr;
 int	parc;
 char	*parv[], *mbuf, *pbuf;
@@ -577,7 +578,7 @@ char	*parv[], *mbuf, *pbuf;
 
 	mode = &(chptr->mode);
 	bcopy((char *)mode, (char *)&oldm, sizeof(Mode));
-	ischop = is_chan_op(cptr, chptr) || IsServer(cptr);
+	ischop = IsServer(sptr) || is_chan_op(sptr, chptr);
 	new = mode->mode;
 
 	while (curr && *curr && count >= 0)
@@ -596,7 +597,9 @@ char	*parv[], *mbuf, *pbuf;
 				break;
 			parv++;
 			*parv = check_string(*parv);
-			if (opcnt >= MAXMODEPARAMS || BadPtr(*parv))
+			if (BadPtr(*parv))
+				break;
+			if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
 				break;
 			/*
 			 * Check for nickname changes and try to follow these
@@ -658,7 +661,9 @@ char	*parv[], *mbuf, *pbuf;
 			if (keychange)
 				break;
 			*parv = check_string(*parv);
-			if (opcnt >= MAXMODEPARAMS || BadPtr(*parv))
+			if (BadPtr(*parv))
+				break;
+			if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
 				break;
 			if (whatt == MODE_ADD)
 			    {
@@ -700,7 +705,9 @@ char	*parv[], *mbuf, *pbuf;
 				break;
 			    }
 			parv++;
-			if (opcnt >= MAXMODEPARAMS || BadPtr(*parv))
+			if (BadPtr(*parv))
+				break;
+			if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
 				break;
 			if (whatt == MODE_ADD)
 			    {
@@ -735,6 +742,10 @@ char	*parv[], *mbuf, *pbuf;
 			    }
 			if (--parc > 0)
 			    {
+				if (BadPtr(*parv))
+					break;
+				if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
+					break;
 				lp = &chops[opcnt++];
 				lp->flags = MODE_ADD|MODE_LIMIT;
 				nusers = atoi(*++parv);
@@ -842,8 +853,9 @@ char	*parv[], *mbuf, *pbuf;
 		Reg2	char	c;
 		char	*user, *host, numeric[16];
 
-		if (opcnt > 3)
-			opcnt = 3;	/* restriction for 2.7 servers */
+		/* restriction for 2.7 servers */
+		if (!IsServer(cptr) && opcnt > (MAXMODEPARAMS-2))
+			opcnt = (MAXMODEPARAMS-2);
 
 		for (; i < opcnt; i++)
 		    {
@@ -1187,7 +1199,7 @@ char	*parv[];
 	int	i, flags = 0;
 	char	*p = NULL, *p2 = NULL;
 
-	if (check_registered(sptr))
+	if (check_registered(sptr) || !sptr->user)
 		return 0;
 
 	if (parc < 2 || *parv[1] == '\0')

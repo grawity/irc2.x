@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.38 4/15/93 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.39 5/4/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -277,7 +277,7 @@ time_t	currenttime;
 #endif
 		ping = get_client_ping(cptr);
 		if (!IsRegistered(cptr))
-			ping = CONNECTTIMEOUT - 10;
+			ping = CONNECTTIMEOUT;
 		/*
 		 * Ok, so goto's are ugly and can be avoided here but this code
 		 * is already indented enough so I think its justified. -avalon
@@ -298,7 +298,7 @@ time_t	currenttime;
 		     (currenttime - cptr->since) >= ping))
 		    {
 			if (!IsRegistered(cptr) &&
-			    (currenttime - cptr->lasttime) < CONNECTTIMEOUT)
+			    (DoingDNS(cptr) || DoingAuth(cptr)))
 			    {
 				if (cptr->authfd >= 0)
 				    {
@@ -307,10 +307,13 @@ time_t	currenttime;
 					cptr->count = 0;
 					*cptr->buffer = '\0';
 				    }
+				Debug((DEBUG_NOTICE,"DNS/AUTH timeout %s",
+					get_client_name(cptr,TRUE)));
 				del_queries(cptr);
 				ClearAuth(cptr);
 				ClearDNS(cptr);
 				SetAccess(cptr);
+				cptr->since = currenttime;
 				continue;
 			    }
 			if (IsServer(cptr) || IsConnecting(cptr) ||

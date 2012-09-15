@@ -289,7 +289,7 @@ struct Client	{
 #endif
 	time_t	lasttime;	/* ...should be only LOCAL clients? --msa */
 	time_t	firsttime;	/* time client was created */
-	time_t	since;		/* When this client entry was created */
+	time_t	since;		/* last time we parsed something */
 	long	flags;		/* client flags */
 	aClient	*from;		/* == self, if Local Client, *NEVER* NULL! */
 	int	fd;		/* >= 0, for local clients */
@@ -354,6 +354,8 @@ struct	stats {
 	unsigned int	is_fake; /* MODE 'fakes' */
 	unsigned int	is_asuc; /* successful auth requests */
 	unsigned int	is_abad; /* bad auth requests */
+	unsigned int	is_udp;	/* packets recv'd on udp port */
+	unsigned int	is_loc;	/* local connections made */
 };
 
 /* mode structure for channels */

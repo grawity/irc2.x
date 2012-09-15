@@ -78,7 +78,9 @@
 
 /*
  * The following is fairly system dependent and is important that you
- * get it right. Use *ONE* of these as your #define and *ONE ONLY*
+ * get it right. Use *ONE* of these as your #define and *ONE ONLY*.
+ * Where and if possible, check for and use POSIX_SIGNALS since any POSIX
+ * compliant vendor is very unlikely to not have a working sigaction().
  *
  * define this if your signal() calls DONT get reset back to the default
  * action when a signal is trapped. BSD signals are by reliable.
@@ -118,7 +120,7 @@
  *       the maintainer.
  */
 
-#define	DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
+#undef	DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
 
 /*
  * If you have curses, and wish to use it, then define HAVECURSES. This is the

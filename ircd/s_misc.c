@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.30 4/24/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.31 5/6/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -613,6 +613,8 @@ char	*name;
 		   me.name, name, sp->is_num, sp->is_fake);
 	sendto_one(cptr, ":%s NOTICE %s :auth successes %u fails %u",
 		   me.name, name, sp->is_asuc, sp->is_abad);
+	sendto_one(cptr, ":%s NOTICE %s :local connections %u udp packets %u",
+		   me.name, name, sp->is_loc, sp->is_udp);
 	sendto_one(cptr, ":%s NOTICE %s :Client Server", me.name, name);
 	sendto_one(cptr, ":%s NOTICE %s :connected %u %u",
 		   me.name, name, sp->is_cl, sp->is_sv);
