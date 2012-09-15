@@ -19,10 +19,15 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.8 1997/07/15 04:35:47 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_debug.c,v 1.13 1997/10/17 17:45:39 kalt Exp $";
 #endif
 
-#include "struct.h"
+#include "os.h"
+#include "s_defines.h"
+#define S_DEBUG_C
+#include "s_externs.h"
+#undef S_DEBUG_C
+
 /*
  * Option string.  Must be before #ifdef DEBUGMODE.
  * spaces are not allowed.
@@ -89,7 +94,7 @@ char	serveropts[] = {
 #ifdef	IDLE_FROM_MSG
 'M',
 #endif
-#ifdef	NPATH
+#ifdef	NPATH /* gone */
 'N',
 #endif
 #ifdef	BETTER_NDELAY
@@ -140,57 +145,12 @@ char	serveropts[] = {
 #ifdef MIRC_KLUDGE
 '$',
 #endif
-'_',
-'V',
-#ifndef NoV28Links
-'0',
-#endif
-'1',
 '\0'};
-
-#include "common.h"
-#include "sys.h"
-#include "numeric.h"
-#include "whowas.h"
-#include "hash.h"
-#include <sys/file.h>
-#ifdef HPUX
-#include <fcntl.h>
-#endif
-#ifdef HPUX
-# include <sys/syscall.h>
-# define getrusage(a,b) syscall(SYS_GETRUSAGE, a, b)
-#endif
-#ifdef GETRUSAGE_2
-# ifdef SVR4
-#  include <sys/time.h>
-# endif
-# include <sys/resource.h>
-#else
-#  ifdef TIMES_2
-#   include <sys/times.h>
-#  endif
-#endif
-#ifdef PCS
-# include <time.h>
-#endif
-#ifdef HPUX
-#include <unistd.h>
-#ifdef DYNIXPTX
-#include <sys/types.h>
-#include <time.h>
-#endif
-#endif
-#include "h.h"
-
-#ifndef ssize_t
-#define ssize_t unsigned int
-#endif
 
 #ifdef DEBUGMODE
 static	char	debugbuf[1024];
 
-#ifndef	USE_STDARG
+#if ! USE_STDARG
 void	debug(level, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
 int	level;
 char	*form, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10;
@@ -203,7 +163,7 @@ void	debug(int level, char *form, ...)
 #ifdef	USE_SYSLOG
 	if (level == DEBUG_ERROR)
 	    {
-#ifndef	USE_STDARG
+#if ! USE_STDARG
 		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
 		va_list va;
@@ -215,7 +175,7 @@ void	debug(int level, char *form, ...)
 #endif
 	if ((debuglevel >= 0) && (level <= debuglevel))
 	    {
-#ifndef	USE_STDARG
+#if ! USE_STDARG
 		(void)sprintf(debugbuf, form,
 				p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
@@ -247,7 +207,7 @@ aClient *cptr;
 char	*nick;
 {
 
-#ifdef GETRUSAGE_2
+#if HAVE_GETRUSAGE
 	struct	rusage	rus;
 	time_t	secs, rup;
 #ifdef	hz
@@ -265,10 +225,6 @@ char	*nick;
 
 	if (getrusage(RUSAGE_SELF, &rus) == -1)
 	    {
-#ifndef SYS_ERRLIST_DECLARED
-		extern char *sys_errlist[];
-#endif
-
 		sendto_one(cptr,":%s NOTICE %s :Getruseage error: %s.",
 			   me.name, nick, sys_errlist[errno]);
 		return;
@@ -298,8 +254,8 @@ char	*nick;
 	sendto_one(cptr, ":%s %d %s :Signals %d Context Vol. %d Invol %d",
 		   me.name, RPL_STATSDEBUG, nick, rus.ru_nsignals,
 		   rus.ru_nvcsw, rus.ru_nivcsw);
-#else
-# ifdef TIMES_2
+#else /* HAVE_GETRUSAGE */
+# if HAVE_TIMES
 	struct	tms	tmsbuf;
 	time_t	secs, mins;
 	int	hzz = 1, ticpermin;
@@ -330,8 +286,8 @@ char	*nick;
 		   ":%s %d %s :CPU Secs %d:%d User %d:%d System %d:%d",
 		   me.name, RPL_STATSDEBUG, nick, mins, secs, umin, usec,
 		   smin, ssec);
-# endif
-#endif
+# endif /* HAVE_TIMES */
+#endif /* HAVE_GETRUSAGE */
 	sendto_one(cptr, ":%s %d %s :Reads %d Writes %d",
 		   me.name, RPL_STATSDEBUG, nick, readcalls, writecalls);
 	sendto_one(cptr, ":%s %d %s :DBUF alloc %d blocks %d",
@@ -355,8 +311,8 @@ char	*nick;
 {
 #ifdef HUB
     	sendto_one(cptr, 
-	   ":%s %d %s :HUB:%d LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
-		   ME, RPL_STATSDEFINE, nick, HUB, LISTENQUEUE, 
+   ":%s %d %s :HUB:%d MS:%d LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
+		   ME, RPL_STATSDEFINE, nick, HUB, MAXSERVERS, LISTENQUEUE, 
 		   MAXCONNECTIONS, TIMESEC, HANGONRETRYDELAY, HANGONGOODLINK,
 		   WRITEWAITDELAY, CONNECTTIMEOUT);
 #else
@@ -661,10 +617,12 @@ int	debug;
 		   _CHANNELHASHSIZE, sizeof(aHashEntry) * _CHANNELHASHSIZE);
 	d_db = db = istat.is_dbufnow * sizeof(dbufbuf);
 	db = istat.is_dbufnow * sizeof(dbufbuf);
-	sendto_one(cptr, ":%s %d %s :Dbuf blocks %u(%d) (> %u) (%u < %u) [%u]",
+	sendto_one(cptr,
+		   ":%s %d %s :Dbuf blocks %u(%d) (> %u [%u]) (%u < %u) [%u]",
 		   me.name, RPL_STATSDEBUG, nick, istat.is_dbufnow, db,
-		   istat.is_dbuf, istat.is_dbufuse, istat.is_dbufmax,
-		   istat.is_dbufmore);
+		   istat.is_dbuf,
+		   (u_int) (((u_int)BUFFERPOOL) / ((u_int)sizeof(dbufbuf))),
+		   istat.is_dbufuse, istat.is_dbufmax, istat.is_dbufmore);
 
 	d_rm = rm = cres_mem(cptr, nick);
 

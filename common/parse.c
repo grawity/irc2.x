@@ -18,21 +18,107 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* -- Jto -- 03 Jun 1990
- * Changed the order of defines...
- */
-
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: parse.c,v 1.5 1997/06/26 15:40:47 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.10 1997/09/19 20:47:12 kalt Exp $";
 #endif
-#include "struct.h"
-#include "common.h"
-#define MSGTAB
-#include "msg.h"
-#undef MSGTAB
-#include "sys.h"
-#include "numeric.h"
-#include "h.h"
+
+#include "os.h"
+#ifndef CLIENT_COMPILE
+# include "s_defines.h"
+#else
+# include "c_defines.h"
+#endif
+#define PARSE_C
+#ifndef CLIENT_COMPILE
+# include "s_externs.h"
+#else
+# include "c_externs.h"
+#endif
+#undef PARSE_C
+
+struct Message msgtab[] = {
+  { MSG_PRIVATE, m_private,  MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_NICK,    m_nick,     MAXPARA, MSG_LAG, 0, 0, 0L},
+  { MSG_NOTICE,  m_notice,   MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_JOIN,    m_join,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_MODE,    m_mode,     MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_QUIT,    m_quit,     MAXPARA, MSG_LAG, 0, 0, 0L},
+  { MSG_PART,    m_part,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_TOPIC,   m_topic,    MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_INVITE,  m_invite,   MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_KICK,    m_kick,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_WALLOPS, m_wallops,  MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0, 0, 0L},
+  { MSG_PING,    m_ping,     MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_PONG,    m_pong,     MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_ERROR,   m_error,    MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0, 0, 0L},
+#ifdef	OPER_KILL
+  { MSG_KILL,    m_kill,     MAXPARA, MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0,0, 0L},
+#else
+  { MSG_KILL,    m_kill,     MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0, 0, 0L},
+#endif
+#ifndef CLIENT_COMPILE
+  { MSG_USER,    m_user,     MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
+  { MSG_AWAY,    m_away,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_UMODE,   m_umode,    MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_ISON,    m_ison,     1,	 MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_SERVER,  m_server,   MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
+  { MSG_SQUIT,   m_squit,    MAXPARA, MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0,0, 0L},
+  { MSG_WHOIS,   m_whois,    MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_WHO,     m_who,      MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_WHOWAS,  m_whowas,   MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_LIST,    m_list,     MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_NAMES,   m_names,    MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_USERHOST,m_userhost, MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_TRACE,   m_trace,    MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_PASS,    m_pass,     MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
+  { MSG_LUSERS,  m_lusers,   MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_TIME,    m_time,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_OPER,    m_oper,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_CONNECT, m_connect,  MAXPARA,
+				MSG_LAG|MSG_REGU|MSG_OP|MSG_LOP, 0, 0, 0L},
+  { MSG_VERSION, m_version,  MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_STATS,   m_stats,    MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_LINKS,   m_links,    MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_ADMIN,   m_admin,    MAXPARA, MSG_LAG, 0, 0, 0L},
+  { MSG_USERS,   m_users,    MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_SUMMON,  m_summon,   MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_HELP,    m_help,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_INFO,    m_info,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_MOTD,    m_motd,     MAXPARA, MSG_LAG|MSG_REGU, 0, 0, 0L},
+  { MSG_CLOSE,   m_close,    MAXPARA, MSG_LAG|MSG_REGU|MSG_OP, 0, 0, 0L},
+  { MSG_RECONECT,m_reconnect,MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
+  { MSG_SERVICE, m_service,  MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
+#ifdef	USE_SERVICES
+  { MSG_SERVSET, m_servset,  MAXPARA, MSG_LAG|MSG_SVC|MSG_NOU, 0, 0, 0L},
+#endif
+  { MSG_SQUERY,  m_squery,   MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_SERVLIST,m_servlist, MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_HASH,    m_hash,     MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+  { MSG_DNS,     m_dns,      MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
+#if defined(OPER_REHASH) || defined(LOCOP_REHASH)
+  { MSG_REHASH,  m_rehash,   MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_REHASH
+					 |MSG_LOP
+# endif
+					, 0, 0, 0L},
+#endif
+#if defined(OPER_RESTART) || defined(LOCOP_RESTART)
+  { MSG_RESTART,  m_restart,   MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_RESTART
+					 |MSG_LOP
+# endif
+					, 0, 0, 0L},
+#endif
+#if defined(OPER_DIE) || defined(LOCOP_DIE)
+  { MSG_DIE,  m_die,   MAXPARA, MSG_REGU|MSG_OP
+# ifdef	LOCOP_DIE
+					 |MSG_LOP
+# endif
+					, 0, 0, 0L},
+#endif
+#endif /* !CLIENT_COMPILE */
+  { (char *) 0, (int (*)()) 0, 0, 0, 0, 0, 0L}
+};
 
 /*
  * NOTE: parse() should not be called recursively by other functions!
@@ -337,7 +423,14 @@ char	*buffer, *bufend;
 		if (*sender && IsServer(cptr))
 		    {
  			from = find_client(sender, (aClient *) NULL);
-			if (!from || match(from->name, sender))
+			if (!from ||
+			    /*
+			    ** I really believe that the followin line is 
+			    ** useless.  What a waste, especially with 2.9
+			    ** hostmasks.. at least the test on from->name
+			    ** will make it a bit better. -krys
+			    */
+			    (*from->name == '*' && match(from->name, sender)))
 				from = find_server(sender, (aClient *)NULL);
 #ifndef	CLIENT_COMPILE
 			/* Is there svc@server prefix ever? -Vesa */
@@ -521,6 +614,8 @@ char	*buffer, *bufend;
 	if (mptr == NULL)
 		return (do_numeric(numeric, cptr, from, i, para));
 	mptr->count++;
+	if (!MyConnect(from))
+		mptr->rcount++;
 	if (IsRegisteredUser(cptr) &&
 #ifdef	IDLE_FROM_MSG
 	    mptr->func == m_private)
@@ -580,14 +675,14 @@ char	*buffer, *bufend;
 /*
  * field breakup for ircd.conf file.
  */
-char	*getfield(newline)
-char	*newline;
+char	*getfield(irc_newline)
+char	*irc_newline;
 {
 	static	char *line = NULL;
 	char	*end, *field;
 	
-	if (newline)
-		line = newline;
+	if (irc_newline)
+		line = irc_newline;
 	if (line == NULL)
 		return(NULL);
 
@@ -673,6 +768,9 @@ char	*sender;
 	 * user on the other server which needs to be removed. -avalon
 	 * it can simply be caused by lag (among other things), so just
 	 * drop it if it is not a server. -krys
+	 * services aren't prone to collisions, so lag shouldn't be responsible
+	 * if we get here and sender is a service, we should probably issue
+	 * a kill in this case! -krys
 	 */
 		sendto_flag(SCH_LOCAL, "Dropping unknown %s brought by %s.",
 			    sender, get_client_name(cptr, FALSE));

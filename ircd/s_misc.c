@@ -22,27 +22,14 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.7 1997/06/27 13:38:38 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_misc.c,v 1.12 1997/10/08 20:20:02 kalt Exp $";
 #endif
 
-#include <sys/time.h>
-#include "struct.h"
-#include "common.h"
-#include "sys.h"
-#include "numeric.h"
-#include <sys/stat.h>
-#include <fcntl.h>
-#if defined(PCS) || defined(AIX) || defined(SVR3)
-# include <time.h>
-#endif
-#ifdef HPUX
-#include <unistd.h>
-#endif
-#ifdef DYNIXPTX
-#include <sys/types.h>
-#include <time.h>
-#endif
-#include "h.h"
+#include "os.h"
+#include "s_defines.h"
+#define S_MISC_C
+#include "s_externs.h"
+#undef S_MISC_C
 
 static	void	exit_one_client __P((aClient *,aClient *,aClient *,char *));
 
@@ -380,7 +367,8 @@ char	*comment;	/* Reason for the exit */
 	Reg	aClient	*acptr;
 	Reg	aClient	*next;
 	Reg	aServer *asptr;
-#if defined(FNAME_USERLOG) || defined(USE_SYSLOG)
+	Reg	aService *asvptr;
+#if defined(FNAME_USERLOG) || defined(USE_SYSLOG) || defined(USE_SERVICES)
 	time_t	on_for;
 #endif
 	char	comment1[HOSTLEN + HOSTLEN + 2];
@@ -396,7 +384,8 @@ char	*comment;	/* Reason for the exit */
 		    }
 
 		sptr->flags |= FLAGS_CLOSING;
-#if (defined(FNAME_USERLOG) || defined(FNAME_CONNLOG)) \
+#if (defined(FNAME_USERLOG) || defined(FNAME_CONNLOG) \
+     || defined(USE_SERVICES)) \
     || (defined(USE_SYSLOG) && (defined(SYSLOG_USERS) || defined(SYSLOG_CONN)))
 		if (IsPerson(sptr))
 		    {
@@ -411,7 +400,7 @@ char	*comment;	/* Reason for the exit */
 			       sptr->user->username, sptr->user->host,
 			       sptr->auth, sptr->exitc);
 # endif
-# ifdef FNAME_USERLOG
+# if defined(FNAME_USERLOG) || defined(USE_SERVICES)
 			sendto_flog(sptr, NULL, on_for, sptr->user->username,
 				    sptr->user->host);
 # endif
@@ -426,7 +415,7 @@ char	*comment;	/* Reason for the exit */
 			       ((sptr->hostp) ? sptr->hostp->h_name :
 				sptr->sockhost), sptr->auth, sptr->exitc);
 # endif
-# ifdef FNAME_CONNLOG
+# if defined(FNAME_CONNLOG) || defined(USE_SERVICES)
 			sendto_flog(sptr, " Unknown ", 0, "<none>", 
 				    (IsUnixSocket(sptr)) ? me.sockhost :
 				    ((sptr->hostp) ? sptr->hostp->h_name :
@@ -509,7 +498,8 @@ char	*comment;	/* Reason for the exit */
 				    || (asptr->bcptr->from != sptr
 					&& asptr->bcptr != sptr))
 					continue;
-				/* This version doesn't need QUITs to be
+				/*
+			        ** This version doesn't need QUITs to be
 				** propagaged unless the remote server is
 				** hidden (by a hostmask)
 				*/
@@ -536,6 +526,7 @@ char	*comment;	/* Reason for the exit */
 			** on remote servers: services,it would be much smarter
 			** to only check services instead of wasting CPU - krys
 			*/
+#if 0
 			for (acptr = client; acptr; acptr = next)
 			    {
 				next = acptr->next;
@@ -543,7 +534,7 @@ char	*comment;	/* Reason for the exit */
 				    {
 					/*
 					** Let's see if things are ever wrong.
-					** Second step would be finally change
+					** Second step would be: finally change
 					** this loop to go through the services
 					** list. -krys
 					*/
@@ -559,6 +550,28 @@ char	*comment;	/* Reason for the exit */
 							comment1);
 				    }
 			    }
+#else
+			/*
+			** I'm now trying to put more comments in this function
+			** than code.  The above could be re-enabled some time
+			** for curiosity/debugging.
+			** I've only heard of one instance when the above
+			** notice showed up, and it was due to a bug, now
+			** fixed.
+			** With 2.9 combined NICK protocol, it should never
+			** happen, as a NICK is immediately associated to a
+			** server.
+			** Avalon made me do it. ;) -krys
+			*/
+			for (asvptr = svctop; asvptr; asvptr =(aService *)next)
+			    {
+				next = (aClient *)asvptr->nexts;
+				if ((acptr = asvptr->bcptr) && 
+				    acptr->from == sptr)
+					exit_one_client(NULL, acptr, &me,
+                                                        comment1);
+			    }
+#endif
 			/*
 			** Second SQUIT all servers behind this link
 			*/
@@ -601,21 +614,7 @@ char	*comment;	/* Reason for the exit */
  		{
  			acptr = sptr->serv->userlist->bcptr;
  			acptr->flags |= flags;
-#ifndef NoV28Links
- 			if (cptr->from == acptr->from 
- 			    && cptr->serv->version == SV_OLD)
- 			{
- 				sendto_flag(SCH_LOCAL,
- 					    "Dropping ghost %s (%s) from %s.",
- 					    acptr->name, acptr->user->server,
- 					    acptr->from->name);
- 				exit_one_client(cptr, acptr, &me,
- 						"No Such User");
-				ircstp->is_ghost++;
- 			}
- 			else
-#endif
- 				exit_one_client(cptr, acptr, &me, comment1);
+			exit_one_client(cptr, acptr, &me, comment1);
  		}
  		while (sptr->serv->userlist);
  	}
@@ -750,10 +749,6 @@ char	*comment;
 			    }
 			else
 			    {
-#ifndef NoV28Links
-				sendto_serv_v(cptr, SV_OLD, ":%s QUIT :%s",
-					   sptr->name, comment);
-#endif
 				if (sptr->flags & FLAGS_HIDDEN)
 					/* joys of hostmasking */
 					for (i = fdas.highest; i >= 0; i--)
@@ -792,9 +787,6 @@ char	*comment;
 				istat.is_user[0]--;
 			if (IsAnOper(sptr))
 				istat.is_oper--;
-#ifdef NPATH
-			note_signoff(sptr);
-#endif
 			sendto_common_channels(sptr, ":%s QUIT :%s",
 						sptr->name, comment);
 
@@ -978,8 +970,8 @@ char	*name;
 		   ME, RPL_STATSDEBUG, name, sp->is_kill, sp->is_ni);
 	sendto_one(cptr, ":%s %d %s :wrong direction %u empty %u",
 		   ME, RPL_STATSDEBUG, name, sp->is_wrdi, sp->is_empt);
-	sendto_one(cptr, ":%s %d %s :users without servers %u ghosts %u",
-		   ME, RPL_STATSDEBUG, name, sp->is_nosrv, sp->is_ghost);
+	sendto_one(cptr, ":%s %d %s :users without servers %u ghosts N/A",
+		   ME, RPL_STATSDEBUG, name, sp->is_nosrv);
 	sendto_one(cptr, ":%s %d %s :numerics seen %u mode fakes %u",
 		   ME, RPL_STATSDEBUG, name, sp->is_num, sp->is_fake);
 	sendto_one(cptr, ":%s %d %s :auth: successes %u fails %u",

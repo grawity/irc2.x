@@ -18,13 +18,14 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: class.c,v 1.2 1997/04/14 15:04:15 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: class.c,v 1.5 1997/09/23 20:47:56 kalt Exp $";
 #endif
 
-#include "struct.h"
-#include "common.h"
-#include "numeric.h"
-#include "h.h"
+#include "os.h"
+#include "s_defines.h"
+#define CLASS_C
+#include "s_externs.h"
+#undef CLASS_C
 
 #define BAD_CONF_CLASS		-1
 #define BAD_PING		-2
@@ -132,8 +133,9 @@ aClass	*clptr;
  * if no present entry is found, then create a new one and add it in
  * immeadiately after the first one (class 0).
  */
-void	add_class(class, ping, confreq, maxli, sendq)
-int	class, ping, confreq, maxli;
+void	add_class(class, ping, confreq, maxli, sendq, hlocal, uhlocal,
+		  hglobal, uhglobal)
+int	class, ping, confreq, maxli, hlocal, uhlocal, hglobal, uhglobal;
 long	sendq;
 {
 	aClass *t, *p;
@@ -150,14 +152,19 @@ long	sendq;
 	else
 		p = t;
 	Debug((DEBUG_DEBUG,
-		"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d sq: %l",
-		class, p, t, confreq, ping, maxli, QUEUELEN));
+"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d sq: %l ml: %d.%d mg: %d.%d",
+		class, p, t, confreq, ping, maxli, QUEUELEN, hlocal, uhlocal,
+	       hglobal, uhglobal));
 	Class(p) = class;
 	ConFreq(p) = confreq;
 	PingFreq(p) = ping;
 	MaxLinks(p) = maxli;
 	if (sendq)
 		MaxSendq(p) = sendq;
+	MaxHLocal(p) = hlocal;
+	MaxUHLocal(p) = uhlocal;
+	MaxHGlobal(p) = hglobal;
+	MaxUHGlobal(p) = uhglobal;
 	if (p != t)
 		Links(p) = 0;
 }
@@ -222,7 +229,9 @@ char	*to;
 	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
 		sendto_one(sptr, rpl_str(RPL_STATSYLINE, to), 'Y',
 			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
-			   MaxLinks(cltmp), MaxSendq(cltmp));
+			   MaxLinks(cltmp), MaxSendq(cltmp),
+			   MaxHLocal(cltmp), MaxUHLocal(cltmp),
+			   MaxHGlobal(cltmp), MaxUHGlobal(cltmp));
 }
 
 long	get_sendq(cptr)

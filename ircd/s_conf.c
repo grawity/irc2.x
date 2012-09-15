@@ -48,29 +48,14 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.10 1997/07/15 04:35:47 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.22 1997/10/13 19:09:40 kalt Exp $";
 #endif
 
-#include "struct.h"
-#include "common.h"
-#include "sys.h"
-#include "numeric.h"
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <sys/wait.h>
-#ifdef __hpux
-# ifdef HAVE_ARPA_INET_H
-#  include <arpa/inet.h>
-# endif
-#endif
-#if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
-#include <time.h>
-#endif
-#ifdef	R_LINES
-#include <signal.h>
-#endif
-
-#include "h.h"
+#include "os.h"
+#include "s_defines.h"
+#define S_CONF_C
+#include "s_externs.h"
+#undef S_CONF_C
 
 static	int	check_time_interval __P((char *, char *));
 static	int	lookup_confhost __P((aConfItem *));
@@ -151,6 +136,11 @@ char	*sockhost;
 		(void)strncat(uhost, sockhost, sizeof(uhost) - strlen(uhost));
 		if (match(aconf->host, uhost))
 			continue;
+		if (*aconf->name == '\0' && hp)
+		    {
+			strncpyzt(uhost, hp->h_name, sizeof(uhost));
+			add_local_domain(uhost, sizeof(uhost) - strlen(uhost));
+		    }
 attach_iline:
 		if (index(uhost, '@'))
 			cptr->flags |= FLAGS_DOID;
@@ -158,10 +148,11 @@ attach_iline:
 			SetRestricted(cptr);
 		get_sockhost(cptr, uhost);
 		if ((i = attach_conf(cptr, aconf)) < -1)
-			find_bounce(cptr, ConfClass(aconf));
+			find_bounce(cptr, ConfClass(aconf), -1);
 		return i;
 	    }
-	return -1;
+	find_bounce(cptr, 0, -2);
+	return -2; /* used in register_user() */
 }
 
 /*
@@ -266,34 +257,71 @@ aClient *cptr;
 		if (aconf->clients >= ConfMaxLinks(aconf) &&
 		    ConfMaxLinks(aconf) > 0)
 			return -3;    /* Use this for printing error message */
-		if (ConfConFreq(aconf) > 0)	/* special limit per host */
-		    {
-			Reg	aClient	*acptr;
-			Reg	int	i, cnt = 0;
+	    }
+	if ((aconf->status & (CONF_CLIENT | CONF_RCLIENT)))
+	    {
+		int	hcnt = 0, ucnt = 0;
 
-			for (i = highest_fd; i >= 0; i--)
-				if ((acptr = local[i]) && (cptr != acptr) &&
-				    !bcmp((char *)&cptr->ip,
-					  (char *)&acptr->ip,
-					  sizeof(cptr->ip)))
-					cnt++;
-			if (cnt >= ConfConFreq(aconf))
-				return -4;	/* for error message */
-		    }
-		if (ConfConFreq(aconf) < 0) { /* special limit per user@host */
+		/* check on local/global limits per host and per user@host */
+
+		/*
+		** local limits first to save CPU if any is hit.
+		**	host check is done on the IP address.
+		**	user check is done on the IDENT reply.
+		*/
+		if (ConfMaxHLocal(aconf) > 0 || ConfMaxUHLocal(aconf) > 0) {
 			Reg     aClient *acptr;
-			Reg     int     i, cnt = 0;
+			Reg     int     i;
+			int	sz = sizeof(cptr->ip);
 
 			for (i = highest_fd; i >= 0; i--)
 				if ((acptr = local[i]) && (cptr != acptr) &&
 				    !bcmp((char *)&cptr->ip,(char *)&acptr->ip,
-					  sizeof(cptr->ip))
-				    && !strncasecmp(acptr->auth,
-						    cptr->auth, USERLEN))
-					cnt--;
-			if (cnt <= ConfConFreq(aconf))
+					  sizeof(cptr->ip)))
+				    {
+					hcnt++;
+					if (!strncasecmp(acptr->auth,
+							 cptr->auth, USERLEN))
+						ucnt++;
+				    }
+			if (ConfMaxHLocal(aconf) > 0 &&
+			    hcnt >= ConfMaxHLocal(aconf))
+				return -4;	/* for error message */
+			if (ConfMaxUHLocal(aconf) > 0 &&
+			    ucnt >= ConfMaxUHLocal(aconf))
 				return -5;      /* for error message */
 		}
+		/*
+		** Global limits
+		**	host check is done on the hostname (IP if unresolved)
+		**	user check is done on username
+		*/
+		if (ConfMaxHGlobal(aconf) > 0 || ConfMaxUHGlobal(aconf) > 0)
+		    {
+			Reg     aClient *acptr;
+			Reg     int     ghcnt = hcnt, gucnt = ucnt;
+
+			for (acptr = client; acptr; acptr = acptr->next)
+			    {
+				if (!IsPerson(acptr))
+					continue;
+				if (MyConnect(acptr) &&
+				    (ConfMaxHLocal(aconf) > 0 ||
+				     ConfMaxUHLocal(aconf) > 0))
+					continue;
+				if (!strcmp(cptr->sockhost, acptr->user->host))
+				    {
+					if (ConfMaxHGlobal(aconf) > 0 &&
+					    ++ghcnt >= ConfMaxHGlobal(aconf))
+						return -6;
+					if (ConfMaxUHGlobal(aconf) > 0 &&
+					    !strcmp(cptr->user->username,
+						    acptr->user->username) &&
+					    (++gucnt >=ConfMaxUHGlobal(aconf)))
+						return -7;
+				    }
+			    }
+		    }
 	    }
 
 	lp = make_link();
@@ -730,7 +758,6 @@ int	openconf()
 	return open(configfile, O_RDONLY);
 #endif
 }
-extern char *getfield();
 
 /*
 ** initconf() 
@@ -750,7 +777,7 @@ int	opt;
 					{'\\', '\\'}, { 0, 0}};
 	Reg	char	*tmp, *s;
 	int	fd, i;
-	char	line[512], c[80], *tmp2 = NULL;
+	char	line[512], c[80], *tmp2 = NULL, *tmp3 = NULL, *tmp4 = NULL;
 	int	ccount = 0, ncount = 0;
 	aConfItem *aconf = NULL;
 
@@ -816,7 +843,7 @@ int	opt;
 
 		if (tmp2)
 			MyFree(tmp2);
-		tmp2 = NULL;
+		tmp3 = tmp4 = NULL;
 		tmp = getfield(line);
 		if (!tmp)
 			continue;
@@ -941,6 +968,10 @@ int	opt;
 			if ((tmp = getfield(NULL)) == NULL)
 				break;
 			Class(aconf) = find_class(atoi(tmp));
+			/* the following are only used for Y: */
+			if ((tmp3 = getfield(NULL)) == NULL)
+				break;
+			tmp4 = getfield(NULL);
 			break;
 		    }
 		istat.is_confmem += aconf->host ? strlen(aconf->host)+1 : 0;
@@ -958,9 +989,25 @@ int	opt;
                 */
 		if (aconf->status & CONF_CLASS)
 		    {
-			add_class(atoi(aconf->host), atoi(aconf->passwd),
-				  atoi(aconf->name), aconf->port,
-				  tmp ? atoi(tmp) : 0);
+			if (atoi(aconf->host) >= 0)
+				add_class(atoi(aconf->host),
+					  atoi(aconf->passwd),
+					  atoi(aconf->name), aconf->port,
+					  tmp ? atoi(tmp) : 0,
+/*					  tmp3 ? atoi(tmp3) : 0,
+**					  tmp3 && index(tmp3, '.') ?
+**					  atoi(index(tmp3, '.') + 1) : 0,
+** the next 3 lines should be replaced by the previous sometime in the
+** future.  It is only kept for "backward" compatibility and not needed,
+** but I'm in good mood today -krys
+*/
+					  tmp3 ? atoi(tmp3) : (atoi(aconf->name) > 0) ? atoi(aconf->name) : 0,
+					  tmp3 && index(tmp3, '.') ?
+					  atoi(index(tmp3, '.') + 1) : (atoi(aconf->name) < 0) ? -1 * atoi(aconf->name) : 0,
+/* end of backward compatibility insanity */
+ 					  tmp4 ? atoi(tmp4) : 0,
+					  tmp4 && index(tmp4, '.') ?
+					  atoi(index(tmp4, '.') + 1) : 0);
 			continue;
 		    }
 		/*
@@ -995,6 +1042,8 @@ int	opt;
 				 aconf->status == CONF_LISTEN_PORT)
 				(void)add_listener(aconf);
 		    }
+		if (aconf->status & CONF_SERVICE)
+			aconf->port &= SERVICE_MASK_ALL;
 		if (aconf->status & (CONF_SERVER_MASK|CONF_SERVICE))
 			if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
 			    !aconf->host || index(aconf->host, '*') ||
@@ -1134,7 +1183,7 @@ int	doall;
 char	**comment;
 {
 	static char	reply[256];
-	char *host, *name, *ident, *check;
+	char *host, *ip, *name, *ident, *check;
 	aConfItem *tmp;
 	int	now;
 
@@ -1142,6 +1191,9 @@ char	**comment;
 		return 0;
 
 	host = cptr->sockhost;
+	ip = (char *) inetntoa((char *)&cptr->ip);
+	if (!strcmp(host, ip))
+	  ip = NULL;
 	name = cptr->user->username;
 	ident = cptr->auth;
 
@@ -1162,8 +1214,12 @@ char	**comment;
 		else
 			check = ident;
  		if (tmp->host && tmp->name &&
-		    (match(tmp->host, host) == 0) &&
- 		    (!check || match(tmp->name, check) == 0) &&
+		    /* host & IP matching.. */
+		    ((*tmp->host == '=' && match(tmp->host+1, host) == 0) ||
+		     (*tmp->host != '=' && (match(tmp->host, host) == 0 ||
+					    (ip && match(tmp->host, ip) ==0))))
+		    /* username matching */
+		    && (!check || match(tmp->name, check) == 0) &&
 		    (!tmp->port || (tmp->port == cptr->acpt->port)))
 		    {
 			now = 0;
@@ -1179,10 +1235,12 @@ char	**comment;
 	if (*reply)
 		sendto_one(cptr, reply, ME, now, cptr->name);
 	else if (tmp)
-		sendto_one(cptr, ":%s %d %s :%s", ME,
+		sendto_one(cptr, ":%s %d %s :%s%s", ME,
 			   ERR_YOUREBANNEDCREEP, cptr->name,
 			   BadPtr(tmp->passwd) ?
-			   "You are not welcome to this server" : tmp->passwd);
+			   "You are not welcome to this server" :
+			   "You are not welcome to this server: ",
+			   BadPtr(tmp->passwd) ? "" : tmp->passwd);
 
 	if (tmp && !BadPtr(tmp->passwd))
 		*comment = tmp->passwd;
@@ -1405,11 +1463,13 @@ char	*interval, *reply;
 /*
 ** find_bounce
 **	send a bounce numeric to a client.
-**	if cptr is NULL, class is considered to be a fd (ugly, isn't it?)
+**	fd is optional, and only makes sense if positive and when cptr is NULL
+**	fd == -1 : not fd, class is a class number.
+**	fd == -2 : not fd, class isn't a class number.
 */
-void	find_bounce(cptr, class)
+void	find_bounce(cptr, class, fd)
 aClient *cptr;
-int	class;
+int	class, fd;
     {
 	Reg	aConfItem	*aconf;
 
@@ -1418,12 +1478,12 @@ int	class;
 		if (aconf->status != CONF_BOUNCE)
 			continue;
 
-		if (cptr == NULL)
+		if (fd >= 0)
 			/*
 			** early rejection,
 			** connection class and hostname are unknown
 			*/
-			if (atoi(aconf->host) == -1)
+			if (*aconf->host == '\0')
 			    {
 				char rpl[BUFSIZE];
 				
@@ -1436,13 +1496,13 @@ int	class;
 			else
 				continue;
 
-		/* cptr != NULL */
+		/* fd < 0 */
 		/*
 		** "too many" type rejection, class is known.
 		** check if B line is for a class #,
 		** and if it is for a hostname.
 		*/
-		if (isdigit(*aconf->host))
+		if (fd != -2 && isdigit(*aconf->host))
 		    {
 			if (class != atoi(aconf->host))
 				continue;

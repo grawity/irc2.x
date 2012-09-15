@@ -22,25 +22,14 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.18 1997/07/16 19:27:16 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.24 1997/10/11 03:48:10 kalt Exp $";
 #endif
 
-#include <sys/types.h>
-#include <utmp.h>
-#include "struct.h"
-#include "common.h"
-#include "sys.h"
-#include "numeric.h"
-#include "msg.h"
-#include "channel.h"
-#if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
-#include <time.h>
-#endif
-#include <sys/stat.h>
-#include <fcntl.h>
-#include "h.h"
-
-extern  char    serveropts[];
+#include "os.h"
+#include "s_defines.h"
+#define S_SERV_C
+#include "s_externs.h"
+#undef S_SERV_C
 
 static	char	buf[BUFSIZE];
 
@@ -539,8 +528,7 @@ char	*parv[];
 			if (match(my_name_for_link(ME, aconf->port),
 				    acptr->name) == 0)
 				continue;
-			stok = (bcptr->serv->version != SV_OLD) 
-				? acptr->serv->tok : "";
+			stok = acptr->serv->tok;
 			sendto_one(bcptr, ":%s SERVER %s %d %s :%s", parv[0],
 				   acptr->name, hop+1, stok, acptr->info);
 		    }
@@ -619,15 +607,12 @@ Reg	aClient	*cptr;
 		return exit_client(cptr, cptr, &me, "No C line for server");
 	    }
 
-#ifdef NoV28Links
-	if (cptr->hopcount == SV_OLD)
+	if (cptr->hopcount == SV_OLD) /* lame test, should be == 0 */
 	    {
 		sendto_one(cptr, "ERROR :Server version is too old.");
-		sendto_flag(SCH_ERROR, "Old version (%d) for %s",
-			    cptr->hopcount, inpath);
+		sendto_flag(SCH_ERROR, "Old version for %s", inpath);
 		return exit_client(cptr, cptr, &me, "Old version");
 	    }
-#endif
 
 #ifdef CRYPT_LINK_PASSWORD
 	/* use first two chars of the password they send in as salt */
@@ -638,9 +623,18 @@ Reg	aClient	*cptr;
 		char    salt[3];
 		extern  char *crypt();
 
-		salt[0]=aconf->passwd[0];
-		salt[1]=aconf->passwd[1];
-		salt[2]='\0';
+		/* Determine if MD5 or DES */
+                if (strncmp(aconf->passwd, "$1$", 3))
+		    {
+			salt[0] = aconf->passwd[0];
+			salt[1] = aconf->passwd[1];
+		    }
+		else
+		    {
+			salt[0] = aconf->passwd[3];
+			salt[1] = aconf->passwd[4];
+		    }
+		salt[2] = '\0';
 		encr = crypt(cptr->passwd, salt);
 	    }
 	else
@@ -763,7 +757,7 @@ Reg	aClient	*cptr;
 	istat.is_serv++;
 	istat.is_myserv++;
 	nextping = timeofday;
-	sendto_flag(SCH_NOTICE, "Link with %s established. (%d%s)", inpath,
+	sendto_flag(SCH_NOTICE, "Link with %s established. (%X%s)", inpath,
 		    cptr->hopcount, (cptr->flags & FLAGS_ZIP) ? "z" : "");
 	(void)add_to_client_hash_table(cptr->name, cptr);
 	/* doesnt duplicate cptr->serv if allocted this struct already */
@@ -776,13 +770,13 @@ Reg	aClient	*cptr;
 	cptr->serv->stok = 1;
 	cptr->flags |= FLAGS_CBURST;
 	(void) add_to_server_hash_table(cptr->serv, cptr);
-	Debug((DEBUG_NOTICE, "Server link established with %s V%d %d",
+	Debug((DEBUG_NOTICE, "Server link established with %s V%X %d",
 		cptr->name, cptr->serv->version, cptr->serv->stok));
 	add_fd(cptr->fd, &fdas);
 #ifdef	USE_SERVICES
 	check_services_butone(SERVICE_WANT_SERVER, cptr->name, cptr,
-				":%s SERVER %s %d :%s", ME,
-				cptr->name, cptr->hopcount+1, cptr->info);
+			      ":%s SERVER %s %d %s :%s", ME, cptr->name,
+			      cptr->hopcount+1, cptr->serv->tok, cptr->info);
 #endif
 	sendto_flag(SCH_SERVER, "Sending SERVER %s (%d %s)", cptr->name,
 		    1, cptr->info);
@@ -799,7 +793,7 @@ Reg	aClient	*cptr;
 		if ((aconf = acptr->serv->nline) &&
 		    !match(my_name_for_link(ME, aconf->port), cptr->name))
 			continue;
-		stok = (acptr->serv->version != SV_OLD) ? cptr->serv->tok : "";
+		stok = cptr->serv->tok;
 		if (split)
 			sendto_one(acptr,":%s SERVER %s 2 %s :[%s] %s",
 				   ME, cptr->name, stok,
@@ -827,7 +821,6 @@ Reg	aClient	*cptr;
 	**	see previous *WARNING*!!! (Also, original inpath
 	**	is destroyed...)
 	*/
-	i = cptr->serv->version;
 	aconf = cptr->serv->nline;
 	for (acptr = &me; acptr; acptr = acptr->prev)
 	    {
@@ -838,7 +831,7 @@ Reg	aClient	*cptr;
 			continue;
 		split = (MyConnect(acptr) &&
 			 mycmp(acptr->name, acptr->sockhost));
-		stok = (i != SV_OLD) ? acptr->serv->tok : "";
+		stok = acptr->serv->tok;
 		if (split)
 			sendto_one(cptr, ":%s SERVER %s %d %s :[%s] %s",
 				   acptr->serv->up,
@@ -868,35 +861,21 @@ Reg	aClient	*cptr;
 					    acptr->name, acptr->user->server,
 					    acptr->user->servp->tok,
 					    cptr->name);
-			if (i != SV_OLD)
-			    {
-				if (*mlname == '*' &&
-				    match(mlname, acptr->user->server) == 0)
-					stok = me.serv->tok;
-				else
-					stok = acptr->user->servp->tok;
-				send_umode(NULL, acptr, 0, SEND_UMODES, buf);
-				sendto_one(cptr,"NICK %s %d %s %s %s %s :%s",
-					   acptr->name, acptr->hopcount + 1,
-					   acptr->user->username,
-					   acptr->user->host, stok,
-					   (*buf) ? buf : "+", acptr->info);
-			    }
+			if (*mlname == '*' &&
+			    match(mlname, acptr->user->server) == 0)
+				stok = me.serv->tok;
 			else
-			    {
-				sendto_one(cptr,"NICK %s :%d",acptr->name,
-					   acptr->hopcount + 1);
-				sendto_one(cptr,":%s USER %s %s %s :%s",
-					   acptr->name, acptr->user->username,
-					   acptr->user->host,
-					   acptr->user->server, acptr->info);
-				send_umode(cptr, acptr, 0, SEND_UMODES, buf);
-			    }
+				stok = acptr->user->servp->tok;
+			send_umode(NULL, acptr, 0, SEND_UMODES, buf);
+			sendto_one(cptr,"NICK %s %d %s %s %s %s :%s",
+				   acptr->name, acptr->hopcount + 1,
+				   acptr->user->username,
+				   acptr->user->host, stok,
+				   (*buf) ? buf : "+", acptr->info);
 			send_user_joins(cptr, acptr);
 		    }
 		else if (IsService(acptr) &&
-			 (match(acptr->service->dist, cptr->name) == 0
-			  && cptr->serv->version != SV_OLD))
+			 match(acptr->service->dist, cptr->name) == 0)
 		    {
 			if (*mlname == '*' &&
 			    match(mlname, acptr->service->server) == 0)
@@ -1381,7 +1360,8 @@ char	*parv[];
 			if (mptr->count)
 				sendto_one(cptr, rpl_str(RPL_STATSCOMMANDS,
 					   parv[0]), mptr->cmd,
-					   mptr->count, mptr->bytes);
+					   mptr->count, mptr->bytes,
+					   mptr->rcount);
 		break;
 	case 'o' : case 'O' : /* O (and o) lines */
 		report_configured_links(cptr, parv[0], CONF_OPS);
@@ -1913,6 +1893,32 @@ aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
 {
+	Reg	aClient	*acptr;
+	Reg	int	i;
+	char	killer[HOSTLEN * 2 + USERLEN + 5];
+
+	strcpy(killer, get_client_name(sptr, TRUE));
+	for (i = 0; i <= highest_fd; i++)
+	    {
+		if (!(acptr = local[i]))
+			continue;
+		if (IsClient(acptr) || IsService(acptr))
+		    {
+			sendto_one(acptr,
+				   ":%s NOTICE %s :Server Restarting. %s",
+				   ME, acptr->name, killer);
+			acptr->exitc = EXITC_DIE;
+			if (IsClient(acptr))
+				exit_client(acptr, acptr, &me,
+					    "Server Restarting");
+			/* services are kept for logging purposes */
+		    }
+		else if (IsServer(acptr))
+			sendto_one(acptr, ":%s ERROR :Restarted by %s",
+				   ME, killer);
+	    }
+	flush_connections(me.fd);
+
 	SPRINTF(buf, "RESTART by %s", get_client_name(sptr, TRUE));
 	restart(buf);
 	/*NOT REACHED*/
@@ -2221,19 +2227,22 @@ char	*parv[];
 	    {
 		if (!(acptr = local[i]))
 			continue;
-		if (IsClient(acptr))
+		if (IsClient(acptr) || IsService(acptr))
 		    {
 			sendto_one(acptr,
 				   ":%s NOTICE %s :Server Terminating. %s",
 				   ME, acptr->name, killer);
 			acptr->exitc = EXITC_DIE;
-			(void)exit_client(acptr, acptr, &me, "Server died");
+			if (IsClient(acptr))
+				exit_client(acptr, acptr, &me, "Server died");
+			/* services are kept for logging purposes */
 		    }
 		else if (IsServer(acptr))
 			sendto_one(acptr, ":%s ERROR :Terminated by %s",
 				   ME, killer);
 	    }
-	(void)s_die();
+	flush_connections(me.fd);
+	(void)s_die(0);
 	return 0;
 }
 #endif

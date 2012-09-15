@@ -32,21 +32,14 @@
  */
 
 #ifndef	lint
-static	char rcsid[] = "@(#)$Id: channel.c,v 1.8 1997/07/18 03:08:13 kalt Exp $";
+static	char rcsid[] = "@(#)$Id: channel.c,v 1.18 1997/10/18 13:43:20 kalt Exp $";
 #endif
 
-#include "struct.h"
-#include "sys.h"
-#include "numeric.h"
-#include "channel.h"
-#include "h.h"
-
-#ifdef EPATH
-#define m_names n_names
-#define m_list n_list
-#define m_join n_join
-#define m_mode n_mode
-#endif
+#include "os.h"
+#include "s_defines.h"
+#define CHANNEL_C
+#include "s_externs.h"
+#undef CHANNEL_C
 
 aChannel *channel = NullChn;
 
@@ -61,9 +54,6 @@ static	Link	*is_banned __P((aClient *, aChannel *));
 static	int	set_mode __P((aClient *, aClient *, aChannel *, int *, int,\
 				char **, char *,char *));
 static	void	sub1_from_channel __P((aChannel *));
-
-void	clean_channelname __P((char *));
-void	del_invite __P((aClient *, aChannel *));
 
 static	char	*PartFmt = ":%s PART %s :%s";
 /*
@@ -248,6 +238,22 @@ aChannel *chptr;
 	for (tmp = chptr->banlist; tmp; tmp = tmp->next)
 		if (match(tmp->value.cp, s) == 0)
 			break;
+
+	if (!tmp)
+	    {
+		char *ip = (char *) inetntoa((char *)&cptr->ip);
+
+		if (strcmp(ip, cptr->user->host))
+		    {
+			s = make_nick_user_host(cptr->name,
+						cptr->user->username, ip);
+	    
+			for (tmp = chptr->banlist; tmp; tmp = tmp->next)
+				if (match(tmp->value.cp, s) == 0)
+					break;
+		    }
+	  }
+
 	return (tmp);
 }
 
@@ -292,7 +298,12 @@ int	flags;
 
 #ifdef USE_SERVICES
 		if (chptr->users == 1)
-			check_services_butone(SERVICE_WANT_CHANNEL,
+			check_services_butone(SERVICE_WANT_CHANNEL|
+					      SERVICE_WANT_VCHANNEL,
+					      NULL, &me, "CHANNEL %s %d",
+					      chptr->chname, chptr->users);
+		else
+			check_services_butone(SERVICE_WANT_VCHANNEL,
 					      NULL, &me, "CHANNEL %s %d",
 					      chptr->chname, chptr->users);
 #endif
@@ -315,9 +326,6 @@ int	flags;
 			chptr->clist = ptr;
 		    }
 		ptr->flags++;
-#ifdef NPATH            
-                note_join(who, chptr);
-#endif
 	    }
 }
 
@@ -360,11 +368,15 @@ aChannel *chptr;
 		istat.is_userc--;
 	    }
 #ifdef USE_SERVICES
-	check_services_butone(SERVICE_WANT_CHANNEL, NULL, &me, "CHANNEL %s %d",
-			      chptr->chname, chptr->users-1);
-#endif
-#ifdef NPATH            
-        note_leave(sptr, chptr);
+	if (chptr->users == 1)
+		check_services_butone(SERVICE_WANT_CHANNEL|
+				      SERVICE_WANT_VCHANNEL, NULL, &me,
+				      "CHANNEL %s %d", chptr->chname,
+				      chptr->users-1);
+	else
+		check_services_butone(SERVICE_WANT_VCHANNEL, NULL, &me,
+				      "CHANNEL %s %d", chptr->chname,
+				      chptr->users-1);
 #endif
 	if (--chptr->users <= 0)
 		sub1_from_channel(chptr);
@@ -466,35 +478,45 @@ aClient	*mp;
 		MODE_QUIET;
 
 	chptr = get_channel(mp, "&ERRORS", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: server errors");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&NOTICES", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: warnings and notices");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&KILLS", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: operator and server kills");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&CHANNEL", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: fake modes");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&NUMERICS", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: numerics received");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&SERVERS", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: servers joining and leaving");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&HASH", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: hash tables growth");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&LOCAL", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: notices about local connections");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&SERVICES", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: services joining and leaving");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
 	chptr->mode.mode = smode;
 	chptr = get_channel(mp, "&DEBUG", CREATE);
+	strcpy(chptr->topic, "SERVER MESSAGES: debug messages [you shouldn't be here! ;)]");
 	add_user_to_channel(chptr, mp, CHFL_CHANOP);
-	chptr->mode.mode = smode|MODE_PRIVATE;
+	chptr->mode.mode = smode|MODE_SECRET;
 
 	setup_svchans();
 }
@@ -607,9 +629,6 @@ aChannel *chptr;
 	*modebuf = *parabuf = '\0';
 	channel_modes(cptr, modebuf, parabuf, chptr);
 
-	if (cptr->serv->version == SV_OLD)
-		send_mode_list(cptr, chptr->chname, chptr->members,
-				CHFL_CHANOP, 'o');
 	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   ME, chptr->chname, modebuf, parabuf);
@@ -621,18 +640,6 @@ aChannel *chptr;
 	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   ME, chptr->chname, modebuf, parabuf);
-
-	if (cptr->serv->version == SV_OLD)
-	    {
-		*parabuf = '\0';
-		*modebuf = '+';
-		modebuf[1] = '\0';
-		send_mode_list(cptr, chptr->chname, chptr->members,
-				CHFL_VOICE, 'v');
-		if (modebuf[1] || *parabuf)
-			sendto_one(cptr, ":%s MODE %s %s %s",
-				   ME, chptr->chname, modebuf, parabuf);
-	    }
 }
 
 /*
@@ -1465,10 +1472,10 @@ Reg	aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
 {
-	static	char	jbuf[BUFSIZE];
+	static	char	jbuf[BUFSIZE], cbuf[BUFSIZE];
 	Reg	Link	*lp;
 	Reg	aChannel *chptr;
-	Reg	char	*name, *key = NULL;
+	Reg	char	*name, *chop, *key = NULL;
 	int	i, flags = 0;
 	char	*p = NULL, *p2 = NULL, *s;
 
@@ -1479,9 +1486,12 @@ char	*parv[];
 	    }
 
 	*jbuf = '\0';
+	*cbuf = '\0';
 	/*
 	** Rebuild list of channels joined to be the actual result of the
 	** JOIN.  Note that "JOIN 0" is the destructive problem.
+	** Also note that this can easily trash the correspondance between
+	** parv[1] and parv[2] lists.
 	*/
 	for (i = 0, name = strtoken(&p, parv[1], ","); name;
 	     name = strtoken(&p, NULL, ","))
@@ -1539,13 +1549,10 @@ char	*parv[];
 			continue;
 		    }
 
-		if (cptr->serv && cptr->serv->version != SV_OLD &&
-		    (s = index(name, '\007')))
+		if (cptr->serv && (s = index(name, '\007')))
 			*s++ = '\0';
 		else
 			clean_channelname(name), s = NULL;
-
-		flags = 0;
 
 		if (MyConnect(sptr) &&
 		    sptr->user->joined >= MAXCHANNELSPERUSER) {
@@ -1573,9 +1580,13 @@ char	*parv[];
 		** Operator.
 		*/
 		flags = 0;
+		chop = "";
 		if (MyConnect(sptr) && UseModes(name) &&
 		    (!IsRestricted(sptr) || (*name == '&')) && !chptr->users)
+		    {
 			flags = CHFL_CHANOP;
+			chop = "\007o";
+		    }
 		/*
 		**  Complete user entry to the new channel (if any)
 		*/
@@ -1592,48 +1603,52 @@ char	*parv[];
 		    }
 		add_user_to_channel(chptr, sptr, flags);
 		/*
-		** notify all other users on the new channel
+		** notify all users on the channel
 		*/
 #ifndef MIRC_KLUDGE
 		if (s)
 			*--s = '\007';
-		sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s",
-						parv[0], name);
+		sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s%s",
+						parv[0], name, chop);
 #else
 		sendto_channel_butserv(chptr, sptr, ":%s JOIN :%s",
 						parv[0], name);
 		if (s) {
 			sendto_channel_butserv(chptr, sptr,
-						":%s MODE %s +%s %s",
-						cptr->name, name, s, parv[0]);
+					       ":%s MODE %s +%c%c %s %s",
+					       cptr->name, name, *s,
+					       *(s+1) == 'v' ? 'v' : '+',
+					       parv[0],
+					       *(s+1) == 'v' ? parv[0] : "");
 			*--s = '\007';
 		}
 #endif
-		sendto_match_servs(chptr, cptr, ":%s JOIN :%s", parv[0], name);
-
 		if (MyClient(sptr))
 		    {
 			del_invite(sptr, chptr);
-			if (flags == CHFL_CHANOP)
-				sendto_match_servs(chptr, cptr,
-						   ":%s MODE %s +o %s",
-						   ME, name, parv[0]);
 			if (chptr->topic[0] != '\0')
 				sendto_one(sptr, rpl_str(RPL_TOPIC, parv[0]),
 					   name, chptr->topic);
 			parv[1] = name;
 			(void)m_names(cptr, sptr, 2, parv);
 		    }
-#ifndef NoV28Links
-		else if (s && flags & (CHFL_VOICE|CHFL_CHANOP))
+		/*
+	        ** notify other servers
+		*/
+		if (index(name, ':'))
+			sendto_match_servs(chptr, cptr, ":%s JOIN :%s%s",
+					   parv[0], name, chop);
+		else
 		    {
-			*s++ = '\0';
-			sendto_serv_v(cptr, SV_OLD, ":%s MODE %s +%c%c %s %s",
-				      ME, name, *s, *(s+1) == 'v' ? 'v' : '+',
-				      parv[0], *(s+1) == 'v' ? parv[0] : "");
+			if (*cbuf)
+				strcat(cbuf, ",");
+			strcat(cbuf, name);
+			if (chop)
+				strcat(cbuf, chop);
 		    }
-#endif
 	    }
+	if (*cbuf)
+		sendto_serv_butone(cptr, ":%s JOIN :%s", parv[0], cbuf);
 	return 2;
 }
 
@@ -1688,17 +1703,11 @@ char	*parv[];
 		*/
 		if (!index(name, ':')) {	/* channel:*.mask */
 			if (*name != '&')
-# ifndef NoV28Links
-				if (*name == '+')	/* 2.8 has no +chan */
-					sendto_serv_v(cptr, SV_29, PartFmt,
-						      parv[0], name, comment);
-				else
-# endif /* NoV28Links */
-				{
-					if (*buf)
-						(void)strcat(buf, ",");
-					(void)strcat(buf, name);
-				}
+			    {
+				if (*buf)
+					(void)strcat(buf, ",");
+				(void)strcat(buf, name);
+			    }
 		} else
 			sendto_match_servs(chptr, cptr, PartFmt,
 				   	   parv[0], name, comment);
@@ -2083,7 +2092,8 @@ char	*parv[];
 	    hunt_server(cptr, sptr, ":%s NAMES %s %s", 2, parc, parv))
 		return 10;
 
-	mlen = strlen(ME) + 10;
+	mlen = strlen(ME) + 10; /* server names + : : + spaces + "353" */
+	mlen += strlen(parv[0]);
 	if (!BadPtr(para))
 	    {
 		s = index(para, ',');
@@ -2109,7 +2119,8 @@ char	*parv[];
 			continue;
 		if (!MyConnect(sptr) && (BadPtr(para) || (rlen > CHREPLLEN)))
 			break;
-		if (!ShowChannel(sptr, chptr))
+		if ((BadPtr(para) || !HiddenChannel(chptr)) &&
+		    !ShowChannel(sptr, chptr))
 			continue; /* -- users on this are not listed */
 
 		/* Find users on same channel (defined by chptr) */
@@ -2138,7 +2149,7 @@ char	*parv[];
 			sendto_one(sptr, rpl_str(RPL_NAMREPLY, parv[0]), buf);
 			continue;
 		    }
-		idx = len + 4;
+		idx = len + 4; /* channel name + [@=] + 2?? */
 		flag = 1;
 		for (lp = chptr->members; lp; lp = lp->next)
 		    {
@@ -2159,7 +2170,7 @@ char	*parv[];
 			idx += strlen(c2ptr->name) + 1;
 			flag = 1;
 			(void)strcat(buf," ");
-			if (mlen + idx + NICKLEN > BUFSIZE - 2)
+			if (mlen + idx + NICKLEN + 1 > BUFSIZE - 2)
 			    {
 				sendto_one(sptr, rpl_str(RPL_NAMREPLY,
 					   parv[0]), buf);
@@ -2268,10 +2279,6 @@ aClient	*cptr, *user;
 		chptr = lp->value.chptr;
 		if (*chptr->chname == '&')
 			continue;
-#ifndef NoV28Links
-		if (*chptr->chname == '+' && cptr->serv->version == SV_OLD)
-			continue;
-#endif
 		if ((mask = index(chptr->chname, ':')))
 			if (match(++mask, cptr->name))
 				continue;
@@ -2293,8 +2300,7 @@ aClient	*cptr, *user;
 		    }
 		(void)strcpy(buf + len, chptr->chname);
 		len += clen;
-		if (cptr->serv->version != SV_OLD &&
-		    lp->flags & (CHFL_CHANOP|CHFL_VOICE))
+		if (lp->flags & (CHFL_CHANOP|CHFL_VOICE))
 		    {
 			buf[len++] = '\007';
 			if (lp->flags & CHFL_CHANOP)
@@ -2329,7 +2335,7 @@ time_t	now;
 	static	u_char	split = 0;
 	Reg	aChannel *chptr = channel;
 	Reg	u_int	cur_nb = 1, curh_nb = 0;
-	aChannel *delch;
+	aChannel *del_ch;
 #ifdef DEBUGMODE
 	u_int	del = istat.is_hchan;
 #endif
@@ -2388,18 +2394,18 @@ time_t	now;
 
 		if ((chptr->users == 0) && (chptr->history <= now))
 		    {
-			delch = chptr;
-			if (delch->prevch)
-				chptr = delch->prevch->nextch = delch->nextch;
+			del_ch = chptr;
+			if (del_ch->prevch)
+				chptr = del_ch->prevch->nextch = del_ch->nextch;
 			else
-				chptr = channel = delch->nextch;
-			if (delch->nextch)
-				delch->nextch->prevch = delch->prevch;
-			(void)del_from_channel_hash_table(delch->chname,delch);
+				chptr = channel = del_ch->nextch;
+			if (del_ch->nextch)
+				del_ch->nextch->prevch = del_ch->prevch;
+			(void)del_from_channel_hash_table(del_ch->chname,del_ch);
 			istat.is_hchan--;
 			istat.is_hchanmem -= sizeof(aChannel) 
-				+ strlen(delch->chname);
-			MyFree((char *)delch);
+				+ strlen(del_ch->chname);
+			MyFree((char *)del_ch);
 		    }
 		else
 			chptr = chptr->nextch;

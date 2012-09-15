@@ -1,5 +1,5 @@
 This is Info file INSTALL.info, produced by Makeinfo-1.55 from the
-input file /tmp/sgml2info20282tmp2.
+input file /tmp/sgml2info23680tmp2.
 
    \input texinfo
 
@@ -10,9 +10,9 @@ Installing IRC - The Internet Relay Chat Program
 ************************************************
 
      SGML version by Christophe Kalt
-     $Id: INSTALL.info,v 1.9 1997/07/18 03:13:46 kalt Exp $
+     $Id: INSTALL.info,v 1.18 1997/10/13 19:09:38 kalt Exp $
 
-   This document describes how to install, and configure IRC 2.9.3.
+   This document describes how to install, and configure IRC 2.9.4.
 
 * Menu:
 
@@ -44,12 +44,21 @@ default behaviour:
      changes the default directory where most irc files will go.
      (default is prefix/lib/ircd)
 
+`--resconf=FILE'
+     defines the file to be used by ircd to initialize its resolver.
+     (default is /etc/resolv.conf)
+
 `--zlib-include=DIR'
      specifies in which directory the include file from the zlib is
      located.
 
 `--zlib-library=DIR'
-     specifies in which directory the zlib library is locate.
+     specifies in which directory the zlib library is located.
+
+`--zlib-prefix=DIR'
+     specifies the prefix for zlib location.  It overrides the 2
+     previous options.  (The include directory is supposed to be in
+     prefix/include, and the library in prefix/lib).
 
 `--with-zlib'
      is the default.  "configure" looks on your system to find the
@@ -541,8 +550,8 @@ Connection Classes
      `BEFORE' it is used in any other way.
 
 `Format'
-     Y:<Class>:<Ping Frequency>:<Connect freq|Max IP>:<Max
-     Links>:<Sendq>
+     Y:<Class>:<Ping Frequency>:<Connect freq>:<Max
+     Links>:<SendQ>:<Local Limit>:<Global Limit>
 
 `Y'
      This specifies a Class record.
@@ -557,22 +566,12 @@ Connection Classes
      still alive.  Unless you are sure of what you are doing, use the
      default value which is in your config.h file.
 
-`Connect Frequency|Max IP'
-     This field has a different meaning depending on the use of the Y
-     line:
-        * For servers: By changing this number, you change how often
-          your server checks to see if it can connect to this server.
-          If you want to check very occasionally, use a large value,
-          but if it is an important connection, you might want a
-          smaller value so that you connect to it as soon as possible.
-
-        * For clients:
-             *  Positive value: defines the maximum number of clients
-               from the same host (IP) will be allowed.
-
-             *  Negative value: defines the maximum number of clients
-               from the same user@host (IP) will be allowed.  Read note
-               below.
+`Connect Frequency'
+     By changing this number, you change how often your server checks
+     to see if it can connect to this server. If you want to check very
+     occasionally, use a large value, but if it is an important
+     connection, you might want a smaller value so that you connect to
+     it as soon as possible.
 
 `Max Links'
      This field defines the maximum number of links this class will
@@ -580,39 +579,85 @@ Connection Classes
      overrides this feature.  Also defines the maximum number of users
      in this class (I/O lines).
 
-`Sendq'
-     This field defines the "sendq" value for this class.  If thisfield
-     is not present, the default (from config.h) is assigned.
+`SendQ'
+     This field defines the "SendQ" value for this class.  If this
+     field is not present, the default (from config.h) is assigned.
+
+`Local limit'
+     This field is used to limit the number of local concurrent
+     connections.  The format is <x>.<y>
+        *  x: defines the maximum number of clients from the same host
+          (IP) will be allowed.
+
+        *  y: defines the maximum number of clients from the same
+          user@host (IP) will be allowed.  Read note below.
+
+     Only x or y may be set, any unset value defaults to zero.
+
+`Global limit'
+     This field has the same use as the "Local limit" field.  But, the
+     connection counts are done for all clients present on the net
+     instead of only counting local clients.
 
 `Note'
-     leaving any of the fields out means their value is 0 (ZERO)!!
+     leaving any of the fields (except SendQ) out means their value is
+     0 (ZERO)!!  The SendQ field default value is dynamically
+     determined.
 
 `Note'
-     If you plan to use the user@host limit, please read the following
-     very carefully.  The "user" value is the ident reply for the
-     connection.  If no reply was given then it defaults to "unknown"
-     and thus the effective limit will be per host, not per user@host.
-     Also, some ident servers return encrypted data which changes for
-     every connection making the limit void.
+     If you plan to use the local user@host limit, please read the
+     following very carefully.  The "user" value is the ident reply for
+     the connection.  If no reply was given then it defaults to
+     "unknown" and thus the effective limit will be per host, not per
+     user@host. Also, some ident servers return encrypted data which
+     changes for every connection making the limit void.
+
+`Note'
+     Only the local limitation is accurate.
+
+`Note'
+     If you define a gobal limit, you should also define a local limit
+     (same or lower) as it won't take more CPU and will make the global
+     limit more accurate.
+
+`Note'
+     The local and global limits only affect users (I lines), not
+     servers nor services.
 
 `Example'
-     Y:23:120:300:5:
+     Y:23:120:300:5:100000:0:0: (server class)
 
      This defines class 23 to allow 5 auto-connections, which are
      checked every 300 seconds.  The connection is allowed to remain
      silent for 120 seconds before a PING is sent.  NOTE: fields 3 & 4
-     are in seconds.
-
-     You may also give I lines a class (again the sixth field to define
-     which class).  This is only usefull (currently) for redefining the
-     ping frequency.  It can also be useful as a diagnostic to see how
-     much each I line is used when combined with the TRACE output.
+     are in seconds.  The SendQ is set to 100000 bytes.
 
      Another feature of connection class is the ability to do automatic
      routing by using the class as a "priority".  If you are connected
      to a server which has a class lower than one of the servers that
      is "behind" it, the server will disconnect the lower class one and
      schedule a "new" connection for the higher class server.
+
+     Y:1:60:0:50:20000:2:5: (client class)
+
+     In case of a client class, the fields are interpreted a bit
+     differently.  This class (number 1) can be used by up to 50 users.
+     The connections are allowed to remain silent for 60 seconds
+     before a PING is set.  The SendQ is set to 20000 bytes.  A new
+     connection in this class will only be allowed if there aren't more
+     than 2 other local connections from the same IP address, or more
+     than 5 other connections on the net from the same hostname.
+
+     Y:2:60:0:50:20000:2.1:5: (client class)
+
+     In case of a client class, the fields are interpreted a bit
+     differently.  This class (number 1) can be used by up to 50 users.
+     The connections are allowed to remain silent for 60 seconds
+     before a PING is set.  The SendQ is set to 20000 bytes.  A new
+     connection in this class will only be allowed if there aren't more
+     than 2 other local connections from the same IP address, 1 other
+     local connection from the same user from the same IP address, or
+     more than 5 other connections on the net from the same hostname.
 
 
 File: INSTALL.info,  Node: Client connections,  Next: Operator priviliges,  Prev: Connection Classes,  Up: The ircd-conf file
@@ -638,6 +683,45 @@ Client connections
      I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Port>:<Class>
      i:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Port>:<Class>
 
+`TARGET Host Addr'
+     Specifies the IP address(es) of the machine(s) that are allowed to
+     connect.  If "user@" prefixes the actual IP address the server
+     will require that the remote username returned by the ident server
+     be the same as the one given before the "@".  Wildcards are
+     permitted.
+
+`Password'
+     The password that must be given by the client to be allowed on the
+     server.
+
+`TARGET Host NAME'
+     Specifies the host name(s) of the machines allowed to connect to
+     the server.  If "user@" prefixes the actual IP address the server
+     will require that the remote username returned by the ident server
+     be the same as the one given before the "@".  Wildcards are
+     permitted.
+
+     This field can be empty, it then has a special meaning.  See Below.
+
+`Port'
+     Specifies the port number for which this configuration line is
+     valid.  An empty field, or "0" matches all ports.
+
+`Class'
+     This field should refer to an existing class.  Connections classes
+     are usefull to limit the number of users allowed on the server.
+
+`Note'
+     The server first checks if the client hostname (or any aliases)
+     matches the `TARGET Host NAME' field.  If a match is found, the
+     client is accepted.  If not, the server checks if the IP address
+     of the client matches the `TARGET Host Addr' field.  The matching
+     field is used to set the name of the client: for example, if the
+     client matches the `TARGET Host Addr' field, it will show on IRC
+     with a numerical address (even if this address is resolvable).  If
+     the `TARGET Host NAME' field is empty, then the host name is
+     always used (when available).
+
 `Examples'
      For example, if you were installing IRC on tolsun.oulu.fi and you
      wanted to allow examples sake let us assume you were making this
@@ -651,7 +735,7 @@ Client connections
 
      I:x::*.du.edu::1
 
-     Allow any clients from machines whose names end in "du.edu" to
+     Allow any clients from machines whose names end in ".du.edu" to
      connect with no password.
 
      I:128.214.6.100::nic.funet.fi::1
@@ -661,8 +745,8 @@ Client connections
 
      I:x:secret:*.tut.fi::1
 
-     Allow clients from machines matching *.tut.fi to connect with the
-     password "secret".
+     Allow clients from machines matching "*.tut.fi" to connect with
+     the password "secret".
 
      I:*::*::1
 
@@ -676,8 +760,21 @@ Client connections
 
      I:x::*.fi:6667:1
 
-     Allow clients from machines matching *.fi to connect on the port
+     Allow clients from machines matching "*.fi" to connect on the port
      6667.
+
+     I:135.11.35.*::*.net::1
+
+     Allows clients from machines which host name matches "*.net" or
+     which IP address matches "135.11.35.*" to connect to the server.
+     If the host name does not match "*.net" then the IP address is
+     used for these clients, even if the host name is known.
+
+     I:135.11.35.*::::1
+
+     Allows clients from machines which IP address matches
+     "135.11.35.*" to connect to the server.  If the host name is
+     known, is it used as address for these clients.
 
 `NEW!!!'
      As of the 2.7.2d version of the server, the server is able to
@@ -828,6 +925,13 @@ Excluded accounts
      why would you run an ircd if you allow nobody to connect to it
      anyways ?
 
+     If you specify an IP address, or IP mask, it will match clients
+     connecting from the matching addresses, no matter if they resolve
+     or not.
+
+     You can prefix an IP address or IP mask by "=" in which case only
+     non resolving matching hosts will be banned.
+
 `time interval(s)|comment'
      Either leave this field empty or put a comment, then the line
      active continuously for the specified user/host machine.  You may
@@ -858,7 +962,7 @@ Excluded accounts
      If user "jtrim" connects to IRC from host "orion.cair.du.edu" then
      IMMEDIATELY REMOVE HIM from my IRCD.
 
-     K:*.stealth.net::-43589:0:
+     k:*.stealth.net::-43589:0:
 
      If a user connects from any host that has the suffix "stealth.net"
      and if that host ident server returns "-43589" - then IMMEDIATELY
@@ -880,6 +984,16 @@ Excluded accounts
      access to your server between 8 and 12am, 2 and 7pm. Users get
      kicked off if they're already signed on when the line becomes
      active (they'll get a warning 5 minutes ago).
+
+     K:192.11.35.*::*:0:
+
+     This line disallows all hosts whose IP address matches
+     "192.11.35.*" to login to the ircd.
+
+     K:=192.11.35.*::*:0:
+
+     This line disallows all hosts whose IP address matches
+     "192.11.35.*" and which didn't resolve to login to the ircd.
 
 
 File: INSTALL.info,  Node: Server connections,  Next: Hub connections,  Prev: Excluded accounts,  Up: The ircd-conf file
@@ -1221,7 +1335,9 @@ Version limitations
      It is possible to have and use multiple V-lines for the one server
      mask.
 
-     V:020901:*:*:: V:020902:*:*::
+     V:020901:*:*::
+
+     V:020902:*:*::
 
      is allowed.
 
@@ -1280,8 +1396,8 @@ Service connections
      This is the password which must be passed in the SERVICE command.
 
 `Service Name'
-     : The name used by the service. Services don't have nicknames, but
-     a static name defined by the S line.
+     The name used by the service. Services don't have nicknames, but a
+     static name defined by the S line.
 
 `Service Type'
      The type of service. It defines the priviledges given to the
@@ -1292,24 +1408,6 @@ Service connections
      The class field should refer to an existing class.
 
 `Notes'
-     To connect a service to your server, you must first create an
-     S-line entry in your ircd.conf file and get your server to read
-     this in (ie rehash or reboot). Once your server has updated
-     itself, you can then attempt to register your connection as a
-     service.  Registering as a service is done by sending a SERVICE
-     command to the server:
-
-     SERVICE servicename servername distribution servicetype 0
-     :Information
-
-     A successfull registering of a service at the server will result
-     in a RPL_YOURESERVICE (383) being sent back to you. Any other
-     reply as a result of sending service indicates an error has
-     occured.
-
-     Services can be listed using the SERVLIST command, and can be sent
-     messages using the SQUERY command.
-
      A service is not a very useful sort of client, it cannot join
      channels or issue certain commands although most are available to
      it. Services are rejected upon sending an unknown or unallowed
@@ -1325,9 +1423,9 @@ Bounce server
 
 `Introduction'
      This provides you a way to bounce clients to another server.  This
-     information is provided to clients which are denied connection
-     because a limit is reached.  It is NOT used when client is not
-     normally authorized to connect to server.
+     information is provided to clients which are denied connection,
+     either because their connection class is full, or the server is
+     full, or they are not authorized to connect.
 
 `Format'
      B:<Class|Host Mask>::<Server Name>:<Port>:
@@ -1344,7 +1442,7 @@ Bounce server
      "All connections in use" message.  In this case, the server
      doesn't process the connections at all, and has no knowledge of
      the client's host name, or class number.  For these cases, this
-     must field contain "-1".
+     field must be empty.
 
 `Server Name'
      This specifies the IRC server hostname that the client should use.
@@ -1364,7 +1462,7 @@ Bounce server
      Finnish client should use irc.funet.fi when they cannot be taken
      anymore.
 
-     B:-1::irc2.stealth.net:6667:
+     B:::irc2.stealth.net:6667:
 
      When the server is completely full, clients should use the
      secondary server.
@@ -1419,38 +1517,38 @@ Related resources
 
 Tag Table:
 Node: Top123
-Node: Installing IRC-609
-Node: The config-h file1965
-Node: Define what type of UNIX your machine uses-2631
-Node: DEBUGMODE3031
-Node: SPATH CPATH MPATH LPATH PPATH TPATH3689
-Node: CACHED_MOTD4898
-Node: CHROOTDIR5368
-Node: ENABLE_SUMMON ENABLE_USERS5692
-Node: SHOW_INVISIBLE_LUSERS NO_DEFAULT_INVISIBLE6228
-Node: OPER_KILL OPER_REHASH OPER_RESTART LOCAL_KILL_ONLY6911
-Node: ZIP_LINKS ZIP_LEVEL7543
-Node: SLOW_ACCEPT8554
-Node: CLONE_CHECK9172
-Node: Other #define's9512
-Node: Editing the Makefile and compiling9837
-Node: The ircd-conf file10473
-Node: Machine information12157
-Node: Administrative info14253
-Node: Port connections16288
-Node: Connection Classes18498
-Node: Client connections22421
-Node: Operator priviliges25706
-Node: Restrict connections27826
-Node: Excluded accounts29141
-Node: Server connections32441
-Node: Hub connections40874
-Node: Leaf connections42087
-Node: Version limitations44170
-Node: Excluded machines45403
-Node: Service connections46710
-Node: Bounce server49083
-Node: Default local server (for local clients) `*OBSOLETED*'50707
-Node: Related resources51590
+Node: Installing IRC-610
+Node: The config-h file2296
+Node: Define what type of UNIX your machine uses-2962
+Node: DEBUGMODE3362
+Node: SPATH CPATH MPATH LPATH PPATH TPATH4020
+Node: CACHED_MOTD5229
+Node: CHROOTDIR5699
+Node: ENABLE_SUMMON ENABLE_USERS6023
+Node: SHOW_INVISIBLE_LUSERS NO_DEFAULT_INVISIBLE6559
+Node: OPER_KILL OPER_REHASH OPER_RESTART LOCAL_KILL_ONLY7242
+Node: ZIP_LINKS ZIP_LEVEL7874
+Node: SLOW_ACCEPT8885
+Node: CLONE_CHECK9503
+Node: Other #define's9843
+Node: Editing the Makefile and compiling10168
+Node: The ircd-conf file10804
+Node: Machine information12488
+Node: Administrative info14584
+Node: Port connections16619
+Node: Connection Classes18829
+Node: Client connections24265
+Node: Operator priviliges29737
+Node: Restrict connections31857
+Node: Excluded accounts33172
+Node: Server connections37030
+Node: Hub connections45463
+Node: Leaf connections46676
+Node: Version limitations48759
+Node: Excluded machines49998
+Node: Service connections51305
+Node: Bounce server52898
+Node: Default local server (for local clients) `*OBSOLETED*'54521
+Node: Related resources55404
 
 End Tag Table

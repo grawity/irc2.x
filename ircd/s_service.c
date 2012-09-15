@@ -22,21 +22,16 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_service.c,v 1.12 1997/06/27 13:46:36 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_service.c,v 1.17 1997/10/08 20:20:03 kalt Exp $";
 #endif
 
-#include "struct.h"
-#include "common.h"
-#include "sys.h"
-#include "service.h"
-#include "msg.h"
-#include "numeric.h"
-#include "h.h"
-#include "channel.h"
+#include "os.h"
+#include "s_defines.h"
+#define S_SERVICE_C
+#include "s_externs.h"
+#undef S_SERVICE_C
 
-void	channel_modes __P((aClient *, char *, char *, aChannel *));
-
-static	aService	*svctop = NULL;
+aService	*svctop = NULL;
 
 aService	*make_service(cptr)
 aClient	*cptr;
@@ -109,7 +104,7 @@ aClient *cptr;
 **	action	type on notice
 **	server	origin
 */
-#ifndef USE_STDARG
+#if ! USE_STDARG
 void	check_services_butone(action, server, cptr, fmt, p1, p2, p3, p4,
 			      p5, p6, p7, p8)
 long	action;
@@ -139,7 +134,7 @@ void	check_services_butone(long action, char *server, aClient *cptr, char *fmt, 
 			    cptr && IsRegisteredUser(cptr) &&
 			    (action & SERVICE_MASK_PREFIX))
 			    {
-#ifdef USE_STDARG
+#if USE_STDARG
 				char	buf[2048];
 				va_list	va;
 				va_start(va, fmt);
@@ -149,7 +144,7 @@ void	check_services_butone(long action, char *server, aClient *cptr, char *fmt, 
 				sprintf(nbuf, "%s!%s@%s", cptr->name,
 					cptr->user->username,cptr->user->host);
 
-#ifndef USE_STDARG
+#if ! USE_STDARG
 				sendto_one(acptr, fmt, nbuf, p2, p3, p4, p5,
 					   p6, p7, p8);
 #else
@@ -158,7 +153,7 @@ void	check_services_butone(long action, char *server, aClient *cptr, char *fmt, 
 			    }
 			else
 			    {
-#ifndef USE_STDARG
+#if ! USE_STDARG
 				sendto_one(acptr, fmt, p1, p2, p3, p4, p5,
 					   p6, p7, p8);
 #else
@@ -352,17 +347,7 @@ char	*parv[];
 		strncpyzt(sptr->name, parv[1], sizeof(sptr->name));
 		server = parv[2];
 		metric = atoi(parv[5]);
-		if (cptr->serv->version != SV_OLD)
-			sp = find_tokserver(atoi(server), cptr, NULL);
-		/* The following is to plug a hole in 2.9.1 & 2.9.2 */
-		if (!sp && (acptr = find_server(server, NULL)))
-		    {
-			sendto_flag(SCH_DEBUG,
-				    "%s uses wrong syntax for SERVICE (%s)",
-				    get_client_name(cptr, TRUE), sptr->name);
-                        sp = acptr->serv;
-		    }
-		/* it should be removed sometime in the future.. */
+		sp = find_tokserver(atoi(server), cptr, NULL);
 		if (!sp)
 		    {
 			sendto_flag(SCH_ERROR,
@@ -482,8 +467,6 @@ char	*parv[];
 		    acptr == cptr)
 			continue;
 		if (match(dist, acptr->name))
-			continue;
-		if (acptr->serv->version == SV_OLD)
 			continue;
 		mlname = my_name_for_link(ME, acptr->serv->nline->port);
 		if (*mlname == '*' && match(mlname, sptr->service->server)== 0)
@@ -647,7 +630,7 @@ char	*parv[];
 		    }
 	    }
 	
-	if (burst & (SERVICE_WANT_CHANNEL|SERVICE_WANT_MODE))
+	if (burst & (SERVICE_WANT_CHANNEL|SERVICE_WANT_VCHANNEL|SERVICE_WANT_MODE))
 	    {
 		char    modebuf[MODEBUFLEN], parabuf[MODEBUFLEN];
 		aChannel	*chptr;
@@ -656,7 +639,7 @@ char	*parv[];
 		    {
 			if (chptr->users == 0)
 				continue;
-			if (burst & SERVICE_WANT_CHANNEL)
+			if (burst&(SERVICE_WANT_CHANNEL|SERVICE_WANT_VCHANNEL))
 				sendto_one(sptr, "CHANNEL %s %d",
 					   chptr->chname, chptr->users);
 			if (burst & SERVICE_WANT_MODE)
@@ -697,8 +680,14 @@ char	*parv[];
 	    }
 
 	if ((acptr = best_service(parv[1], NULL)))
-		sendto_one(acptr, ":%s SQUERY %s :%s",
-			   parv[0], acptr->name, parv[2]);
+		if (MyConnect(acptr) &&
+		    (acptr->service->wants & SERVICE_WANT_PREFIX))
+			sendto_one(acptr, ":%s!%s@%s SQUERY %s :%s", parv[0],
+				   sptr->user->username, sptr->user->host,
+				   acptr->name, parv[2]);
+		else
+			sendto_one(acptr, ":%s SQUERY %s :%s",
+				   parv[0], acptr->name, parv[2]);
 	else
 		sendto_one(sptr, err_str(ERR_NOSUCHSERVICE, parv[0]), parv[1]);
 	return 2;

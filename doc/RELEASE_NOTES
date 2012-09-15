@@ -1,15 +1,36 @@
-# @(#)$Id: RELEASE_NOTES,v 1.9 1997/07/24 12:37:33 kalt Exp $
+# @(#)$Id: RELEASE_NOTES,v 1.15 1997/10/18 13:44:37 kalt Exp $
 
-This is version 2.9.3 of the IRC software.
+This is version 2.9.4 of the IRC software.
 
----
+===============================================================================
+
+2.9.4 doesn't support 2.8 links anymore.  A 2.8.x server cannot
+be directly linked to a 2.9.4 server.  They can however coexist
+on the same IRC network.
+
+------
+
+Configuration changes between 2.9.3 and 2.9.4:
+
+	* The format for I lines was extended.
+	* The format for B lines has slightly changed.
+	* The format for Y lines has changed ([user@]host limits).
+	* K lines on IP addresses now match resolving hosts by default.
+
+------
+
+As announced with the 2.9.3 release, the NOTE feature has been removed.
+A replacement has been written as an independant package, and can be found
+at the following location: ftp://ftp.cs.tu-berlin.de/pub/net/irc/noteserv/
+
+===============================================================================
 
 2.9.3 doesn't support 2.7 protocol anymore.  Don't run 2.9.3
-and 2.7 servers on the same network.
+and 2.7 servers on the same IRC network.
 
----
+------
 
-New features:
+New features in 2.9.3:
 
 	* compression of server links.
 	* virtual IP support.
@@ -18,9 +39,9 @@ New features:
 	* V lines created. (restrict peers' compile time options)
 	* new type of client: services.
 
----
+------
 
-Important configuration changes:
+Important configuration changes between 2.9.2 and 2.9.3:
 
 	* M and P lines format has changed since 2.9.2, it is important
 	  to update your ircd.conf !
