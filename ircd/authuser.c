@@ -203,7 +203,7 @@ register int timeout;
  FD_SET(s,&wfds);
  r = select(s + 1,(fd_set *) 0,&wfds,(fd_set *) 0,&tv);
  /* XXX: how to handle EINTR? */
- if (r == -1)
+ if (r <= 0)
    CLORETS(0)
  if (!FD_ISSET(s,&wfds))
   {
@@ -211,13 +211,13 @@ register int timeout;
    errno = ETIMEDOUT;
    return 0;
   }
- return auth_sockuser(s,local,remote);
+ return auth_sockuser(s,local,remote,timeout);
 }
 
-char *auth_sockuser(s,local,remote)
+char *auth_sockuser(s,local,remote,timeout)
 register int s;
 register unsigned short local;
-register unsigned short remote;
+register unsigned short remote,timeout;
 {
  register int buflen;
  register int w;
@@ -226,7 +226,8 @@ register unsigned short remote;
  unsigned short rlocal;
  unsigned short rremote;
  register int fl;
- fd_set wfds;
+ struct timeval tv;
+ fd_set wfds,rfds;
  void *old_sig;
  
  old_sig = signal(SIGPIPE, SIG_IGN);
@@ -261,6 +262,13 @@ register unsigned short remote;
      buflen -= w;
     }
  buf = realbuf;
+ FD_ZERO(&rfds);
+ FD_SET(s,&rfds);
+ tv.tv_sec = timeout;
+ tv.tv_usec = 0;
+ w = select(s + 1,&rfds,(fd_set *) 0,(fd_set *) 0,&tv);
+ if (w <= 0 || !FD_ISSET(s,&wfds))
+   CLORETS(0)
  while ((w = read(s,&ch,1)) == 1)
   {
    *buf = ch;
