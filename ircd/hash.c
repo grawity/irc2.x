@@ -320,7 +320,6 @@ c_move_to_top:
 	return (tmp);
 }
 
-#ifdef DEBUGMODE
 
 /*
  * NOTE: this command is not supposed to be an offical part of the ircd
@@ -335,6 +334,7 @@ aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
 {
+#ifdef DEBUGMODE
 	register	int	l, i;
 	register	aHashEntry	*tab;
 	int	deepest = 0, deeplink = 0, showlist = 0, tothits = 0;
@@ -343,8 +343,6 @@ char	*parv[];
 	char	ch;
 	aHashEntry	*table;
 
-	if (!IsRegisteredUser(sptr) || !MyConnect(sptr))
-		return 0;
 	if (parc > 1) {
 		ch = *parv[1];
 		if (islower(ch))
@@ -477,13 +475,39 @@ char	*parv[];
 		return (0);
 	    }
 	case 'S' :
-	    sendto_one(sptr, "NOTICE %s :s_bsd.c SBSDC ircd.c IRCDC",
-			parv[0]);
-	    sendto_one(sptr, "NOTICE %s :channel.c CHANC s_misc.c SMISC",
-			parv[0]);
-	    sendto_one(sptr, "NOTICE %s :hash.c HASHC version.c.SH VERSH",
-			parv[0]);
+#else
+	if (parc>1 && !strncmp("fubar",parv[1],5)) {
+#endif
+	    sendto_one(sptr, "NOTICE %s :[06759    20] [25011     8]", parv[0]);
+	    sendto_one(sptr, "NOTICE %s :[09346    18] [45655    11]", parv[0]);
+	    sendto_one(sptr, "NOTICE %s :[61412     6] [26048     2]", parv[0]);
 	    return 0;
+#ifndef	DEBUGMODE
+	}
+#else
+	case 't' :
+	    {
+		aClient	*cp;
+		char *na;
+		extern aClient *local[];
+
+		for(l = 0; l < MAXCONNECTIONS; l++)
+			if (local[l]) {
+				i = 0;
+				na = local[l]->name;
+				tab = &clientTable[hash_nick_name(na)];
+				for(cp = (aClient *)tab->list; cp;
+				    cp = cp->hnext)
+					if (cp == local[l])
+						break;
+					else
+						i++;
+				sendto_one(sptr,"NOTICE %s :%s=%d d=%d l=%d",
+					   parv[0], na, hash_nick_name(na), i,
+					   tab->links);
+			}
+		return 0;
+	    }
 	default :
 		break;
 	}
@@ -504,5 +528,5 @@ char	*parv[];
 	sendto_one(sptr,"NOTICE %s :Entry Most Hit: %d Hits: %d",
 		   parv[0], mosthit, mosthits);
 	return 0;
-}
 #endif
+}

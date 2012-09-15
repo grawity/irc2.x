@@ -606,14 +606,14 @@ char *parv[];
 		sendto_ops("Nick change collision from %s to %s(%s <- %s)",
 			   sptr->name, acptr->name, acptr->from->name,
 			   get_client_name(cptr, FALSE));
-		sendto_serv_butone(cptr, /* KILL old from outgoing servers */
+		sendto_serv_butone(NULL, /* KILL old from outgoing servers */
 				   ":%s KILL %s :%s (%s(%s) <- %s)",
 				   me.name, sptr->name,
 				   me.name,
 				   acptr->from->name,
 				   acptr->name,
 				   get_client_name(cptr, FALSE));
-		sendto_one(cptr, /* Kill new from incoming link */
+		sendto_serv_butone(NULL, /* Kill new from incoming link */
 			   ":%s KILL %s :%s (%s <- %s(%s))",
 			   me.name, acptr->name,
 			   me.name,

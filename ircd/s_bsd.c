@@ -103,6 +103,7 @@ int	highest_fd = 0, readcalls = 0;
 struct	sockaddr *connect_unix_server PROTO((aConfItem *, aClient *, int *));
 struct	sockaddr *connect_inet_server PROTO((aConfItem *, aClient *, int *));
 static	int	completed_connection PROTO((aClient *));
+static	struct	in_addr myip;
 #ifdef	UNIXPORT
 static	char	unixpath[256];
 #endif
@@ -544,11 +545,15 @@ int	len, fam;
 	struct	hostent	hps;
 	int	stop = 0;
 
+	alarm(10);
 	hp = gethostbyaddr(sp, len, fam);
+	alarm(0);
 	if (!hp)
 		return NULL;
 
+	alarm(10);
 	hp2 = gethostbyname(hp->h_name);
+	alarm(0);
 	if (!hp2)
 		return NULL;
 
@@ -590,8 +595,13 @@ int	flags;
 		return -2;
 
 	if (!IsUnixSocket(cptr))
+	    {
+		alarm(10);
 		hp = gethostbyaddr(&(sk.sin_addr), sizeof(struct in_addr),
 				   sk.sin_family);
+		alarm(0);
+	    }
+
 
 	/* attach I-lines using hostname first, then check ip#'s. */
 	if (hp)
@@ -706,8 +716,10 @@ aClient	*cptr;
 	** real name, then check with it as the host. Use gethostbyname()
 	** to check for servername as hostname.
 	*/
+	alarm(10);
 	if ((!c_conf || !n_conf) && (hp = gethostbyname(name)))
 	    {
+		alarm(0);
 		for (i = 0; hp->h_addr_list[i]; i++)
 			if (!bcmp(hp->h_addr_list[i], (char *)(&sk.sin_addr),
 				  sizeof(struct in_addr)))
@@ -723,10 +735,15 @@ aClient	*cptr;
 		    }
 		hp = (struct hostent *)NULL;
 	    }
+	alarm(0);
 
 	if (!c_conf || !n_conf)
+	    {
+		alarm(10);
 		hp = gethostbyaddr(&(sk.sin_addr), sizeof(struct in_addr),
 				   sk.sin_family);
+		alarm(0);
+	    }
 	if (hp)
 		/*
 		 * if we are missing a C or N line from above, search for
@@ -992,7 +1009,9 @@ int	fd;
 	local[fd] = acptr;
 	acptr->acpt = cptr;
 	SetUnixSock(acptr);
+	alarm(10);
 	hp = gethostbyname(me.sockhost);
+	alarm(0);
 	if (hp)
 		bcopy(hp->h_addr_list[0], &acptr->ip, sizeof(struct in_addr));
 	else
@@ -1041,7 +1060,7 @@ long	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	if (cptr = local[i])
 	  {
 	    if (IsMe(cptr) && AcceptNewConnections &&
-		(cptr->flags & FLAGS_LISTEN) && (now > cptr->lasttime + 1))
+		(cptr->flags & FLAGS_LISTEN) && (now > cptr->lasttime + 2))
 	     {
 		FD_SET(i, &read_set);
 	     }
@@ -1287,7 +1306,7 @@ aConfItem	*aconf;
 aClient	*cptr;
 int	*lenp;
 {
-	static	struct	sockaddr_in	server;
+	static	struct	sockaddr_in	server, local;
 	struct	hostent	*hp;
 
 	/*
@@ -1297,7 +1316,12 @@ int	*lenp;
 
 	cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
 	strncpyzt(cptr->sockhost, aconf->host, sizeof(cptr->sockhost));
+	bzero((char *)&server, sizeof(server));
+	bzero((char *)&local, sizeof(local));
+	local.sin_family = AF_INET;
 	server.sin_family = AF_INET;
+	bcopy((char *)&myip, (char *)&local.sin_addr,
+        	sizeof(struct in_addr));
 
 	if (cptr->fd < 0)
 	    {
@@ -1305,13 +1329,22 @@ int	*lenp;
 		free(cptr);
 		return (struct sockaddr *)NULL;
 	    }
+	if (bind(cptr->fd, (struct sockaddr *)&local, sizeof(local))==-1)
+	    {
+		report_error("error binding to local port for %s:%s", cptr);
+		close(cptr->fd);
+		free(cptr);
+		return NULL;
+	    }
 	
 	/* MY FIX -- jtrim@duorion.cair.du.edu  (2/10/89) */
 
 	if (isdigit(*(aconf->host)) && (aconf->ipnum.s_addr == -1))  {
 		aconf->ipnum.s_addr = inet_addr(aconf->host);
 	} else if (aconf->ipnum.s_addr == -1) {
+		alarm(10);
 		hp = gethostbyname(aconf->host);
+		alarm(0);
 		if (hp == (struct hostent *)NULL)
 		    {
 			close(cptr->fd);
@@ -1488,7 +1521,8 @@ int	get_my_name(conf_name, name, len)
 char	*conf_name, *name;
 int	len;
 {
-	struct hostent *hp;
+	static	char	tmp[HOSTLEN];
+	struct	hostent	*hp;
 
 	if (gethostname(name,len) < 0)
 		return -1;
@@ -1502,27 +1536,29 @@ int	len;
 	 * a CNAME record for conf_name pointing to hostname. If so accept
 	 * conf_name as our name.   meLazy
 	 */
-	if (!BadPtr(conf_name) && mycmp(conf_name, name))
+	if (BadPtr(conf_name))
+		return -1;
+
+	alarm(10);
+	if ((hp = gethostbyname(conf_name)) || (hp = gethostbyname(name)))
 	    {
-		if (hp = gethostbyname(conf_name))
-		    {
-			char tmp[HOSTLEN];
-			char *hname;
-			int i=0;
+		char	*hname;
+		int	i=0;
 
-			for (hname = hp->h_name; hname;
-			     hname = hp->h_aliases[i++])
-	  		    {
-				strncpy(tmp, hname, sizeof(tmp));
-				add_local_domain(tmp,sizeof(tmp)-strlen(tmp));
-				if (!mycmp(tmp, conf_name))
-				    {
-					strncpy(name, conf_name, len);
-					break;
-				    }
-	 		    }
-		    }
+		alarm(0);
+		for (hname = hp->h_name; hname; hname = hp->h_aliases[i++])
+  		    {
+			strncpy(tmp, hname, sizeof(tmp));
+			add_local_domain(tmp,sizeof(tmp)-strlen(tmp));
+			if (!mycmp(tmp, conf_name))
+			    {
+				bcopy(hp->h_addr, (char *)&myip,
+				        sizeof(struct in_addr));
+				strncpy(name, conf_name, len);
+				return 0;
+			    }
+ 		    }
 	    }
-
-	return (0);
+	alarm(0);
+	return -1;
 }

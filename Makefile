@@ -88,14 +88,14 @@ bindircd:
 	cd common;\
 	${MAKE} build;\
 	cd ../ircd;\
-	${MAKE} bindircd;\
+	${MAKE} bindircd;
 
 authbind:
 	echo "Building common";\
 	cd common;\
 	${MAKE} build;\
 	cd ../ircd;\
-	${MAKE} authbind;\
+	${MAKE} authbind;
 
 clean:
 	${RM} -f *~ #* core

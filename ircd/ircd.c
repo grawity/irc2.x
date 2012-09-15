@@ -427,7 +427,6 @@ char	*argv[];
 	if (portnum < 0)
 	  portnum = PORTNUM;
 	me.port = portnum;
-	get_my_name(me.name, me.sockhost,sizeof(me.sockhost)-1);
 	if (debugtty == -2)
 	    {
 		me.fd = 0;
@@ -446,6 +445,7 @@ char	*argv[];
 		printf("Couldn't open configuration file %s\n", configfile);
 		exit(-1);
 	    }
+	get_my_name(me.name, me.sockhost,sizeof(me.sockhost)-1);
 	if (debugtty != -2)
 	    {
 		aConfItem	*aconf;

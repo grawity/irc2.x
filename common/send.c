@@ -522,6 +522,8 @@ char	*pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 	    {
 		if (!SendWallops(cptr))
 			continue;
+		if (MyClient(cptr) && !(IsServer(from) || IsMe(from)))
+			continue;
 		i = cptr->from->fd;	/* find connection oper is on */
 		if (sentalong[i])	/* sent message along it already ? */
 			continue;
