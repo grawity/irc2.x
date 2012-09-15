@@ -347,3 +347,72 @@ unsigned char char_atribs[] = {
 		};
 
 #endif
+
+
+/*
+** read a string terminated by \r or \n in from a fd
+**
+** Created: Sat Dec 12 06:29:58 EST 1992 by avalon
+*/
+int	dgets(fd, buf, num)
+int	fd, num;
+char	*buf;
+{
+	static	char	dgbuf[8192];
+	static	char	*head = dgbuf, *tail = dgbuf;
+	static	int	eof = 0;
+	register char	*s, *t;
+	register int	n, nr;
+
+	/*
+	** Sanity checks.
+	*/
+	if (!num)
+		return 0;
+	if (num > sizeof(dgbuf) - 1)
+		num = sizeof(dgbuf) - 1;
+dgetsagain:
+	/*
+	** check input buffer for EOL and if present return string.
+	*/
+	if (head < tail &&
+	    ((s = index(head, '\n')) || (s= index(head, '\r'))) && s < tail)
+	    {
+		n = MIN(s - head + 1, num);	/* at least 1 byte */
+dgetsreturnbuf:
+		bcopy(head, buf, n);
+		head += n;
+		if (head == tail)
+			head = tail = dgbuf;
+		return n;
+	    }
+
+	if (tail - head >= num)		/* dgets buf is big enough */
+	    {
+		n = num;
+		goto dgetsreturnbuf;
+	    }
+
+	if (head != dgbuf)
+	    {
+		for (nr = head - dgbuf, s = head, t = dgbuf; nr > 0; nr--)
+			*t++ = *s++;
+		tail = --t;
+	    }
+	n = sizeof(dgbuf) - (tail - dgbuf) - 1;
+	nr = read(fd, tail, n);
+	if (nr == -1)
+		return -1;
+	if (!nr)
+	    {
+		if (head < tail)
+		    {
+			n = MIN(head - tail, num);
+			goto dgetsreturnbuf;
+		    }
+		return 0;
+	    }
+	tail += nr;
+	*(tail + 1) = '\0';
+	goto dgetsagain;
+}

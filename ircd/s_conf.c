@@ -57,6 +57,7 @@ char conf_id[] = "conf.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <stdio.h>
 #include "netdb.h"
 #include <sys/socket.h>
+#include <fcntl.h>
 #ifdef __hpux
 #include "inet.h"
 #endif
@@ -482,16 +483,16 @@ extern char *getfield();
 int 	initconf(rehashing)
 int rehashing;
     {
-	FILE *fd;
+	int fd;
 	char line[512], *tmp, c[80];
 	int ccount = 0, ncount = 0;
 	aConfItem *aconf;
 	struct hostent *hp;
 
 	debug(DEBUG_DEBUG, "initconf(%d)", rehashing);
-	if (!(fd = fopen(configfile,"r")))
+	if ((fd = open(configfile, O_RDONLY)) == -1)
 		return(-1);
-	while (fgets(line,sizeof(line)-1,fd))
+	while (dgets(fd,line,sizeof(line)-1)>0)
 	    {
 		if (line[0] == '#' || line[0] == '\n' ||
 		    line[0] == ' ' || line[0] == '\t')
@@ -500,7 +501,7 @@ int rehashing;
 
 		if (tmp = (char *)index(line, '\n'))
 			*tmp = 0;
-		else while(fgets(c, sizeof(c), fd))
+		else while(dgets(fd, c, sizeof(c))>0)
 		    {
 			if (tmp = (char *)index(c, '\n'))
 				*tmp= 0;
@@ -694,7 +695,7 @@ int rehashing;
 		      aconf->status, aconf->host, aconf->passwd,
 		      aconf->name, aconf->port, Class(aconf));
 	    }
-	fclose(fd);
+	close(fd);
 	check_class();
 	nextping = nextconnect = time(NULL);
 	return (0);

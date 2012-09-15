@@ -31,6 +31,7 @@ char smisc_id[]="s_misc.c v2.0 (c) 1988 University of Oulu, Computing Centers\
 #include "sys.h"
 #include "numeric.h"
 #include <sys/stat.h>
+#include <fcntl.h>
 #ifdef HPUX
 # include <sys/syscall.h>
 # define getrusage(a,b) syscall(SYS_GETRUSAGE, a, b)
@@ -297,8 +298,8 @@ char	*comment;	/* Reason for the exit */
 				sptr->user->username, sptr->user->host);
 # else
 	    {
-		FILE *userlogfile;
-		struct stat stbuf;
+		int	userlogfile;
+		char	linebuf[160];
 
 		/*
  		 * This conditional makes the logfile active only after
@@ -310,16 +311,17 @@ char	*comment;	/* Reason for the exit */
 		 * file in 3 seconds. -avalon (curtesy of wumpus)
 		 */
 		alarm(3);
-		if (IsPerson(sptr) && !stat(FNAME_USERLOG, &stbuf) &&
-		    (userlogfile = fopen(FNAME_USERLOG, "a")))
+		if (IsPerson(sptr) &&
+		    (userlogfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)))
 		    {
 			alarm(0);
-			fprintf(userlogfile, "%s (%3d:%02d:%02d): %s@%s\n",
+			sprintf(linebuf, "%s (%3d:%02d:%02d): %s@%s\n",
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
 				on_for % 60,
 				sptr->user->username, sptr->user->host);
-			fclose(userlogfile);
+			write(userlogfile, linebuf, strlen(linebuf));
+			close(userlogfile);
 		    }
 		alarm(0);
 		/* Modification by stealth@caen.engin.umich.edu */
