@@ -792,7 +792,9 @@ char *parv[];
       if (!IsPerson(acptr) && !IsService(acptr))
 	continue;
       
+      repchan = "*";
       if (chptr = acptr->user->channel) {
+	repchan = chptr->chname;
 	if (channame &&
 	    /* Channel name should NEVER be zero,
 	     * this is probably unnecessary check  -- Jto */
@@ -803,7 +805,7 @@ char *parv[];
 	if (SecretChannel(chptr) && chptr != mychannel)
 	  continue;
 	else if (!PubChannel(chptr) && chptr != mychannel)
-	  chptr = NULL;
+	  repchan = "*";
       } else if (channame)
 	continue;
       /*
@@ -817,7 +819,7 @@ char *parv[];
 	  matches(mask,acptr->user->host) == 0 ||
 	  matches(mask,acptr->user->server) == 0 ||
 	  matches(mask,acptr->info) == 0) {
-	DoWho(sptr, acptr, chptr);
+	DoWho(sptr, acptr, (void *) 0);
       }
     }
   sendto_one(sptr, ":%s %d %s :* End of /WHO list.", me.name,
