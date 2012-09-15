@@ -202,3 +202,14 @@ void initclass()
   Links(FirstClass()) = 0;
   NextClass(FirstClass()) = (aClass *) NULL;
 }
+
+ReportClasses(cptr,sptr)
+aClient *cptr,*sptr;
+{
+	Reg1 aClass *cltmp;
+
+	for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
+		sendto_one(sptr,"NOTICE %s :Y:%d:%d:%d:%d", sptr->name,
+			   Class(cltmp), PingFreq(cltmp), ConFreq(cltmp),
+			   MaxLinks(cltmp));
+}

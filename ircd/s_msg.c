@@ -137,9 +137,14 @@ MyNameForLink(name, conf)
 char *name;
 aConfItem *conf;
 {
-  int count = conf->port;
+  int count;
   static char namebuf[HOSTLEN];
   char *start = name;
+  if (!conf)
+    return start;
+  if (!name)
+    return start;
+  count = conf->port;
   if (count <= 0 || count > 5) {
     return start;
   }
@@ -147,8 +152,6 @@ aConfItem *conf;
     name++;
     name = index(name, '.');
   }
-  if (!name)
-    return start;
   namebuf[0] = '*';
   strncpy(&namebuf[1], name, HOSTLEN - 1);
   namebuf[HOSTLEN - 1] = '\0';
@@ -406,9 +409,7 @@ int parc;
 char *parv[];
     {
 	aClient *acptr;
-	aChannel *chptr;
 	char *nick;
-	int flag;
 	
 	if (parc < 2)
 	    {
@@ -423,29 +424,66 @@ char *parv[];
 			   ERR_ERRONEUSNICKNAME, parv[0], parv[1]);
 		return 0;
 	    }
-	if ((acptr = find_person(nick,(aClient *)NULL)) && 
-	    /*
-	    ** This allows user to change the case of his/her nick,
-	    ** when it differs only in case, but only if we have
-	    ** properly defined source client (acptr == sptr).
-	    */
-	    (strncmp(acptr->name, nick, NICKLEN) == 0 || acptr != sptr))
+	/*
+	** Check against nick name collisions.[a 'for' loop is used here
+	** only to be able to use 'break', these tests and actions
+	** would get quite hard to follow, if done with plain if's...]
+	*/
+	for (;;)
 	    {
-		sendto_one(sptr, ":%s %d %s %s :Nickname is already in use.",
-			   me.name, ERR_NICKNAMEINUSE,
-			   parv[0], nick);
-		if (IsServer(cptr))
+		if ((acptr = find_person(nick,(aClient *)NULL)) == NULL)
+			break;  /* No collisions, all clear... */
+		/*
+		** This allows user to change the case of his/her nick,
+		** when it differs only in case, but only if we have
+		** properly defined source client (acptr == sptr).
+		*/
+		if (strncmp(acptr->name, nick, NICKLEN) != 0 && acptr == sptr)
+			break;
+		/*
+		** If the older one is "non-person", the new entry is just
+		** allowed to overwrite it. Just silently drop non-person,
+		** and proceed with the nick. This should take care of the
+		** "dormant nick" way of generating collisions...
+		*/
+		if (!IsPerson(acptr) && MyConnect(acptr) && acptr != sptr)
+		    {
+			ExitClient((aClient *)NULL,acptr,&me,"Overridden");
+			break;
+		    }
+		/*
+		** Decide, we really have a nick collision and deal with it
+		*/
+		if (!IsServer(cptr))
 		    {
 			/*
-			** NICK was coming from a server connection. Means
-			** that the same nick is registerd for different
-			** users by different servers. This is either a
-			** race condition (two users coming online about
-			** same time, or net reconnecting) or just two
-			** net fragments becoming joined and having same
-			** nicks in use. We cannot have TWO users with
-			** same nick--purge this NICK from the system
-			** with a KILL... >;)
+			** NICK is coming from local client connection. Just
+			** send error reply and ignore the command.
+			** [There is no point in sending this to remote
+			** clients, the following KILL should be sufficient :-]
+			*/
+			sendto_one(sptr,
+				   ":%s %d %s %s :Nickname is already in use.",
+				   me.name, ERR_NICKNAMEINUSE,
+				   parv[0], nick);
+			return 0; /* NICK message ignored */
+		    }
+		/*
+		** NICK was coming from a server connection. Means
+		** that the same nick is registerd for different
+		** users by different servers. This is either a
+		** race condition (two users coming online about
+		** same time, or net reconnecting) or just two
+		** net fragments becoming joined and having same
+		** nicks in use. We cannot have TWO users with
+		** same nick--purge this NICK from the system
+		** with a KILL... >;)
+		*/
+		if (sptr == cptr)
+		    {
+			/*
+			** A new NICK being introduced by a neighbouring
+			** server (e.g. message type "NICK new" received)
 			*/
 			sendto_serv_butone((aClient *)NULL, /* all servers */
 					   "KILL %s :%s(%s <- %s)",
@@ -453,15 +491,40 @@ char *parv[];
 					   me.name,
 					   acptr->from->name,
 					   /* NOTE: Cannot use GetClientName
-					    * twice here, it returns static
-					    * string pointer--the other info
-					    * would be lost
-					    */
+					   ** twice here, it returns static
+					   ** string pointer--the other info
+					   ** would be lost
+					   */
 					   GetClientName(cptr, FALSE));
 			acptr->flags |= FLAGS_KILLED;
 			ExitClient((aClient *)NULL,acptr,&me,"Nick collision");
+			return 0; /* Normal NICK collision handled */
 		    }
-		return 0; /* Duplicate NICKNAME handled */
+		/*
+		** A NICK change has collided (e.g. message type
+		** ":old NICK new". This requires more complex cleanout.
+		** Both clients must be purged from this server, the "new"
+		** must be killed from the incoming connection, and "old" must
+		** be purged from all outgoing connections.
+		*/
+		sendto_serv_butone(cptr, /* KILL old from outgoing servers */
+				   "KILL %s :%s(%s(%s) <- %s)",
+				   sptr->name,
+				   me.name,
+				   acptr->from->name,
+				   acptr->name,
+				   GetClientName(cptr, FALSE));
+		acptr->flags |= FLAGS_KILLED;
+		ExitClient((aClient *)NULL,acptr,&me,"Nick collision(new)");
+		sendto_one(cptr, /* Kill new from incoming link */
+			   "KILL %s :%s(%s <- %s(%s))",
+			   acptr->name,
+			   me.name,
+			   acptr->from->name,
+			   GetClientName(cptr, FALSE),
+			   sptr->name);
+		sptr->flags |= FLAGS_KILLED;
+		return ExitClient(cptr,sptr,&me,"Nick collision(old)");
 	    }
 	if (IsServer(sptr))
 	    {
@@ -601,6 +664,23 @@ int notice;
 
 	if ((*nick == '$' || *nick == '#') && IsAnOper(sptr))
 	    {
+	    Reg1 char *s;
+
+	    if (!(s = rindex(nick, '.')))
+		{
+		sendto_one(sptr, ":%s NOTICE %s :No toplevel domain specified",
+			   me.name, parv[0]);
+		continue;
+		}
+	    for(; *s; s++)
+		if (*s == '*' || *s == '?' || *s == '.')
+		    break;
+	    if (*s == '*' || *s == '?')
+		{
+		sendto_one(sptr, ":%s NOTICE %s :Wildcard in toplevel Domain",
+			   me.name, parv[0]);
+		continue;
+		}
 	    sendto_match_butone(IsServer(cptr) ? cptr : NULL, nick + 1,
 		(*nick == '#') ? MATCH_HOST : MATCH_SERVER,
 		":%s %s %s :%s", parv[0], cmd, nick, parv[2]);
@@ -746,92 +826,86 @@ aChannel *repchan;
 ** m_who
 **	parv[0] = sender prefix
 **	parv[1] = nickname mask list
+**	parv[2] = additional selection flag, only 'o' for now.
 */
 m_who(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int parc;
 char *parv[];
-{
-  aChannel *mychannel = (sptr->user != NULL) ?
-    sptr->user->channel : NullChn;
-  aClient *acptr;
-  aChannel *chptr;
-  char *channame = (char *) 0, *repchan;
-  int i;
-  Reg1 char *mask = parc > 1 ? parv[1] : NULL;
-
-  /* Allow use of m_who without registering */
-
-  /*
-   **  Following code is some ugly hacking to preserve the
-   **  functions of the old implementation. (Also, people
-   **  will complain when they try to use masks like "12tes*"
-   **  and get people on channel 12 ;) --msa
-   */
-  if (mask == NULL || *mask == '\0')
-    mask = NULL;
-  else if (mask[1] == '\0' && mask[0] == '*') {
-    mask = NULL;
-    if (mychannel)
-      channame = mychannel->chname;
-  } else if (mask[1] == '\0' && mask[0] == '0') /* "WHO 0" for irc.el */
-    mask = NULL;
-  else
-    channame = mask;
-  if (channame &&
-      (*channame == '+' || atoi(channame) || *channame == '#')) {
-    Link *link;
-    /* List all users on a given channel */
-    sendto_one(sptr,"WHOREPLY * User Host Server Nickname S :Name");
-    chptr = find_channel(channame, NullChn);
-    if (chptr && (!SecretChannel(chptr) || IsMember(sptr, chptr)))
-      for (link = chptr->members; link; link = link->next) {
-	DoWho(sptr, (aClient *) (link->value), chptr);
-      }
-    sendto_one(sptr, ":%s %d %s %s :* End of /WHO list.", me.name,
-	       RPL_ENDOFWHO, parv[0], parv[1]);
-    return 0;
-  } else
-    channame = (char *) 0;
-  
-  sendto_one(sptr,"WHOREPLY * User Host Server Nickname S :Name");
-  for (acptr = client; acptr; acptr = acptr->next)
     {
-      if (!IsPerson(acptr) && !IsService(acptr))
-	continue;
-      
-      if (chptr = acptr->user->channel) {
-	if (channame &&
-	    /* Channel name should NEVER be zero,
-	     * this is probably unnecessary check  -- Jto */
-	    (chptr->chname[0] == '\0' ||
-	     mycmp(channame, chptr->chname)))
-	  continue;
+	aChannel *mychannel = (sptr->user != NULL) ?
+		sptr->user->channel : NullChn;
+	aClient *acptr;
+	aChannel *chptr;
+	char *channame = (char *) 0;
+	int oper = parc > 2 ? (*parv[2] == 'o' ): 0; /* Show OPERS only */
+	Reg1 char *mask = parc > 1 ? parv[1] : NULL;
 	
-	if (SecretChannel(chptr) && chptr != mychannel)
-	  continue;
-	else if (!PubChannel(chptr) && chptr != mychannel)
-	  chptr = NULL;
-      } else if (channame)
-	continue;
-      /*
-       ** This is brute force solution, not efficient...? ;( 
-       ** Show entry, if no mask or any of the fields match
-       ** the mask. --msa
-       */
-      if (mask == NULL ||
-	  matches(mask,acptr->name) == 0 ||
-	  matches(mask,acptr->user->username) == 0 ||
-	  matches(mask,acptr->user->host) == 0 ||
-	  matches(mask,acptr->user->server) == 0 ||
-	  matches(mask,acptr->info) == 0) {
-	DoWho(sptr, acptr, chptr);
-      }
+	/* Allow use of m_who without registering */
+	
+	/*
+	**  Following code is some ugly hacking to preserve the
+	**  functions of the old implementation. (Also, people
+	**  will complain when they try to use masks like "12tes*"
+	**  and get people on channel 12 ;) --msa
+	*/
+	if (mask == NULL || *mask == '\0')
+		mask = NULL;
+	else if (mask[1] == '\0' && mask[0] == '*')
+	    {
+		mask = NULL;
+		if (mychannel)
+			channame = mychannel->chname;
+	    }
+	else if (mask[1] == '\0' && mask[0] == '0') /* "WHO 0" for irc.el */
+		mask = NULL;
+	else
+		channame = mask;
+	sendto_one(sptr,"WHOREPLY * User Host Server Nickname S :Name");
+	if (channame &&
+	    (*channame == '+' || atoi(channame) || *channame == '#'))
+	    {
+		Link *link;
+		/* List all users on a given channel */
+		chptr = find_channel(channame, NullChn);
+		if (chptr && (!SecretChannel(chptr) || IsMember(sptr, chptr)))
+			for (link = chptr->members; link; link = link->next)
+			    {
+				if (oper && !IsAnOper((aClient *)link->value))
+					continue;
+				DoWho(sptr, (aClient *)(link->value), chptr);
+			    }
+	    }
+	else for (acptr = client; acptr; acptr = acptr->next)
+	    {
+		if (!IsPerson(acptr) && !IsService(acptr))
+			continue;
+		if (oper && !IsAnOper(acptr))
+			continue;
+		if (chptr = acptr->user->channel)
+		    {
+			if (SecretChannel(chptr) && chptr != mychannel)
+				continue;
+			else if (!PubChannel(chptr) && chptr != mychannel)
+				chptr = NULL;
+		    }
+		/*
+		** This is brute force solution, not efficient...? ;( 
+		** Show entry, if no mask or any of the fields match
+		** the mask. --msa
+		*/
+		if (mask == NULL ||
+		    matches(mask,acptr->name) == 0 ||
+		    matches(mask,acptr->user->username) == 0 ||
+		    matches(mask,acptr->user->host) == 0 ||
+		    matches(mask,acptr->user->server) == 0 ||
+		    matches(mask,acptr->info) == 0)
+			DoWho(sptr, acptr, chptr);
+	    }
+	sendto_one(sptr, ":%s %d %s %s :* End of /WHO list.", me.name,
+		   RPL_ENDOFWHO, parv[0], parv[1]);
+	return 0;
     }
-  sendto_one(sptr, ":%s %d %s %s :* End of /WHO list.", me.name,
-	     RPL_ENDOFWHO, parv[0], parv[1]);
-  return 0;
-}
 
 /*
 ** m_whois
@@ -924,6 +998,8 @@ char *parv[];
 						   buf);
 					buf[0] = '\0';
 				}
+				if (IsChanOp(acptr, chptr))
+					strcat(buf, "@");
 				strcat(buf, chptr->chname);
 				strcat(buf, " ");
 			}
@@ -1082,7 +1158,6 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
     {
-	char buf2[80];
 	aChannel *chptr;
 	
 	sendto_one(sptr,":%s %d %s :  Channel  : Users  Name",
@@ -1251,6 +1326,7 @@ m_server(cptr, sptr, parc, parv)
   char *inpath;
   Reg1 char *ch;
   Reg2 int i;
+  int  unknown;
   
   inpath = GetClientName(cptr,FALSE);
   if (parc < 2 || *parv[1] == '\0')
@@ -1352,14 +1428,12 @@ m_server(cptr, sptr, parc, parv)
 		   "Go away and get a life");
 	return ExitClient(cptr, cptr, cptr, "");
       }
-      
       acptr = make_client(cptr);
       strncpyzt(acptr->name,host,sizeof(acptr->name));
       strncpyzt(acptr->info,info,sizeof(acptr->info));
-      acptr->status = STAT_SERVER;
+      SetServer(acptr);
       add_client_to_list(acptr);
       addToClientHashTable(acptr->name, acptr);
-      
       /*
        ** Old sendto_serv_but_one() call removed because we now
        ** need to send different names to different servers
@@ -1370,10 +1444,11 @@ m_server(cptr, sptr, parc, parv)
 	  if (!(bcptr = local[i]) || !IsServer(bcptr) ||
 	      bcptr == cptr || IsMe(bcptr))
 	    continue;
-	  if (matches(MyNameForLink(me.name, bcptr->confs->value),
-		      acptr->name) == 0)
+	  if (bcptr->confs &&
+	      matches(MyNameForLink(me.name, bcptr->confs->value),
+		      acptr->name) == 0 )
 	    continue;
-	  sendto_one(bcptr,"SERVER %s :%s",
+	  sendto_one(bcptr,"SERVER %s %s",
 		     acptr->name, acptr->info);
 	}
       return 0;
@@ -1385,6 +1460,8 @@ m_server(cptr, sptr, parc, parv)
    ** to be a SERVER. Check if this is allowed and change
    ** status accordingly...
    */
+  unknown = IsUnknown(cptr);
+  SetServer(cptr);
   strncpyzt(cptr->name, host, sizeof(cptr->name));
   strncpyzt(cptr->info, BadPtr(info) ? me.name : info,
 	    sizeof(cptr->info));
@@ -1392,16 +1469,16 @@ m_server(cptr, sptr, parc, parv)
   if (!(aconf = FindConf(cptr->confs,host,CONF_NOCONNECT_SERVER)))
     {
       sendto_one(cptr,
-		 "ERROR :Access denied (no such server enabled) %s",
+		 "ERROR :Access denied. No N field for server %s",
 		 inpath);
-      sendto_ops("Access denied (no such server enabled) %s",
+      sendto_ops("Access denied. No N field for server %s",
 		 inpath);
       return ExitClient(cptr, cptr, cptr, "");
     }
   if (!(bconf = FindConf(cptr->confs,host,CONF_CONNECT_SERVER)))
     {
-      sendto_one(cptr, "ERROR :Only N field for server %s", inpath);
-      sendto_ops("Only N field for server %s",inpath);
+      sendto_one(cptr, "ERROR :Only N (no C) field for server %s", inpath);
+      sendto_ops("Only N (no C) field for server %s",inpath);
       return ExitClient(cptr, cptr, cptr, "");
     }
   if (*(aconf->passwd) && !StrEq(aconf->passwd, cptr->passwd))
@@ -1411,30 +1488,29 @@ m_server(cptr, sptr, parc, parv)
       sendto_ops("Access denied (passwd mismatch) %s", inpath);
       return ExitClient(cptr, cptr, cptr, "");
     }
-  if (IsUnknown(cptr))
+  if (unknown)
     {
       if (bconf->passwd[0])
 	sendto_one(cptr,"PASS %s",bconf->passwd);
       /*
        ** Pass my info to the new server
        */
-      sendto_one(cptr,"SERVER %s :%s",
+      sendto_one(cptr,"SERVER %s %s",
 		 MyNameForLink(me.name, aconf), 
 		 (me.info[0]) ? (me.info) : "IRCers United");
     }
   /*
-   ** *WARNING*
-   ** 	In the following code in place of plain server's
-   **	name we send what is returned by GetClientName
-   **	which may add the "sockhost" after the name. It's
-   **	*very* *important* that there is a SPACE between
-   **	the name and sockhost (if present). The receiving
-   **	server will start the information field from this
-   **	first blank and thus puts the sockhost into info.
-   **	...a bit tricky, but you have been warned, besides
-   **	code is more neat this way...  --msa
-   */
-  SetServer(cptr);
+  ** *WARNING*
+  ** 	In the following code in place of plain server's
+  **	name we send what is returned by GetClientName
+  **	which may add the "sockhost" after the name. It's
+  **	*very* *important* that there is a SPACE between
+  **	the name and sockhost (if present). The receiving
+  **	server will start the information field from this
+  **	first blank and thus puts the sockhost into info.
+  **	...a bit tricky, but you have been warned, besides
+  **	code is more neat this way...  --msa
+  */
   det_confs_butone(cptr, aconf);
   /* Save this in order to get domain
    * wildcard match counts whenever needed */
@@ -1450,10 +1526,11 @@ m_server(cptr, sptr, parc, parv)
       if (!(acptr = local[i]) || !IsServer(acptr) ||
 	  acptr == cptr || IsMe(acptr))
 	continue;
-      if (matches(MyNameForLink(me.name, acptr->confs->value),
+      if (acptr->confs &&
+	  matches(MyNameForLink(me.name, acptr->confs->value),
 		  cptr->name) == 0)
 	continue;
-      sendto_one(acptr,"SERVER %s :%s",
+      sendto_one(acptr,"SERVER %s %s",
 		 inpath, cptr->info);
     }
   
@@ -1483,18 +1560,18 @@ m_server(cptr, sptr, parc, parv)
     {
       if (!IsServer(acptr) || acptr == cptr || IsMe(acptr))
 	continue;
-      if (matches(MyNameForLink(me.name, cptr->confs->value),
+      if (cptr->confs &&
+	  matches(MyNameForLink(me.name, cptr->confs->value),
 		  acptr->name) == 0)
 	continue;
       inpath = GetClientName(acptr, TRUE);
-      sendto_one(cptr,"SERVER %s :%s", inpath, acptr->info);
+      sendto_one(cptr,"SERVER %s %s", inpath, acptr->info);
     }
   /*
    ** Second, pass all clients
    */
   for (acptr = client; acptr; acptr = acptr->next)
     {
-      aChannel *chptr;
       if (IsServer(acptr) || acptr == cptr || IsMe(acptr))
 	continue;
       if (!IsPerson(acptr) && !IsService(acptr))
@@ -1517,18 +1594,9 @@ m_server(cptr, sptr, parc, parv)
    */
   for (chptr = channel; chptr; chptr = chptr->nextch) {
     Link *link;
-    /*
-     ** Send channel operators first...
-     */
     for (link = chptr->members; link; link = link->next) {
-      sendto_one(cptr,":%s %s %s", ((aClient *) link->value)->name,
-		 (IsMultiChannel(chptr) ? "JOIN" : "CHANNEL"),
+      sendto_one(cptr,":%s JOIN %s", ((aClient *) link->value)->name, 
 		 chptr->chname);
-      if (TestChanOpFlag(link->flags)) {
-	sendto_one(cptr,":%s MODE %s +o %s",
-		   me.name, chptr->chname,
-		   ((aClient *) link->value)->name);
-      }
     }
   }
   
@@ -1539,6 +1607,7 @@ m_server(cptr, sptr, parc, parv)
     aChannel *chptr;
     char modebuf[MODEBUFLEN];
     for (chptr = channel; chptr; chptr = chptr->nextch) {
+      send_channel_ops(cptr, chptr);
       ChannelModes(modebuf, chptr);
       if (modebuf[1])
 	sendto_one(cptr, ":%s MODE %s %s", me.name,
@@ -1838,8 +1907,9 @@ char *parv[];
 **    Note:   The info is reported in the order the server uses
 **            it--not reversed as in ircd.conf!
 */
-static ReportConfiguredLinks(cptr, sptr)
+static ReportConfiguredLinks(cptr, sptr, mask)
 aClient *cptr, *sptr;
+int mask;
 {
   aConfItem *tmp;
   char flag;
@@ -1847,18 +1917,25 @@ aClient *cptr, *sptr;
   
   for (tmp = conf; tmp; tmp = tmp->next)
     {
-      if (tmp->status == CONF_CONNECT_SERVER)
-	flag = 'C';
-      else if (tmp->status == CONF_NOCONNECT_SERVER)
-	flag = 'N';
-      else
-	continue;
-      sendto_one(sptr,"NOTICE %s :%c:%s:%c:%s:%d:%d", sptr->name,
-		 flag,
-		 BadPtr(tmp->host) ? noinfo : tmp->host,
-		 BadPtr(tmp->passwd) ? ' ' : '*',
-		 BadPtr(tmp->name) ? noinfo : tmp->name,
-		 (int)tmp->port, GetConfClass(tmp));
+      if (tmp->status & mask) {
+	if (tmp->status == CONF_CONNECT_SERVER)
+	  flag = 'C';
+	else if (tmp->status == CONF_NOCONNECT_SERVER)
+	  flag = 'N';
+	else if (tmp->status == CONF_QUARANTINED_SERVER)
+	  flag = 'Q';
+	else if (tmp->status == CONF_KILL)
+	  flag = 'K';
+	else if (tmp->status == CONF_CLIENT)
+	  flag = 'I';
+	else
+	  continue;
+	sendto_one(sptr,"NOTICE %s :%c:%s:%c:%s:%d:%d", sptr->name, flag,
+		   BadPtr(tmp->host) ? noinfo : tmp->host,
+		   BadPtr(tmp->passwd) ? ' ' : '*',
+		   BadPtr(tmp->name) ? noinfo : tmp->name,
+		   (int)tmp->port, GetConfClass(tmp));
+      }
     }
   return 0;
 }
@@ -1881,8 +1958,9 @@ char *parv[];
 	if (HuntServer(cptr,sptr,":%s STATS %s :%s",2,parc,parv)!= HUNTED_ISME)
 		return 0;
 
-	if (*stat == 'L' || *stat == 'l')
-	    {
+	switch (*stat)
+	{
+	case 'L' : case 'l' :
 		/*
 		** The following is not the most effiecient way of
 		** generating the heading, buf it's damn easier to
@@ -1905,15 +1983,37 @@ char *parv[];
 					   (int)acptr->receiveB,
 					   myctime(acptr->firsttime));
 			      }
-	    }
-        else if (*stat == 'C' || *stat == 'c')
-                ReportConfiguredLinks(cptr,sptr);
-	else
+		break;
+	case 'C' : case 'c' :
+                ReportConfiguredLinks(cptr,sptr,
+				      CONF_CONNECT_SERVER|
+				      CONF_NOCONNECT_SERVER);
+		break;
+	case 'I' : case 'i' :
+		if (IsOper(sptr))
+			ReportConfiguredLinks(cptr,sptr,CONF_CLIENT);
+		break;
+	case 'K' : case 'k' :
+		if (IsOper(sptr))
+			ReportConfiguredLinks(cptr,sptr,CONF_KILL);
+		break;
+	case 'Q' : case 'q' :
+		if (IsOper(sptr))
+			ReportConfiguredLinks(cptr,sptr,
+					      CONF_QUARANTINED_SERVER);
+		break;
+	case 'Y' : case 'y' :
+		if (IsOper(sptr))
+			ReportClasses(cptr,sptr);
+		break;
+	default :
 		for (mptr = msgtab; mptr->cmd; mptr++)
 		   if (mptr->count)
 			sendto_one(sptr,
 			  "NOTICE %s :%s has been used %d times after startup",
 				   parv[0], mptr->cmd, mptr->count);
+		break;
+	}
 	return 0;
     }
 
@@ -2021,7 +2121,7 @@ char *comment;	/* Reason for the exit */
 		    (userlogfile = fopen(FNAME_USERLOG, "a")))
 		    {
 			on_for = time(NULL) - sptr->firsttime;
-			fprintf(userlogfile, "%s (%3d:%2d:%2d): %s@%s\n",
+			fprintf(userlogfile, "%s (%3d:%02d:%02d): %s@%s\n",
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
 				on_for % 60,
@@ -2070,15 +2170,13 @@ aClient *cptr;
 aClient *from;
 char *comment;
     {
-	aClient *acptr, **pacptr;
-	aChannel *chptr;
+	aClient *acptr;
 	Reg1 int i;
 
 #ifdef MSG_NOTE
 	check_messages(cptr, sptr, sptr->name,'e');
 #endif
 
-	
 	/*
 	**  For a server or user quitting, propagage the information to
 	**  other servers (except to the one where is came from (cptr))
@@ -2096,7 +2194,8 @@ char *comment;
 	      if (!(acptr = local[i]) || !IsServer(acptr) ||
 		  acptr == cptr || IsMe(acptr))
 		continue;
-	      if (matches(MyNameForLink(me.name, acptr->confs->value),
+	      if (acptr->confs &&
+		  matches(MyNameForLink(me.name, acptr->confs->value),
 			  sptr->name) == 0)
 		continue;
 	      if (sptr->from == acptr)
@@ -2225,6 +2324,8 @@ int parc;
 char *parv[];
     {
 	if (IsOper(sptr) && MyConnect(sptr)) {
+	  sendto_ops("NOTICE %s :*** %s has pulled the plug on us sir!\n",
+		     me.name, parv[0]);
 	  terminate();
 	}
     }
@@ -2235,6 +2336,7 @@ int parc;
 char *parv[];
     {
 	int s_count = 0, c_count = 0, u_count = 0, i_count = 0, o_count = 0;
+	int m_count = 0;
 	aClient *acptr;
 	
 	for (acptr = client; acptr; acptr = acptr->next)
@@ -2252,16 +2354,20 @@ char *parv[];
 	    case STAT_OPER | STAT_CHANOP | STAT_CLIENT:
 	    case STAT_OPER | STAT_LOCOP | STAT_CHANOP | STAT_CLIENT:
 	    case STAT_OPER | STAT_LOCOP | STAT_CLIENT:
-	      /* if (acptr->user->channel >= 0 || IsOper(sptr)) */
 	      o_count++;
 	    case STAT_CLIENT:
 	    case STAT_CHANOP | STAT_CLIENT:
 	    case STAT_CHANOP:
 	      if (PubChannel(acptr->user->channel) ||
-		  HiddenChannel(acptr->user->channel))
+		  HiddenChannel(acptr->user->channel)) {
+		if (MyConnect(acptr))
+		  m_count++;
 		c_count++;
-	      else
+	      } else {
+		if (IsOper(sptr) && MyConnect(acptr))
+		  m_count++;
 		i_count++;
+	      }
 	      break;
 	    default:
 	      u_count++;
@@ -2284,6 +2390,10 @@ char *parv[];
 		sendto_one(sptr,
 			"NOTICE %s :*** There are %d yet unknown connections",
 			   parv[0], u_count);
+	if (m_count > 0)
+		sendto_one(sptr,
+			"NOTICE %s :*** There are %d clients connected to %s",
+			   parv[0], m_count, me.name);
 	sendto_one(sptr, "NOTICE %s :*** There are %d channels.",
 		   parv[0], count_channels(sptr));
     }
@@ -2783,7 +2893,6 @@ char *parv[];
 
 	/* First, do all visible channels (public and the one user self is) */
 
-        ToNewJis(para);
 	for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
 	        Link *link;
@@ -2923,8 +3032,9 @@ char *parv[];
     {
 	aClient *acptr;
 	aClass *cltmp;
-	int doall;
+	int doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
 	Reg1 int i;
+	Reg2 aClient *acptr2;
 
 	switch (HuntServer(cptr,sptr,":%s TRACE :%s", 1,parc,parv))
 	    {
@@ -2938,6 +3048,16 @@ char *parv[];
 		return 0;
 	    }
 	doall = (parv[1] && (parc > 1)) ? !matches(parv[1],me.name): TRUE;
+
+	for (i = 0; i < MAXCONNECTIONS; i++)
+		link_s[i] = 0, link_u[i] = 0;
+
+	if (doall && IsOper(sptr))
+		for (acptr2 = client; acptr2; acptr2 = acptr2->next)
+			if (IsPerson(acptr2))
+				link_u[acptr2->from->fd]++;
+			else if (IsServer(acptr2))
+				link_s[acptr2->from->fd]++;
 
 	/* report all direct connections */
 	
@@ -2956,27 +3076,27 @@ char *parv[];
 	      {
 	      case STAT_CONNECTING:
 		sendto_one(sptr,
-			   "NOTICE %s :*** Try. Class[%d] %s ==> %s",
-			   parv[0], class, me.name, name);
+			   "NOTICE %s :*** Try. Class[%d] ==> %s",
+			   parv[0], class, name);
 		break;
 	      case STAT_HANDSHAKE:
 		sendto_one(sptr,
-			   "NOTICE %s :*** H.S. Class[%d] %s ==> %s",
-			   parv[0], class, me.name, name);
+			   "NOTICE %s :*** H.S. Class[%d] ==> %s",
+			   parv[0], class, name);
 		break;
 	      case STAT_ME:
 		break;
 	      case STAT_UNKNOWN:
 		if (IsAnOper(sptr))
 		  sendto_one(sptr,
-			     "NOTICE %s :*** ???? Class[%d] %s ==> %s",
-			     parv[0], class, me.name, name);
+			     "NOTICE %s :*** ???? Class[%d] ==> %s",
+			     parv[0], class, name);
 		break;
 	      case STAT_CLIENT:
 		if (IsOper(sptr)) /* Only opers see users */
 		  sendto_one(sptr,
-			     "NOTICE %s :*** User Class[%d] %s ==> %s",
-			     parv[0], class, me.name, name);
+			     "NOTICE %s :*** User Class[%d] ==> %s",
+			     parv[0], class, name);
 		break;
 	      case STAT_CLIENT | STAT_OPER:
 	      case STAT_CLIENT | STAT_LOCOP:
@@ -2986,19 +3106,24 @@ char *parv[];
 	      case STAT_OPER:
 		if (IsAnOper(sptr)) /* Only opers see users */
 		  sendto_one(sptr,
-			     "NOTICE %s :*** Oper Class[%d] %s ==> %s",
-			     parv[0], class, me.name, name);
+			     "NOTICE %s :*** Oper Class[%d] ==> %s",
+			     parv[0], class, name);
 		break;
 	      case STAT_SERVER:
-		sendto_one(sptr,
-			   "NOTICE %s :*** Serv Class[%d] %s ==> %s", 
-			   parv[0], class, me.name, name);
+		if (IsOper(sptr))
+		    sendto_one(sptr,
+		  	       "NOTICE %s :*** Serv Class[%d] ==> %s %dS %dC",
+				parv[0], class, name, link_s[i], link_u[i]);
+		else
+		  sendto_one(sptr,
+			     "NOTICE %s :*** Serv Class[%d] ==> %s", 
+			     parv[0], class, name);
 		break;
 	      default:
 		/* ...we actually shouldn't come here... --msa */
 		sendto_one(sptr,
-			   "NOTICE %s :*** <newtype> %s ==> %s",
-			   parv[0], me.name, name);
+			   "NOTICE %s :*** <newtype> ==> %s",
+			   parv[0], name);
 		break;
 	      }
 	  }

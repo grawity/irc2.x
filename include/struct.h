@@ -195,7 +195,6 @@ struct User
 #else
 	char channel[CHANNELLEN];
 #endif
-
 	struct Channel *invited;
 	int refcnt;		/* Number of times this block is referenced */
 	long last;

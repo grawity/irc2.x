@@ -575,17 +575,22 @@ char *host, *name, *reply;
 	static int check_time_interval();
 	int rc = ERR_YOUREBANNEDCREEP;
 
+	if (!host || !reply)
+		return (0);
 	if (strlen(host)  > HOSTLEN || (name ? strlen(name) : 0) > HOSTLEN)
 		return (0);
 	strcpy(reply, ":%s %d %s :*** Ghosts are not allowed on IRC.");
 	for (tmp = conf; tmp; tmp = tmp->next)
- 		if ((matches(tmp->host, host) == 0) &&
-		    tmp->status == CONF_KILL &&
- 		    (name == NULL || matches(tmp->name, name) == 0))
+	    {
+		if (tmp->status == CONF_KILL &&
+		    (BadPtr(tmp->host) || matches(tmp->host, host) == 0) &&
+		    (BadPtr(tmp->name) || BadPtr(name) ||
+matches(tmp->name, name) == 0))
  			if (BadPtr(tmp->passwd) ||
  			   (rc = check_time_interval(tmp->passwd, reply)))
  			break;
- 		return (tmp ? rc : 0);
+	    }
+	return (tmp ? rc : 0);
      }
 
 #ifdef R_LINES

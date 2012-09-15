@@ -229,10 +229,13 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 {
   Reg1 int i;
   Reg2 aClient *cptr;
-  for (i = 0; i <= highest_fd; i++)
-    if ((cptr = local[i]) && IsServer(cptr) && cptr != one)
+  for (i = 0; i <= highest_fd; i++) {
+    if (!(cptr = local[i]) || one && cptr == one->from)
+      continue;
+    if (IsServer(cptr))
       sendto_one(cptr, pattern,
 		 par1, par2, par3, par4, par5, par6, par7, par8);
+  }
 }
 
 /* sendto_common_channels()

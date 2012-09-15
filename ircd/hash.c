@@ -32,8 +32,12 @@ aClient	*hash_find_client();
 static	aHashEntry	clientTable[HASHSIZE];
 static	aHashEntry	channelTable[CHANNELHASHSIZE];
 
-static	int	hash_mult[] = { 127, 131, 107, 151, 179,
-				141, 167, 119, 123, 103, 105};
+static	int	hash_mult[] = { 103, 107, 109, 113, 127, 131,
+				137, 139, 149, 151, 163, 167,
+				173, 179, 181, 191, 193, 197,
+				199, 211, 223, 227, 229, 233,
+				239, 241, 251, 257, 263, 269,
+				271, 277, 281, 293, 307, 311};
 /*
  * this function must be *quick*.  Thus there should be no multiplication
  * or division or modulus in the inner loop.  subtraction and other bit
@@ -116,12 +120,12 @@ void	*cptr;
 aHashEntry	table[];
 int	hashv;
 {
-	aHashLink	*tmp;
+	Reg1	aHashLink	*tmp;
 
-	table[hashv].links++;
-	table[hashv].hits++;
 	if (!(tmp = (aHashLink *)MyMalloc(sizeof(aHashLink))))
 		return 0;
+	table[hashv].links++;
+	table[hashv].hits++;
 	bzero(tmp, sizeof(aHashLink));
 	tmp->next = table[hashv].list;
 	table[hashv].list = tmp;
@@ -153,8 +157,6 @@ int	hashv;
 {
 	aHashLink	*tmp, *prev = (aHashLink *)NULL;
 
-	if (table[hashv].links > 0)
-		table[hashv].links--;
 	for (tmp = table[hashv].list; tmp; tmp = tmp->next) {
 		if (tmp->ptr.client == cptr) {
 			if (prev)
@@ -162,7 +164,11 @@ int	hashv;
 			else
 				table[hashv].list = tmp->next;
 			free(tmp);
-			return 1;
+			if (table[hashv].links > 0) {
+				table[hashv].links--;
+				return 1;
+			} else
+				return -1;
 		}
 		prev = tmp;
 	}
@@ -273,7 +279,6 @@ aChannel	*chptr;
 	aHashLink	*prv;
 	aHashEntry	*tmp3;
 
-        ToNewJis(name);
 	hashv = HashChannelName(name);
 	tmp3 = &channelTable[hashv];
 
