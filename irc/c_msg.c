@@ -530,3 +530,11 @@ char *parv[];
   sprintf(mybuf,"*** Error: %s %s", parv[1], (parv[2]) ? parv[2] : "");
   putline(mybuf);
 }
+
+m_userhost() {
+  putline("*** Oh boy... server asking userhost from client... exiting...");
+}
+
+m_ison() {
+  putline("*** Oh boy... server asking ison from client... exiting...");
+}

@@ -17,6 +17,19 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Sep 02 17:06:59 1991  Darren Reed  <avalon@coombs.anu.edu.au>
+
+	* config.h
+	  added MAXCONNECTIONS (see config.h for details)
+	  added NICKNAMEHISTORYLENGTH
+
+	* hash.h
+	  Added to support for ../ircd/hash.c
+
+	* msg.h
+	  Commands reordered in (hopefully) order of useage.
+	  All commands now marked for flood protection.
+
 Tue Jul 02 11:10:26 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* config.h

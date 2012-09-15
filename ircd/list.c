@@ -87,6 +87,7 @@ aClient *from;
 	/* Note:  structure is zero (calloc) */
 	cptr->from = from ? from : cptr; /* 'from' of local client is self! */
 	cptr->next = NULL; /* For machines with NON-ZERO NULL pointers >;) */
+	cptr->prev = NULL;
 	cptr->user = NULL;
 	cptr->history = NULL;
 	cptr->status = STAT_UNKNOWN;
@@ -112,6 +113,7 @@ aClient *sptr;
 		outofmemory();
 	bzero((char *)sptr->user,sizeof(anUser));
 	sptr->user->away = NULL;
+	sptr->user->invited = NULL;
 	sptr->user->refcnt = 1;
 	sptr->user->channel = (aChannel *) 0;
 	return 0;
@@ -133,3 +135,37 @@ anUser *user;
 	    }
     }
 
+/*
+ * taken the code from ExitOneClient() for this and placed it here.
+ * - avalon
+ */
+remove_client_from_list(cptr)
+aClient	*cptr;
+{
+	if (cptr->prev)
+		cptr->prev->next = cptr->next;
+	else
+		client = cptr->next;
+	if (cptr->next)
+		cptr->next->prev = cptr->prev;
+	if (cptr->user) {
+		OffHistory(cptr);
+		free_user(cptr->user);
+	}
+	free(cptr);
+}
+
+/*
+ * although only a small routine, it appears in a number of places
+ * as a collection of a few lines...functions like this *should* be
+ * in this file, shouldnt they ?  after all, this is list.c, isnt it ?
+ * -avalon
+ */
+add_client_to_list(cptr)
+aClient	*cptr;
+{
+	cptr->next = client;
+	client = cptr;
+	if (cptr->next)
+		cptr->next->prev = cptr;
+}

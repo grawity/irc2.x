@@ -46,6 +46,7 @@ char parse_id[] = "parse.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include "numeric.h"
 
 extern aClient *client;
+extern aClient *hash_find_client(), *hash_find_server();
 
 static char sender[HOSTLEN+1];
 
@@ -92,6 +93,20 @@ Reg2 char *str2;
 **	the old. 'name' is now assumed to be a null terminated
 **	string and the search is the for server and user.
 */
+#ifndef CLIENT_COMPILE
+aClient *find_client(name, cptr)
+char *name;
+aClient *cptr;
+    {
+	Reg1 aClient *c2ptr;
+
+	if (name) {
+		c2ptr = hash_find_client(name, cptr);
+		return c2ptr;
+	}
+	return cptr;
+    }
+#else
 aClient *find_client(name, cptr)
 char *name;
 aClient *cptr;
@@ -104,6 +119,7 @@ aClient *cptr;
 				return c2ptr;
 	return cptr;
     }
+#endif
 
 /*
 **  Find a user@host (server or user).
@@ -149,6 +165,31 @@ int *count;
 **	the old. 'name' is now assumed to be a null terminated
 **	string.
 */
+#ifndef CLIENT_COMPILE
+aClient *find_server(name, cptr)
+char *name;
+aClient *cptr;
+{
+  Reg1 aClient *c2ptr = (aClient *) 0;
+
+  if (name) {
+    if (c2ptr = hash_find_server(name, (aClient *)NULL))
+      return (c2ptr);
+    if (!index(name, '*'))
+      return (aClient *)NULL;
+    for (c2ptr = client; c2ptr; c2ptr = c2ptr->next) {
+      if (!IsServer(c2ptr) && !IsMe(c2ptr))
+	continue;
+      if (matches(name, c2ptr->name) == 0)
+	break;
+      if (index(c2ptr->name, '*'))
+        if (matches(c2ptr->name, name) == 0)
+          break;
+    }
+  }
+  return c2ptr;
+}
+#else
 aClient *find_server(name, cptr)
 char *name;
 aClient *cptr;
@@ -166,6 +207,7 @@ aClient *cptr;
   }
   return c2ptr;
 }
+#endif
 
 /*
 **  Find person by (nick)name.
@@ -307,8 +349,8 @@ struct Message *mptr;
 			return(-1);
 		    }
 		paramcount = mptr->parameters;
-		if (mptr->flags & 1 && !IsServer(cptr) && !IsService(cptr))
-		  cptr->since += 2;  /* Allow only 1 msg per 2 seconds
+		if (mptr->flags & 1 && !IsServer(cptr) && !IsService(cptr) && !IsOper(cptr))
+		  cptr->since += 1;  /* Allow only 1 msg per 2 seconds
 				      * (on average) to prevent dumping.
 				      * to keep the response rate up,
 				      * bursts of up to 5 msgs are allowed--SRB

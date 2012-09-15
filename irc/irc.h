@@ -101,5 +101,7 @@ struct Command commands[] = {
   { (int (*)()) 0, "MAIL",    SERVER_CMD, "\0\0", MSG_MAIL },
 #endif
   { (int (*)()) 0, "KICK",    SERVER_CMD, "\0\0", MSG_KICK },
+  { (int (*)()) 0, "USERHOST",SERVER_CMD, "\0\0", MSG_USERHOST },
+  { (int (*)()) 0, "ISON",    SERVER_CMD, "\0\0", MSG_ISON },
   { (int (*)()) 0, (char *) 0, 0,         "\0\0", (char *) 0 }
 };

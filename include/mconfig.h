@@ -104,10 +104,10 @@
 #define LPATH "/tmp/ircd7.log"   /* Where the Logfile lives. */
 #ifdef MSG_NOTE
 /* Where MSGBASE saves its messages from time to time... */
-#define NOTE_SAVE_FILENAME "/usr/local/lib/irc/.ircdnote"
+#define NOTE_SAVE_FILENAME "/usr/local/lib/irc/.ircdmail"
 #endif
 
-#define UPHOST "131.170.8.11"              /* Default UPHOST for irc */
+#define UPHOST "coombs.anu.edu.au"              /* Default UPHOST for irc */
                                              /* standard client        */
 
 /* ENABLE_SUMMON
@@ -201,40 +201,17 @@
  * Port where ircd resides. NOTE: This *MUST* be greater than 1024 if you
  * plan to run ircd under any other uid than root.
  */
+
 #define PORTNUM 6667		/* Recommended values: 6667 or 6666 */
-
-/*
- * Maximum number of network connections your server will allow.  This should
- * never exceed max. number of open file descrpitors and wont increase this.
- * Should remain LOW as possible. Most sites will usually have under 30 or so
- * connections. A busy hub or server may need this to be as high as 50 or 60.
- * Making it over 100 decreases any performance boost gained from it being low.
- * if you have a lot of server connections, it may be worth splitting the load
- * over 2 or more servers.
- * 1 server = 1 connection, 1 user = 1 connection.
- */
-#define MAXCONNECTIONS	50
-
-/*
- * this defines the length of the nickname history.  each time a user changes
- * nickname or signs off, their old nickname is added to the top of the list.
- * The following sizes are recommended:
- * 8MB or less  core memory : 200
- * 8MB-16MB     core memory : 200-300
- * 16MB-32MB    core memory : 300-500
- * 32MB or more core memory : 500+
- * (100 nicks/users ~ 75K)
- * NOTE: this is directly related to the amount of memory ircd will use whilst
- *	 resident and running - it hardly ever gets swapped to disk! You can
- *	 ignore these recommendations- they only are meant to serve as a guide
- */
-#define NICKNAMEHISTORYLENGTH 300
+#define MAXCONNECTIONS	80
 
 /*
  * Time interval to wait and if no messages have been received, then check for
  * PINGFREQUENCY and CONNECTFREQUENCY 
  */
+
 #define TIMESEC  60		/* Recommended value: 60 */
+
 
 /*
  * If daemon doesn't receive anything from any of its links within
@@ -242,6 +219,7 @@
  * an active link with a PING message. If no reply is received within
  * (PINGFREQUENCY * 2) seconds, then the connection will be closed.
  */
+
 #define PINGFREQUENCY    120	/* Recommended value: 120 */
 
 
@@ -249,6 +227,7 @@
  * If the connection to to uphost is down, then attempt to reconnect every 
  * CONNECTFREQUENCY  seconds.
  */
+
 #define CONNECTFREQUENCY 600	/* Recommended value: 600 */
 
 /*
@@ -266,17 +245,20 @@
 /*
  * Number of seconds to wait for write to complete if stuck.
  */
+
 #define WRITEWAITDELAY     15	/* Recommended value: 15 */
 
 /*
  * Max time from the nickname change that still causes KILL
  * automaticly to switch for the current nick of that user. (seconds)
  */
+
 #define KILLCHASETIMELIMIT 90   /* Recommended value: 90 */
 
 /*
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
+
 #define MAXSENDQLENGTH 100000    /* Recommended value: 50000 for leaves */
                                  /*                    100000 for backbones */
 

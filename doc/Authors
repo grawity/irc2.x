@@ -65,6 +65,9 @@ Tom Hinds <rocker@bucsf.bu.edu>: emacs client updating.
 Tim Miller <cerebus@bu-pub.bu.edu>: various server and client-breaking
 features.
 
+Darren Reed <avalon@coombs.anu.edu.au>: various bug fixes and enhancements.
+Introduced nickname and channelname hash tables into the server.
+
 The version 2.2 release was coordinated by Mike Bolotski
 <mikeb@salmon.ee.ubc.ca>.
 

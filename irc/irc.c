@@ -75,9 +75,6 @@ char *a_myuser();
 #include "sys.h"
 #include "irc.h"
 
-
-char *makeclientbuf();
-
 extern char *HEADER;
 int timeout();
 char buf[BUFSIZE];

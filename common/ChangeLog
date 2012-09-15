@@ -17,6 +17,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Sep 02 17:08:43 1991  Darren Reed  <avalon@coombs.anu.edu.au>
+
+	* general comments:
+
+	various files now have dependencies depending on whether it is the
+	client or server the files are being compiled for.
+
+	* parse.c
+
+	find_*() routines changed to use hash table lookup.
+
+	* send.c
+
+	changed to maximize presence of the local client array.
+	sendto_ops_butone() fixed back to not broadcast wallops.
 
 Sun Jun 30 23:21:50 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 

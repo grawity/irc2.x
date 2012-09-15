@@ -17,6 +17,16 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Sep 02 17:12:41 1991  Darren Reed <avalon@coombs.anu.edu.au>
+
+	* Documentation brought upto date with new features to 2.6.2
+
+
+Mon Aug 26 16:51:01 1991  Helen Trillian Rose  (hrose@eff.org)
+
+	* Rewrite of documentation (again) to coincide with the 2.6.2
+	release. 
+
 Wed Oct 31 18:05:12 1990  Jarkko Oikarinen
 
 	* Added hrose@cs.bu.edu's patches to irc2.6

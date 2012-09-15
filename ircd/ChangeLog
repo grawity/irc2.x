@@ -17,6 +17,41 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+Mon Sep 02 16:27:53 1991  Darren Reed <avalon@coombs.anu.edu.au>
+	  (lost previous ChangeLog which had accurate dates of additions
+	   for 2.6.2. Following is changes from 2.6.1 to 2.6.2).
+
+	* s_conf.c    - added L-line handling for Leaf Enforcement.
+			(Courtesy Wumpus (Greg Lindhal)
+		      - added det_I_lines_butfirst to make sure each client
+			connection only ever has (at most) 1 I-line attached
+			to it.
+
+	* channel.c   - fixed ghost ChanOp problem from earlier versions.
+		      - painful ^G mode bug fixed for 2.6.1
+
+	* ircd.c      - some problems with TryConnections fixed.
+
+	* s_bsd.c, ircd.c, s_msg.c
+		      - local clients are now stored and referenced with an
+			array of pointers. This has a fixed size :/
+
+	* s_msg.c, list.c
+		      - client list is now a double linked list.
+		      - moved some code to list.c to create addition/deletion
+			routines to add/delete client records from the list.
+
+	* list.c      - added NICKNAMEHISTORYLENGTH to replace the 'magic' 200.
+
+	* s_msg.c     - Added following commands:
+			USERHOST <nickname> [n.[n.[n.[n.]]]]
+			ISON <nickname> [nickname...]
+
+	* hash.c, s_msg.c, channel.c
+		      - (finally) added hash tables for nickname, server and
+			channel name lookup. Nicknames and servers share the
+			same table.
+
 Thu Jul 04 20:31:10 1991  Armin Gruner <gruner@informatik.tu-muenchen.de>
 
 	* s_numeric.c

@@ -103,7 +103,7 @@ static aConfItem *make_conf()
 	cptr->clients = 0;
 	cptr->port = 0;
 	cptr->hold = 0;
-	Class(cptr) = NULL;
+	Class(cptr) = 0;
 	return (cptr);
     }
 
@@ -126,7 +126,7 @@ det_confs_butone(cptr, aconf)
 aClient *cptr;
 aConfItem *aconf;
 {
-  Link *tmp;
+  Reg1 Link *tmp;
   tmp = cptr->confs;
   while (tmp && tmp->value == (char *) aconf)
     tmp = tmp->next;
@@ -146,7 +146,7 @@ det_confs_butmask(cptr, mask)
 aClient *cptr;
 int mask;
 {
-  Link *tmp, *tmp2;
+  Reg1 Link *tmp, *tmp2;
   tmp = cptr->confs;
   while (tmp && tmp->value) {
     tmp2 = tmp->next;
@@ -156,6 +156,26 @@ int mask;
   }
 }
 /*
+ * remove all attached I lines except for the first one.
+ */
+det_I_lines_butfirst(cptr)
+aClient *cptr;
+{
+  Reg1 Link *tmp, *tmp2;
+  Link *first = (Link *)NULL;
+  tmp = cptr->confs;
+  while (tmp && tmp->value) {
+    tmp2 = tmp->next;
+    if ( ((aConfItem *)tmp->value)->status == CONF_CLIENT)
+      if (first)
+	detach_conf(cptr, tmp->value);
+      else
+	first = tmp;
+    tmp = tmp2;
+  }
+}
+
+/*
 ** detach_conf
 **	Disassociate configuration from the client.
 **      Also removes a class from the list if marked for deleting.
@@ -164,19 +184,26 @@ detach_conf(cptr, aconf)
 aClient *cptr;
 aConfItem *aconf;
 {
-  Link **link, *tmp;
+  Reg1 Link **link, *tmp;
+  int status;
 
   link = &(cptr->confs);
 
   while (*link) {
     if ((*link)->value == (char *) aconf) {
-      if ((aconf) && (Class(aconf)) && --ConfLinks(aconf) == 0 &&
-	  ConfMaxLinks(aconf) == -1)
-	free(Class(aconf));
-
-      if (aconf != NULL &&
-	  --aconf->clients == 0 &&
-	  aconf->status == CONF_ILLEGAL)
+      if ((aconf) && (Class(aconf))) {
+	status = aconf->status;
+	if (IsIllegal(aconf))
+	  aconf->status *= CONF_ILLEGAL;
+	if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
+	    CONF_NOCONNECT_SERVER))
+	  if (ConfLinks(aconf) > 0)
+	     --ConfLinks(aconf);
+        if (ConfMaxLinks(aconf) == -1 && ConfLinks(aconf) == 0)
+	  free(Class(aconf));
+      }
+      aconf->status = status;
+      if (aconf != NULL && --aconf->clients == 0 && IsIllegal(aconf))
 	free_conf(aconf);
       tmp = *link;
       *link = (*link)->next;
@@ -191,7 +218,7 @@ IsAttached(aconf, cptr)
 aConfItem *aconf;
 aClient *cptr;
 {
-  Link *link = cptr->confs;
+  Reg1 Link *link = cptr->confs;
   while (link) {
     if (link->value == (char *) aconf)
       break;
@@ -211,9 +238,9 @@ attach_conf(aconf,cptr)
 aConfItem *aconf;
 aClient *cptr;
 {
-  Link *link;
+  Reg1 Link *link;
   if (IsAttached(aconf, cptr))
-    return;
+    return 1;
   link = (Link *) MyMalloc(sizeof(Link));
   link->next = cptr->confs;
   link->value = (char *) aconf;
@@ -222,13 +249,13 @@ aClient *cptr;
   if (aconf->status & (CONF_CLIENT | CONF_CONNECT_SERVER |
       CONF_NOCONNECT_SERVER))
     ConfLinks(aconf)++;
-  return 0;
+  return 1;
 }
 
 
 aConfItem *find_admin()
     {
-	aConfItem *aconf;
+	Reg1 aConfItem *aconf;
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status & CONF_ADMIN)
@@ -239,7 +266,7 @@ aConfItem *find_admin()
 
 aConfItem *find_me()
     {
-	aConfItem *aconf;
+	Reg1 aConfItem *aconf;
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status & CONF_ME)
 			break;
@@ -252,7 +279,8 @@ aClient *cptr;
 char *host;
 int statmask;
 {
-  aConfItem *tmp, *first = (aConfItem *) 0;
+  Reg1 aConfItem *tmp;
+  aConfItem *first = (aConfItem *) 0;
   int len = strlen(host);
   
   if (len > HOSTLEN)
@@ -260,15 +288,13 @@ int statmask;
 
   for (tmp = conf; tmp; tmp = tmp->next) {
     if ((tmp->status & statmask) &&
-	(tmp->status & CONF_CONNECT_SERVER) == 0 &&
-	(tmp->status & CONF_NOCONNECT_SERVER) == 0 &&
+	(tmp->status & (CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)) == 0 &&
 	(matches(tmp->host, host) == 0)) {
       if (!first)
 	first = tmp;
       attach_conf(tmp, cptr);
     } else if ((tmp->status & statmask) &&
-	       ((tmp->status & CONF_CONNECT_SERVER) ||
-		(tmp->status & CONF_NOCONNECT_SERVER)) &&
+	       (tmp->status & (CONF_CONNECT_SERVER|CONF_NOCONNECT_SERVER)) &&
 	       (mycmp(tmp->host, host) == 0)) {
       if (!first)
 	first = tmp;
@@ -282,7 +308,7 @@ aConfItem *FindConfName(name, statmask)
 char *name;
 int statmask;
 {
-  aConfItem *tmp;
+  Reg1 aConfItem *tmp;
   
   for (tmp = conf; tmp; tmp = tmp->next) {
     /*
@@ -302,7 +328,7 @@ char *name;
 Link *link;
 int statmask;
 {
-  aConfItem *tmp;
+  Reg1 aConfItem *tmp;
   int namelen = name ? strlen(name) : 0;
   
   if (namelen > HOSTLEN)
@@ -322,8 +348,8 @@ int statmask;
 
 rehash()
     {
-	aConfItem *tmp = conf, *tmp2;
-	aClass *cltmp, *cltmp2;
+	Reg1 aConfItem *tmp = conf, *tmp2;
+	Reg2 aClass *cltmp, *cltmp2;
 
 	while (tmp)
 	  {
@@ -336,7 +362,7 @@ rehash()
 		 ** that it will be deleted when the last client
 		 ** exits...
 		 */
-		tmp->status = CONF_ILLEGAL;
+		tmp->status *= CONF_ILLEGAL;
 		tmp->next = NULL;
 	      }
 	    else
@@ -394,7 +420,6 @@ initconf()
 		    case 'I':   /* Just plain normal irc client trying  */
 		    case 'i':   /* to connect me */
 		      aconf->status = CONF_CLIENT;
-		      Class(aconf) = find_class(0);
 		      break;
 		    case 'K':   /* Kill user line on irc.conf           */
 		    case 'k':
@@ -434,6 +459,10 @@ initconf()
 		    case 'y':
 		        aconf->status = CONF_CLASS;
 		        break;
+		    case 'L':   /* guaranteed leaf server */
+		    case 'l':
+		      aconf->status = CONF_LEAF;
+                      break;
 		    case 'Q':   /* a server that you don't want in your */
 		    case 'q':   /* network. USE WITH CAUTION! */
 		        aconf->status = CONF_QUARANTINED_SERVER;
@@ -448,7 +477,7 @@ initconf()
 			debug(DEBUG_ERROR, "Error in config file: %s", line);
 			break;
 		    }
-		if (aconf->status == CONF_ILLEGAL)
+		if (IsIllegal(aconf))
 		    {
 			free(aconf);
 			continue;
@@ -479,14 +508,13 @@ initconf()
                 ** If conf line is a class definition, create a class entry
                 ** for it and make the conf_line illegal and delete it.
                 */
-		if (aconf->status == CONF_CLASS) {
+		if (aconf->status & CONF_CLASS) {
 		  AddClass(atoi(aconf->host), atoi(aconf->passwd),
 			   atoi(aconf->name), aconf->port);
 		}
 
-		if (aconf->status == CONF_CONNECT_SERVER ||
-		    aconf->status == CONF_NOCONNECT_SERVER ||
-		    aconf->status == CONF_CLASS) {
+		if (aconf->status & (CONF_CONNECT_SERVER |
+		    CONF_NOCONNECT_SERVER | CONF_CLASS)) {
 		  if (ncount > MAXCONFLINKS || ccount > MAXCONFLINKS ||
 		      aconf->host && index(aconf->host, '*')) {
 		    if (aconf->host)
@@ -505,11 +533,13 @@ initconf()
                 ** associate each conf line with a class by using a pointer
                 ** to the correct class record. -avalon
                 */
-		if ((aconf->status == CONF_NOCONNECT_SERVER ||
-		     aconf->status == CONF_CONNECT_SERVER) &&
-		    Class(aconf) == 0)
-		  Class(aconf) = find_class(0);
-
+		if (aconf->status & (CONF_CONNECT_SERVER | CONF_CLIENT |
+		    CONF_NOCONNECT_SERVER | CONF_OPERATOR | CONF_LOCOP)) {
+		  if (Class(aconf) == 0)
+		    Class(aconf) = find_class(0);
+		  if (MaxLinks(Class(aconf)) < 0)
+		    Class(aconf) = find_class(0);
+		}
 		/*
 		** Own port and name cannot be changed after the startup.
 		** (or could be allowed, but only if all links are closed
@@ -530,8 +560,7 @@ initconf()
 		debug(DEBUG_NOTICE,
 		      "Read Init: (%d) (%s) (%s) (%s) (%d) (%d)",
 		      aconf->status, aconf->host, aconf->passwd,
-		      aconf->name, aconf->port,
-		      Class(aconf) ? ConfClass(aconf) : 0);
+		      aconf->name, aconf->port, Class(aconf));
 	    }
 	fclose(fd);
 	check_class();
@@ -573,7 +602,7 @@ int find_restrict(host, name, reply)
 char *host, *name, *reply;
     {
 	aConfItem *tmp;
-	char *cmdline[132],*rplhold=reply,*temprpl[80],rplchar='Y';
+	char cmdline[132],*rplhold=reply,temprpl[80],rplchar='Y';
 	FILE *fp;
 	int rc = 0;
 

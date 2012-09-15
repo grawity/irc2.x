@@ -39,7 +39,7 @@ about half the number of users).
 
 Anet
 ====
-hermetic@milton.u.washington.edu
+joshua@coombs.anu.edu.au
 (DCLXVI == Josh Geller)
    Arguments in favor of joining Anet include stabler links, ease of 
 connecting (just connect your server to eris.berkeley.edu; if you decide 
@@ -79,7 +79,7 @@ supplying the information listed below.
 savela@tel.vtt.fi, irc@tolsun.oulu.fi, and d88-skl@nada.kth.se coordinate
 the NORDUnet connections. (msa, WiZ, and meLazy on irc, respectively)
 
-muts@fysaj.fys.ruu.nl coordinates Dutch servers.
+muts@fysak.fys.ruu.nl coordinates Dutch servers.
 
 stumpf@Informatik.TU-Muenchen.de and Gruner@Informatik.TU-Muenchen.de
 coordinate German servers. (Maex and Armin/Gonzo)
@@ -102,19 +102,18 @@ bowles@is.s.u-tokyo.ac.jp coordinates the Japanese servers.
 
       server/machine name        IP Address     Geographical Location
       bucsd.bu.edu               128.197.10.2   Boston, MA
-      garfield.mit.edu           18.72.0.252    Cambridge, MA
-      astsun.astro.virginia.edu  128.143.20.20  Charlottesville, VA
-      hydra.gatech.edu           128.61.6.11    Atlanta, GA
-      netserv2.its.rpi.edu       128.113.1.3    Troy, NY
+      irc.mit.edu                18.70.0.224    Cambridge, MA
+      poe.acc.virginia.edu       128.143.20.20  Charlottesville, VA
+      sindri.cs.cornell.edu      128.84.254.96  Ithaca, NY
+      polaris.ctr.columbia.edu   128.59.64.79   New York City, NY
       fairhope.andrew.cmu.edu    128.2.11.213   Pittsburgh, PA
-      unix.cis.pitt.edu          130.49.254.10  Pittsburgh, PA
-      arrakis.engin.umich.edu    141.212.66.13  Ann Arbor, MI
-      oddjob.uchicago.edu        128.135.4.2    Chicago, IL
-      tavi.rice.edu              128.42.4.37    Houston, TX
+      *.umich.edu                141.212.66.36  Ann Arbor, MI
+      h.ece.uiuc.edu             128.174.115.18 Urbana-Champaign, IL
       minnie.cc.utexas.edu       128.83.135.13  Austin, TX
-      zephyr.cair.du.edu         130.253.1.26   Denver, CO
-      betwixt.cs.caltech.edu     131.215.128.4  Pasadena, CA
-      ucscb.ucsc.edu             128.114.129.6  Santa Cruz, CA
+      ucsu.colorado.edu          128.138.129.83 Boulder, CO
+      badger.ugcs.caltech.edu    131.215.128.29 Pasadena, CA
+      *.spies.com                130.143.3.3    Cupertino, CA
+      *.washington.edu           128.95.152.35  Seattle, WA
 
 (yes, this seems like alot, but the backbone structure is quite complex and
 redundant so when we have a network break, servers can pick up other
@@ -193,17 +192,19 @@ Open client servers
 Until such a time that your server becomes connected, you should use your
 irc client and connect to open client servers.  Some of these servers are-
 
-garfield.mit.edu
-astsun.astro.virginia.edu
+irc.mit.edu
+bucsd.bu.edu
 fairhope.andrew.cmu.edu
-arrakis.engin.umich.edu
+hermes.tcad.ee.ufl.edu
+mingin.engin.umich.edu
 minnie.cc.utexas.edu
-betwixt.cs.caltech.edu
-zephyr.cair.du.edu
+badger.ugcs.caltech.edu
+ucsu.colorado.edu
+dharma.cpac.washington.edu
 
-fysaj.fys.ruu.nl
+fysak.fys.ruu.nl
 nic.funet.fi
-
+coombs.anu.edu.au
 
 Start up your irc client, and then type /help for help.
 Happy IRC'ing!

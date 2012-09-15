@@ -83,7 +83,7 @@ static int HistoryLength = 0;
 **	a variable so that it will be easy to change it in runtime
 **	if needed (should even work if set to 0).
 */
-static int MaxHistoryLength = 200;
+static int MaxHistoryLength = NICKNAMEHISTORYLENGTH;
 
 AddHistory(cptr)
 aClient *cptr;

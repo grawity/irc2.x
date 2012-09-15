@@ -43,7 +43,10 @@ char send_id[] = "send.c v2.0 (c) 1988 University of Oulu, Computing Center and 
 
 static char sendbuf[1024];
 
-extern aClient *client;
+#ifndef CLIENT_COMPILE
+extern aClient *client, *local[];
+extern int highest_fd;
+#endif
 extern aChannel *channel;
 
 /*
@@ -67,7 +70,11 @@ char *notice;
     {
 	to->flags |= FLAGS_DEADSOCKET;
 	if (notice != NULL && !IsPerson(to) && !IsUnknown(to))
+#ifndef CLIENT_COMPILE
 		sendto_ops(notice,to->sockhost);
+#else
+		;
+#endif
 	return 0;
     }
 
@@ -183,33 +190,33 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
     SendMessage(to, sendbuf, strlen(sendbuf));
 }
 
+#ifndef CLIENT_COMPILE
 sendto_channel_butone(one, channel, pattern,
 		      par1, par2, par3, par4, par5, par6, par7, par8)
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 aChannel *channel;
 {
+  int sentalong[MAXCONNECTIONS], i;
   Link *link, *tmplink;
+  for (i = 0; i < MAXCONNECTIONS; i++)
+    sentalong[i] = 0;
   for (link = channel->members; link; link = link->next)
     {
       if ((((aClient *) link->value)->from) == one)
 	continue;	/* ...was the one I should skip */
+      i = ((aClient *)link->value)->from->fd;
       if (MyConnect(((aClient *)link->value)) &&
 	  IsRegisteredUser((aClient *)link->value)) {
 	sendto_one(link->value, pattern,
 		   par1, par2, par3, par4, par5, par6, par7, par8);
+	sentalong[i] = 1;
       } else {  /* Now check whether a message has been sent to this
 		   remote link already */
-	for (tmplink = channel->members; tmplink != link;
-	     tmplink = tmplink->next) {
-	  if (((aClient *) tmplink->value)->from ==
-	      ((aClient *) link->value)->from) {
-	    break;
-	  }
-	}
-	if (tmplink == link) {
+	if (sentalong[i] == 0) {
 	  sendto_one(link->value, pattern,
 		     par1, par2, par3, par4, par5, par6, par7, par8);
+	  sentalong[i] = 1;
 	}
       }
     }
@@ -220,9 +227,10 @@ sendto_serv_butone(one, pattern, par1, par2, par3, par4, par5, par6,
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 {
-  aClient *cptr;
-  for (cptr = client; cptr; cptr = cptr->next) 
-    if (MyConnect(cptr) && IsServer(cptr) && cptr != one)
+  Reg1 int i;
+  Reg2 aClient *cptr;
+  for (i = 0; i <= highest_fd; i++)
+    if ((cptr = local[i]) && IsServer(cptr) && cptr != one)
       sendto_one(cptr, pattern,
 		 par1, par2, par3, par4, par5, par6, par7, par8);
 }
@@ -236,10 +244,12 @@ sendto_common_channels(user, pattern,
 aClient *user;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 {
-  aClient *cptr;
+  Reg1 int i;
+  Reg2 aClient *cptr;
   aChannel *chptr;
-  for (cptr = client; cptr; cptr = cptr->next) {
-    if (!MyConnect(cptr) || IsServer(cptr) || user == cptr)
+
+  for (i = 0; i <= highest_fd; i++) {
+    if (!(cptr = local[i]) || IsServer(cptr) || user == cptr)
       continue;
     for (chptr = channel; chptr; chptr = chptr->nextch) {
       if (IsMember(user, chptr) && IsMember(cptr, chptr)) {
@@ -253,7 +263,7 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
     sendto_one(user, pattern, par1, par2, par3, par4,
 	       par5, par6, par7, par8);
 }
-
+#endif
 sendto_channel_butserv(channel, pattern,
 		       par1, par2, par3, par4, par5, par6, par7, par8)
 aChannel *channel;
@@ -289,6 +299,7 @@ static int match_it(one, mask, what)
     }
 }
 
+#ifndef CLIENT_COMPILE
 sendto_match_butone(one, mask, what, pattern, par1, par2, par3, par4, par5,
 		    par6, par7, par8)
      aClient *one;
@@ -296,14 +307,15 @@ sendto_match_butone(one, mask, what, pattern, par1, par2, par3, par4, par5,
      char *mask, *pattern, *par1, *par2, *par3, *par4, *par5, *par6;
      char *par7, *par8;
 {
-  aClient *cptr, *acptr;
+  Reg1 int i;
+  Reg2 aClient *cptr, *acptr;
   
-  for (cptr = client; cptr; cptr = cptr->next)
+  for (i = 0; i <= highest_fd; i++)
     {
+      if (!(cptr = local[i]))
+	continue;       /* that clients are not mine */
       if (cptr == one)        /* must skip the origin !! */
 	continue;
-      if (!MyConnect(cptr))
-	continue;       /* that clients are not mine */
       if (IsServer(cptr))
 	{
 	  for (acptr=client; acptr; acptr=acptr->next)
@@ -336,9 +348,10 @@ sendto_all_butone(one, pattern, par1, par2, par3, par4, par5,
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 {
-  aClient *cptr;
-  for (cptr = client; cptr; cptr = cptr->next) 
-    if (MyConnect(cptr) && !IsMe(cptr) && one != cptr)
+  Reg1 int i;
+  Reg2 aClient *cptr;
+  for (i = 0; i <= highest_fd; i++)
+    if ((cptr = local[i]) && !IsMe(cptr) && one != cptr)
       sendto_one(cptr, pattern,
 		 par1, par2, par3, par4, par5, par6, par7, par8);
 }
@@ -350,11 +363,12 @@ char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 sendto_ops(pattern, par1, par2, par3, par4, par5, par6, par7, par8)
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
 {
-  aClient *cptr;
+  Reg1 aClient *cptr;
+  Reg2 int i;
   char buf[512];
 
-  for (cptr = client; cptr; cptr = cptr->next) 
-    if (MyConnect(cptr) && IsAnOper(cptr))
+  for (i = 0; i <= highest_fd; i++)
+    if ((cptr = local[i]) && IsAnOper(cptr))
       {
 	sprintf(buf, "NOTICE %s :*** Notice -- ", cptr->name);
 	strncat(buf, pattern, sizeof(buf) - strlen(buf));
@@ -372,20 +386,23 @@ sendto_ops_butone(one, pattern,
 aClient *one;
 char *pattern, *par1, *par2, *par3, *par4, *par5, *par6, *par7, *par8;
     {
-	aClient *cptr, *acptr;
+	Reg1 int i;
+	Reg2 aClient *cptr;
+	int sent[MAXCONNECTIONS];
+
+	for (i=0; i<highest_fd; i++)
+		sent[i] = 0;
 	for (cptr = client; cptr; cptr = cptr->next)
 	    {
+		if (!IsOper(cptr))
+			continue;
+		if (sent[i = cptr->from->fd])
+			continue;
 		if (cptr == one)
 			continue;	/* ...was the one I should skip */
-		if (!MyConnect(cptr))
-			continue;	/* ...no connection on this */
-		if (IsServer(cptr))
-		    {  /* Now wallops get sent to all servers... -SRB */
-		    }
-		else if (!IsOper(cptr))
-			continue;
+		sent[i] = 1;
       		sendto_one(cptr, pattern,
 			   par1, par2, par3, par4, par5, par6, par7, par8);
 	    }
     }
-
+#endif

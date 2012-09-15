@@ -32,6 +32,9 @@
 #include "struct.h"
 #include "common.h"
 
+extern char *strerror();
+extern int errno;
+
 #define BAD_CONF_CLASS		-1
 #define BAD_PING		-2
 #define BAD_CLIENT_CLASS	-3
@@ -120,29 +123,38 @@ aClass	*clptr;
 		return (CONNECTFREQUENCY);
 }
 
-extern char *strerror();
-extern int errno;
-
+/*
+ * When adding a class, check to see if it is already present first.
+ * if so, then update the information for that class, rather than create
+ * a new entry for it and later delete the old entry.
+ * if no present entry is found, then create a new one and add it in
+ * immeadiately after the first one (class 0).
+ */
 void AddClass(class, ping, confreq, maxli)
 int class, ping, confreq, maxli;
 {
   aClass *t, *p;
 
   t = find_class(class);
-  p = (aClass *) malloc(sizeof(aClass));
-  if (!p) {
-    debug(DEBUG_FATAL, "malloc (addclass) %s", strerror(errno));
-    restart();
+  if ((t == classes) && (class != 0)) {
+    p = (aClass *) malloc(sizeof(aClass));
+    if (!p) {
+      debug(DEBUG_FATAL, "malloc (addclass) %s", strerror(errno));
+      restart();
+    }
+    NextClass(p) = NextClass(t);
+    NextClass(t) = p;
   }
-
-  NextClass(p) = NextClass(t);
-  NextClass(t) = p;
-
+  else
+    p = t;
+  debug(DEBUG_DEBUG,"Add Class %d: p %x t %x - cf: %d pf: %d ml: %d",
+	class, p, t, confreq, ping, maxli);
   Class(p) = class;
   ConFreq(p) = confreq;
   PingFreq(p) = ping;
   MaxLinks(p) = maxli;
-  Links(p) = 0;
+  if (p != t)
+    Links(p) = 0;
 }
 
 aClass *find_class(cclass)
@@ -151,21 +163,21 @@ int cclass;
   aClass *cltmp;
 
   for (cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp))
-    if (Class(cltmp) == cclass && (MaxLinks(cltmp) >= 0))
+    if (Class(cltmp) == cclass)
       return cltmp;
   return classes;
 }
 
 void check_class()
 {
-  aClass *cltmp, *cltmp2;
+  Reg1 aClass *cltmp, *cltmp2;
 
   debug(DEBUG_DEBUG, "Class check:");
 
   for (cltmp2 = cltmp = FirstClass(); cltmp; cltmp = NextClass(cltmp2)) {
-    debug(DEBUG_DEBUG, "Class %d : CF: %d PF: %d ML: %d",
+    debug(DEBUG_DEBUG, "Class %d : CF: %d PF: %d ML: %d LI: %d",
 	  Class(cltmp), ConFreq(cltmp), PingFreq(cltmp),
-	  MaxLinks(cltmp));
+	  MaxLinks(cltmp), Links(cltmp));
     if (MaxLinks(cltmp) < 0) {
       NextClass(cltmp2) = NextClass(cltmp);
       if (Links(cltmp) <= 0)
@@ -188,5 +200,5 @@ void initclass()
   PingFreq(FirstClass()) = PINGFREQUENCY;
   MaxLinks(FirstClass()) = MAXIMUM_LINKS;
   Links(FirstClass()) = 0;
-  NextClass(FirstClass()) = (aClass *) 0;
+  NextClass(FirstClass()) = (aClass *) NULL;
 }

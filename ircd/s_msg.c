@@ -53,7 +53,7 @@ char s_msg_id[] = "s_msg.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #include "whowas.h"
 #include "channel.h"
 
-extern aClient *client, me;
+extern aClient *client, me, *local[];
 extern aClient *find_server(), *find_person();
 extern aClient *find_userhost();
 extern aConfItem *FindConf(), *FindConfName(), *find_admin();
@@ -64,7 +64,7 @@ extern aChannel *channel;
 extern char *debugmode;
 extern char *configfile;
 extern int maxusersperchannel;
-extern int autodie;
+extern int autodie, highest_fd;
 
 #define BIGBUFFERSIZE 2000
 
@@ -365,26 +365,6 @@ char *nick;
 	AddHistory(sptr);
 	if (MyConnect(sptr))
 	    {
-#ifdef FNAME_USERLOG
-               FILE *userlogfile;
-	       struct stat stbuf;
-
-	      /*
-	       * This conditional makes the logfile active only after
-	       * it's been created - thus logging can be turned off by
-	       * removing the file.
-	       */
-
-	      if (!stat(FNAME_USERLOG, &stbuf) &&
-		 (userlogfile = fopen(FNAME_USERLOG, "a")))
-		  {
-		  fprintf(userlogfile, "%s: %s@%s\n", date(0),
-		      sptr->user->username, sptr->user->host);
-		  fclose(userlogfile);
-		  }
-	      /* Modification by stealth@caen.engin.umich.edu */
-#endif
-
 	      sendto_one(sptr,
 			 "NOTICE %s :%s %s",
 			 nick, "*** Welcome to the Internet Relay Network,",
@@ -400,6 +380,7 @@ char *nick;
 	      m_motd(sptr, sptr, 1, &tmp);
 	      det_confs_butmask(cptr,
 				CONF_CLIENT | CONF_OPERATOR | CONF_LOCOP);
+	      det_I_lines_butfirst(cptr);
 	      if (oldstatus == STAT_MASTER && MyConnect(sptr)) {
 		char *parv[3];
 		parv[0] = sptr->name;
@@ -487,8 +468,7 @@ char *parv[];
 		/* A server introducing a new client, change source */
 
 		sptr = make_client(cptr);
-		sptr->next = client;
-		client = sptr;
+		add_client_to_list(sptr);
 	    }
 	else if (sptr->name[0])
 	    {
@@ -525,7 +505,10 @@ char *parv[];
 	/*
 	**  Finally set new nick name.
 	*/
+	if (sptr->name[0])
+		delFromClientHashTable(sptr->name, sptr);
 	strcpy(sptr->name, nick); /* correctness guaranteed by 'DoNickName' */
+	addToClientHashTable(sptr->name, sptr);
 	return 0;
     }
 
@@ -795,7 +778,6 @@ char *parv[];
     mask = NULL;
   else
     channame = mask;
-  tonewjis(channame);
   if (channame &&
       (*channame == '+' || atoi(channame) || *channame == '#')) {
     Link *link;
@@ -863,7 +845,7 @@ char *parv[];
 {
     int found, eol = 0, wilds;
     Reg1 char *nick, *tmp;
-    char *p;
+    char *p, buf[1024];
     aClient *acptr, *a2cptr;
     aChannel *chptr;
 
@@ -942,6 +924,26 @@ char *parv[];
 			   user->username,
 			   user->host,
 			   acptr->info);
+	      for (buf[0] = '\0', chptr = channel; chptr;
+		   chptr = chptr->nextch) {
+			if (ShowChannel(sptr, chptr) &&
+			    IsMember(acptr, chptr)) {
+				if (strlen(buf) + strlen(chptr->chname) > 400) {
+					sendto_one(sptr, ":%s %d %s %s",
+						   me.name, RPL_WHOISCHANNELS,
+						   parv[0], buf);
+					buf[0] = '\0';
+				}
+				strcat(buf, chptr->chname);
+				strcat(buf, " ");
+			}
+	      }
+	      if (buf[0] != '\0')
+		sendto_one(sptr, ":%s %d %s %s",
+			   me.name,
+			   RPL_WHOISCHANNELS,
+			   parv[0],
+			   buf);
 	      sendto_one(sptr,":%s %d %s %s :%s",
 			 me.name, 
 			 RPL_WHOISSERVER,
@@ -967,9 +969,10 @@ char *parv[];
 			   acptr->name,
 			   "has been touched by magic forces");
 	      if (acptr->user && acptr->user->last && MyConnect(acptr))
-		sendto_one(sptr, ":%s %d %s %ld :%s",
+		sendto_one(sptr, ":%s %d %s %s %ld :%s",
 			   me.name, RPL_WHOISIDLE,
-			   parv[0], time((void *) 0) - acptr->user->last,
+			   parv[0], acptr->name,
+			   time((void *) 0) - acptr->user->last,
 			   "is the idle time for this user");
 	    }
 	if (!found)
@@ -1400,6 +1403,7 @@ m_server(cptr, sptr, parc, parv)
   aChannel *chptr;
   char *inpath;
   Reg1 char *ch;
+  Reg2 int i;
   
   inpath = GetClientName(cptr,FALSE);
   if (parc < 2 || *parv[1] == '\0')
@@ -1466,7 +1470,17 @@ m_server(cptr, sptr, parc, parv)
 	  sendto_one(cptr,"ERROR :No server info specified");
 	  return 0;
 	}
-      
+
+      /*
+       ** See if the newly found server is behind a guaranteed
+       ** leaf (L-line). If so, close the link.
+       */
+      if (aconf = FindConfName( sptr->name, CONF_LEAF )) {
+	sendto_ops("Leaf-only link %s issued second server command",
+		   GetClientName(sptr, FALSE) );
+	sendto_one(cptr, ":ERROR :Leaf-only link, sorry." );
+	return ExitClient(cptr, cptr, cptr, "");
+      }
       /*
        ** See if the newly found server has a Q line for it in
        ** our conf. If it does, lose the link that brought it
@@ -1496,18 +1510,18 @@ m_server(cptr, sptr, parc, parv)
       strncpyzt(acptr->name,host,sizeof(acptr->name));
       strncpyzt(acptr->info,info,sizeof(acptr->info));
       acptr->status = STAT_SERVER;
-      acptr->next = client;
-      client = acptr;
+      add_client_to_list(acptr);
+      addToClientHashTable(acptr->name, acptr);
       
       /*
        ** Old sendto_serv_but_one() call removed because we now
        ** need to send different names to different servers
        ** (domain name matching)
        */
-      for (bcptr = client; bcptr; bcptr = bcptr->next)
+      for (i = 0; i <= highest_fd; i++)
 	{
-	  if (!IsServer(bcptr) || bcptr == cptr ||
-	      IsMe(bcptr) || !MyConnect(bcptr))
+	  if (!(bcptr = local[i]) || !IsServer(bcptr) ||
+	      bcptr == cptr || IsMe(bcptr))
 	    continue;
 	  if (matches(MyNameForLink(me.name, bcptr->confs->value),
 		      acptr->name) == 0)
@@ -1578,16 +1592,16 @@ m_server(cptr, sptr, parc, parv)
   /* Save this in order to get domain
    * wildcard match counts whenever needed */
   sendto_ops("Link with %s established.", inpath);
-  
+  addToClientHashTable(cptr->name, cptr);
   /*
    ** Old sendto_serv_but_one() call removed because we now
    ** need to send different names to different servers
    ** (domain name matching)
    */
-  for (acptr = client; acptr; acptr = acptr->next)
+  for (i = 0; i <= highest_fd; i++) 
     {
-      if (!IsServer(acptr) || acptr == cptr ||
-	  IsMe(acptr) || !MyConnect(acptr))
+      if (!(acptr = local[i]) || !IsServer(acptr) ||
+	  acptr == cptr || IsMe(acptr))
 	continue;
       if (matches(MyNameForLink(me.name, acptr->confs->value),
 		  cptr->name) == 0)
@@ -1660,23 +1674,13 @@ m_server(cptr, sptr, parc, parv)
      ** Send channel operators first...
      */
     for (link = chptr->members; link; link = link->next) {
+      sendto_one(cptr,":%s %s %s", ((aClient *) link->value)->name,
+		 (IsMultiChannel(chptr) ? "JOIN" : "CHANNEL"),
+		 chptr->chname);
       if (TestChanOpFlag(link->flags)) {
-	sendto_one(cptr,":%s %s %s", ((aClient *) link->value)->name,
-		   (IsMultiChannel(chptr) ? "JOIN" : "CHANNEL"),
-		   chptr->chname);
 	sendto_one(cptr,":%s MODE %s +o %s",
 		   me.name, chptr->chname,
 		   ((aClient *) link->value)->name);
-      }
-    }
-    /*
-     ** And send then ordinary users...
-     */
-    for (link = chptr->members; link; link = link->next) {
-      if (!TestChanOpFlag(link->flags)) {
-	sendto_one(cptr,":%s %s %s", ((aClient *) link->value)->name,
-		   (IsMultiChannel(chptr) ? "JOIN" : "CHANNEL"),
-		   chptr->chname);
       }
     }
   }
@@ -1712,6 +1716,7 @@ char *parv[];
 	char *inpath = GetClientName(cptr,FALSE);
 	char *user, *path;
 	int chasing = 0;
+	Reg1 int i;
 
 	if (parc < 2 || *parv[1] == '\0')
 	    {
@@ -1795,8 +1800,8 @@ char *parv[];
 	       The reason is wildcard servers and possible
 	       problems with older servers handling wildcards --Jto */
 	    aClient *ptr = client;
-	    for (; ptr; ptr = ptr->next) {
-	      if (!IsServer(ptr) || !MyConnect(ptr) || IsMe(ptr))
+	    for (i = 0; i <= highest_fd; i++) {
+	      if (!(ptr = local[i]) || !IsServer(ptr) || IsMe(ptr))
 		continue;
 	      if (cptr != ptr || chasing)
 		sendto_one(ptr, ":%s KILL %s :%s!%s",
@@ -1857,6 +1862,7 @@ char *parv[];
 ** m_links
 **	parv[0] = sender prefix
 **	parv[1] = servername mask
+**      parv[2] = server to query
 */
 m_links(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
@@ -2018,6 +2024,7 @@ char *parv[];
 	struct Message *mptr;
 	aClient *acptr;
 	char *stat = parc > 1 ? parv[1] : "M";
+	Reg1 int i;
 	/*
 	** Server should not format things, but this a temporary kludge
 	*/
@@ -2037,8 +2044,8 @@ char *parv[];
 		sendto_one(sptr,Lheading, parv[0],
 			   "Link", "SendQ", "SendM", "SendBytes",
 			   "RcveM", "RcveBytes", "Open since");
-		for (acptr = client; acptr; acptr = acptr->next)
-			if (MyConnect(acptr) && /* Includes IsMe! */
+		for (i = 0; i <= highest_fd; i++)
+			if ((acptr = local[i]) && /* Includes IsMe! */
 			    (IsOper(sptr) || !IsPerson(acptr) ||
 			     IsLocOp(sptr) && IsLocOp(acptr))) {
 				sendto_one(sptr,Lformat,
@@ -2152,6 +2159,31 @@ char *comment;	/* Reason for the exit */
 		** It also makes sptr->from == NULL, thus it's unnecessary
 		** to test whether "sptr != acptr" in the following loops.
 		*/
+#ifdef FNAME_USERLOG
+	    {
+		FILE *userlogfile;
+		struct stat stbuf;
+		long	on_for;
+
+		/*
+ 		 * This conditional makes the logfile active only after
+		 * it's been created - thus logging can be turned off by
+		 * removing the file.
+		 */
+		if (IsPerson(sptr) && !stat(FNAME_USERLOG, &stbuf) &&
+		    (userlogfile = fopen(FNAME_USERLOG, "a")))
+		    {
+			on_for = time(NULL) - sptr->firsttime;
+			fprintf(userlogfile, "%s (%3d:%2d:%2d): %s@%s\n",
+				myctime(sptr->firsttime),
+				on_for / 3600, (on_for % 3600)/60,
+				on_for % 60,
+				sptr->user->username, sptr->user->host);
+			fclose(userlogfile);
+		    }
+		/* Modification by stealth@caen.engin.umich.edu */
+	    }
+#endif
 		CloseConnection(sptr);
 		/*
 		** First QUIT all NON-servers which are behind this link
@@ -2193,6 +2225,7 @@ char *comment;
     {
 	aClient *acptr, **pacptr;
 	aChannel *chptr;
+	Reg1 int i;
 
 #ifdef MSG_NOTE
 	check_messages(cptr, sptr, sptr->name,'e');
@@ -2211,10 +2244,10 @@ char *comment;
 	   ** need to send different names to different servers
 	   ** (domain name matching)
 	   */
-	  for (acptr = client; acptr; acptr = acptr->next)
+	  for (i = 0; i <= highest_fd; i++)
 	    {
-	      if (!IsServer(acptr) || acptr == cptr ||
-		  IsMe(acptr) || !MyConnect(acptr))
+	      if (!(acptr = local[i]) || !IsServer(acptr) ||
+		  acptr == cptr || IsMe(acptr))
 		continue;
 	      if (matches(MyNameForLink(me.name, acptr->confs->value),
 			  sptr->name) == 0)
@@ -2274,30 +2307,9 @@ char *comment;
 	}
 
 	/* remove sptr from the client list */
-
-	for (pacptr = &client; acptr = *pacptr; pacptr = &(acptr->next))
-		if (acptr == sptr)
-		    {
-			*pacptr = sptr->next;
-			if (sptr->user != NULL)
-			    {
-				OffHistory(sptr);
-				free_user(sptr->user);
-			    }
-			free(sptr);
-			if (autodie) {
-			  for (acptr = client; acptr; acptr = acptr->next)
-			    if (MyConnect(acptr) && IsRegisteredUser(acptr))
-			      break;
-			  if (!acptr) {
-			    /* That was the last client of local server */
-			    exit(0);
-			  }
-			}
-			return 0;
-		    }
-	debug(DEBUG_FATAL, "List corrupted");
-	restart();
+	delFromClientHashTable(sptr->name, sptr);
+	remove_client_from_list(sptr);
+	return (0);
     }
 
 /*
@@ -2425,6 +2437,8 @@ char *parv[];
 		sendto_one(sptr,
 			"NOTICE %s :*** There are %d yet unknown connections",
 			   parv[0], u_count);
+	sendto_one(sptr, "NOTICE %s :*** There are %d channels.",
+		   parv[0], count_channels(sptr));
     }
 
   
@@ -2709,7 +2723,7 @@ char *parv[];
 	
 	/* if message arrived from server, trust it, and set to oper */
 
-	if (IsServer(cptr) || IsMe(cptr))
+	if ((IsServer(cptr) || IsMe(cptr)) && !IsOper(sptr))
 	    {
 		SetOper(sptr);
 		sendto_serv_butone(cptr, ":%s OPER", parv[0]);
@@ -2922,7 +2936,6 @@ char *parv[];
 
 	/* First, do all visible channels (public and the one user self is) */
 
-	tonewjis(para);
 	for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
 	        Link *link;
@@ -3063,6 +3076,7 @@ char *parv[];
 	aClient *acptr;
 	aClass *cltmp;
 	int doall;
+	Reg1 int i;
 
 	switch (HuntServer(cptr,sptr,":%s TRACE :%s", 1,parc,parv))
 	    {
@@ -3079,12 +3093,12 @@ char *parv[];
 
 	/* report all direct connections */
 	
-	for (acptr = client; acptr; acptr = acptr->next)
+	for (i = 0; i <= highest_fd; i++)
 	  {
 	    char *name;
 	    int class;
 	    
-	    if (acptr->from != acptr) /* Local Connection? */
+	    if (!(acptr = local[i])) /* Local Connection? */
 	      continue;
 	    name = GetClientName(acptr,FALSE);
 	    if (!doall && matches(parv[1],acptr->name))
@@ -3278,4 +3292,84 @@ int parc;
 char *parv[];
 {
     return m_error(cptr, sptr, parc, parv);
+}
+
+/*
+ * m_userhost added by Darren Reed 13/8/91 to aid clients and reduce
+ * the need for complicated requests like WHOIS. It returns user/host
+ * information only (no spurious AWAY labels or channels).
+ */
+m_userhost(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int parc;
+char *parv[];
+{
+	char	*output, buf[USERHOST_REPLYLEN], *p;
+	aClient	*acptr;
+	register	char *s;
+	register	int i;
+
+	CheckRegisteredUser(sptr);
+
+	if (parc < 2) {
+		sendto_one(sptr, ":%s %d %s :USERHOST not enough params",
+			   me.name, ERR_NEEDMOREPARAMS, sptr->name );
+		return 0;
+	}
+	output = (char *)MyMalloc(strlen(me.name) + strlen(sptr->name) + 3 +
+				  USERHOST_REPLYLEN * 5 + 10);
+	sprintf(output, ":%s %d %s :", me.name, RPL_USERHOST, sptr->name);
+	for (i = 5, s = strtoken(&p, parv[1], " "); i && s;
+	     s = strtoken(&p, NULL, " "), i--)
+		if (acptr = find_person(s, (aClient *)NULL)) {
+			sprintf(buf, "%s%s=%c%s@%s ",
+				acptr->name,
+				IsOper(acptr) ? "*" : "",
+				(acptr->user->away) ? '-' : '+',
+				acptr->user->username,
+				acptr->user->host);
+			strcat(output, buf);
+		}
+	sendto_one(sptr, output);
+	free(output);
+	return 0;
+}
+
+/*
+ * m_ison added by Darren Reed 13/8/91 to act as an efficent user indicator
+ * with respect to cpu/bandwidth used. Implemented for NOTIFY feature in
+ * clients. Designed to reduce number of whois requests. Can process
+ * nicknames in batches of 5.
+ * format:
+ * ISON :nicklist
+ */
+
+m_ison(cptr, sptr, parc, parv)
+aClient *cptr, *sptr;
+int parc;
+char *parv[];
+{
+	char *reply, *p;
+	register aClient *acptr;
+	register char *s;
+
+	CheckRegisteredUser(sptr);
+
+	if (parc != 2) {
+		sendto_one(sptr, ":%s %d %s :ISON not enough args",
+			   me.name, ERR_NEEDMOREPARAMS, sptr->name);
+		return 0;
+	}
+	reply = (char *)MyMalloc(strlen(me.name) + strlen(sptr->name) + 3 +
+				 strlen(parv[1]) + 10);
+
+	sprintf(reply, ":%s %d %s :", me.name, RPL_ISON, sptr->name);
+	for (s = strtoken(&p, parv[1], " "); s; s = strtoken(&p, NULL, " "))
+		if (acptr = find_person(s, (aClient *)NULL)) {
+			strcat(reply, acptr->name);
+			strcat(reply, " ");
+		}
+	sendto_one(sptr, reply);
+	free(reply);
+	return 0;
 }

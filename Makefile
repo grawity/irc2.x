@@ -34,8 +34,8 @@ CFLAGS=-I$(INCLUDEDIR)
 #on NeXT other than 2.0:
 # IRCDLIBS=-lsys_s
 #
-# HPUX:
-# IRCDLIBS=-lBSD
+# HPUX: (was IRCDLIBS= -lbsd but apparently its not needed)
+# IRCDLIBS=
 #
 #and otherwise:
 IRCDLIBS=
@@ -44,7 +44,7 @@ IRCDLIBS=
 # the 4 at the front is important (allows for setuidness)
 IRCDMODE = 4711
 
-MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}'
+MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' 'IRCDMODE=${IRCDMODE}'
 SHELL=/bin/sh
 SUBDIRS=common ircd irc
 # use this if you don't want the default client compiled

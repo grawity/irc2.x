@@ -89,6 +89,9 @@ extern long nextconnect;
 
 extern int errno;
 
+aClient	*local[MAXCONNECTIONS];
+int	highest_fd = 0;
+
 /*
 ** AddLocalDomain()
 ** Add the domain to hostname, if it is missing
@@ -209,6 +212,8 @@ int portnum;
 		  me.name, RPL_MYPORTIS, server.sin_port);
 	  write(0, buf, strlen(buf));
 	}
+	highest_fd = sock;
+	local[sock] = &me;
 	listen(sock, 3);
 	return(sock);
     }
@@ -249,6 +254,8 @@ init_sys()
 #endif
 	    }
 	else close (0);
+	for (fd = 0; fd < MAXCONNECTIONS; fd++)
+		local[fd] = (aClient *)NULL;
     }
 
 /*
@@ -405,6 +412,7 @@ CloseConnection(cptr)
 aClient *cptr;
     {
         Reg1 aConfItem *aconf;
+	Reg2 int i,j;
 
         if (IsServer(cptr))
 		{
@@ -413,14 +421,39 @@ aClient *cptr;
                		aconf->hold = MIN(aconf->hold,
 					  time(NULL) + ConfConFreq(aconf));
                 }
-
-	close(cptr->fd);
-	cptr->fd = -1;
-	dbuf_clear(&cptr->sendQ);
+	if (cptr->fd >= 0) {
+		local[cptr->fd] = (aClient *)NULL;
+		close(cptr->fd);
+		if (cptr->fd >= highest_fd)
+			for (; highest_fd > 0; highest_fd--)
+				if (local[highest_fd])
+					break;
+		cptr->fd = -1;
+		dbuf_clear(&cptr->sendQ);
+	}
 	while (cptr->confs)
-	  detach_conf(cptr, cptr->confs->value);
+		detach_conf(cptr, cptr->confs->value);
 	cptr->from = NULL; /* ...this should catch them! >:) --msa */
 	AcceptNewConnections = TRUE; /* ...perhaps new ones now succeed? */
+
+	/*
+	 * fd remap to keep local[i] filled at the bottom.
+	 */
+	for (i = 0, j = highest_fd; i < j; i++)
+		if (!local[i]) {
+			int	arg;
+
+			if (fcntl(i, F_GETFL, &arg) != -1)
+				continue;
+			if (dup2(j,i) == -1)
+				continue;
+			local[i] = local[j];
+			local[i]->fd = i;
+			local[j] = (aClient *)NULL;
+			close(j);
+			for (; j > i && !local[j]; j--)
+				;
+		}
     }
 
 /*
@@ -458,8 +491,10 @@ int fd;
     free(cptr);
     return (aClient *) 0;
   }
-  cptr->next = client;
-  client = cptr;
+  if (fd > highest_fd)
+     highest_fd = fd;
+  local[fd] = cptr;
+  add_client_to_list(cptr);
   SetNonBlocking(cptr);
   return cptr;
 }
@@ -473,7 +508,7 @@ ReadMessage(buffer, buflen, from, delay)
 {
   Reg1 aClient *cptr;
   Reg2 int nfds;
-  int res, length, fd;
+  int res, length, fd, i;
   struct timeval wait;
   fd_set read_set, write_set;
   aConfItem *aconf;
@@ -486,18 +521,18 @@ ReadMessage(buffer, buflen, from, delay)
       FD_ZERO(&write_set);
       if (AcceptNewConnections)
 	FD_SET(me.fd, &read_set);
-      for (cptr = client; cptr; cptr = cptr->next) 
-	if (cptr->fd >= 0)
+      for (i = 0; i <= highest_fd; i++)
+	if (cptr = local[i])
 	  {
 	    if (!IsMe(cptr))
 	      if (cptr->since > tval) /* To allow blocking an fd this 
 					 is a shorter delay than usually */
 		delay = 1;
 	      else
-		FD_SET(cptr->fd, &read_set);
+		FD_SET(i, &read_set);
 	    if (dbuf_length(&cptr->sendQ) > 0 ||
 		IsConnecting(cptr))
-	      FD_SET(cptr->fd, &write_set);
+	      FD_SET(i, &write_set);
 	  }
       wait.tv_sec = delay;
       wait.tv_usec = 0;
@@ -541,15 +576,22 @@ ReadMessage(buffer, buflen, from, delay)
 	  ReportError("Cannot accept new connections %s:%s",
 		      (aClient *)NULL);
 	  AcceptNewConnections = FALSE;
-	  exit(-2);
+	  break;
 	}
-      cptr = make_client((aClient *)NULL); /* Local client */
+      if (fd >= MAXCONNECTIONS) {
+	close(fd);
+	AcceptNewConnections = FALSE;
+	break;
+      }
+      cptr = make_client((aClient *)NULL);
       cptr->fd = fd;
       if (check_access(cptr, CONF_CLIENT | CONF_NOCONNECT_SERVER | CONF_LOCOP
 		       | CONF_OPERATOR | CONF_CONNECT_SERVER) >= 0)
 	{
-	  cptr->next = client;
-	  client = cptr;
+	  add_client_to_list(cptr);
+	  if (fd > highest_fd)
+	    highest_fd = fd;
+	  local[fd] = cptr;
 	  SetNonBlocking(cptr);
 	  break;
 	}
@@ -565,11 +607,11 @@ ReadMessage(buffer, buflen, from, delay)
 
   tval = time(NULL);
 
-  for (cptr = client; cptr && nfds; cptr = cptr->next)
+  for (i = 0; (i <= highest_fd) && nfds; i++)
     {
-      if (cptr->fd<0 || IsMe(cptr))
+      if (!(cptr = local[i]) || IsMe(cptr))
 	continue;
-      if (FD_ISSET(cptr->fd, &write_set))
+      if (FD_ISSET(i, &write_set))
 	{
 	  if (IsConnecting(cptr) && !CompletedConnection(cptr))
 	    {
@@ -582,10 +624,10 @@ ReadMessage(buffer, buflen, from, delay)
 	  SendQueued(cptr);
 	  nfds--;
 	}
-      if (!FD_ISSET(cptr->fd, &read_set))
+      if (!FD_ISSET(i, &read_set))
 	continue;
       nfds--;
-      if ((length = read(cptr->fd, buffer, buflen)) > 0) {
+      if ((length = read(i, buffer, buflen)) > 0) {
 	*from = cptr;
 	if (cptr->since < tval)
 	  cptr->since = tval;
@@ -628,7 +670,8 @@ ReadMessage(buffer, buflen, from, delay)
 	    nextconnect = aconf->hold;
 	}
       ExitClient(cptr, cptr, &me, "Bad link?");
-      return 0; /* ...cannot continue loop, blocks freed! --msa */
+      continue;
+      /* return 0; /* ...cannot continue loop, blocks freed! --msa */
       /*
        ** Another solution would be to restart the loop from the
        ** beginning. Then we would have to issue FD_CLR for sockets
@@ -700,9 +743,11 @@ aConfItem *aconf;
 	/*
 	** The socket has been connected or connect is in progress.
 	*/
+	if (cptr->fd > highest_fd)
+		highest_fd = cptr->fd;
+	local[cptr->fd] = cptr;
 	cptr->status = STAT_CONNECTING;
-	cptr->next = client;
-	client = cptr;
+	add_client_to_list(cptr);
 	return 0;
     }
 

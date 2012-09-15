@@ -37,7 +37,7 @@ CFLAGS =-O -I${INCLUDE}
 #IRCLIBS=-lcurses -lcur
 IRCLIBS=-lcurses -ltermcap
 
-CC=cc
+CC=/bsd/bin/cc
 RM=/bin/rm
 OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
      irc.o screen.o str.o c_debug.o
@@ -45,9 +45,7 @@ OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
 SRC=c_bsd.c c_conf.c c_msg.c c_numeric.c c_version.c edit.c help.c ignore.c\
      irc.c screen.c str.c c_debug.c
 
-COMMONOBJS=../common/bsd.o ../common/dbuf.o\
-           ../common/packet.o ../common/send.o\
-	   ../common/match.o ../common/parse.o ../common/support.o
+COMMONOBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
 
 
 MAKE = make 'CFLAGS=${CFLAGS}' 'CC=${CC}'
@@ -59,26 +57,26 @@ build: irc
 irc: $(OBJS) $(COMMONOBJS)
 	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(IRCLIBS) $(LIBFLAGS)
 
-../common/parse.o:
-	(cd ../common; ${MAKE} build);
+parse.o: ../common/parse.c ../include/msg.h
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/parse.c
 
-../common/bsd.o:
-	(cd ../common; ${MAKE} build);
+bsd.o: ../common/bsd.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/bsd.c
 
-../common/dbuf.o:
-	(cd ../common; ${MAKE} build);
+dbuf.o: ../common/dbuf.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/dbuf.c
 
-../common/packet.o:
-	(cd ../common; ${MAKE} build);
+packet.o: ../common/packet.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/packet.c
 
-../common/send.o:
-	(cd ../common; ${MAKE} build);
+send.o: ../common/send.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/send.c
 
-../common/match.o:
-	(cd ../common; ${MAKE} build);
+match.o: ../common/match.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/match.c
 
-../common/support.o:
-	(cd ../common; ${MAKE} build);
+support.o: ../common/support.c
+	${CC} ${CFLAGS} -DCLIENT_COMPILE=1 -c ../common/support.c
 
 clean:
 	rm -f *.o *~ irc core #* *.bak

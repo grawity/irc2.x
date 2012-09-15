@@ -28,7 +28,7 @@
 #include "numeric.h"
 #include <ctype.h>
 #include <stdio.h>
-#include <time.h
+#include <time.h>
 
 #define VERSION "v1.3pre8"
 

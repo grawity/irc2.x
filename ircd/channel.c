@@ -56,6 +56,7 @@ aChannel *channel = NullChn;
 extern int maxusersperchannel;
 extern aClient *find_person(), me;
 
+extern aChannel *hash_find_channel();
 static void sub1_from_channel();
 static int SetMode();
 
@@ -197,11 +198,7 @@ aChannel *para;
 {
   aChannel *ch2ptr;
 
-  tonewjis(chname);
-  for (ch2ptr = channel; ch2ptr; ch2ptr = ch2ptr->nextch) 
-    if (mycmp(ch2ptr->chname, chname) == 0)
-      break;
-
+  ch2ptr = hash_find_channel(chname, para);
   return ch2ptr ? ch2ptr : para;
 }
 
@@ -520,45 +517,41 @@ int flag;
 	if (i == (char *) 0)
 		return NullChn;
 
-	tonewjis(i);
-	for ( ; ; chptr = chptr->nextch)
+	if (chptr = hash_find_channel(i, (aChannel *)NULL))
+		return (chptr);
+	if (flag == CREATE) {
+	  if (!(chptr = (aChannel *) malloc(sizeof(aChannel) +
+					    strlen(i))))
 	    {
-	      if (chptr == NullChn) {
-		if (flag == CREATE) {
-		  if (!(chptr = (aChannel *) malloc(sizeof(aChannel) +
-						    strlen(i))))
-		    {
-		      debug(DEBUG_FATAL,
-			    "Out of memory. Cannot allocate channel");
-		      restart();
-		    }
-		  chptr->nextch = channel;
-		  strcpy(chptr->chname, i);
-		  chptr->topic[0] = '\0';
-		  chptr->users = 0;
-		  chptr->mode.limit = 0;
-		  chptr->members = (Link *) 0;
-		  chptr->invites = (Invites *) 0;
-		  channel = chptr;
-		  number = atoi(chptr->chname);
-		  
-		  if (number < 0)
-		    chptr->mode.mode = MODE_SECRET;
-		  else if (number > 0)
-		    if (number < 1000)
-		      chptr->mode.mode = 0x0;
-		    else
-		      chptr->mode.mode = MODE_PRIVATE;
-		  else {
-		    chptr->mode.mode = 0x0;
-		  }
-		}
-		break;
-	      }
-	      if (chptr && mycmp(chptr->chname, i) == 0) {
-		break;
-	      }
+	      debug(DEBUG_FATAL,
+		    "Out of memory. Cannot allocate channel");
+	      restart();
 	    }
+	  strcpy(chptr->chname, i);
+	  chptr->topic[0] = '\0';
+	  chptr->users = 0;
+	  chptr->mode.limit = 0;
+	  chptr->members = (Link *) 0;
+	  chptr->invites = (Invites *) 0;
+	  if (channel)
+	    channel->prevch = chptr;
+	  chptr->prevch = NullChn;
+	  chptr->nextch = channel;
+	  channel = chptr;
+	  number = atoi(chptr->chname);
+	  addToChannelHashTable(i, chptr);
+	  
+	  if (number < 0)
+	    chptr->mode.mode = MODE_SECRET;
+	  else if (number > 0)
+	    if (number < 1000)
+	      chptr->mode.mode = 0x0;
+	    else
+	      chptr->mode.mode = MODE_PRIVATE;
+	  else {
+	    chptr->mode.mode = 0x0;
+	  }
+	}
 	return chptr;
     }
 
@@ -605,31 +598,26 @@ aClient *cptr;
 static void sub1_from_channel(xchptr)
 aChannel *xchptr;
     {
-	Reg1 aChannel *chptr;
-	Reg2 aChannel **pchptr;
+	Reg1 aChannel *chptr = xchptr;
 
-	for (pchptr = &channel; chptr = *pchptr; pchptr = &(chptr->nextch))
-	  if (chptr == xchptr)
-	    {
-	      if (--chptr->users <= 0)
-		{
-		  Invites *oldinv = (Invites *) 0, *inv = chptr->invites;
-		  *pchptr = chptr->nextch;
-		  /* Now, find all invite links from channel structure */
-		  while (inv) {
-		    inv->user->user->invited = NullChn;
-		    oldinv = inv;
-		    inv = inv->next;
-		    free(oldinv);
-		  }
-		  free(chptr);
-		}
-	      break;
-	    }
-	/*
-	**  Actually, it's a bug, if the channel is not found and
-	**  the loop terminates with "chptr == NULL"
-	*/
+	if (--chptr->users <= 0) {
+	  Invites *oldinv = (Invites *) 0, *inv = chptr->invites;
+	  /* Now, find all invite links from channel structure */
+	  while (inv) {
+	    inv->user->user->invited = NullChn;
+	    oldinv = inv;
+	    inv = inv->next;
+	    free(oldinv);
+	  }
+	  if (chptr->prevch)
+	    chptr->prevch->nextch = chptr->nextch;
+	  else
+	    channel = chptr->nextch;
+	  if (chptr->nextch)
+	    chptr->nextch->prevch = chptr->prevch;
+	  delFromChannelHashTable(chptr->chname, chptr);
+	  free(chptr);
+	}
     }
 
 /*
@@ -672,14 +660,15 @@ char *parv[];
 	  return 0;
 	}
 
-	if (!ChannelExists(parv[1]))
-	  flags = FLAG_CHANOP;
+	if (MyConnect(sptr)) {
+	  if (!ChannelExists(parv[1]))
+	    flags = FLAG_CHANOP;
 
-	if (MyConnect(sptr) &&
-	    CountChannels(sptr) >= MAXCHANNELSPERUSER) {
-	  sendto_one(sptr, ":%s %d %s %s :You have joined too many channels",
-		     me.name, ERR_TOOMANYCHANNELS, parv[0], parv[1]);
-	  return 0;
+	  if (CountChannels(sptr) >= MAXCHANNELSPERUSER) {
+	    sendto_one(sptr, ":%s %d %s %s :You have joined too many channels",
+		       me.name, ERR_TOOMANYCHANNELS, parv[0], parv[1]);
+	    return 0;
+	  }
 	}
 	chptr = get_channel(sptr, parv[1], CREATE);
 	if (!chptr || (cptr == sptr && (i = CanJoin(sptr, chptr))))
@@ -716,6 +705,9 @@ char *parv[];
 	if (parc > 2) {
 	  m_mode(cptr, sptr, parc, parv);
 	}
+	if (flags == FLAG_CHANOP)
+		sendto_serv_butone(cptr, ":%s MODE %s +o %s",
+				   me.name, parv[1], parv[0]);
 #ifdef AUTOTOPIC
 	if (MyClient(sptr) && IsPerson(sptr)) {
 	  if (chptr->topic[0] != '\0')
@@ -833,16 +825,18 @@ char *parv[];
   return (0);
 }
 
-tonewjis(chan)
-char *chan;
+int	count_channels(sptr)
+aClient	*sptr;
 {
-    if (chan)
-	for (; *chan; chan++)
-	    if (chan[0] == '\033') {
-		if (chan[1] == '$' && chan[2] == '@')
-		    chan[2] = 'B';
-		if (chan[1] == '(' && chan[2] == 'J')
-		    chan[2] = 'B';
-	    }
-}
+	Reg1	aChannel	*chptr;
+	Reg2	int	count = 0;
 
+	for (chptr = channel; chptr; chptr = chptr->nextch)
+		if (SecretChannel(chptr)) {
+			if (IsAnOper(sptr))
+				count++;
+		}
+		else
+			count++;
+	return (count);
+}

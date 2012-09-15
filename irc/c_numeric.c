@@ -173,6 +173,12 @@ char *parv[];
 			(parv[2][0]) ? parv[2] : "*Unknown*",
 			(parv[3][0]) ? parv[3] : "*No message (strange)*");
 		break;
+	    case RPL_USERHOST:
+		sprintf(mybuf, "*** USERHOST reply: %s", parv[2]);
+		break;
+	    case RPL_ISON:
+		sprintf(mybuf, "*** ISON reply: %s", parv[2]);
+		break;
 	    case RPL_WHOISUSER:
 		sprintf(mybuf, "*** %s is %s@%s (%s) on channel %s",
 			parv[2], parv[3], parv[4], parv[6],
@@ -197,6 +203,9 @@ char *parv[];
 	    case RPL_WHOISIDLE:
 		sprintf(mybuf, "*** %s %s %s",
 			parv[2], parv[3], parv[4]);
+		break;
+	    case RPL_WHOISCHANNELS:
+		sprintf(mybuf, "*** On Channels: %s", parv[2]);
 		break;
 	    case RPL_LISTSTART:
 		sprintf(mybuf, "*** Chn Users  Name");

@@ -1,5 +1,6 @@
 /************************************************************************
- *   IRC - Internet Relay Chat, include/patchlevel.h
+ *   IRC - Internet Relay Chat, include/hash.h
+ *   Copyright (C) 1991 Darren Reed
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,16 +17,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * $Id: patchlevel.h,v 6.1 1991/07/04 21:04:33 gruner stable gruner $
- *
- * $Log: patchlevel.h,v $
- * Revision 6.1  1991/07/04  21:04:33  gruner
- * Revision 2.6.1 [released]
- *
- * Revision 6.0  1991/07/04  18:05:04  gruner
- * frozen beta revision 2.6.1
- *
- */
+typedef	struct	hashlink {
+	struct	hashlink	*next;
+	union
+	    {
+		aClient		*client;
+		aChannel	*channel;
+	    } ptr;
+	} aHashLink;
 
-#define PATCHLEVEL "2.6.2"
+typedef	struct	hashentry {
+	int	hits;
+	int	links;
+	aHashLink	*list;
+	} aHashEntry;
+
+#define	HASHSIZE	293	/* prime number */
+
+#define	CHANNELHASHSIZE	101	/* prime number */

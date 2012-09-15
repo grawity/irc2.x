@@ -63,6 +63,8 @@ typedef struct User anUser;
 #define HEADERLEN 	200
 #define PASSWDLEN 	20
 
+#define USERHOST_REPLYLEN       (NICKLEN+HOSTLEN+USERLEN+5)
+
 #define MAXRECIPIENTS 	20
 #define BUFSIZE  	256
 #define MAXBUFLEN 	512
@@ -118,7 +120,7 @@ typedef struct User anUser;
 #define	SetOper(x)	((x)->status |= STAT_OPER)
 #define SetLocOp(x)     ((x)->status |= STAT_LOCOP)
 
-#define CONF_ILLEGAL            0
+#define CONF_ILLEGAL            -1
 #define CONF_QUARANTINED_SERVER 1
 #define CONF_CLIENT             2
 #define CONF_CONNECT_SERVER     4
@@ -133,6 +135,7 @@ typedef struct User anUser;
 #endif
 #define CONF_CLASS              1024
 #define CONF_SERVICE            2048
+#define CONF_LEAF		4096
 
 #define MATCH_SERVER  1
 #define MATCH_HOST    2
@@ -173,6 +176,8 @@ struct ConfItem
 	struct ConfItem *next;
     };
 
+#define	IsIllegal(x)	((x)->status < 0)
+
 struct User
     {
 	char username[USERLEN+1];
@@ -199,7 +204,7 @@ struct User
 
 struct Client
     {
-	struct Client *next;
+	struct Client *next,*prev;
 	short status;		/* Client type */
 	char name[HOSTLEN+1];	/* Unique name of the client, nick or host */
 	char info[REALLEN+1];	/* Free form additional client information */
@@ -265,7 +270,7 @@ typedef struct SInvites {
 
 struct Channel
     {
-	struct Channel *nextch;
+	struct Channel *nextch, *prevch;
 	Mode mode;
 	char topic[CHANNELLEN+1];
 	int users;

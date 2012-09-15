@@ -79,6 +79,8 @@
 #define ERR_NOSERVICEHOST    492
 
 #define RPL_AWAY             301
+#define RPL_USERHOST         302
+#define RPL_ISON             303
 
 #define RPL_WHOISUSER        311
 #define RPL_WHOISSERVER      312
@@ -91,6 +93,7 @@
 #define RPL_WHOISIDLE        317
 
 #define RPL_ENDOFWHOIS       318
+#define RPL_WHOISCHANNELS    319
 
 #define RPL_LISTSTART        321
 #define RPL_LIST             322

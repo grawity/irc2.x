@@ -44,7 +44,7 @@ To install the new server, there is just a few changes to be made.
   this version is simply something to begin with if you don't happen
   to have other clients available.
 
-  NOTE: This server does *NOT* have MAIL system installed by default.
+  NOTE: This server does *NOT* have NOTE system installed by default.
 
 * Connecting to the ircd network
 
@@ -87,7 +87,7 @@ enhancements, and please send BUG reports and patches ONLY but no additions
 and enhancements.
 
 It is planned to clean up code and rewrite some sections for better
-code maintenance (2.6.2), this will (hopefully) result in less code as well as
+code maintenance (2.6.3), this will (hopefully) result in less code as well as
 less CPU time consumption.
 
 --Armin <gruner@informatik.tu-muenchen.de>

@@ -44,10 +44,10 @@ CFLAGS=-g -I${INCLUDE}
 IRCDLIBS=
 
 OBJS=channel.o date.o ircd.o list.o s_bsd.o s_conf.o s_msg.o s_numeric.o\
-     whowas.o s_debug.o note.o class.o
+     whowas.o s_debug.o note.o class.o hash.o
 
 SRC=channel.c date.c ircd.c list.c s_bsd.c s_conf.c s_msg.c s_numeric.c\
-     whowas.c s_debug.c note.c class.c
+     whowas.c s_debug.c note.c class.c hash.c
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o \
            ../common/packet.o ../common/send.o\
