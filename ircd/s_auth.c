@@ -61,14 +61,17 @@ Reg1	aClient	*cptr;
 	    {
 #ifdef	USE_SYSLOG
 		syslog(LOG_ERR, "Unable to create auth socket for %s:%m",
-			get_client_name(cptr,TRUE));
+			get_client_name(cptr, TRUE));
 #endif
+		Debug((DEBUG_ERROR, "Unable to create auth socket for %s:%s",
+			get_client_name(cptr, TRUE),
+			strerror(get_sockerr(cptr))));
 		if (!DoingDNS(cptr))
 			SetAccess(cptr);
 		ircstp->is_abad++;
 		return;
 	    }
-	if (cptr->authfd >= MAXCONNECTIONS)
+	if (cptr->authfd >= (MAXCONNECTIONS-2))
 	    {
 		sendto_ops("Can't allocate fd for auth on %s",
 			   get_client_name(cptr, TRUE));

@@ -249,8 +249,9 @@ Reg1	aClient	*cptr;
 	    {
 		add_history(cptr);
 		off_history(cptr);
-		(void)free_user(cptr->user, cptr);
 	    }
+	if (cptr->user)
+		(void)free_user(cptr->user, cptr);
 	if (cptr->serv)
 	    {
 		if (cptr->serv->user)

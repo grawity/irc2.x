@@ -647,7 +647,7 @@ int	sig;
 int	openconf()
 {
 #ifdef	M4_PREPROC
-	int	pi[2];
+	int	pi[2], i;
 
 	if (pipe(pi) == -1)
 		return -1;
@@ -663,6 +663,9 @@ int	openconf()
 			(void)close(pi[1]);
 		    }
 		(void)dup2(1,2);
+		for (i = 3; i < MAXCONNECTIONS; i++)
+			if (local[i])
+				(void) close(i);
 		/*
 		 * m4 maybe anywhere, use execvp to find it.  Any error
 		 * goes out with report_error.  Could be dangerous,
@@ -712,8 +715,9 @@ int	opt;
 		return -1;
 	    }
 	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
-	while (dgets(fd, line, sizeof(line) - 1) > 0)
+	while ((i = dgets(fd, line, sizeof(line) - 1)) > 0)
 	    {
+		line[i] = '\0';
 		if ((tmp = (char *)index(line, '\n')))
 			*tmp = 0;
 		else while(dgets(fd, c, sizeof(c) - 1) > 0)
@@ -914,7 +918,7 @@ int	opt;
 
 		if (aconf->status &
 		    (CONF_SERVER_MASK|CONF_LOCOP|CONF_OPERATOR))
-			if (!index(aconf->host, '@'))
+			if (!index(aconf->host, '@') && *aconf->host != '/')
 			    {
 				char	*newhost;
 				int	len = 3;	/* *@\0 = 3 */
@@ -1073,8 +1077,8 @@ aClient	*cptr;
 	aConfItem *tmp;
 	char	reply[80], temprpl[80];
 	char	*rplhold = reply, *host, *name, *s;
-	char	rplchar='Y';
-	int	pi[2], rc = 0;
+	char	rplchar = 'Y';
+	int	pi[2], rc = 0, n;
 
 	if (!cptr->user)
 		return 0;
@@ -1129,8 +1133,9 @@ aClient	*cptr;
 		}
 		*reply = '\0';
 		(void)dgets(-1, NULL, 0); /* make sure buffer marked empty */
-		while (dgets(pi[0], temprpl, sizeof(temprpl)-1) > 0)
+		while ((n = dgets(pi[0], temprpl, sizeof(temprpl)-1)) > 0)
 		    {
+			temprpl[n] = '\0';
 			if ((s = (char *)index(temprpl, '\n')))
 			      *s = '\0';
 			if (strlen(temprpl) + strlen(reply) < sizeof(reply)-2)

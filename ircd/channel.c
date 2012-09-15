@@ -544,10 +544,8 @@ char	*parv[];
 		if ((IsServer(cptr) && !IsServer(sptr) && !chanop) ||
 		    (mcount < 0))
 		    {
-#ifndef HIDE_FAKES
 			sendto_ops("Fake: %s MODE %s %s %s",
 				   parv[0], parv[1], modebuf, parabuf);
-#endif
 			ircstp->is_fake++;
 		    }
 		else
@@ -776,9 +774,10 @@ char	*parv[], *mbuf, *pbuf;
 					break;
 				if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
 					break;
+				if (!(nusers = atoi(*++parv)))
+					continue;
 				lp = &chops[opcnt++];
 				lp->flags = MODE_ADD|MODE_LIMIT;
-				nusers = atoi(*++parv);
 				limitset = 1;
 				count++;
 				break;

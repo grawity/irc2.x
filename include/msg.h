@@ -71,7 +71,7 @@
 #define	MSG_RESTART  "RESTART"	/* REST */
 #define	MSG_CLOSE    "CLOSE"	/* CLOS */
 #define	MSG_DIE	     "DIE"
-#define	MSG_HASH     "HASH"	/* HASH */
+#define	MSG_HASH     "HSAH"	/* HASH */
 #define	MSG_DNS      "DNS"	/* DNS  -> DNSS */
 
 #define MAXPARA    15 

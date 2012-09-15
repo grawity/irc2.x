@@ -48,7 +48,7 @@ static	void	resend_query PROTO((ResRQ *));
 static	int	proc_answer PROTO((ResRQ *, HEADER *, char *, char *));
 static	int	query_name PROTO((char *, int, int, ResRQ *));
 static	aCache	*make_cache PROTO((ResRQ *));
-static	aCache	*find_cache_name PROTO((ResRQ *, char *));
+static	aCache	*find_cache_name PROTO((char *));
 static	aCache	*find_cache_number PROTO((ResRQ *, char *));
 static	int	add_request PROTO((ResRQ *));
 static	ResRQ	*make_request PROTO((Link *));
@@ -106,7 +106,13 @@ int	op;
 	    }
 
 	if (op & RES_INITSOCK)
+	    {
+		int	on = 0;
+
 		ret = resfd = socket(AF_INET, SOCK_DGRAM, 0);
+		(void) setsockopt(ret, SOL_SOCKET, SO_BROADCAST,
+				  (char *)&on, sizeof(on));
+	    }
 #ifdef DEBUG
 	if (op & RES_INITDEBG);
 		_res.options |= RES_DEBUG;
@@ -235,15 +241,6 @@ time_t	now;
 					if (!DoingAuth(cptr))
 						SetAccess(cptr);
 					break;
-				case ASYNC_SERVER :
-					sendto_ops("Host %s unknown",
-						   rptr->name);
-					ClearDNS(cptr);
-					if (check_server(cptr, NULL,
-							 NULL, NULL, 1))
-						(void)exit_client(cptr, cptr,
-							&me, "No Permission");
-					break;
 				case ASYNC_CONNECT :
 					sendto_ops("Host %s unknown",
 						   rptr->name);
@@ -278,7 +275,7 @@ char	*cp;
 {
 	Reg1	ResRQ	*rptr, *r2ptr;
 
-	for (rptr = first, r2ptr = NULL; rptr; rptr = r2ptr)
+	for (rptr = first; rptr; rptr = r2ptr)
 	    {
 		r2ptr = rptr->next;
 		if (cp == rptr->cinfo.value.cp)
@@ -318,11 +315,9 @@ int	len, rcount;
 			reinfo.re_sent++;
 			sent++;
 		    }
-#ifdef	DEBUGMODE
 		else
 			Debug((DEBUG_ERROR,"s_r_m:sendto: %d on %d",
 				errno, resfd));
-#endif
 	    }
 
 	return (sent) ? sent : -1;
@@ -350,7 +345,7 @@ Link	*lp;
 	Reg1	aCache	*cp;
 
 	reinfo.re_na_look++;
-	if ((cp = find_cache_name(NULL, name)))
+	if ((cp = find_cache_name(name)))
 		return (struct hostent *)&(cp->he);
 	if (!lp)
 		return NULL;
@@ -381,12 +376,12 @@ Reg1	ResRQ	*rptr;
 	char	hname[HOSTLEN+1];
 	int	len;
 
-	(void)strncpy(hname, name, sizeof(hname)-1);
+	(void)strncpy(hname, name, sizeof(hname) - 1);
 	len = strlen(hname);
 
 	if (rptr && !index(hname, '.') && _res.options & RES_DEFNAMES)
 	    {
-		(void)strncat(hname, dot, sizeof(hname)-len-1);
+		(void)strncat(hname, dot, sizeof(hname) - len - 1);
 		len++;
 		(void)strncat(hname, _res.defdname, sizeof(hname) - len -1);
 	    }
@@ -399,7 +394,7 @@ Reg1	ResRQ	*rptr;
 	    {
 		rptr = make_request(lp);
 		rptr->type = T_A;
-		rptr->name = (char *)MyMalloc(strlen(name)+1);
+		rptr->name = (char *)MyMalloc(strlen(name) + 1);
 		(void)strcpy(rptr->name, name);
 	    }
 	return (query_name(hname, C_IN, T_A, rptr));
@@ -523,17 +518,24 @@ HEADER	*hptr;
 	alias = hp->h_aliases;
 	while (*alias)
 		alias++;
+#ifdef	SOL20		/* brain damaged compiler (Solaris2) it seems */
+	for (; hptr->qdcount > 0; hptr->qdcount--)
+#else
 	while (hptr->qdcount-- > 0)
-		cp += dn_skipname(cp, eob) + QFIXEDSZ;
+#endif
+		if ((n = dn_skipname(cp, eob)) == -1)
+			break;
+		else
+			cp += (n + QFIXEDSZ);
 	/*
 	 * proccess each answer sent to us blech.
 	 */
 	while (hptr->ancount-- > 0 && cp && cp < eob) {
 		n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf));
-		cp += n;
 		if (n <= 0)
-			return ans;
+			break;
 
+		cp += n;
 		type = (int)_getshort(cp);
 		cp += sizeof(short);
 		class = (int)_getshort(cp);
@@ -584,6 +586,7 @@ HEADER	*hptr;
 				break;
 			    }
 			cp += n;
+			len = strlen(hostbuf);
 			Debug((DEBUG_INFO,"got host %s",hostbuf));
 			/*
 			 * copy the returned hostname into the host name
@@ -592,22 +595,24 @@ HEADER	*hptr;
 			 */
 			if (hp->h_name)
 			    {
+				if (alias >= &(hp->h_aliases[MAXALIASES-1]))
+					break;
 				*alias = (char *)MyMalloc(len + 1);
 				(void)strcpy(*alias++, hostbuf);
 				*alias = NULL;
 			    }
 			else
 			    {
-				hp->h_name = (char *)MyMalloc(n);
+				hp->h_name = (char *)MyMalloc(len + 1);
 				(void)strcpy(hp->h_name, hostbuf);
 			    }
 			ans++;
 			break;
 		case T_CNAME :
 			cp += dlen;
+			Debug((DEBUG_INFO,"got cname %s", hostbuf));
 			if (alias >= &(hp->h_aliases[MAXALIASES-1]))
-				continue;
-			Debug((DEBUG_INFO,"got cname %s",hostbuf));
+				break;
 			*alias = (char *)MyMalloc(len + 1);
 			(void)strcpy(*alias++, hostbuf);
 			*alias = NULL;
@@ -616,7 +621,7 @@ HEADER	*hptr;
 		default :
 #ifdef DEBUG
 			Debug((DEBUG_INFO,"proc_answer: type:%d for:%s",
-			      type,hostbuf));
+			      type, hostbuf));
 #endif
 			break;
 		}
@@ -641,7 +646,7 @@ char	*lp;
 	rc = recvfrom(resfd, buf, sizeof(buf), 0, (struct sockaddr *)&sin,
 		      &len);
 	(void)alarm((unsigned)0);
-	if (rc <= 0)
+	if (rc <= sizeof(HEADER))
 		goto getres_err;
 	/*
 	 * convert DNS reply reader from Network byte order to CPU byte order.
@@ -993,8 +998,7 @@ aCache	*cachep;
 	return;
 }
 
-static	aCache	*find_cache_name(rptr, name)
-ResRQ	*rptr;
+static	aCache	*find_cache_name(name)
 char	*name;
 {
 	Reg1	aCache	*cp;
@@ -1013,7 +1017,7 @@ char	*name;
 			if (mycmp(s, name) == 0)
 			    {
 				cainfo.ca_na_hits++;
-				update_list(rptr, cp);
+				update_list(NULL, cp);
 				return cp;
 			    }
 
@@ -1030,7 +1034,7 @@ char	*name;
 		for (i = 0, s = cp->he.h_aliases[i]; s && i < MAXALIASES; i++)
 			if (!mycmp(name, s)) {
 				cainfo.ca_na_hits++;
-				update_list(rptr, cp);
+				update_list(NULL, cp);
 				return cp;
 			    }
 	    }

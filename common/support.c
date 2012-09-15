@@ -277,7 +277,7 @@ size_t	y;
 	bcopy((char *)&y, ret + SZ_CH, SZ_ST);
 	bcopy("VAVA", ret + SZ_CHST + (int)y, 4);
 	Debug((DEBUG_NOTICE, "MyRealloc(%#x,%ld) = %#x", x, y, ret + SZ_CHST));
-	for(l = 0, s = marray; *s != x && i < mindex; l++, s++)
+	for(l = 0, s = marray; *s != x && l < mindex; l++, s++)
 		;
  	if (l < mindex)
 		*s = NULL;
@@ -438,9 +438,9 @@ dgetsreturnbuf:
 	    }
 	if (!nr)
 	    {
-		if (head < tail)
+		if (tail > head)
 		    {
-			n = MIN(head - tail, num);
+			n = MIN(tail - head, num);
 			goto dgetsreturnbuf;
 		    }
 		head = tail = dgbuf;

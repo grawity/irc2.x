@@ -8,70 +8,27 @@ Administrator and IRC Operator. Your future days will be filled with hours
 of fun chatting on IRC, and then wondering why everyone you talked to went
 away, because the links had apparently broken. 
 
+2 and a Half years later, December 1994.
+
 Linking:
 ========
 
-You will be assigned links from the IRC Routing Coordinators. Please
-use these links and these links ONLY. The links have been designed to
-maximize efficiency and make delays in chatting minimal. You will
-usually be given two links, one to each regional backbone site.
-Connect to the primary site first and then to the secondary site. You
-should not need to connect to any other sites. You will be informed if
-this policy changes.
+Currently, there is no policy of any sort in operation on EFnet except for
+Europe (see EBIC documents).  If you want links, find an operator or server
+admin, become friends with them, build a case, run lots of bots to make it
+look like you have lots of users and away you go.  It doesn't matter what
+speed your link is or where you get it (regardless of what people say, they
+don't actually follow their own preeching).
 
 Kills 
 =====
 
-/kill is a special operator command. You should use it with
-care, and only if absolutely needed. The format is as follows:
-/kill NICKNAME comment. Comment can be a phrase of almost any length
-(within reason) and should be used for specifying the reason of the kill.
-Example: /kill Trillian She's a Ghost
-IRC Ghosts are created after a net split has occured and the net has yet to
-relink. 
-
-/wallops PHRASE This is used to talk to those users who have their
-user mode set to +w. /wallops used to be a way for operators to talk
-about important matters in linking etc., but it has little use
-nowadays. 
-
-/TRACE command /TRACE is useful to know what servers are connected to
-what. Sometimes /trace can be confusing, especially if you are using
-it for the first time.  Here is an example of a trace from
-stekt1.oulu.fi to cdc835.cdc.polimi.it.
-
-/TRACE cdc835.cdc.polimi.it
-
-*** Link stekt1.oulu.fi<2.7.2> ==> cdc835.cdc.polimi.it
-*** Link rieska.oulu.fi<2.7.1>e ==> cdc835.cdc.polimi.it
-*** Link nic.funet.fi<2.7.1>e ==> cdc835.cdc.polimi.it
-*** Link ircserver.et.tudelft.nl<2.7.1>e ==> cdc835.cdc.polimi.it
-*** Link vesuv.unisg.ch<2.7.1>e ==> cdc835.cdc.polimi.it
-*** Link apollo.di.unipi.it<2.7.1>e ==> cdc835.cdc.polimi.it
-*** Oper Class[10] ==> Allanon[cdc835.cdc.polimi.it]  
-*** User Class[11] ==> Lupandy[plus2.usr.dsi.unimi.it]  
-*** Serv Class[3] ==> apollo.di.unipi.it[131.114.4.36] 132S 445C
-*** User Class[11] ==> Punk[pluto.sm.dsi.unimi.it]  
-*** User Class[11] ==> TheEdge[pluto.sm.dsi.unimi.it]  
-*** User Class[10] ==> Mork[cdc835.cdc.polimi.it]  
-*** User Class[11] ==> Lollo[c700-2.sm.dsi.unimi.it]  
-*** User Class[11] ==> Attila[hp2.sm.dsi.unimi.it]  
-*** Class 0  Entries linked 1
-*** Class 11 Entries linked 5
-*** Class 10 Entries linked 2
-*** Class 3  Entries linked 1
-
-From this output you can see that the route goes first to
-rieska.oulu.fi (running version 2.7.1e), then nic.funet.fi,
-ircserver.et.tudelft.nl, vesuv.unisg.ch, and apollo.di.unipi.it, after
-which cdc835 is the next server. Then we see the connections on
-cdc835: One operator (Allanon) and 6 users are on line. The class of
-each connection is given. There is only one server connected to cdc835
-at the moment, and that server is apollo.di.unipi.it (cdc835 is said
-to be a "leaf" server at the moment). The numbers 132S 445C in the end
-of line tell us, that there are 132 servers and 445 clients connected
-to the servers from apollo onwards.  Finally we see a grand total of
-connections in each connection class. 
+/kill is a special operator command.  The format is as follows:
+	/kill NICKNAME comment.
+Comment can be a phrase of almost any length (within reason) and should be
+used for specifying the reason of the kill.
+Example:
+	/kill jonathan hey, this is fun!
 
 
 /SQUIT server {comment}
@@ -79,7 +36,9 @@ connections in each connection class.
 you look at it along the trace path starting from your server. 
 This is usually used in conjunction with CONNECT (explained later) to
 reroute traffic. This will be described in detail in the section
-"routing", preceding CONNECT.
+"routing", preceding CONNECT.  Note, that a primary reason to use squit
+is to isolate your server (to become a leaf) if you want chanop or someone
+else wants chanop and you want to help them.
 
    Usage (and examples): 
 
@@ -189,39 +148,19 @@ before trying alternates. At the most, you may decide to squit an
 alternate server and connect to your primary if/when it goes back up.
 This only involves local squits, however.
 
-   If you are operating a backbone site, you may find yourself
-rerouting things quite often. If the servers badger.ugcs.caltech.edu
-(Pasadena, CA), irc.mit.edu (Boston, MA), minnie.cc.utexas.edu
-(Austin, TX) and ucsu.colorado.edu (Boulder, CO) were routing traffic
-in the following way:
-
-    ... <---> minnie <---> badger <---> bucsd <---> ucsu <---> ...
-
-It would make sense to either squit ucsu and reconnect it to minnie,
-or disconnect minnie from badger and connect to ucsu, because
-topologically (and geographically) ucsu and minnie are rather close.
-There are occasions when US traffic for some reasons winds up being
-routed through Australia. This is another case where traffic should
-definitely be rerouted. However, there are sometimes occasions when
-routing is going through "backdoor" methods. If you see something
-totally outrageous (like the east coast and the west coast being
-connected by eff.org) please ask for example on channel #twilight_zone
-before you send any squits, because chances are, it's like that for a
-reason.
-
-   Of course, any operator can remotely squit or connect servers, so
-if you see a problem and you're sure you know how to fix it, it's a
-good idea to do so. If the operator of a server which is is being
-routed poorly is online, it's probably best to contact him/her first,
-though.
-
    Chances are that hub operators will be more familiar with the
 general topology of the network and which servers connect to which
 (which is why most of the manual routing is left to them), so if you
 have any problems, talk to the other operators on operator channels
 (#twilight_zone, #eu-opers etc.) That's what they are there for!
-   Also, be aware that servers will notify all the operators online of
-remote SQUITs and CONNECTs via WALLOPS.
+
+   Don't bother wasting your time with #twilight_zone.  There are many
+operators on many hub servers (including many found in this channel) which
+purport to know something but in fact know nothing.  They will most likely
+ignore you, make fun of you, abuse you, dump your private messages to the
+channel, etc.  In general, many operators (especially true of those on
+#twilight_zone) are not the sort of people you'd want to do this as a
+paid job and won't do anything unless it serves them in some way.
 
 Please let us know if there should be any additions to this guide. Again,
 this is not MANDATORY, this is just a GUIDE. Please conduct yourself as 
@@ -240,3 +179,9 @@ Mauri Haikola
 <mjh@stekt.oulu.fi>
 
 May, 1992
+
+Revised to become more a reflection of the current state of IRC by
+Darren Reed
+<avalon@coombs.anu.edu.au>
+
+December 1994

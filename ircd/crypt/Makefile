@@ -19,7 +19,7 @@
 #
 # Change this to the path of your local ircd.conf file
 #
-IRCDCONF = /home/407/avalon/ircd.conf
+IRCDCONF = /usr/local/src/ircd/ircd.conf
 
 all: mkpasswd
 crypt: install

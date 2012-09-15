@@ -357,10 +357,8 @@ char	*nick, *username;
 			user->username[USERLEN] = '\0';
 			
 		    }
-#ifndef FOLLOW_IDENT_RFC
 		else if (sptr->flags & FLAGS_GOTID)
 			strncpyzt(user->username, sptr->username, USERLEN+1);
-#endif
 		else
 			strncpyzt(user->username, username, USERLEN+1);
 
@@ -1582,7 +1580,7 @@ char	*parv[];
 
 	if (strlen(awy2) > (size_t) TOPICLEN)
 		awy2[TOPICLEN] = '\0';
-	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], parv[1]);
+	sendto_serv_butone(cptr, ":%s AWAY :%s", parv[0], awy2);
 #ifdef	USE_SERVICES
 	check_services_butonee(SERVICE_WANT_AWAY, ":%s AWAY :%s",
 				parv[0], parv[1]);

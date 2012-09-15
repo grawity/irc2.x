@@ -37,6 +37,9 @@ char	serveropts[] = {
 #ifdef	CMDLINE_CONFIG
 'C',
 #endif
+#ifdef	DO_ID
+'d',
+#endif
 #ifdef	DEBUGMODE
 'D',
 #endif
@@ -46,11 +49,8 @@ char	serveropts[] = {
 #ifdef	OPER_REHASH
 'E',
 #endif
-#ifdef	FOLLOW_IDENT_RFC
+#ifdef	NOTE_FORWARDER
 'f',
-#endif
-#ifdef  HIDE_FAKES
-'F',
 #endif
 #ifdef	HUB
 'H',
@@ -97,9 +97,6 @@ char	serveropts[] = {
 #endif
 #ifdef	OPER_REMOTE
 't',
-#endif
-#ifdef  TRACE_STATS
-'T',
 #endif
 #ifdef	IRCII_KLUDGE
 'u',
@@ -186,6 +183,10 @@ va_dcl
 #endif
 	int	err = errno;
 
+#ifdef	USE_SYSLOG
+	if (level == DEBUG_ERROR)
+		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+#endif
 	if ((debuglevel >= 0) && (level <= debuglevel))
 	    {
 #ifndef	USE_VARARGS

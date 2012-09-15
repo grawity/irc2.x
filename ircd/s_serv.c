@@ -339,7 +339,7 @@ char	*parv[];
 			   get_client_name(acptr, TRUE), host);
 		return exit_client(acptr, acptr, acptr, "Server Exists");
 	    }
-	if ((acptr = find_client(host, NULL)))
+	if ((acptr = find_client(host, NULL)) && acptr != cptr)
 	    {
 		/*
 		** Server trying to use the same name as a person. Would
@@ -1760,11 +1760,7 @@ char	*parv[];
 	 * Add these lines to summarize the above which can get rather long
          * and messy when done remotely - Avalon
          */
-#ifndef TRACE_STATS
        	if (!IsAnOper(sptr) || !cnt)
-#else
-        if (!SendWallops(sptr) || !cnt)
-#endif
 	    {
 		if (cnt)
 			return 0;

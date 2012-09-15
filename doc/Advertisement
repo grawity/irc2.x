@@ -31,8 +31,7 @@ NNTP-Usenet, with several clients availble in C and elisp. You may ftp
 documentation and clients from any of the following sites:
 
 many kinds of clients (C, elisp, X11, VMS, REXX for VM, MSDOS, Macintosh):
-cs.bu.edu:/irc/clients
-ftp.acsu.buffalo.edu:/pub/irc
+cs-pub.bu.edu:/irc/clients
 ftp.funet.fi:/pub/unix/irc
 coombs.anu.edu.au:/pub/irc
 

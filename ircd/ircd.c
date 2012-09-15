@@ -253,7 +253,7 @@ time_t	currenttime;
 
 static	time_t	check_pings(currenttime)
 time_t	currenttime;
-{		
+{
 	Reg1	aClient	*cptr;
 	Reg2	int	killflag;
 	int	ping = 0, i, rflag = 0;

@@ -98,8 +98,8 @@
  * these are only the recommened names and paths. Change as needed.
  * You must define these to something, even if you don't really want them.
  */
-#define	DPATH	"/usr/local/lib/ircd"	/* dir where all ircd stuff is */
-#define	SPATH	"/usr/local/bin/ircd"	/* path to server executeable */
+#define	DPATH	"/scratch/avalon/ircd"	/* dir where all ircd stuff is */
+#define	SPATH	"/scratch/avalon/ircd/bin/ircd"
 #define	CPATH	"ircd.conf"	/* server configuration file */
 #define	MPATH	"ircd.motd"	/* server MOTD file */
 #define	LPATH	"/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
@@ -112,8 +112,8 @@
  * FNAME_USERLOG just logs user connections, FNAME_OPERLOG logs every
  * successful use of /oper.  These are either full paths or files within DPATH.
  */
-/* #define FNAME_USERLOG "/usr/local/lib/ircd/users" /* */
-/* #define FNAME_OPERLOG "/usr/local/lib/ircd/opers" /* */
+#define FNAME_USERLOG "/usr/local/lib/ircd/users" /* */
+#define FNAME_OPERLOG "/usr/local/lib/ircd/opers" /* */
 
 /* CHROOTDIR
  *
@@ -133,7 +133,7 @@
  * won't work, or simply don't want local users to be summoned, undefine
  * this.
  */
-#undef	ENABLE_SUMMON	/* local summon */
+#define	ENABLE_SUMMON	/* local summon */
 #undef	ENABLE_USERS	/* enables local /users (same as who/finger output) */
 
 /* SHOW_INVISIBLE_LUSERS
@@ -211,7 +211,7 @@
  * to a leaf which just has 1 server (typically the uplink). Define this
  * correctly for performance reasons.
  */
-#undef	HUB
+#define	HUB
 
 /* R_LINES:  The conf file now allows the existence of R lines, or
  * restrict lines.  These allow more freedom in the ability to restrict
@@ -262,7 +262,7 @@
  * this option is used unless you tell the system administrator beforehand
  * and obtain their permission to send messages to the system log files.
  */
-#undef	USE_SYSLOG
+#define	USE_SYSLOG
 
 #ifdef	USE_SYSLOG
 /*
@@ -279,7 +279,7 @@
  * If you want to log to a different facility than DAEMON, change
  * this define.
  */
-#define LOG_FACILITY LOG_DAEMON
+#define LOG_FACILITY LOG_LOCAL1
 #endif /* USE_SYSLOG */
 
 /*
@@ -358,10 +358,6 @@
 /* Sends an extra NOTICE in the beginning of client connection     */
 #undef	IRCII_KLUDGE
 
-#define FOLLOW_IDENT_RFC
-#define HIDE_FAKES
-#define TRACE_STATS
-
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
 /* You shouldn't change anything below this line, unless absolutely needed. */
@@ -398,7 +394,7 @@
  * 1 server = 1 connection, 1 user = 1 connection.
  * This should be at *least* 3: 1 listen port, 1 dns port + 1 client
  */
-#define MAXCONNECTIONS	50
+#define MAXCONNECTIONS	256
 
 /*
  * this defines the length of the nickname history.  each time a user changes

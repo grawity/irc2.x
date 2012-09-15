@@ -62,20 +62,22 @@ operlist-request@kei.com.
 
 If you are in the United States and need a link, please mail to
 "operlist-request@kei.com" supplying the information listed below.
+If that doesn't get you a link, talk to other operators on IRC.
+Eventually you will find one who will help you get a link (if you're
+female, you've got even better chances - hint hint).
 
 (1) Find out if your system has /etc/ping (sometimes /usr/etc/ping) and
     ping the following hosts:
 
     server/machine name		IP address	Geographical Location
-    csa.bu.edu			129.197.10.3	Boston, MA
+    cs-pub.bu.edu		129.197.10.3	Boston, MA
     irc-2.mit.edu		18.180.0.2	Cambridge, MA
     polaris.ctr.columbia.edu	128.59.68.10	New York, NY
     poe.acc.virginia.edu	128.143.83.132	Charlottesville, VA
     irc.iastate.edu		129.186.150.1	Ames, IA
     dewey.cc.utexas.edu		128.83.135.3	Austin, TX
-    irc.netsys.com		198.175.9.8	Palo Alto, CA
     w6yx.stanford.edu		36.55.0.50	Stanford, CA
-    goren.u.washington.edu	140.142.63.1	Seattle, WA
+    alfred1.u.washington.edu	140.142.63.1	Seattle, WA
 
 These are results of the typical /etc/ping command:
 
@@ -136,9 +138,9 @@ Appendix
 Open client servers.
 
 USA:
-                csa.bu.edu
+                cs-pub.bu.edu
                 irc.colorado.edu
-                irc.uiuc.edu
+                irc-2.mit.edu
 
 Canada:
                 ug.cs.dal.ca

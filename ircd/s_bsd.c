@@ -321,6 +321,7 @@ aConfItem *aconf;
 		cptr->confs = make_link();
 		cptr->confs->next = NULL;
 		cptr->confs->value.aconf = aconf;
+		set_non_blocking(cptr->fd, cptr);
 	    }
 	else
 		free_client(cptr);
@@ -1686,7 +1687,8 @@ deadsocket:
 					      cptr);
 		    }
 		if (length != FLUSH_BUFFER)
-			(void)exit_client(cptr, cptr, &me,
+			(void)exit_client(cptr, cptr, &me, length >= 0 ?
+					  "EOF From client" :
 					  strerror(get_sockerr(cptr)));
 	    }
 	return 0;
@@ -2204,6 +2206,9 @@ int	setup_ping()
 		udpfd = -1;
 		return -1;
 	    }
+	on = 0;
+	(void) setsockopt(udpfd, SOL_SOCKET, SO_BROADCAST,
+			  (char *)&on, sizeof(on));
 	if (bind(udpfd, (struct sockaddr *)&from, sizeof(from))==-1)
 	    {
 #ifdef	USE_SYSLOG
@@ -2336,14 +2341,6 @@ static	void	do_dns_async()
 		if (hp && aconf)
 			bcopy(hp->h_addr, (char *)&aconf->ipnum,
 			      sizeof(struct in_addr));
-		break;
-	case ASYNC_SERVER :
-		cptr = ln.value.cptr;
-		del_queries((char *)cptr);
-		ClearDNS(cptr);
-		if (check_server(cptr, hp, NULL, NULL, 1))
-			(void)exit_client(cptr, cptr, &me,
-				"No Authorization");
 		break;
 	default :
 		break;

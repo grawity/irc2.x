@@ -82,7 +82,7 @@ IRCDMODE = 711
 
 # IRCDDIR must be the same as DPATH in include/config.h
 #
-IRCDDIR=/usr/local/lib/ircd
+IRCDDIR=/usr/local/src/ircd
 
 SHELL=/bin/sh
 SUBDIRS=common ircd irc
