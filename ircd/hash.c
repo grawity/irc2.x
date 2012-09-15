@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: hash.c,v 1.4 1997/09/03 17:45:49 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: hash.c,v 1.6 1998/02/07 14:39:59 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -85,9 +85,11 @@ int	*store;
 		hash <<= 1;
 		hash += hashtab[(int)ch];
 	}
-	*store = hash;
+	/*
 	if (hash < 0)
 		hash = -hash;
+	*/
+	*store = hash;
 	hash %= _HASHSIZE;
 	return (hash);
 }
@@ -571,10 +573,10 @@ aClient *cptr;
 	for (;;)
 	    {
 		t--;
-		for (; t > server; t--)
+		for (; t >= server; t--)
 			if (*(t+1) == '.')
 				break;
-		if (*t == '*' || t == server)
+		if (t < server || *t == '*')
 			break;
 		ch = *t;
 		*t = '*';

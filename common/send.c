@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: send.c,v 1.19 1997/09/03 20:33:20 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: send.c,v 1.21 1998/01/23 13:26:18 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -166,7 +166,7 @@ int	len;
 				    poolsize);
 			istat.is_dbufmore++;
 		    }
-		else if (IsServer(to))
+		else if (IsServer(to) || IsService(to))
 			sendto_flag(SCH_ERROR,
 				"Max SendQ limit exceeded for %s: %d > %d",
 			   	get_client_name(to, FALSE),
@@ -177,7 +177,7 @@ int	len;
 			return dead_link(to, "Max Sendq exceeded");
 		    }
 #  else /* HUB */
-		if (IsServer(to))
+		if (IsService(to) || IsServer(to))
 			sendto_flag(SCH_ERROR,
 				"Max SendQ limit exceeded for %s: %d > %d",
 			   	get_client_name(to, FALSE),
@@ -285,7 +285,7 @@ tryagain:
 		if (DBufLength(&to->sendQ) > get_sendq(to))
 		    {
 #  ifdef HUB
-			if (IsServer(to) && CBurst(to))
+			if ((IsService(to) || IsServer(to)) && CBurst(to))
 			    {
 				aClass	*cl = to->serv->nline->class;
 
@@ -297,9 +297,9 @@ tryagain:
                                             poolsize);
 				istat.is_dbufmore++;
 			    }
-			else if (IsServer(to))
+			else if (IsServer(to) || IsService(to))
 #  else
-			if (IsServer(to))
+			if (IsServer(to) || IsService(to))
 #  endif
 			sendto_flag(SCH_ERROR,
 				"Max SendQ limit exceeded for %s: %d > %d",
@@ -812,6 +812,39 @@ void	sendto_serv_v(aClient *one, int ver, char *pattern, ...)
 		if ((cptr = local[fdas.fd[i]]) &&
 		    (!one || cptr != one->from) && !IsMe(cptr) &&
 		    (cptr->serv->version & ver)) {
+			if (!len)
+			    {
+#if ! USE_STDARG
+				len = sendprep(pattern, p1, p2, p3, p4, p5,
+					       p6, p7, p8, p9, p10, p11);
+#else
+				va_list	va;
+				va_start(va, pattern);
+				len = vsendprep(pattern, va);
+				va_end(va);
+#endif
+			    }
+			(void)send_message(cptr, sendbuf, len);
+	}
+	return;
+}
+
+#if ! USE_STDARG
+void	sendto_serv_notv(one, ver, pattern, p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11)
+aClient *one;
+int	ver;
+char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
+#else
+void	sendto_serv_notv(aClient *one, int ver, char *pattern, ...)
+#endif
+{
+	Reg	int	i, len=0;
+	Reg	aClient *cptr;
+
+	for (i = fdas.highest; i >= 0; i--)
+		if ((cptr = local[fdas.fd[i]]) &&
+		    (!one || cptr != one->from) && !IsMe(cptr) &&
+		    ((cptr->serv->version & ver) == 0)) {
 			if (!len)
 			    {
 #if ! USE_STDARG

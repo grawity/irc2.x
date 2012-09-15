@@ -309,6 +309,7 @@
 #define	RPL_STATSBLINE       247
 #define	RPL_STATSDEFINE      248
 #define	RPL_STATSDEBUG	     249
+#define	RPL_STATSDLINE       250
 
 #define	RPL_LUSERCLIENT      251
 #define RPL_LUSEROP          252
@@ -322,3 +323,4 @@
 
 #define	RPL_TRACELOG         261
 #define	RPL_TRACEEND         262
+#define	RPL_TRYAGAIN         263

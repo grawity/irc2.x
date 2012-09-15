@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_user.c,v 1.32 1997/10/11 04:21:22 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_user.c,v 1.38 1998/02/10 23:17:24 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -440,6 +440,7 @@ char	*nick, *username;
 					prefix = '+';
 			*user->username = prefix;
 			strncpy(&user->username[1], buf2, USERLEN);
+			user->username[USERLEN] = '\0';
 		    }
 #endif
 
@@ -898,13 +899,20 @@ nickkilldone:
 		** on that channel. Propagate notice to other servers.
 		*/
 		sendto_common_channels(sptr, ":%s NICK :%s", parv[0], nick);
-		if (sptr->user)
+		if (sptr->user) /* should always be true.. */
+		    {
 			add_history(sptr, sptr);
-		sendto_serv_butone(cptr, ":%s NICK :%s", parv[0], nick);
 #ifdef	USE_SERVICES
-		check_services_butone(SERVICE_WANT_NICK, sptr->user->server,
-				      sptr, ":%s NICK :%s", parv[0], nick);
+			check_services_butone(SERVICE_WANT_NICK,
+					      sptr->user->server, sptr,
+					      ":%s NICK :%s", parv[0], nick);
 #endif
+		    }
+		else
+			sendto_flag(SCH_NOTICE,
+				    "Illegal NICK change: %s -> %s from %s",
+				    parv[0], nick, get_client_name(cptr,TRUE));
+		sendto_serv_butone(cptr, ":%s NICK :%s", parv[0], nick);
 		if (sptr->name[0])
 			(void)del_from_client_hash_table(sptr->name, sptr);
 		(void)strcpy(sptr->name, nick);
@@ -1043,9 +1051,8 @@ int	parc, notice;
 					   parv[0]), nick);
 				continue;
 			    }
-			if (match(nick + 1, sptr->user->server) &&
-			    (*nick == '$' ||
-			     match(nick + 1, sptr->user->host)))
+			if ((s = (char *)rindex(ME, '.')) &&
+			    strcasecmp(rindex(nick, '.'), s))
 			    {
 				sendto_one(sptr, err_str(ERR_BADMASK,
 					   parv[0]), nick);
@@ -1387,7 +1394,7 @@ char	*parv[];
 		else 
 		    {
 			who_find(sptr, mask, oper);
-			if (mask && strlen(mask) > 4)
+			if (mask && (int)strlen(mask) > 4)
 				penalty += 3;
 			else
 				penalty += 5;
@@ -2233,9 +2240,11 @@ char	*parv[];
 		encr = "";
 #endif
 #if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
-		syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",
+		syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s) [%s@%s]",
 			name, encr,
-			parv[0], sptr->user->username, sptr->sockhost);
+		       parv[0], sptr->user->username, sptr->user->host,
+		       sptr->auth, IsUnixSocket(sptr) ? sptr->sockhost :
+                       inetntoa((char *)&sptr->ip));
 #endif
 #ifdef FNAME_OPERLOG
 	      {
@@ -2254,9 +2263,11 @@ char	*parv[];
 		    (logfile = open(FNAME_OPERLOG, O_WRONLY|O_APPEND)) != -1)
 		{
 		  (void)alarm(0);
-			SPRINTF(buf, "%s OPER (%s) (%s) by (%s!%s@%s)\n",
-				    myctime(timeofday), name, encr, parv[0],
-				    sptr->user->username, sptr->sockhost);
+		  SPRINTF(buf, "%s OPER (%s) (%s) by (%s!%s@%s) [%s@%s]\n",
+			  myctime(timeofday), name, encr,
+			  parv[0], sptr->user->username, sptr->user->host,
+			  sptr->auth, IsUnixSocket(sptr) ? sptr->sockhost :
+			  inetntoa((char *)&sptr->ip));
 		  (void)alarm(3);
 		  (void)write(logfile, buf, strlen(buf));
 		  (void)alarm(0);

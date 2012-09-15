@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: parse.c,v 1.10 1997/09/19 20:47:12 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: parse.c,v 1.12 1998/01/23 22:38:33 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -63,6 +63,7 @@ struct Message msgtab[] = {
   { MSG_ISON,    m_ison,     1,	 MSG_LAG|MSG_REG, 0, 0, 0L},
   { MSG_SERVER,  m_server,   MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
   { MSG_SQUIT,   m_squit,    MAXPARA, MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0,0, 0L},
+  { MSG_NJOIN,   m_njoin,    MAXPARA, MSG_LAG|MSG_NOU, 0, 0, 0L},
   { MSG_WHOIS,   m_whois,    MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
   { MSG_WHO,     m_who,      MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},
   { MSG_WHOWAS,  m_whowas,   MAXPARA, MSG_LAG|MSG_REG, 0, 0, 0L},

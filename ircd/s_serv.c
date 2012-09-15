@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.24 1997/10/11 03:48:10 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.32 1998/02/09 14:22:11 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -32,6 +32,8 @@ static  char rcsid[] = "@(#)$Id: s_serv.c,v 1.24 1997/10/11 03:48:10 kalt Exp $"
 #undef S_SERV_C
 
 static	char	buf[BUFSIZE];
+
+static	int	check_link __P((aClient *));
 
 /*
 ** m_functions execute protocol messages on this server:
@@ -251,8 +253,18 @@ aClient	*cptr;
 	       cptr->info+12, cptr->info+44));
 
 	/* hop = 1 really for local client, return it in m_server_estab() */
-	if (!strncmp(cptr->info, "0209", 4) || !strncmp(cptr->info, "021", 3))
+	if (!strncmp(cptr->info, "0209", 4))
+	    {
 		cptr->hopcount = SV_29;	/* 2.9+ protocol */
+		if (!(cptr->info[4] == '0' &&
+		      (cptr->info[5] == '0' || cptr->info[5] == '1' ||
+		       cptr->info[5] == '2' || cptr->info[5] == '3' ||
+		       cptr->info[5] == '4')))
+			/* the NJOIN command appeared on 2.9.5 */
+			cptr->hopcount |= SV_NJOIN;
+	    }
+	else if (!strncmp(cptr->info, "021", 3))
+		cptr->hopcount = SV_29|SV_NJOIN;
 	else
 		cptr->hopcount = SV_OLD;
 
@@ -872,7 +884,10 @@ Reg	aClient	*cptr;
 				   acptr->user->username,
 				   acptr->user->host, stok,
 				   (*buf) ? buf : "+", acptr->info);
-			send_user_joins(cptr, acptr);
+#ifdef	USE_NJOIN
+			if ((cptr->serv->version & SV_NJOIN) == 0)
+#endif
+				send_user_joins(cptr, acptr);
 		    }
 		else if (IsService(acptr) &&
 			 match(acptr->service->dist, cptr->name) == 0)
@@ -893,12 +908,18 @@ Reg	aClient	*cptr;
 	** Last, pass all channels modes
 	** only sending modes for LIVE channels.
 	*/
-	{
+	    {
 		Reg	aChannel *chptr;
 		for (chptr = channel; chptr; chptr = chptr->nextch)
 			if (chptr->users)
+			    {
+#ifdef	USE_NJOIN
+				if (cptr->serv->version & SV_NJOIN)
+					send_channel_members(cptr, chptr);
+#endif
 				send_channel_modes(cptr, chptr);
-	}
+			    }
+	    }
 	cptr->flags &= ~FLAGS_CBURST;
 #ifdef	ZIP_LINKS
  	/*
@@ -973,6 +994,12 @@ char	*parv[];
 {
 	char **text = infotext;
 
+	if (IsServer(cptr) && check_link(cptr))
+	    {
+		sendto_one(sptr, rpl_str(RPL_TRYAGAIN, parv[0]),
+			   "INFO");
+		return 5;
+	    }
 	if (hunt_server(cptr,sptr,":%s INFO :%s",1,parc,parv) == HUNTED_ISME)
 	    {
 		while (*text)
@@ -1012,6 +1039,16 @@ char	*parv[];
 
 	if (parc > 2)
 	    {
+		int	qlen = strlen(parv[2]);
+
+		if ((qlen < 4 || qlen < (int)strlen(parv[1]) ||
+		     index(parv[2]+1, '*') || index(parv[2]+1, '?')) &&
+		    IsServer(cptr) && check_link(cptr))
+		    {
+			sendto_one(sptr, rpl_str(RPL_TRYAGAIN, parv[0]),
+				   "LINKS");
+			return 5;
+		    }
 		if (hunt_server(cptr, sptr, ":%s LINKS %s :%s", 1, parc, parv)
 				!= HUNTED_ISME)
 			return 5;
@@ -1167,7 +1204,7 @@ char	*parv[];
 **	      it--not reversed as in ircd.conf!
 */
 
-static int report_array[16][3] = {
+static int report_array[17][3] = {
 		{ CONF_ZCONNECT_SERVER,	  RPL_STATSCLINE, 'c'},
 		{ CONF_CONNECT_SERVER,	  RPL_STATSCLINE, 'C'},
 		{ CONF_NOCONNECT_SERVER,  RPL_STATSNLINE, 'N'},
@@ -1183,6 +1220,7 @@ static int report_array[16][3] = {
 		{ CONF_SERVICE,		  RPL_STATSSLINE, 'S'},
 		{ CONF_VER,		  RPL_STATSVLINE, 'V'},
 		{ CONF_BOUNCE,		  RPL_STATSBLINE, 'B'},
+		{ CONF_DENY,		  RPL_STATSDLINE, 'D'},
 		{ 0, 0, 0}
 	};
 
@@ -1262,6 +1300,18 @@ char	*parv[];
 	int	doall = 0, wilds = 0;
 	char	*name = NULL, *cm = NULL;
 
+	if (IsServer(cptr) &&
+	    (stat != 'd' && stat != 'p' && stat != 'q' && stat != 's' &&
+	     stat != 't' && stat != 'u' && stat != 'v') &&
+	    !(stat == 'o' && IsOper(sptr)))
+	    {
+		if (check_link(cptr))
+		    {
+			sendto_one(sptr, rpl_str(RPL_TRYAGAIN, parv[0]),
+				   "STATS");
+			return 5;
+		    }
+	    }
 	if (parc == 3)
 	    {
 		if (hunt_server(cptr, sptr, ":%s STATS %s %s",
@@ -1344,8 +1394,9 @@ char	*parv[];
 	case 'd' : case 'D' : /* defines */
 		send_defines(cptr, parv[0]);
 		break;
-	case 'H' : case 'h' : /* H and L conf lines */
-		report_configured_links(cptr, parv[0], CONF_HUB|CONF_LEAF);
+	case 'H' : case 'h' : /* H, L and D conf lines */
+		report_configured_links(cptr, parv[0],
+					CONF_HUB|CONF_LEAF|CONF_DENY);
 		break;
 	case 'I' : case 'i' : /* I (and i) conf lines */
 		report_configured_links(cptr, parv[0],
@@ -2306,4 +2357,49 @@ char *sname;
 	  }
 	server_name[server_num] = mystrdup(sname);
 	return server_num++;
+}
+
+/*
+** check_link (added 97/12 to prevent abuse)
+**	routine which tries to find out how healthy a link is.
+**	useful to know if more strain may be imposed on the link or not.
+**
+**	returns 0 if link load is light, -1 otherwise.
+*/
+static int
+check_link(cptr)
+aClient	*cptr;
+{
+    if (!IsServer(cptr))
+	    return 0;
+
+    ircstp->is_ckl++;
+    if ((int)DBufLength(&cptr->sendQ) > 65536) /* SendQ is already (too) high*/
+	{
+	    cptr->serv->lastload = timeofday;
+	    ircstp->is_cklQ++;
+	    return -1;
+	}
+    if (timeofday - cptr->firsttime < 60) /* link is too young */
+	{
+	    ircstp->is_ckly++;
+	    return -1;
+	}
+    if (timeofday - cptr->serv->lastload > 30)
+	    /* last request more than 30 seconds ago => OK */
+	{
+	    cptr->serv->lastload = timeofday;
+	    ircstp->is_cklok++;
+	    return 0;
+	}
+    if (timeofday - cptr->serv->lastload > 15
+	&& (int)DBufLength(&cptr->sendQ) < CHREPLLEN)
+	    /* last request between 15 and 30 seconds ago, but little SendQ */
+	{
+	    cptr->serv->lastload = timeofday;
+	    ircstp->is_cklq++;
+	    return 0;
+	}
+    ircstp->is_cklno++;
+    return -1;
 }

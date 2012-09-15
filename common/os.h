@@ -129,6 +129,10 @@
 
 #if HAVE_SYS_POLL_H
 # include <sys/poll.h>
+# if linux && !defined(POLLRDNORM)
+/* Linux 2.1.xx supports poll(), header files are not upto date yet */
+#  define POLLRDNORM 0x0040
+# endif
 #endif
 
 #if HAVE_STROPTS_H
@@ -485,10 +489,18 @@ extern char *inet_ntoa __P((struct in_addr in));
 # undef IP_OPTIONS  /* Defined in /usr/include/netinet/in.h but doesn't work */
 #endif
 
+/*  h_errno portability problems.
+ */
+
+#ifdef _WIN32
+extern int w32_h_errno;  /* The "normal" h_errno is read only */
+#define h_errno w32_h_errno
+#endif
+
 /*  setlinebuf portability problems.
  */
 
-#if defined(HPUX) && !defined(SYSV) && !defined(SVR4)
+#if defined(HPUX) && !defined(SYSV) && !defined(SVR4) || defined(_WIN32)
 # define setlinebuf(x) (setvbuf((x), NULL, _IOLBF, BUFSIZ))
 #endif
 

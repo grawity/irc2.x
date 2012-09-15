@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.22 1997/10/13 19:09:40 kalt Exp $";
+static  char rcsid[] = "@(#)$Id: s_conf.c,v 1.27 1998/02/10 23:19:01 kalt Exp $";
 #endif
 
 #include "os.h"
@@ -78,6 +78,26 @@ int	mask;
 		if ((tmp->value.aconf->status & mask) == 0)
 			(void)detach_conf(cptr, tmp->value.aconf);
 	    }
+}
+
+/*
+ * Match address by #IP bitmask (10.11.12.128/27)
+ */
+int    match_ipmask(mask, cptr)
+char   *mask;
+aClient *cptr;
+{
+        int i1, i2, i3, i4, m;
+        u_long lmask, baseip;
+ 
+        if (sscanf(mask, "%d.%d.%d.%d/%d", &i1, &i2, &i3, &i4, &m) != 5 ||
+           m < 1 || m > 31) {
+               sendto_flag(SCH_LOCAL, "Ignoring bad mask: %s", mask);
+                return -1;
+        }
+        lmask = htonl(0xfffffffful << (32 - m)); /* /24 -> 0xffffff00ul */
+        baseip = htonl(i1 * 0x1000000 + i2 * 0x10000 + i3 * 0x100 + i4);
+        return ((cptr->ip.s_addr & lmask) == baseip) ? 0 : 1;
 }
 
 /*
@@ -134,7 +154,11 @@ char	*sockhost;
 		else
 			*uhost = '\0';
 		(void)strncat(uhost, sockhost, sizeof(uhost) - strlen(uhost));
-		if (match(aconf->host, uhost))
+		if (strchr(aconf->host, '/'))		/* 1.2.3.0/24 */
+		    {
+			if (match_ipmask(aconf->host, cptr))
+				continue;
+                } else if (match(aconf->host, uhost))	/* 1.2.3.* */
 			continue;
 		if (*aconf->name == '\0' && hp)
 		    {
@@ -866,6 +890,10 @@ int	opt;
 				ccount++;
 				aconf->status = CONF_ZCONNECT_SERVER;
 				break;
+			case 'D': /* auto connect restrictions */
+			case 'd':
+				aconf->status = CONF_DENY;
+				break;
 			case 'H': /* Hub server line */
 			case 'h':
 				aconf->status = CONF_HUB;
@@ -1193,7 +1221,7 @@ char	**comment;
 	host = cptr->sockhost;
 	ip = (char *) inetntoa((char *)&cptr->ip);
 	if (!strcmp(host, ip))
-	  ip = NULL;
+		ip = NULL; /* we don't have a name for the ip# */
 	name = cptr->user->username;
 	ident = cptr->auth;
 
@@ -1209,18 +1237,42 @@ char	**comment;
 			continue;
 		if (!(tmp->status & (CONF_KILL | CONF_OTHERKILL)))
 			continue;
+		if (!tmp->host || !tmp->name)
+			continue;
 		if (tmp->status == CONF_KILL)
 			check = name;
 		else
 			check = ident;
- 		if (tmp->host && tmp->name &&
-		    /* host & IP matching.. */
-		    ((*tmp->host == '=' && match(tmp->host+1, host) == 0) ||
-		     (*tmp->host != '=' && (match(tmp->host, host) == 0 ||
-					    (ip && match(tmp->host, ip) ==0))))
-		    /* username matching */
-		    && (!check || match(tmp->name, check) == 0) &&
-		    (!tmp->port || (tmp->port == cptr->acpt->port)))
+		/* host & IP matching.. */
+		if (!ip) /* unresolved */
+		    {
+			if (strchr(tmp->host, '/'))
+			    {
+				if (match_ipmask((*tmp->host == '=') ?
+						 tmp->host+1: tmp->host, cptr))
+					continue;
+			    }
+			else          
+				if (match((*tmp->host == '=') ? tmp->host+1 :
+					  tmp->host, host))
+					continue;
+		    }
+		else if (*tmp->host == '=') /* numeric only */
+			continue;
+		else /* resolved */
+			if (strchr(tmp->host, '/'))
+			    {
+				if (match_ipmask(tmp->host, cptr))
+					continue;
+			    }
+			else
+				if (match(tmp->host, ip) &&
+				    match(tmp->host, host))
+					continue;
+		
+		/* user & port matching */
+		if ((!check || match(tmp->name, check) == 0) &&
+		    (!tmp->port || (tmp->port == cptr->acpt->port)))   
 		    {
 			now = 0;
 			if (!BadPtr(tmp->passwd) && isdigit(*tmp->passwd) &&
@@ -1502,13 +1554,19 @@ int	class, fd;
 		** check if B line is for a class #,
 		** and if it is for a hostname.
 		*/
-		if (fd != -2 && isdigit(*aconf->host))
+		if (fd != -2 &&
+		    !strchr(aconf->host, '.') && isdigit(*aconf->host))
 		    {
 			if (class != atoi(aconf->host))
 				continue;
 		    }
 		else
-			if (match(aconf->host, cptr->sockhost))
+			if (strchr(aconf->host, '/'))
+			    {
+				if (match_ipmask(aconf->host, cptr))
+					continue;
+			    }
+			else if (match(aconf->host, cptr->sockhost))
 				continue;
 
 		sendto_one(cptr, rpl_str(RPL_BOUNCE, cptr->name), aconf->name,
@@ -1518,3 +1576,50 @@ int	class, fd;
 	
     }
 
+/*
+** find_denied
+**	for a given server name, make sure no D line matches any of the
+**	servers currently present on the net.
+*/
+aConfItem *
+find_denied(name, class)
+    char *name;
+    int class;
+{
+    aConfItem	*aconf;
+
+    for (aconf = conf; aconf; aconf = aconf->next)
+	{
+	    if (aconf->status != CONF_DENY)
+		    continue;
+	    if (!aconf->name)
+		    continue;
+	    if (match(aconf->name, name) && aconf->port != class)
+		    continue;
+	    if (isdigit(*aconf->passwd))
+		{
+		    aConfItem	*aconf2;
+		    int		ck = atoi(aconf->passwd);
+
+		    for (aconf2 = conf; aconf2; aconf2 = aconf2->next)
+			{
+			    if (aconf2->status != CONF_NOCONNECT_SERVER)
+				    continue;
+			    if (!aconf2->class || ConfClass(aconf2) != ck)
+				    continue;
+			    if (find_client(aconf2->host, NULL))
+				    return aconf2;
+			}
+		}
+	    if (aconf->host)
+		{
+		    aServer	*asptr;
+
+		    for (asptr = svrtop; asptr; asptr = asptr->nexts)
+			    if (aconf->host &&
+				!match(aconf->host, asptr->bcptr->name))
+				    return aconf;
+		}
+	}
+    return NULL;
+}

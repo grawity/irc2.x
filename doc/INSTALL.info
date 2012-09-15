@@ -1,5 +1,5 @@
 This is Info file INSTALL.info, produced by Makeinfo-1.55 from the
-input file /tmp/sgml2info23680tmp2.
+input file /tmp/sgml2info13260tmp2.
 
    \input texinfo
 
@@ -10,9 +10,9 @@ Installing IRC - The Internet Relay Chat Program
 ************************************************
 
      SGML version by Christophe Kalt
-     $Id: INSTALL.info,v 1.18 1997/10/13 19:09:38 kalt Exp $
+     $Id: INSTALL.info,v 1.23 1998/02/18 21:47:53 kalt Exp $
 
-   This document describes how to install, and configure IRC 2.9.4.
+   This document describes how to install, and configure IRC 2.9.5.
 
 * Menu:
 
@@ -27,6 +27,17 @@ File: INSTALL.info,  Node: Installing IRC-,  Next: The config-h file,  Prev: Top
 
 Installing IRC-
 ***************
+
+* Menu:
+
+* The configure script::
+* Notes for Cygwin32 users::
+
+
+File: INSTALL.info,  Node: The configure script,  Next: Notes for Cygwin32 users,  Up: Installing IRC-
+
+The configure script
+====================
 
    This package uses a GNU configure script for its configuration.  You
 simply need to untar the distribution and run the "configure" script.
@@ -69,6 +80,27 @@ default behaviour:
 `--without-zlib'
      tells "configure" not to look for the zlib.  Defining this will
      keep you from using server link compression.
+
+
+File: INSTALL.info,  Node: Notes for Cygwin32 users,  Prev: The configure script,  Up: Installing IRC-
+
+Notes for Cygwin32 users
+========================
+
+   The 2.9.5 release compiles properly on W32 systems which have the
+GNU-Win32 environment () setup.  At the time of the release, tests were
+made using the version b18 of the Cygwin32 library with the "coolview"
+patch from Sergey Okhapkin.  (This patch should be rolled in the next
+beta)
+
+   When compiling on such system, you want to make sure that you have
+carefully followed the Cygwin32 installation notes.  In particular, you
+will need to make sure that the following files exist: `/bin/cp.exe',
+`/bin/mv.exe', `/bin/rm.exe' and `/bin/sh.exe'.
+
+   Also, the IRC server needs a `resolv.conf' file in order to
+initialize the resolver.  This file can be anywhere (see configure
+options), and is typically in `/etc' on UNIX systems.
 
 
 File: INSTALL.info,  Node: The config-h file,  Next: Editing the Makefile and compiling,  Prev: Installing IRC-,  Up: Top
@@ -318,19 +350,27 @@ configuration options.  The record types are as follows:
 
   9. Server connections      (C,c,N)
 
- 10. Hub connections         (H)
+ 10. Deny auto-connections   (D)
 
- 11. Leaf connections        (L)
+ 11. Hub connections         (H)
 
- 12. Version limitations     (V)
+ 12. Leaf connections        (L)
 
- 13. Excluded machines       (Q)
+ 13. Version limitations     (V)
 
- 14. Service connections     (S)
+ 14. Excluded machines       (Q)
 
- 15. Bounce server           (B)
+ 15. Service connections     (S)
 
- 16. Default local server    (U)
+ 16. Bounce server           (B)
+
+ 17. Default local server    (U)
+
+   Except for types "M" and "A", you are allowed to have multiple
+records of the same type.  In some cases, you can have concurrent
+records.  `It is important to note that the last matching record will
+be used'.  This is especially useful when setting up I records (client
+connections).
 
 * Menu:
 
@@ -343,6 +383,7 @@ configuration options.  The record types are as follows:
 * Restrict connections::
 * Excluded accounts::
 * Server connections::
+* Deny auto-connections::
 * Hub connections::
 * Leaf connections::
 * Version limitations::
@@ -577,7 +618,7 @@ Connection Classes
      This field defines the maximum number of links this class will
      allow from automatic connections (C lines).  Using /CONNECT
      overrides this feature.  Also defines the maximum number of users
-     in this class (I/O lines).
+     in this class for I/O lines per I/O line.
 
 `SendQ'
      This field defines the "SendQ" value for this class.  If this
@@ -688,7 +729,7 @@ Client connections
      connect.  If "user@" prefixes the actual IP address the server
      will require that the remote username returned by the ident server
      be the same as the one given before the "@".  Wildcards are
-     permitted.
+     permitted unless using a bitmask (e.g. 1.2.3.0/24).
 
 `Password'
      The password that must be given by the client to be allowed on the
@@ -915,8 +956,9 @@ Excluded accounts
      "K" tells the IRCD that you are making a KILL USER command entry.
 
 `Host Name'
-     In this field you specify the Hostname that the user is connecting
-     from.  If you wanted to REMOVE connects to IRC from
+     In this field you specify the Hostname or the IP address (Single
+     IP, Wildcard notation or bitmask notation) that the user is
+     connecting from.  If you wanted to REMOVE connects to IRC from
      "orion.cair.du.edu" then you would want to enter
      "orion.cair.du.edu".  If you want to REMOVE ALL HOSTS access you
      can use "*" (Wild Card notation) and no matter what host the
@@ -925,12 +967,12 @@ Excluded accounts
      why would you run an ircd if you allow nobody to connect to it
      anyways ?
 
-     If you specify an IP address, or IP mask, it will match clients
-     connecting from the matching addresses, no matter if they resolve
-     or not.
+     If you specify an IP address, IP mask, or an IP bitmask, it will
+     match clients connecting from the matching addresses, no matter if
+     they resolve or not.
 
-     You can prefix an IP address or IP mask by "=" in which case only
-     non resolving matching hosts will be banned.
+     You can prefix an IP address, an IP mask, or IP bitmask by "=" in
+     which case only non resolving matching hosts will be banned.
 
 `time interval(s)|comment'
      Either leave this field empty or put a comment, then the line
@@ -996,7 +1038,7 @@ Excluded accounts
      "192.11.35.*" and which didn't resolve to login to the ircd.
 
 
-File: INSTALL.info,  Node: Server connections,  Next: Hub connections,  Prev: Excluded accounts,  Up: The ircd-conf file
+File: INSTALL.info,  Node: Server connections,  Next: Deny auto-connections,  Prev: Excluded accounts,  Up: The ircd-conf file
 
 Server connections
 ==================
@@ -1204,7 +1246,50 @@ format as the "C" entries.
      of countries and other large areas with common domain.
 
 
-File: INSTALL.info,  Node: Hub connections,  Next: Leaf connections,  Prev: Server connections,  Up: The ircd-conf file
+File: INSTALL.info,  Node: Deny auto-connections,  Next: Hub connections,  Prev: Server connections,  Up: The ircd-conf file
+
+Deny auto-connections
+=====================
+
+`Introduction'
+     D lines were implemented to give server administrators more
+     control on how auto connections are done.  This will most likely
+     only be useful for big networks which have complex configurations.
+
+`Format'
+     D:<Denied Server Mask>:Denied Class:<Server Name>:Server Class:
+
+`Denied Server Mask'
+     This field is matched against all servers currently present on the
+     network.
+
+`Denied Class'
+     If this field contains a class number, it will match if any server
+     in that class is currently present on the network.  Note that this
+     can be true for any server, even the ones not directly connected.
+
+`Server Mask'
+     This field is matched against the server name that the server
+     wants to auto connect to.
+
+`Server Class'
+     This field is used to match against the class to which belong the
+     servers for which an autoconnect is set.
+
+`Examples'
+     D:*.edu::*.fi::
+
+     Don't auto-connect to any "*.fi" server if any server present on
+     the network matches "*.edu".
+
+     D::2:eff.org:3:
+
+     Do now auto-connect to "eff.org", or any server in class "3" if a
+     server defined to be in class "2" is currently present on the
+     network.
+
+
+File: INSTALL.info,  Node: Hub connections,  Next: Leaf connections,  Prev: Deny auto-connections,  Up: The ircd-conf file
 
 Hub connections
 ===============
@@ -1433,10 +1518,11 @@ Bounce server
 `B'
      This specifies a Bounce record.
 
-`Class|Host Name'
+`Class|Host Mask'
      This field specifies to which client this configuration line
-     applies to.  It can be either a connection class number, or a host
-     mask to be matched against the client's hostname.
+     applies to.  It can be either a connection class number, a host
+     mask to be matched against the client's hostname, or an IP
+     address/mask/bitmask to be matched against the client's IP address.
 
      When the server is completely full, it rejects clients with the
      "All connections in use" message.  In this case, the server
@@ -1518,37 +1604,40 @@ Related resources
 Tag Table:
 Node: Top123
 Node: Installing IRC-610
-Node: The config-h file2296
-Node: Define what type of UNIX your machine uses-2962
-Node: DEBUGMODE3362
-Node: SPATH CPATH MPATH LPATH PPATH TPATH4020
-Node: CACHED_MOTD5229
-Node: CHROOTDIR5699
-Node: ENABLE_SUMMON ENABLE_USERS6023
-Node: SHOW_INVISIBLE_LUSERS NO_DEFAULT_INVISIBLE6559
-Node: OPER_KILL OPER_REHASH OPER_RESTART LOCAL_KILL_ONLY7242
-Node: ZIP_LINKS ZIP_LEVEL7874
-Node: SLOW_ACCEPT8885
-Node: CLONE_CHECK9503
-Node: Other #define's9843
-Node: Editing the Makefile and compiling10168
-Node: The ircd-conf file10804
-Node: Machine information12488
-Node: Administrative info14584
-Node: Port connections16619
-Node: Connection Classes18829
-Node: Client connections24265
-Node: Operator priviliges29737
-Node: Restrict connections31857
-Node: Excluded accounts33172
-Node: Server connections37030
-Node: Hub connections45463
-Node: Leaf connections46676
-Node: Version limitations48759
-Node: Excluded machines49998
-Node: Service connections51305
-Node: Bounce server52898
-Node: Default local server (for local clients) `*OBSOLETED*'54521
-Node: Related resources55404
+Node: The configure script801
+Node: Notes for Cygwin32 users2509
+Node: The config-h file3401
+Node: Define what type of UNIX your machine uses-4067
+Node: DEBUGMODE4467
+Node: SPATH CPATH MPATH LPATH PPATH TPATH5125
+Node: CACHED_MOTD6334
+Node: CHROOTDIR6804
+Node: ENABLE_SUMMON ENABLE_USERS7128
+Node: SHOW_INVISIBLE_LUSERS NO_DEFAULT_INVISIBLE7664
+Node: OPER_KILL OPER_REHASH OPER_RESTART LOCAL_KILL_ONLY8347
+Node: ZIP_LINKS ZIP_LEVEL8979
+Node: SLOW_ACCEPT9990
+Node: CLONE_CHECK10608
+Node: Other #define's10948
+Node: Editing the Makefile and compiling11273
+Node: The ircd-conf file11909
+Node: Machine information13941
+Node: Administrative info16037
+Node: Port connections18072
+Node: Connection Classes20282
+Node: Client connections25733
+Node: Operator priviliges31246
+Node: Restrict connections33366
+Node: Excluded accounts34681
+Node: Server connections38644
+Node: Deny auto-connections47083
+Node: Hub connections48456
+Node: Leaf connections49672
+Node: Version limitations51755
+Node: Excluded machines52994
+Node: Service connections54301
+Node: Bounce server55894
+Node: Default local server (for local clients) `*OBSOLETED*'57596
+Node: Related resources58479
 
 End Tag Table
