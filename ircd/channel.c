@@ -331,7 +331,6 @@ char *parabuf;
 	  nusers = atoi(parv[0]);
 	  if (nusers > 0) {
 	    limitflag = LIMIT_SET;
-	    sprintf(&(parabuf[strlen(parabuf)]), "%d ", nusers);
 	    limit = nusers;
 	  }
 	  break;
@@ -357,47 +356,54 @@ char *parabuf;
   }
   mode->mode |= maddflags;
   mode->mode &= ~mdelflags;
-  modebuf[i++] = '+';
-  if (maddflags & MODE_PRIVATE)
-    modebuf[i++] = 'p';
-  if (maddflags & MODE_SECRET)
-    modebuf[i++] = 's';
-  if (maddflags & MODE_ANONYMOUS)
-    modebuf[i++] = 'a';
-  if (maddflags & MODE_MODERATED)
-    modebuf[i++] = 'm';
-  if (maddflags & MODE_TOPICLIMIT)
-    modebuf[i++] = 't';
-  if (maddflags & MODE_INVITEONLY)
-    modebuf[i++] = 'i';
-  if (maddflags & MODE_NOPRIVMSGS)
-    modebuf[i++] = 'n';
-  modebuf[i++] = '-';
-  if (mdelflags & MODE_PRIVATE)
-    modebuf[i++] = 'p';
-  if (mdelflags & MODE_SECRET)
-    modebuf[i++] = 's';
-  if (mdelflags & MODE_ANONYMOUS)
-    modebuf[i++] = 'a';
-  if (mdelflags & MODE_MODERATED)
-    modebuf[i++] = 'm';
-  if (mdelflags & MODE_TOPICLIMIT)
-    modebuf[i++] = 't';
-  if (mdelflags & MODE_INVITEONLY)
-    modebuf[i++] = 'i';
-  if (mdelflags & MODE_NOPRIVMSGS)
-    modebuf[i++] = 'n';
+  if (maddflags || !(mdelflags || (i > 0)))
+    {
+      modebuf[i++] = '+';
+      if (maddflags & MODE_PRIVATE)
+	modebuf[i++] = 'p';
+      if (maddflags & MODE_SECRET)
+	modebuf[i++] = 's';
+      if (maddflags & MODE_ANONYMOUS)
+	modebuf[i++] = 'a';
+      if (maddflags & MODE_MODERATED)
+	modebuf[i++] = 'm';
+      if (maddflags & MODE_TOPICLIMIT)
+	modebuf[i++] = 't';
+      if (maddflags & MODE_INVITEONLY)
+	modebuf[i++] = 'i';
+      if (maddflags & MODE_NOPRIVMSGS)
+	modebuf[i++] = 'n';
+    }
+  if (mdelflags)
+    {
+      modebuf[i++] = '-';
+      if (mdelflags & MODE_PRIVATE)
+	modebuf[i++] = 'p';
+      if (mdelflags & MODE_SECRET)
+	modebuf[i++] = 's';
+      if (mdelflags & MODE_ANONYMOUS)
+	modebuf[i++] = 'a';
+      if (mdelflags & MODE_MODERATED)
+	modebuf[i++] = 'm';
+      if (mdelflags & MODE_TOPICLIMIT)
+	modebuf[i++] = 't';
+      if (mdelflags & MODE_INVITEONLY)
+	modebuf[i++] = 'i';
+      if (mdelflags & MODE_NOPRIVMSGS)
+	modebuf[i++] = 'n';
+    }
   if (limitflag && limit >= 0)
     {
       if (limit > 0)
 	{
 	  modebuf[i++] = '+';
+	  sprintf(&(parabuf[strlen(parabuf)]), "%d ", limit);
 	} 
       else if (limit == 0)
 	{
 	  modebuf[i++] = '-'; 
 	}
-	modebuf[i++] = 'l';
+      modebuf[i++] = 'l';
       mode->limit = limit;
     }
   modebuf[i] = '\0';
