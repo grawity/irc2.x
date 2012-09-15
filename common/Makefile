@@ -27,9 +27,9 @@ INCLUDE=../include
 CFLAGS=-O -I${INCLUDE}
 
 
-OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o inet_addr.o
+OBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
 
-SRC=bsd.c dbuf.c packet.c parse.c send.c match.c support.c inet_addr.c
+SRC=bsd.c dbuf.c packet.c parse.c send.c match.c support.c
 
 tm: tm.o match.o tab.o
 	$(CC) -g tab.o tm.o match.o -o tm
@@ -61,4 +61,3 @@ send.o: ../include/struct.h ../include/config.h ../include/class.h
 send.o: ../include/dbuf.h ../include/common.h send.c
 match.o: ../include/config.h ../include/common.h ../include/sys.h match.c
 support.o: ../include/config.h ../include/common.h ../include/sys.h support.c
-inet_addr.o: ../include/sys.h inet_addr.c ../include/common.h

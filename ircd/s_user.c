@@ -324,7 +324,7 @@ char	*nick, *username;
 	anUser	*user = sptr->user;
 	int	i;
 
-	sptr->user->last = time(NULL);
+	user->last = time(NULL);
 	parv[0] = sptr->name;
 	parv[1] = parv[2] = NULL;
 
@@ -352,14 +352,15 @@ char	*nick, *username;
 			char	temp[USERLEN+1];
 
 			strncpyzt(temp, username, USERLEN+1);
-			*sptr->user->username = '~';
-			(void)strncpy(&sptr->user->username[1], temp,
-				  USERLEN);
-			sptr->user->username[USERLEN] = '\0';
+			*user->username = '~';
+			(void)strncpy(&user->username[1], temp, USERLEN);
+			user->username[USERLEN] = '\0';
 			
 		    }
+		else if (sptr->flags & FLAGS_GOTID)
+			strncpyzt(user->username, sptr->username, USERLEN+1);
 		else
-			strncpyzt(sptr->user->username, username, USERLEN+1);
+			strncpyzt(user->username, username, USERLEN+1);
 
 		if (!BadPtr(aconf->passwd) &&
 		    !StrEq(sptr->passwd, aconf->passwd))
@@ -389,7 +390,7 @@ char	*nick, *username;
 			(void)m_oper(&me, sptr, 1, parv);
 	    }
 	else
-		strncpyzt(sptr->user->username, username, USERLEN+1);
+		strncpyzt(user->username, username, USERLEN+1);
 	SetClient(sptr);
 	if (MyConnect(sptr))
 	    {
@@ -446,7 +447,7 @@ char	*nick, *username;
 	check_services_butone(SERVICE_WANT_NICK, sptr, "NICK %s :%d",
 				nick, sptr->hopcount);
 	check_services_butone(SERVICE_WANT_USER, sptr, ":%s USER %s %s %s :%s",
-				nick, sptr->user->username, user->host,
+				nick, user->username, user->host,
 				user->server, sptr->info);
 #endif
 

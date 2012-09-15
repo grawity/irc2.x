@@ -315,7 +315,7 @@
  * Max amount of internal send buffering when socket is stuck (bytes)
  */
 #define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
-                                 /*                    300000 for backbones */
+                                 /*                    700000 for backbones */
 /*
  *  BUFFERPOOL is the maximum size of the total of all sendq's.
  *  Recommended value is 2 * MAXSENDQLENGTH, for hubs, 5 *.

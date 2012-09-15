@@ -29,8 +29,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/param.h>
-#include "cdefs.h"
-#include "bitypes.h"
 
 #ifdef	UNISTDH
 #include <unistd.h>

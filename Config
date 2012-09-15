@@ -23,7 +23,6 @@ NSTRERROR=undef
 NSTRTOKEN=undef
 NSTRTOK=undef
 NINETADDR=undef
-NINETATON=undef
 NINETNTOA=undef
 NINETNETOF=undef
 GETTIMEOFDAY=undef
@@ -551,21 +550,6 @@ cat > $TMP << _EOF_
 #include <netinet/in.h>
 main()
 {
-	struct	in_addr in;
-	(void)inet_aton("1.2.3.4", &in);
-}
-_EOF_
-$COMP >/dev/null 2>&1
-if [ $? -ne 0 ] ; then
-	echo $n " inet_aton$c"
-	NINETATON=define
-fi
-$RM -f $EXEC $TMP
-cat > $TMP << _EOF_
-#include <sys/types.h>
-#include <netinet/in.h>
-main()
-{
 	struct	in_addr	in;
 	in.s_addr = 0x12345678;
 	(void)inet_ntoa(in);
@@ -656,7 +640,6 @@ cat > $SETUP  <<_EOF_
 #$NSTRTOKEN	NEED_STRTOKEN
 #$NSTRTOK	NEED_STRTOK
 #$NINETADDR	NEED_INET_ADDR
-#$NINETATON	NEED_INET_ATON
 #$NINETNTOA	NEED_INET_NTOA
 #$NINETNETOF	NEED_INET_NETOF
 #$GETTIMEOFDAY	GETTIMEOFDAY

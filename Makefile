@@ -50,7 +50,7 @@ IRCLIBS=-lcurses -ltermcap
 #IRCDLIBS= -lsocket -linet -lnsl -lseq
 #
 #use the following on SUN OS without nameserver libraries inside libc
-#IRCDLIBS=
+#IRCDLIBS=-lresolv
 #
 # Solaris 2
 #IRCDLIBS=-lsocket -lnsl

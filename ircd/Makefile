@@ -67,11 +67,19 @@ LINTFLAGS=-hba
 #LDFLAGS=-Bstatic
 #LDFLAGS=-Wl,-a,archive
 #
+# RES - if you are missing the resolv library (man 5 resolv.conf), or you
+# experience probems with ip# to hostname lookups for local machines or
+# the server wont compile because _res is missing, uncomment RES.
+# For those who know what these are, if you normally use the resolv+
+# libraries and have setup /etc/resolv.conf, these are fromm resolv+ if they
+# are not part of your system libraries.  In all cases you should try your
+# system libraries before these.
+#
 #RES=res_init.o res_comp.o res_mkquery.o
 
 COMMONOBJS=../common/bsd.o ../common/dbuf.o ../common/packet.o \
            ../common/send.o ../common/match.o ../common/parse.o \
-           ../common/support.o ../common/inet_addr.o
+           ../common/support.o
 
 OBJS=channel.o class.o hash.o ircd.o list.o res.o s_auth.o s_bsd.o s_conf.o \
 	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_user.o whowas.o \
@@ -126,9 +134,6 @@ lint:
 	(cd ../common; $(MAKE) build);
 ../common/support.o: ../common/support.c ../include/config.h ../include/sys.h\
 		     ../include/common.h
-	(cd ../common; $(MAKE) build);
-../common/inet_addr.o: ../common/inet_addr.c ../include/sys.h \
-		       ../include/common.h
 	(cd ../common; $(MAKE) build);
 
 install: all

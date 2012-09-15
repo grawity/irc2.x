@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_auth.c	1.17 17 Oct 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_auth.c	1.18 4/18/94 (C) 1992 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -172,10 +172,10 @@ Reg1	aClient	*cptr;
 {
 	Reg1	char	*s, *t;
 	Reg2	int	len;
-	char	ruser[USERLEN+1], tuser[USERLEN+1];
+	char	ruser[USERLEN+1], system[8];
 	u_short	remp = 0, locp = 0;
 
-	*ruser = '\0';
+	*system = *ruser = '\0';
 	Debug((DEBUG_NOTICE,"read_authports(%x) fd %d authfd %d stat %d",
 		cptr, cptr->fd, cptr->authfd, cptr->status));
 	/*
@@ -192,16 +192,21 @@ Reg1	aClient	*cptr;
 		cptr->buffer[cptr->count] = '\0';
 	    }
 
-	if ((len > 0) && (cptr->count != sizeof(cptr->buffer) - 1) &&
+	if ((len > 0) && (cptr->count != (sizeof(cptr->buffer) - 1)) &&
 	    (sscanf(cptr->buffer, "%hd , %hd : USERID : %*[^:]: %10s",
-		    &remp, &locp, tuser) == 3) &&
-	    (s = rindex(cptr->buffer, ':')))
+		    &remp, &locp, ruser) == 3))
 	    {
-		for (++s, t = ruser; *s && (t < ruser + sizeof(ruser)); s++)
+		s = rindex(cptr->buffer, ':');
+		*s++ = '\0';
+		for (t = (rindex(cptr->buffer, ':') + 1); *t; t++)
+			if (!isspace(*t))
+				break;
+		strncpyzt(system, t, sizeof(system));
+		for (t = ruser; *s && (t < ruser + sizeof(ruser)); s++)
 			if (!isspace(*s) && *s != ':')
 				*t++ = *s;
 		*t = '\0';
-		Debug((DEBUG_INFO,"auth reply ok"));
+		Debug((DEBUG_INFO,"auth reply ok [%s] [%s]", system, ruser));
 	    }
 	else if (len != 0)
 	    {
@@ -226,12 +231,12 @@ Reg1	aClient	*cptr;
 	if (!locp || !remp || !*ruser)
 	    {
 		ircstp->is_abad++;
-		(void)strcpy(cptr->username, "unknown");
 		return;
 	    }
 	ircstp->is_asuc++;
 	strncpyzt(cptr->username, ruser, USERLEN+1);
-	cptr->flags |= FLAGS_GOTID;
+	if (strcmp(system, "OTHER"))
+		cptr->flags |= FLAGS_GOTID;
 	Debug((DEBUG_INFO, "got username [%s]", ruser));
 	return;
 }
