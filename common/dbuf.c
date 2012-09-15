@@ -36,7 +36,7 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.13 5/21/93 (C) 1990 Markku Savela";
+static  char sccsid[] = "@(#)dbuf.c	2.15 17 Oct 1993 (C) 1990 Markku Savela";
 #endif
 
 #include <stdio.h>
@@ -78,8 +78,13 @@ static dbufbuf *dbuf_alloc()
 		freelist = freelist->next;
 		return dbptr;
 	    }
+	if (dbufalloc * DBUFSIZ > BUFFERPOOL)
+	    {
+		dbufalloc--;
+		return NULL;
+	    }
 
-#ifdef	VALLOC
+#if defined(VALLOC) && !defined(DEBUGMODE)
 # if defined(SOL20) || defined(_SC_PAGESIZE)
 	num = sysconf(_SC_PAGESIZE)/sizeof(dbufbuf);
 # else
@@ -133,7 +138,7 @@ dbuf *dyn;
 	while ((p = dyn->head) != NULL)
 	    {
 		dyn->head = p->next;
-		(void)free((char *)p);
+		MyFree((char *)p);
 	    }
 	return -1;
     }

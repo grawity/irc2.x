@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.27 02 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.28 17 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -71,6 +71,8 @@ char	*notice;
 	    !(to->flags & FLAGS_CLOSING))
 		sendto_ops(notice, get_client_name(to, FALSE));
 #endif
+	DBufClear(&to->recvQ);
+	DBufClear(&to->sendQ);
 	return -1;
 }
 
@@ -115,7 +117,7 @@ char	*msg;	/* if msg is a null pointer, we are flushing connection */
 int	len;
 #ifdef SENDQ_ALWAYS
 {
-	if (to->flags & FLAGS_DEADSOCKET)
+	if (IsDead(to))
 		return 0; /* This socket has already been marked as dead */
 # ifdef	CLIENT_COMPILE
 	if (DBufLength(&to->sendQ) > MAXSENDQLENGTH)
@@ -157,7 +159,7 @@ int	len;
 {
 	int	rlen = 0;
 
-	if (to->flags & FLAGS_DEADSOCKET)
+	if (IsDead(to))
 		return 0; /* This socket has already been marked as dead */
 
 	/*
@@ -220,7 +222,7 @@ aClient *to;
 	** Once socket is marked dead, we cannot start writing to it,
 	** even if the error is removed...
 	*/
-	if (to->flags & FLAGS_DEADSOCKET)
+	if (IsDead(to))
 	    {
 		/*
 		** Actually, we should *NEVER* get here--something is
@@ -249,7 +251,7 @@ aClient *to;
 			break;
 	    }
 
-	return (to->flags & FLAGS_DEADSOCKET) ? -1 : 0;
+	return (IsDead(to)) ? -1 : 0;
 }
 
 /*

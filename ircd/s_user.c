@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.62 15 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.67 17 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -246,6 +246,52 @@ char	*nick;
 
 
 /*
+** canonize
+**
+** reduce a string of duplicate list entries to contain only the unique
+** items.  Unavoidably O(n^2).
+*/
+char	*canonize(buffer)
+char	*buffer;
+{
+	static	char	cbuf[BUFSIZ];
+	register char	*s, *t, *cp = cbuf;
+	register int	l = 0;
+	char	*p = NULL, *p2;
+
+	*cp = '\0';
+
+	for (s = strtoken(&p, buffer, ","); s; s = strtoken(&p, NULL, ","))
+	    {
+		if (l)
+		    {
+			for (p2 = NULL, t = strtoken(&p2, cbuf, ","); t;
+			     t = strtoken(&p2, NULL, ","))
+				if (!mycmp(s, t))
+					break;
+				else if (p2)
+					p2[-1] = ',';
+		    }
+		else
+			t = NULL;
+		if (!t)
+		    {
+			if (l)
+				*(cp-1) = ',';
+			else
+				l = 1;
+			(void)strcpy(cp, s);
+			if (p)
+				cp += (p - s);
+		    }
+		else if (p2)
+			p2[-1] = ',';
+	    }
+	return cbuf;
+}
+
+
+/*
 ** register_user
 **	This function is called when both NICK and USER messages
 **	have been accepted for the client, in whatever order. Only
@@ -288,7 +334,7 @@ char	*nick, *username;
 			sendto_ops("Received unauthorized connection from %s.",
 				   get_client_name(sptr,FALSE));
 			ircstp->is_ref++;
-			return exit_client(cptr, sptr, sptr,
+			return exit_client(cptr, sptr, &me,
 					   "No Authorization");
 		      } 
 		if (IsUnixSocket(sptr))
@@ -320,7 +366,7 @@ char	*nick, *username;
 			ircstp->is_ref++;
 			sendto_one(sptr, err_str(ERR_PASSWDMISMATCH),
 				   me.name, parv[0]);
-			return exit_client(cptr, sptr, sptr, "Bad Password");
+			return exit_client(cptr, sptr, &me, "Bad Password");
 		    }
 		bzero(sptr->passwd, sizeof(sptr->passwd));
 		/*
@@ -339,7 +385,7 @@ char	*nick, *username;
 		    }
 #endif
 		if (oldstatus == STAT_MASTER && MyConnect(sptr))
-			m_oper(&me, sptr, 1, parv);
+			(void)m_oper(&me, sptr, 1, parv);
 	    }
 	else
 		strncpyzt(sptr->user->username, username, USERLEN+1);
@@ -532,7 +578,8 @@ char	*parv[];
 		** send error reply and ignore the command.
 		*/
 		sendto_one(sptr, err_str(ERR_NICKNAMEINUSE),
-			   me.name, parv[0], nick);
+			   /* parv[0] is empty when connecting */
+			   me.name, BadPtr(parv[0]) ? "*" : parv[0], nick);
 		return 0; /* NICK message ignored */
 	    }
 	/*
@@ -702,6 +749,8 @@ int	notice;
 		return -1;
 	    }
 
+	if (MyConnect(sptr))
+		parv[1] = canonize(parv[1]);
 	for (p = NULL, nick = strtoken(&p, parv[1], ","); nick;
 	     nick = strtoken(&p, NULL, ","))
 	    {
@@ -1024,6 +1073,7 @@ char	*parv[];
 		NULL,	/* away */
 		0,	/* last */
 		1,      /* refcount */
+		0,	/* joined */
 		"<Unknown>",	/* user */
 		"<Unknown>",	/* host */
 		"<Unknown>"	/* server */
@@ -1036,7 +1086,7 @@ char	*parv[];
 	char	*p = NULL;
 	int	found;
 
-	if (check_registered(sptr))
+	if (check_registered_user(sptr))
 		return 0;
 
     	if (parc < 2)
@@ -1487,7 +1537,7 @@ char	*parv[];
 
 		if (away)
 		    {
-			(void)free(away);
+			MyFree(away);
 			sptr->user->away = NULL;
 		    }
 		sendto_serv_butone(cptr, ":%s AWAY", parv[0]);
@@ -1632,11 +1682,13 @@ char	*parv[];
 	extern	char *crypt();
 #endif /* CRYPT_OPER_PASSWORD */
 
+	if (check_registered_user(sptr))
+		return 0;
 
 	name = parc > 1 ? parv[1] : NULL;
 	password = parc > 2 ? parv[2] : NULL;
 
-	if (MyClient(sptr) && (BadPtr(name) || BadPtr(password)))
+	if (!IsServer(cptr) && (BadPtr(name) || BadPtr(password)))
 	    {
 		sendto_one(sptr, err_str(ERR_NEEDMOREPARAMS),
 			   me.name, parv[0], "OPER");
@@ -1677,12 +1729,12 @@ char	*parv[];
         /* use first two chars of the password they send in as salt */
 
         /* passwd may be NULL. Head it off at the pass... */
-        salt[0]='\0';
-        if(password)
+        salt[0] = '\0';
+        if (password && aconf->passwd)
 	    {
-        	salt[0]=aconf->passwd[0];
-		salt[1]=aconf->passwd[1];
-		salt[2]='\0';
+        	salt[0] = aconf->passwd[0];
+		salt[1] = aconf->passwd[1];
+		salt[2] = '\0';
 		encr = crypt(password, salt);
 	    }
 	else
@@ -1709,7 +1761,8 @@ char	*parv[];
 		else
 			SetOper(sptr);
 		*--s =  '@';
-		sendto_ops("%s is now operator (%c)", parv[0],
+		sendto_ops("%s (%s@%s) is now operator (%c)", parv[0],
+			   sptr->user->username, sptr->user->host,
 			   IsOper(sptr) ? 'O' : 'o');
 		sptr->flags |= (FLAGS_SERVNOTICE|FLAGS_WALLOP);
 		send_umode_out(cptr, sptr, old);
@@ -1815,11 +1868,11 @@ char	*parv[];
 	Reg1	char	*s;
 	Reg2	int	i, len;
 
-	if (parc > 2)
-		(void)m_userhost(cptr, sptr, parc-1, parv+1);
-
 	if (check_registered(sptr))
 		return 0;
+
+	if (parc > 2)
+		(void)m_userhost(cptr, sptr, parc-1, parv+1);
 
 	if (parc < 2)
 	    {
@@ -2152,7 +2205,7 @@ int	old;
         check_command((long)4, ":%s MODE %s :%s", sptr->name, 
                       sptr->name, flagbuf);
 # endif
-	for (i = 0; i <= highest_fd; i++)
+	for (i = highest_fd; i >= 0; i--)
 		if ((acptr = local[i]) && IsServer(acptr) &&
 		    (acptr != cptr) && (acptr != sptr) && *flagbuf)
 			sendto_one(acptr, ":%s MODE %s :%s",

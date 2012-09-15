@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.25 10 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.27 17 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -176,23 +176,25 @@ va_dcl
 
 	va_start(vl);
 #endif
-	if (debuglevel >= 0)
-		if (level <= debuglevel)
-		    {
+	int	err = errno;
+
+	if ((debuglevel >= 0) && (level <= debuglevel))
+	    {
 #ifndef	USE_VARARGS
-			(void)sprintf(debugbuf, form,
+		(void)sprintf(debugbuf, form,
 				p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #else
-			(void)vsprintf(debugbuf, form, vl);
+		(void)vsprintf(debugbuf, form, vl);
 #endif
-			if (local[2])
-			    {
-				local[2]->sendM++;
-				local[2]->sendB += strlen(debugbuf);
-			    }
-			(void)fprintf(stderr, "%s", debugbuf);
-			(void)fputc('\n', stderr);
+		if (local[2])
+		    {
+			local[2]->sendM++;
+			local[2]->sendB += strlen(debugbuf);
 		    }
+		(void)fprintf(stderr, "%s", debugbuf);
+		(void)fputc('\n', stderr);
+	    }
+	errno = err;
 }
 
 /*
@@ -346,6 +348,7 @@ char	*nick;
 		wwm = 0,	/* whowas array memory used */
 		com = 0,	/* memory used by conf lines */
 		db = 0,		/* memory used by dbufs */
+		rm = 0,		/* res memory used */
 		totcl = 0,
 		totch = 0,
 		totww = 0,
@@ -454,7 +457,9 @@ char	*nick;
 	sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
 
-	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db;
+	rm = cres_mem(cptr);
+
+	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db + rm;
 	tot += sizeof(aHashEntry) * HASHSIZE;
 	tot += sizeof(aHashEntry) * CHANNELHASHSIZE;
 

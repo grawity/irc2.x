@@ -1,6 +1,4 @@
 ############################################################################
-list updated the 27.4.1993
-############################################################################
 
 	If you like in future to establish a link inside the EBIC area,
 	please contact the coordinator of the affected toplevel domain.
@@ -12,21 +10,21 @@ list updated the 27.4.1993
 	These toplevel domains are currently participating EBIC:
 ############################################################################
 
-  *.at  *.ch  *.de   *.fi   *.fr  *.it   *.nl   *.no   *.pl   *.se  *.uk
+  *.at  *.ch  *.de  *.dk  *.fi  *.fr  *.it  *.nl  *.no  *.pl  *.se  *.uk
 
 ############################################################################
     The following national coordinators have been choosen for 92/93:
 ############################################################################
 
 *.at	EASINET, ACONET
-	1. Tom		Tom Kovar		<tom@itc.univie.ac.at>
+	1. Tom		Tom Kovar		<Tom.Kovar@rcvie.co.at>
 
 *.ch	SWITCH, EUNET/CH
 	1. StarNet	Karim Saouli		<Karim.Saouli@epfl.ch>
 	2. Maxim	Maxim Samo		<samo@nessie.cs.id.ethz.ch>
 
-*.de	WIN
-	1. YeggMan	Volker Paulsen		<paulsen@informatik.uni-kl.de>
+*.de	WIN, BelWue
+	1. YeggMan	Volker Paulsen		<Volker.Paulsen@gmd.de>
 	2. Haegar	Thomas Thissen		<tici@uni-paderborn.de>
 
 *.dk	DENET, DKNET
@@ -47,7 +45,7 @@ list updated the 27.4.1993
 
 *.nl	SURFNET/NLNET
 	1. scorpio	Cor Bosman		<bosman@gene.fwi.uva.nl>
-	2. JohnPC	Jan-Pieter Cornet	<cornet@duteca.et.tudelft.nl>
+	2. Erwin	Erwin Bolwidt           <erwin@mars.let.uva.nl>
 
 *.no	UNINETT
 	1. Veggen	Vegard Engen		<vegard@bih.no>
@@ -60,8 +58,6 @@ list updated the 27.4.1993
 	2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
 
 *.uk	JANET, JIPS
-	1.ScottM	Scott A. McIntyre       <scott@shrug.dur.ac.uk>
-
-
+	1. ScottM	Scott A. McIntyre       <scott@shrug.dur.ac.uk>
 
 

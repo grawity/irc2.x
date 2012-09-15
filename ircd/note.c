@@ -79,7 +79,7 @@
 #define FLAGS_NOT_QUEUE_REQUESTS (1<<29)
 #define FLAGS_NEWNICK_DISPLAYED (1<<30)
 
-#define DupNewString(x,y) if (!StrEq(x,y)) { free(x); DupString(x,y); }  
+#define DupNewString(x,y) if (!StrEq(x,y)) { MyFree(x); DupString(x,y); }  
 #define MyEq(x,y) (!myncmp(x,y,strlen(x)))
 #define Usermycmp(x,y) mycmp(x,y)
 #define Key(sptr) KeyFlags(sptr,-1)
@@ -884,15 +884,15 @@ aMsgClient *msgclient;
    }
  FromNameList[fromname_index] = 0;
  fromname_index--;
- free(msgclient->passwd);
- free(msgclient->fromnick);
- free(msgclient->fromname);
- free(msgclient->fromhost);
- free(msgclient->tonick);
- free(msgclient->toname);
- free(msgclient->tohost);
- free(msgclient->message);
- free((char *)msgclient);
+ MyFree(msgclient->passwd);
+ MyFree(msgclient->fromnick);
+ MyFree(msgclient->fromname);
+ MyFree(msgclient->fromhost);
+ MyFree(msgclient->tonick);
+ MyFree(msgclient->toname);
+ MyFree(msgclient->tohost);
+ MyFree(msgclient->message);
+ MyFree((char *)msgclient);
  changes_to_save = 1;
  if (max_fromname - fromname_index > REALLOC_SIZE *2) {
     max_fromname -= REALLOC_SIZE; 

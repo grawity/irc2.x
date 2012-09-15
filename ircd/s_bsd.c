@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.60 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.64 17 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -306,29 +306,21 @@ aConfItem *aconf;
 	if (*aconf->host == '/')
 	    {
 		if (unixport(cptr, aconf->host, aconf->port))
-		    {
 			cptr->fd = -2;
-			free_client(cptr);
-			cptr = NULL;
-		    }
 	    }
 	else
 #endif
-	    {
 		if (inetport(cptr, aconf->host, aconf->port))
-		    {
 			cptr->fd = -2;
-			free_client(cptr);
-			cptr = NULL;
-		    }
-	    }
 
-	if (cptr)
+	if (cptr->fd >= 0)
 	    {
 		cptr->confs = make_link();
 		cptr->confs->next = NULL;
 		cptr->confs->value.aconf = aconf;
 	    }
+	else
+		free_client(cptr);
 	return 0;
 }
 
@@ -406,7 +398,7 @@ void	close_listeners()
 	 * close all 'extra' listening ports we have and unlink the file
 	 * name if it was a unix socket.
 	 */
-	for (i = MAXCONNECTIONS - 1; i; i--)
+	for (i = highest_fd; i >= 0; i--)
 	    {
 		if (!(cptr = local[i]))
 			continue;
@@ -514,12 +506,12 @@ void	init_sys()
 #ifdef TIOCNOTTY
 		if ((fd = open("/dev/tty", O_RDWR)) >= 0)
 		    {
-			ioctl(fd, TIOCNOTTY, (char *)NULL);
+			(void)ioctl(fd, TIOCNOTTY, (char *)NULL);
 			(void)close(fd);
 		    }
 #endif
 #if defined(HPUX) || defined(SOL20) || defined(DYNIXPTX) || \
-    defined(_POSIX_SOURCE)
+    defined(_POSIX_SOURCE) || defined(SVR4)
 		(void)setsid();
 #else
 		(void)setpgrp(0, (int)getpid());
@@ -529,7 +521,6 @@ void	init_sys()
 	    }
 init_dgram:
 	resfd = init_resolver(0x1f);
-	udpfd = setup_ping();
 
 	return;
 }
@@ -581,7 +572,7 @@ Reg2	char	*sockn;
 	/* If descriptor is a tty, special checking... */
 	if (isatty(cptr->fd))
 	    {
-		(void)strncpy(sockn, me.sockhost, HOSTLEN);
+		strncpyzt(sockn, me.sockhost, HOSTLEN);
 		bzero((char *)&sk, sizeof(struct sockaddr_in));
 	    }
 	else if (getpeername(cptr->fd, &sk, &len) == -1)
@@ -593,7 +584,7 @@ Reg2	char	*sockn;
 	if (inet_netof(sk.sin_addr) == IN_LOOPBACKNET)
 	    {
 		cptr->hostp = NULL;
-		(void)strncpy(sockn, me.sockhost, HOSTLEN);
+		strncpyzt(sockn, me.sockhost, HOSTLEN);
 	    }
 	bcopy((char *)&sk.sin_addr, (char *)&cptr->ip,
 		sizeof(struct in_addr));
@@ -926,10 +917,10 @@ aClient	*cptr;
 	    }
 	sendto_one(cptr, "SERVER %s 1 :%s",
 		   my_name_for_link(me.name, aconf), me.info);
-	if (!(cptr->flags & FLAGS_DEADSOCKET))
+	if (!IsDead(cptr))
 		start_auth(cptr);
 
-	return (cptr->flags & FLAGS_DEADSOCKET) ? -1 : 0;
+	return (IsDead(cptr)) ? -1 : 0;
 }
 
 /*
@@ -1336,7 +1327,7 @@ fd_set	*rfd;
 						 sizeof(readbuf));
 				if (dolen <= 0)
 					break;
-				if ((done = dopacket(cptr, readbuf, length)))
+				if ((done = dopacket(cptr, readbuf, dolen)))
 					return done;
 				break;
 			    }
@@ -1362,8 +1353,7 @@ fd_set	*rfd;
 				    }
 				dolen = dbuf_get(&cptr->recvQ, readbuf, 511);
 				if (dolen > 0 && DBufLength(&cptr->recvQ))
-					(void)dbuf_delete(&cptr->recvQ,
-						    DBufLength(&cptr->recvQ));
+					DBufClear(&cptr->recvQ);
 			    }
 
 			if (dolen > 0 &&
@@ -1402,7 +1392,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 		FD_ZERO(&read_set);
 		FD_ZERO(&write_set);
 
-		for (i = 0; i <= highest_fd; i++)
+		for (i = highest_fd; i >= 0; i--)
 		    {
 			if (!(cptr = local[i]))
 				continue;
@@ -1479,7 +1469,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	 * because these can not be processed using the normal loops below.
 	 * -avalon
 	 */
-	for (i = 0; (auth > 0) && (i <= highest_fd); i++)
+	for (i = highest_fd; (auth > 0) && (i >= 0); i--)
 	    {
 		if (!(cptr = local[i]))
 			continue;
@@ -1497,7 +1487,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			read_authports(cptr);
 		    }
 	    }
-	for (i = 0; i <= highest_fd; i++)
+	for (i = highest_fd; i >= 0; i--)
 		if ((cptr = local[i]) && FD_ISSET(i, &read_set) &&
 		    IsListening(cptr))
 		    {
@@ -1544,7 +1534,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 				cptr->acpt = &me;
 		    }
 
-	for (i = 0; i <= highest_fd; i++)
+	for (i = highest_fd; i >= 0; i--)
 	    {
 		if (!(cptr = local[i]) || IsMe(cptr))
 			continue;
@@ -1559,21 +1549,25 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 				  write_err = completed_connection(cptr);
 			if (!write_err)
 				  (void)send_queued(cptr);
-			if (cptr->flags & FLAGS_DEADSOCKET || write_err)
+			if (IsDead(cptr) || write_err)
 			    {
+deadsocket:
 				if (FD_ISSET(i, &read_set))
 				    {
 					nfds--;
 					FD_CLR(i, &read_set);
 				    }
-				 (void)exit_client(cptr, cptr, &me,
+				(void)exit_client(cptr, cptr, &me,
 					     strerror(get_sockerr(cptr)));
-				 continue;
+				continue;
 			    }
 		    }
+		length = 1;	/* for fall through case */
 		if (!NoNewLine(cptr) || FD_ISSET(i, &read_set))
 			length = read_packet(cptr, &read_set);
-		if (!FD_ISSET(i, &read_set))
+		if (IsDead(cptr))
+			goto deadsocket;
+		if (!FD_ISSET(i, &read_set) && length > 0)
 			continue;
 		nfds--;
 		readcalls++;
@@ -1604,7 +1598,8 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 					      cptr);
 		    }
 		if (length != FLUSH_BUFFER)
-			(void)exit_client(cptr, cptr, &me, "Bad link?");
+			(void)exit_client(cptr, cptr, &me,
+					  strerror(get_sockerr(cptr)));
 	    }
 	return 0;
 }
@@ -2083,26 +2078,27 @@ int	setup_ping()
 
 	if ((udpfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 	    {
-		perror("socket udp");
+		Debug((DEBUG_ERROR, "socket udp : %s", strerror(errno)));
 		return -1;
 	    }
 	if (setsockopt(udpfd, SOL_SOCKET, SO_REUSEADDR,
-			(char *)&on, sizeof(on)))
+			(char *)&on, sizeof(on)) == -1)
 	    {
-		perror("setsockopt so_reuseaddr");
-		close(udpfd);
+		Debug((DEBUG_ERROR, "setsockopt so_reuseaddr : %s",
+			strerror(errno)));
+		(void)close(udpfd);
 		return -1;
 	    }
 	if (bind(udpfd, (struct sockaddr *)&from, sizeof(from))==-1)
 	    {
-		perror("bind");
-		close(udpfd);
+		Debug((DEBUG_ERROR, "bind : %s", strerror(errno)));
+		(void)close(udpfd);
 		return -1;
 	    }
 	if (fcntl(udpfd, F_SETFL, FNDELAY)==-1)
 	    {
-		perror("fcntl fndelay");
-		close(udpfd);
+		Debug((DEBUG_ERROR, "fcntl fndelay : %s", strerror(errno)));
+		(void)close(udpfd);
 		return -1;
 	    }
 	return udpfd;
@@ -2224,7 +2220,7 @@ static	void	do_dns_async()
 		cptr = ln.value.cptr;
 		ClearDNS(cptr);
 		if (check_server(cptr, hp, NULL, NULL, 1))
-			(void)exit_client(cptr, cptr, cptr,
+			(void)exit_client(cptr, cptr, &me,
 				"No Authorization");
 		break;
 	default :

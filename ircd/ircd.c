@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.44 10 Sep 1993 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.46 10 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -407,12 +407,12 @@ char	*argv[];
 	(void)signal(SIGUSR1, s_monitor);
 #endif
 
+#ifdef	CHROOTDIR
 	if (chdir(dpath))
 	    {
 		perror("chdir");
 		exit(-1);
 	    }
-#ifdef CHROOTDIR
 	res_init();
 	if (chroot(DPATH))
 	  {
@@ -463,7 +463,7 @@ char	*argv[];
 			dpath = p;
 			break;
 		    case 'o': /* Per user local daemon... */
-                        (void)setuid((uid_t)getuid());
+                        (void)setuid((uid_t)uid);
 			bootopt |= BOOT_OPER;
 		        break;
 #ifdef CMDLINE_CONFIG
@@ -486,6 +486,9 @@ char	*argv[];
                         (void)setuid((uid_t)uid);
 			bootopt |= BOOT_TTY;
 			break;
+		    case 'v':
+			(void)printf("ircd %s\n", version);
+			exit(0);
 		    case 'x':
 #ifdef	DEBUGMODE
                         (void)setuid((uid_t)uid);
@@ -504,6 +507,14 @@ char	*argv[];
 			break;
 		    }
 	    }
+
+#ifndef	CHROOT
+	if (chdir(dpath))
+	    {
+		perror("chdir");
+		exit(-1);
+	    }
+#endif
 
 #ifndef IRC_UID
 	if ((uid != euid) && !euid)
@@ -596,7 +607,8 @@ char	*argv[];
 	    }
 	else if (inetport(&me, "*", 0))
 		exit(1);
-		
+
+	(void)setup_ping();
 	(void)get_my_name(&me, me.sockhost, sizeof(me.sockhost)-1);
 	if (me.name[0] == '\0')
 		strncpyzt(me.name, me.sockhost, sizeof(me.name));

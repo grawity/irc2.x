@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_auth.c	1.16 5/8/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_auth.c	1.17 17 Oct 1993 (C) 1992 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -205,6 +205,8 @@ Reg1	aClient	*cptr;
 	    }
 	else if (len != 0)
 	    {
+		if (!index(cptr->buffer, '\n') && !index(cptr->buffer, '\r'))
+			return;
 		Debug((DEBUG_ERROR,"local %d remote %d s %x", locp, remp, s));
 		Debug((DEBUG_ERROR,"bad auth reply in [%s]", cptr->buffer));
 		*ruser = '\0';

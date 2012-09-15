@@ -35,7 +35,7 @@
 #endif
 
 #if defined(HPUX) || defined(VMS) || defined(AIX) || defined(SOL20) || \
-    defined(ESIX) || defined(DYNIXPTX)
+    defined(ESIX) || defined(DYNIXPTX) || defined(SVR4)
 #include <string.h>
 #define bcopy(a,b,s)  memcpy(b,a,s)
 #define bzero(a,s)    memset(a,0,s)

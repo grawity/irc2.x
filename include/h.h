@@ -162,7 +162,7 @@ extern	void	free_client PROTO((aClient *));
 extern	void	free_link PROTO((Link *));
 extern	void	free_conf PROTO((aConfItem *));
 extern	void	free_class PROTO((aClass *));
-extern	void	free_user PROTO((anUser *));
+extern	void	free_user PROTO((anUser *, aClient *));
 extern	Link	*make_link PROTO(());
 extern	anUser	*make_user PROTO((aClient *));
 extern	aConfItem *make_conf PROTO(());

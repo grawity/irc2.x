@@ -8,6 +8,7 @@
 #include "common.h"
 #include "sys.h"
 #include "res.h"
+#include "numeric.h"
 #include "h.h"
 
 #include <signal.h>
@@ -17,7 +18,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.30 10 Sep 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.31 10 Oct 1993 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -160,13 +161,13 @@ ResRQ	*old;
 #endif
 	r2ptr = old;
 	if (r2ptr->he.h_name)
-		(void)free((char *)r2ptr->he.h_name);
+		MyFree((char *)r2ptr->he.h_name);
 	for (i = 0; i < MAXALIASES; i++)
 		if ((s = r2ptr->he.h_aliases[i]))
-			(void)free(s);
+			MyFree(s);
 	if (r2ptr->name)
-		(void)free(r2ptr->name);
-	(void)free(r2ptr);
+		MyFree(r2ptr->name);
+	MyFree(r2ptr);
 
 	return;
 }
@@ -1253,12 +1254,12 @@ aCache	*ocp;
 	 * of alias pointers.
 	 */
 	if (hp->h_name)
-		(void)free(hp->h_name);
+		MyFree(hp->h_name);
 	if (hp->h_aliases)
 	    {
 		for (hashv = 0; hp->h_aliases[hashv]; hashv++)
-			(void)free(hp->h_aliases[hashv]);
-		(void)free((char *)hp->h_aliases);
+			MyFree(hp->h_aliases[hashv]);
+		MyFree((char *)hp->h_aliases);
 	    }
 
 	/*
@@ -1267,11 +1268,11 @@ aCache	*ocp;
 	if (hp->h_addr_list)
 	    {
 		if (*hp->h_addr_list)
-			(void)free((char *)*hp->h_addr_list);
-		(void)free((char *)hp->h_addr_list);
+			MyFree((char *)*hp->h_addr_list);
+		MyFree((char *)hp->h_addr_list);
 	    }
 
-	(void)free((char *)ocp);
+	MyFree((char *)ocp);
 
 	incache--;
 	cainfo.ca_dels++;
@@ -1353,4 +1354,40 @@ char	*parv[];
 		   reinfo.re_unkrep, reinfo.re_shortttl, reinfo.re_sent,
 		   reinfo.re_resends, reinfo.re_timeouts);
 	return 0;
+}
+
+u_long	cres_mem(sptr)
+aClient	*sptr;
+{
+	register aCache	*c = cachetop;
+	register struct	hostent	*h;
+	register int	i;
+	u_long	nm = 0, im = 0, sm = 0, ts = 0;
+
+	for ( ;c ; c = c->list_next)
+	    {
+		sm += sizeof(*c);
+		h = &c->he;
+		for (i = 0; h->h_addr_list[i]; i++)
+		    {
+			im += sizeof(char *);
+			im += sizeof(struct in_addr);
+		    }
+		im += sizeof(char *);
+		for (i = 0; h->h_aliases[i]; i++)
+		    {
+			nm += sizeof(char *);
+			nm += strlen(h->h_aliases[i]);
+		    }
+		nm += i - 1;
+		nm += sizeof(char *);
+		if (h->h_name)
+			nm += strlen(h->h_name);
+	    }
+	ts = ARES_CACSIZE * sizeof(CacheTable);
+	sendto_one(sptr, ":%s %d %s :RES table %d",
+		   me.name, RPL_STATSDEBUG, sptr->name, ts);
+	sendto_one(sptr, ":%s %d %s :Structs %d IP storage %d Name storage %d",
+		   me.name, RPL_STATSDEBUG, sptr->name, sm, im, nm);
+	return ts + sm + im + nm;
 }

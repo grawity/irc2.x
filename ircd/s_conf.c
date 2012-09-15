@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.47 13 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.48 08 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -891,7 +891,7 @@ int	opt;
 				len += strlen(aconf->host);
 				newhost = (char *)MyMalloc(len);
 				(void)sprintf(newhost, "*@%s", aconf->host);
-				(void)free(aconf->host);
+				MyFree(aconf->host);
 				aconf->host = newhost;
 			    }
 		/*

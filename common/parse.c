@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.28 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.30 17 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -36,7 +36,7 @@ Computing Center and Jarkko Oikarinen";
 #include "h.h"
 
 /*
- * NOTE: parse() should not be called recusively by other fucntions!
+ * NOTE: parse() should not be called recursively by other functions!
  */
 static	char	*para[MAXPARA+1];
 #ifndef	CLIENT_COMPILE
@@ -58,20 +58,23 @@ int	n;
     {
 	Reg1	unsigned char	*s1 = (unsigned char *)str1;
 	Reg2	unsigned char	*s2 = (unsigned char *)str2;
-	while (toupper(*s1) == toupper(*s2))
+	Reg3	int		res;
+
+	while ((res = toupper(*s1) - toupper(*s2)) == 0)
 	    {
 		s1++; s2++; n--;
 		if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
 			return 0;
 	    }
-	return (*s1 - *s2);
+	return (res);
     }
 
 /*
 **  Case insensitive comparison of two NULL terminated strings.
 **
-**	return	0, if equal
-**		1, if not equal
+**	returns	 0, if s1 equal to s2
+**		<0, if s1 lexicographically less than s2
+**		>0, if s1 lexicographically greater than s2
 */
 int	mycmp(s1, s2)
 char	*s1;
@@ -79,15 +82,16 @@ char	*s2;
     {
 	Reg1	unsigned char	*str1 = (unsigned char *)s1;
 	Reg2	unsigned char	*str2 = (unsigned char *)s2;
+	Reg3	int		res;
 
-	while (toupper(*str2) == toupper(*str1))
+	while ((res = toupper(*str1) - toupper(*str2)) == 0)
 	    {
 		if (*str1 == '\0')
 			return 0;
 		str1++;
 		str2++;
 	    }
-	return (*str1 - *str2);
+	return (res);
     }
 
 /*
@@ -270,6 +274,10 @@ struct	Message *mptr;
 	Reg3	int	len, i, numeric, paramcount;
 
 	Debug((DEBUG_DEBUG,"Parsing: %s", buffer));
+#ifndef	CLIENT_COMPILE
+	if (IsDead(cptr))
+		return 0;
+#endif
 
 	s = sender;
 	*s = '\0';
@@ -290,12 +298,12 @@ struct	Message *mptr;
 		if (s = index(sender, '!'))
 		    {
 			*s++ = '\0';
-			(void)strncpy(userhost, s, sizeof(userhost));
+			strncpyzt(userhost, s, sizeof(userhost));
 		    }
 		else if (s = index(sender, '@'))
 		    {
 			*s++ = '\0';
-			(void)strncpy(userhost, s, sizeof(userhost));
+			strncpyzt(userhost, s, sizeof(userhost));
 		    }
 #endif
 		/*

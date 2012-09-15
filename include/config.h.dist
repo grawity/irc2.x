@@ -34,6 +34,7 @@
 #undef	SOL20			/* Solaris2 */
 #undef	ESIX			/* ESIX */
 #undef	NEXT			/* NeXTStep */
+#undef        SVR4
 
 /* Do these work? I dunno... */
 
@@ -369,6 +370,11 @@
  */
 #define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
                                  /*                    300000 for backbones */
+/*
+ *  BUFFERPOOL is the maximum size of the total of all sendq's.
+ *  Recommended value is twice the MAXSENDQLENGTH.
+ */
+#define	BUFFERPOOL     (2 * MAXSENDQLENGTH)
 
 /*
  * use these to setup a Unix domain socket to connect clients/servers to.

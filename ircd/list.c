@@ -37,7 +37,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)list.c	2.20 10 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)list.c	2.22 15 Oct 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -141,7 +141,7 @@ aClient	*from;
 void	free_client(cptr)
 aClient	*cptr;
 {
-	(void)free((char *)cptr);
+	MyFree((char *)cptr);
 }
 
 /*
@@ -162,6 +162,7 @@ aClient *cptr;
 #endif
 		user->away = NULL;
 		user->refcnt = 1;
+		user->joined = 0;
 		user->channel = NULL;
 		user->invited = NULL;
 		cptr->user = user;
@@ -194,14 +195,33 @@ aClient	*cptr;
 **	Decrease user reference count by one and realease block,
 **	if count reaches 0
 */
-void	free_user(user)
+void	free_user(user, cptr)
 Reg1	anUser	*user;
+aClient	*cptr;
 {
 	if (--user->refcnt <= 0)
 	    {
 		if (user->away)
-			(void)free((char *)user->away);
-		(void)free((char *)user);
+			MyFree((char *)user->away);
+		/*
+		 * sanity check
+		 */
+		if (user->joined || user->refcnt < 0 ||
+		    user->invited || user->channel)
+#ifdef DEBUGMODE
+			dumpcore("%#x user (%s!%s@%s) %#x %#x %#x %d %d",
+				cptr, cptr ? cptr->name : "<noname>",
+				user->username, user->host, user,
+				user->invited, user->channel, user->joined,
+				user->refcnt);
+#else
+			sendto_ops("* %#x user (%s!%s@%s) %#x %#x %#x %d %d *",
+				cptr, cptr ? cptr->name : "<noname>",
+				user->username, user->host, user,
+				user->invited, user->channel, user->joined,
+				user->refcnt);
+#endif
+		MyFree((char *)user);
 #ifdef	DEBUGMODE
 		users.inuse--;
 #endif
@@ -229,13 +249,13 @@ Reg1	aClient	*cptr;
 	    {
 		add_history(cptr);
 		off_history(cptr);
-		(void)free_user(cptr->user);
+		(void)free_user(cptr->user, cptr);
 	    }
 	if (cptr->serv)
 	    {
 		if (cptr->serv->user)
-			free_user(cptr->serv->user);
-		(void)free((char *)cptr->serv);
+			free_user(cptr->serv->user, cptr);
+		MyFree((char *)cptr->serv);
 #ifdef	DEBUGMODE
 		servs.inuse--;
 #endif
@@ -301,7 +321,7 @@ Link	*make_link()
 void	free_link(lp)
 Reg1	Link	*lp;
 {
-	(void)free((char *)lp);
+	MyFree((char *)lp);
 #ifdef	DEBUGMODE
 	links.inuse--;
 #endif
@@ -322,7 +342,7 @@ aClass	*make_class()
 void	free_class(tmp)
 Reg1	aClass	*tmp;
 {
-	(void)free((char *)tmp);
+	MyFree((char *)tmp);
 #ifdef	DEBUGMODE
 	classs.inuse--;
 #endif
@@ -356,7 +376,7 @@ aConfItem *aconf;
 		bzero(aconf->passwd, strlen(aconf->passwd));
 	MyFree(aconf->passwd);
 	MyFree(aconf->name);
-	(void)free((char *)aconf);
+	MyFree((char *)aconf);
 #ifdef	DEBUGMODE
 	aconfs.inuse--;
 #endif

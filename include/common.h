@@ -45,7 +45,7 @@
 
 #if defined(mips) || defined(pyr) || defined(apollo) || (defined(sequent) &&\
     !defined(DYNIXPTX)) || defined(__convex__) ||\
-    (defined(BSD) && !defined(sun) && !defined(ultrix))
+    (defined(BSD) && !defined(sun) && !defined(ultrix) && !defined(__osf__))
 char	*malloc(), *calloc();
 void	free();
 #else
@@ -96,7 +96,11 @@ extern char *strtoken PROTO((char **, char *, char *));
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 #endif
 
+#if !defined(DEBUGMODE) || defined(CLIENT_COMPILE)
 #define MyFree(x)       if ((x) != NULL) free(x)
+#else
+#define	free(x)		MyFree(x)
+#endif
 #define DupString(x,y) do{x=MyMalloc(strlen(y)+1);(void)strcpy(x,y);}while(0)
 
 extern unsigned char tolowertab[];

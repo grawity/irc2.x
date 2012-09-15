@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)whowas.c	2.14 07 Aug 1993 (C) 1988 Markku Savela";
+static  char sccsid[] = "@(#)whowas.c	2.15 15 Oct 1993 (C) 1988 Markku Savela";
 #endif
 
 #include "struct.h"
@@ -52,7 +52,7 @@ Reg1	aClient	*cptr;
 
 	np2 = &was[ww_index];
 	if (np2->ww_user)
-		free_user(np2->ww_user);
+		free_user(np2->ww_user, np2->ww_online);
 
 	bcopy((char *)&ntmp, (char *)np2, sizeof(aName));
 

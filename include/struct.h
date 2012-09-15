@@ -173,6 +173,7 @@ typedef	struct	SMode	Mode;
 #define	IsListening(x)		((x)->flags & FLAGS_LISTEN)
 #define	DoAccess(x)		((x)->flags & FLAGS_CHKACCESS)
 #define	IsLocal(x)		((x)->flags & FLAGS_LOCAL)
+#define	IsDead(x)		((x)->flags & FLAGS_DEADSOCKET)
 
 #define	SetOper(x)		((x)->flags |= FLAGS_OPER)
 #define	SetLocOp(x)    		((x)->flags |= FLAGS_LOCOP)
@@ -201,8 +202,10 @@ typedef	struct	SMode	Mode;
 #define	DEBUG_DNS    4	/* used by all DNS related routines - a *lot* */
 #define	DEBUG_INFO   5	/* general usful info */
 #define	DEBUG_NUM    6	/* numerics */
-#define	DEBUG_SEND   8	/* everything that is sent out */
-#define	DEBUG_DEBUG  9	/* anything to do with debugging, ie unimportant :) */
+#define	DEBUG_SEND   7	/* everything that is sent out */
+#define	DEBUG_DEBUG  8	/* anything to do with debugging, ie unimportant :) */
+#define	DEBUG_MALLOC 9	/* malloc/free calls */
+#define	DEBUG_LIST  10	/* debug list use */
 
 /*
  * defines for curses in client
@@ -262,6 +265,7 @@ struct	User	{
 	char	*away;		/* pointer to away message */
 	time_t	last;
 	int	refcnt;		/* Number of times this block is referenced */
+	int	joined;		/* number of channels joined */
 	char	username[USERLEN+1];
 	char	host[HOSTLEN+1];
         char	server[HOSTLEN+1];
@@ -273,6 +277,9 @@ struct	User	{
 				** not yet be in links while USER is
 				** introduced... --msa
 				*/
+#ifdef	LIST_DEBUG
+	aClient	*bcptr;
+#endif
 };
 
 struct	Server	{
@@ -281,6 +288,9 @@ struct	Server	{
 	char	up[HOSTLEN+1];	/* uplink for this server */
 	char	by[NICKLEN+1];
 	aConfItem *nline;	/* N-line pointer for this server */
+#ifdef	LIST_DEBUG
+	aClient	*bcptr;
+#endif
 };
 
 struct Client	{

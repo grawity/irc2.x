@@ -18,7 +18,8 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)support.c	2.16 07 Aug 1993 (C) 1990, 1991 Armin Gruner";
+static  char sccsid[] = "@(#)support.c	2.18 15 Oct 1993 (C) 1990, 1991 Armin Gruner;\
+1992, 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -205,40 +206,205 @@ struct in_addr in;
 #endif /* NEED_INET_NETOF */
 
 
-char    *MyMalloc(x)
-int     x;
+#if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
+void	dumpcore(msg, p1, p2, p3, p4, p5, p6, p7, p8, p9)
+char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 {
-	char *ret = (char *) malloc((unsigned)x);
+	static	time_t	lastd = 0;
+	static	int	dumps = 0;
+	char	corename[12];
+	time_t	now;
+	int	p;
+
+	now = time(NULL);
+
+	if (!lastd)
+		lastd = now;
+	else if (now - lastd < 60 && dumps > 2)
+		(void)s_die();
+	if (now - lastd > 60)
+	    {
+		lastd = now;
+		dumps = 1;
+	    }
+	else
+		dumps++;
+	p = getpid();
+	if (fork()>0) {
+		kill(p, 3);
+		kill(p, 9);
+	}
+	write_pidfile();
+	(void)sprintf(corename, "core.%d", p);
+	(void)rename("core", corename);
+	Debug((DEBUG_FATAL, "Dumped core : core.%d", p));
+	sendto_ops("Dumped core : core.%d", p);
+	Debug((DEBUG_FATAL, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9));
+	sendto_ops(msg, p1, p2, p3, p4, p5, p6, p7, p8, p9);
+		(void)s_die();
+}
+
+static	char	*marray[20000];
+static	int	mindex = 0;
+
+#define	SZ_EX	(sizeof(char *) + sizeof(size_t) + 4)
+#define	SZ_CHST	(sizeof(char *) + sizeof(size_t))
+#define	SZ_CH	(sizeof(char *))
+#define	SZ_ST	(sizeof(size_t))
+
+char	*MyMalloc(x)
+size_t	x;
+{
+	register int	i;
+	register char	**s;
+	char	*ret;
+
+	ret = (char *)malloc(x + (size_t)SZ_EX);
 
 	if (!ret)
 	    {
-#ifndef	CLIENT_COMPILE
+# ifndef	CLIENT_COMPILE
 		outofmemory();
-#else
+# else
 		perror("malloc");
 		exit(-1);
-#endif
+# endif
 	    }
-	return ret;
+	bzero(ret, (int)x + SZ_EX);
+	bcopy((char *)&ret, ret, SZ_CH);
+	bcopy((char *)&x, ret + SZ_ST, SZ_ST);
+	bcopy("VAVA", ret + SZ_CHST + (int)x, 4);
+	Debug((DEBUG_MALLOC, "MyMalloc(%ld) = %#x", x, ret+8));
+	for(i = 0, s = marray; *s && i < mindex; i++, s++)
+		;
+ 	if (i < 20000)
+	    {
+		*s = ret;
+		if (i == mindex)
+			mindex++;
+	    }
+	return ret + SZ_CHST;
     }
 
 char    *MyRealloc(x, y)
 char	*x;
-int	y;
+size_t	y;
     {
-	char *ret = (char *)realloc(x, (unsigned)y);
+	register int	l;
+	register char	**s;
+	char	*ret, *cp;
+	size_t	i;
+	int	k;
+
+	x -= SZ_CHST;
+	bcopy(x, (char *)&cp, SZ_CH);
+	bcopy(x + SZ_CH, (char *)&i, SZ_ST);
+	bcopy(x + (int)i + SZ_CHST, (char *)&k, 4);
+	if (bcmp((char *)&k, "VAVA", 4) || (x != cp))
+		dumpcore("MyRealloc %#x %d %d %#x %#x", x, y, i, cp, k);
+	ret = (char *)realloc(x, y + (size_t)SZ_EX);
 
 	if (!ret)
 	    {
-#ifndef	CLIENT_COMPILE
+# ifndef	CLIENT_COMPILE
 		outofmemory();
-#else
+# else
 		perror("realloc");
 		exit(-1);
-#endif
+# endif
+	    }
+	bcopy((char *)&ret, ret, SZ_CH);
+	bcopy((char *)&y, ret + SZ_CH, SZ_ST);
+	bcopy("VAVA", ret + SZ_CHST + (int)y, 4);
+	Debug((DEBUG_NOTICE, "MyRealloc(%#x,%ld) = %#x", x, y, ret + SZ_CHST));
+	for(l = 0, s = marray; *s != x && i < mindex; l++, s++)
+		;
+ 	if (l < mindex)
+		*s = NULL;
+	else if (l == mindex)
+		Debug((DEBUG_MALLOC, "%#x !found", x));
+	for(l = 0, s = marray; *s && l < mindex; l++,s++)
+		;
+ 	if (l < 20000)
+	    {
+		*s = ret;
+		if (l == mindex)
+			mindex++;
+	    }
+	return ret + SZ_CHST;
+    }
+
+void	MyFree(x)
+char	*x;
+{
+	size_t	i;
+	char	*j;
+	u_char	k[4];
+	register int	l;
+	register char	**s;
+
+	if (!x)
+		return;
+	x -= SZ_CHST;
+
+	bcopy(x, (char *)&j, SZ_CH);
+	bcopy(x + SZ_CH, (char *)&i, SZ_ST);
+	bcopy(x + SZ_CHST + (int)i, (char *)k, 4);
+
+	if (bcmp((char *)k, "VAVA", 4) || (j != x))
+		dumpcore("MyFree %#x %ld %#x %#x", x, i, j,
+			 (k[3]<<24) | (k[2]<<16) | (k[1]<<8) | k[0]);
+
+#undef	free
+	(void)free(x);
+#define	free(x)	MyFree(x)
+	Debug((DEBUG_MALLOC, "MyFree(%#x)",x + SZ_CHST));
+
+	for (l = 0, s = marray; *s != x && l < mindex; l++, s++)
+		;
+	if (l < mindex)
+		*s = NULL;
+	else if (l == mindex)
+		Debug((DEBUG_MALLOC, "%#x !found", x));
+}
+
+#else
+char	*MyMalloc(x)
+size_t	x;
+{
+	char *ret = (char *)malloc(x);
+
+	if (!ret)
+	    {
+# ifndef	CLIENT_COMPILE
+		outofmemory();
+# else
+		perror("malloc");
+		exit(-1);
+# endif
+	    }
+	return	ret;
+}
+
+char	*MyRealloc(x, y)
+char	*x;
+size_t	y;
+    {
+	char *ret = (char *)realloc(x, y);
+
+	if (!ret)
+	    {
+# ifndef CLIENT_COMPILE
+		outofmemory();
+# else
+		perror("realloc");
+		exit(-1);
+# endif
 	    }
 	return ret;
     }
+#endif
+
 
 /*
 ** read a string terminated by \r or \n in from a fd

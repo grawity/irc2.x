@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.47 11 Sep 1993 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.49 15 Oct 1993 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -211,7 +211,7 @@ char	*banid;
 		    {
 			tmp = *ban;
 			*ban = tmp->next;
-			(void)free(tmp->value.cp);
+			MyFree(tmp->value.cp);
 			free_link(tmp);
 			break;
 		    }
@@ -264,6 +264,7 @@ int	flags;
 		ptr->value.chptr = chptr;
 		ptr->next = who->user->channel;
 		who->user->channel = ptr;
+		who->user->joined++;
 	    }
 }
 
@@ -288,6 +289,7 @@ aChannel *chptr;
 			free_link(tmp);
 			break;
 		    }
+	sptr->user->joined--;
 	sub1_from_channel(chptr);
 }
 
@@ -771,16 +773,8 @@ char	*parv[], *mbuf, *pbuf;
 			break;
 		case 'i' : /* falls through for default case */
 			if (whatt == MODE_DEL)
-			    {
-				Link	**lpp;
-
-				for (lpp = &(chptr->invites); *lpp; )
-				    {
-					lp = *lpp;
-					*lpp = lp->next;
-					free_link(lp);
-				    }
-			    }
+				while (lp = chptr->invites)
+					del_invite(lp->value.cptr, chptr);
 		default:
 			for (ip = flags; *ip; ip += 2)
 				if (*(ip+1) == *curr)
@@ -1109,9 +1103,13 @@ aChannel *chptr;
 	 */
 	if (list_length(cptr->user->invited) >= MAXCHANNELSPERUSER)
 	    {
+/*		This forgets the channel side of invitation     -Vesa
 		inv = cptr->user->invited;
 		cptr->user->invited = inv->next;
 		free_link(inv);
+*/
+		del_invite(cptr, cptr->user->invited->value.chptr);
+ 
 	    }
 	/*
 	 * add client to channel invite list
@@ -1180,7 +1178,7 @@ Reg1	aChannel *chptr;
 		    {
 			obtmp = tmp;
 			tmp = tmp->next;
-			(void)free(obtmp->value.cp);
+			MyFree(obtmp->value.cp);
 			free_link(obtmp);
 		    }
 		if (chptr->prevch)
@@ -1190,7 +1188,7 @@ Reg1	aChannel *chptr;
 		if (chptr->nextch)
 			chptr->nextch->prevch = chptr->prevch;
 		(void)del_from_channel_hash_table(chptr->chname, chptr);
-		(void)free((char *)chptr);
+		MyFree((char *)chptr);
 	    }
 }
 
@@ -1212,7 +1210,7 @@ char	*parv[];
 	int	i, flags = 0;
 	char	*p = NULL, *p2 = NULL;
 
-	if (check_registered(sptr) || !sptr->user)
+	if (check_registered_user(sptr))
 		return 0;
 
 	if (parc < 2 || *parv[1] == '\0')
@@ -1285,8 +1283,7 @@ char	*parv[];
 			*/
 			flags = (ChannelExists(name)) ? 0 : CHFL_CHANOP;
 
-			if (list_length(sptr->user->channel) >=
-			    MAXCHANNELSPERUSER)
+			if (sptr->user->joined >= MAXCHANNELSPERUSER)
 			    {
 				sendto_one(sptr, err_str(ERR_TOOMANYCHANNELS),
 					   me.name, parv[0], name);
@@ -1348,7 +1345,7 @@ char	*parv[];
 	Reg1	aChannel *chptr;
 	char	*p = NULL, *name;
 
-	if (check_registered(sptr))
+	if (check_registered_user(sptr))
 		return 0;
 
 	if (parc < 2 || parv[1][0] == '\0')
@@ -1614,7 +1611,7 @@ char	*parv[];
 	aClient *acptr;
 	aChannel *chptr;
 
-	if (check_registered(sptr))
+	if (check_registered_user(sptr))
 		return 0;
 
 	if (parc < 3 || *parv[1] == '\0')
