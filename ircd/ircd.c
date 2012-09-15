@@ -42,6 +42,7 @@ aClient *client = &me;		/* Pointer to beginning of Client list */
 void	server_reboot();
 void	restart __P((char *));
 static	void	open_debugfile(), setup_signals();
+time_t	io_loop __P((time_t));
 
 istat_t	istat;
 char	**myargv;
@@ -727,7 +728,7 @@ char	*argv[];
 	setup_me(&me);
 	check_class();
 	ircd_writetune(tunefile);
-
+/* This cannot be right anymore..
 	if (bootopt & BOOT_INETD)
 	    {
 		aClient	*tmp;
@@ -743,6 +744,7 @@ char	*argv[];
 		(void)inetport(tmp, "*", 0);
 		local[0] = tmp;
 	    }
+*/
 	if (bootopt & BOOT_OPER)
 	    {
 		aClient *tmp = add_connection(&me, 0);
@@ -765,7 +767,7 @@ char	*argv[];
 }
 
 
-io_loop(delay)
+time_t	io_loop(delay)
 time_t	delay;
 {
 	static	time_t	nextc = 0, nextactive = 0, lastl = 0;
@@ -864,7 +866,8 @@ time_t	delay;
 	if (dorestart)
 		restart("Caught SIGINT");
 	if (dorehash)
-	    {
+	    {	/* Only on signal, not on oper /rehash */
+		ircd_writetune(tunefile);
 		(void)rehash(&me, &me, 1);
 		dorehash = 0;
 	    }
@@ -994,7 +997,7 @@ static	void	setup_signals()
 
 /*
  * Called from bigger_hash_table(), s_die(), server_reboot(),
- * main(after initializations), grow_history().
+ * main(after initializations), grow_history(), rehash(io_loop) signal.
  */
 void ircd_writetune(filename)
 char *filename;

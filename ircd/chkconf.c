@@ -48,7 +48,8 @@ static  char sccsid[] = "@(#)chkconf.c	1.1 1/21/95 (C) 1993 Darren Reed";
 
 static	void	new_class();
 static	char	*getfield(), confchar ();
-static	int	openconf(), validate();
+static	int	openconf(), validate __P((aConfItem *));
+static	int	dgets __P((int, char *, int));
 static	aClass	*get_class();
 static	aConfItem	*initconf();
 
@@ -59,7 +60,7 @@ static	char	maxsendq[12];
 
 #define	SHOWSTR(x)	((x) ? (x) : "*")
 
-main(argc, argv)
+int	main(argc, argv)
 int	argc;
 char	*argv[];
 {
@@ -180,10 +181,10 @@ int	opt;
 		aconf->passwd = (char *)NULL;
 		aconf->name = (char *)NULL;
 		aconf->class = (aClass *)NULL;
-		if (tmp = (char *)index(line, '\n'))
+		if ((tmp = (char *)index(line, '\n')))
 			*tmp = 0;
 		else while(dgets(fd, c, sizeof(c) - 1))
-			if (tmp = (char *)index(c, '\n'))
+			if ((tmp = (char *)index(c, '\n')))
 			    {
 				*tmp = 0;
 				break;
@@ -216,7 +217,7 @@ int	opt;
 				if (!*(tmp+1))
 					break;
 				else
-					for (s = tmp; *s = *++s; )
+					for (s = tmp; (*s = *++s); )
 						;
 				tmp++;
 			    }
@@ -365,8 +366,6 @@ int	opt;
                 */
 		if (aconf->status & CONF_CLASS)
 		    {
-			int	class = 0;
-
 			if (!aconf->host)
 			    {
 				(void)fprintf(stderr,"\tERROR: no class #\n");
@@ -563,7 +562,7 @@ char	*newline;
 **	dgets(x,y,0);
 ** to mark the buffer as being empty.
 */
-int	dgets(fd, buf, num)
+static	int	dgets(fd, buf, num)
 int	fd, num;
 char	*buf;
 {
@@ -666,7 +665,7 @@ static	int	validate(top)
 aConfItem *top;
 {
 	Reg	aConfItem *aconf, *bconf;
-	u_int	otype, valid = 0;
+	u_int	otype = 0, valid = 0;
 
 	if (!top)
 		return 0;
@@ -736,7 +735,7 @@ u_int	status;
 	return '-';
 }
 
-outofmemory()
+void	outofmemory()
 {
 	(void)write(2, "Out of memory\n", 14);
 	exit(-1);

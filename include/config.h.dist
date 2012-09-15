@@ -33,7 +33,7 @@
 /*	SGI			Nothing needed (IRIX 4.0.4) */
 #undef 	SVR3			/* SVR3 stuff - being worked on where poss. */
 #undef	DYNIXPTX		/* Sequents Brain-dead Posix implement. */
-#undef	SVR4			/* SVR4 */
+#undef	SVR4			/* SVR4, Solaris2 */
 #undef	ESIX			/* ESIX */
 #undef	NEXT			/* NeXTStep */
 
@@ -142,8 +142,8 @@
  * won't work, or simply don't want local users to be summoned, undefine
  * this.
  */
-#define	ENABLE_SUMMON	/* local summon */
-#define	ENABLE_USERS	/* enables local /users (same as who/finger output) */
+#undef	ENABLE_SUMMON	/* local summon */
+#undef	ENABLE_USERS	/* enables local /users (same as who/finger output) */
 
 /* SHOW_INVISIBLE_LUSERS
  *
@@ -151,7 +151,7 @@
  * LUSERS on your server. On a large net this doesnt mean much, but on a
  * small net it might be an advantage to undefine it.
  */
-#undef	SHOW_INVISIBLE_LUSERS
+#define	SHOW_INVISIBLE_LUSERS
 
 /* NO_DEFAULT_INVISIBLE
  *
@@ -373,7 +373,7 @@
 #define	CHREPLLEN	8192
 
 /* Default server for standard client */
-#define	UPHOST	"coombs.anu.edu.au"
+#define	UPHOST	"irc"
 
 /*
  * If you wish to run services, define USE_SERVICES. 
@@ -399,7 +399,10 @@
 #undef BETTER_NDELAY
 #undef BETTER_CDELAY
 
-/* For broken mirc (win/pc) client. */
+/* For broken mirc (win/pc) client. Enables old features:
+ * 1) Send start-of-list numeric before LIST reply
+ * 2) Revert combined "n JOIN #^Go" -> "n JOIN #" "MODE # o n"
+ */
 #undef MIRC_KLUDGE
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
@@ -535,7 +538,7 @@
 #undef BSD
 #include <sys/param.h>
 #ifndef BSD
-#define BSD
+#define BSD	1
 #endif
 #endif
 
@@ -554,6 +557,7 @@
 
 #ifdef	sgi
 #define	SGI
+#define vfork	fork
 #endif
 
 #ifdef	CLIENT_COMPILE

@@ -2,6 +2,11 @@
 #ifndef	__service_include__
 #define	__service_include__
 
+#ifdef USE_SERVICES
+extern	aService *make_service __P((aClient *));
+extern	void	check_services_butone();
+#endif
+
 /* The different things a service can `sniff' */
 
 #define	SERVICE_WANT_SERVICE	0x0001

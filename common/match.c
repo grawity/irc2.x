@@ -122,8 +122,6 @@ char	*ma, *na;
 int	matches(ma, na)
 char	*ma,*na;
 {
-	int	r;
-
 	calls = 0;
 	return _match(ma, na);
 }

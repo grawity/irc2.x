@@ -521,7 +521,7 @@ char    *buf1, *tmp;
 void do_kick(buf1, tmp)
 char    *buf1, *tmp;
 {
-	char *b2, *b3;
+	char *b2, *b3 = NULL;
 
 	b2 = index(buf1, SPACE);		/* find end of channel name */
 	if (b2)
@@ -760,7 +760,7 @@ int	unixuser()
 void do_log(ptr, temp)
 char	*ptr, *temp;
 {
-	long	tloc;
+	time_t	tloc;
 	char	buf[150];
 	char	*ptr2;
 

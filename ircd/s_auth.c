@@ -239,7 +239,8 @@ Reg	aClient	*cptr;
 	    {
 		if (!index(cptr->buffer, '\n') && !index(cptr->buffer, '\r'))
 			return;
-		Debug((DEBUG_ERROR,"local %d remote %d s %x", locp, remp, s));
+		Debug((DEBUG_ERROR,"local %d remote %d s %x",
+				locp, remp, ruser));
 		Debug((DEBUG_ERROR,"bad auth reply in [%s]", cptr->buffer));
 		*ruser = '\0';
 	    }

@@ -24,7 +24,7 @@ char edit_id[] = "edit.c v2.0 (c) 1988 University of Oulu, Computing\
 #include <curses.h>
 #include <signal.h>
 #include "struct.h"
-#ifdef  UNISTDH
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 #include "common.h"

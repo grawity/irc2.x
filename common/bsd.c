@@ -28,6 +28,7 @@ Computing Center and Jarkko Oikarinen";
 #include "sys.h"
 #include "h.h"
 #include <signal.h>
+#include <sys/socket.h>
 
 #ifndef SYS_ERRLIST_DECLARED
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */

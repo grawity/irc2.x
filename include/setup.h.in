@@ -22,7 +22,7 @@
 #undef HAVE_GETTIMEOFDAY
 #undef HAVE_LRAND48
 #undef HAVE_MEMMOVE
-/* #undef MALLOCH	/* Removed, broken.. */
+/* #undef MALLOCH */	/* Removed, broken.. */
 #undef NBLOCK_BSD
 #undef NBLOCK_POSIX
 #undef NBLOCK_SYSV
@@ -42,8 +42,8 @@
 #undef TIMES_2
 #undef SYS_ERRLIST_DECLARED
 
-/* Define if you have the <stdef.h> header file.  */
-#undef HAVE_STDEF_H
+/* Define if you have the <stddef.h> header file.  */
+#undef HAVE_STDDEF_H
 
 /* Define if you have the <stdlib.h> header file.  */
 #undef HAVE_STDLIB_H

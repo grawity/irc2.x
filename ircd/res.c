@@ -34,7 +34,7 @@
 static  char sccsid[] = "@(#)res.c	1.1 1/21/95 (C) 1992 Darren Reed";
 #endif
 
-#define	DEBUG	/* because there is a lot of debug code in here :-) */
+#undef	DEBUG	/* because there is a lot of debug code in here :-) */
 
 extern	int	errno, h_errno;
 extern	int	highest_fd;
@@ -737,6 +737,9 @@ char	*lp;
 	if (a && rptr->type == T_PTR)
 	    {
 		struct	hostent	*hp2 = NULL;
+
+		if (BadPtr(rptr->he.h_name))	/* Kludge!	960907/Vesa */
+			goto getres_err;
 
 		Debug((DEBUG_DNS, "relookup %s <-> %s",
 			rptr->he.h_name, inetntoa((char *)&rptr->he.h_addr)));

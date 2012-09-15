@@ -24,7 +24,7 @@ M4=$IRCDDIR/ircd.m4
 /bin/rm -f $M4
 egrep "^#def[^P]*PATCHLEVEL" ../include/patchlevel.h | \
 sed -e 's/[^\"]*\"\([^\"]*\)\"/define(VERSION,\1)/' >>$M4
-DEBUG=`egrep "^#define[		]*DEBUGMODE" ../include/config.h`
+DEBUG=`egrep "^#define[		]*DEBUGMODE" config.h`
 if [ -n "$DEBUG" ] ; then
 	echo "define(DEBUGMODE,1)" >>$M4
 else
@@ -34,17 +34,16 @@ echo -n "define(HOSTNAME," >> $M4
 echo "`hostname`" | sed -e 's/\([a-zA-Z0-9\-]*\).*/\1)/' >> $M4
 echo "define(USER,$USER)" >>$M4
 echo -n 'define(PORT,' >>$M4
-PORT=`egrep '^#define[ 	]*PORT[ 	]*[0-9]*' ../include/config.h`
+PORT=`egrep '^#define[ 	]*PORT[ 	]*[0-9]*' config.h`
 echo "$PORT" | sed -e 's/[^0-9]*\([0-9]*\).*/\1)/' >> $M4
 echo -n 'define(PFREQ,' >>$M4
-PING=`egrep '^#define[ 	]*PINGFREQUENCY[ 	]*[0-9]*' ../include/config.h`
+PING=`egrep '^#define[ 	]*PINGFREQUENCY[ 	]*[0-9]*' config.h`
 echo "$PING" | sed -e 's/[^0-9]*\([0-9]*\).*/\1)/' >> $M4
 echo -n 'define(CFREQ,' >>$M4
-CONT=`egrep '^#define[ 	]*CONNECTFREQUENCY[ 	]*[0-9]*' ../include/config.h`
+CONT=`egrep '^#define[ 	]*CONNECTFREQUENCY[ 	]*[0-9]*' config.h`
 echo "$CONT" | sed -e 's/[^0-9]*\([0-9]*\).*/\1)/' >> $M4
 echo -n "define(MAXLINKS," >>$M4
-MAXL=`egrep '^#define[ 	]*MAXIMUM_LINKS[ 	]*[0-9]* | head -1' \
-../include/config.h`
+MAXL=`egrep '^#define[ 	]*MAXIMUM_LINKS[ 	]*[0-9]* | head -1' config.h`
 echo "$MAXL" | sed -e 's/[^0-9]*\([0-9]*\).*/\1)/' >> $M4
 DOM=`egrep '^domain' /etc/resolv.conf | \
 sed -e 's/^domain[ 	]*\([a-zA-Z\-\.0-9]*\).*/\1/'`

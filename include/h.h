@@ -37,6 +37,7 @@ extern	istat_t istat;
 extern	FdAry	fdas, fdall, fdaa;
 #endif
 
+extern	void	setup_server_channels __P((aClient *));
 extern	aChannel *find_channel __P((char *, aChannel *));
 extern	void	remove_user_from_channel __P((aClient *, aChannel *));
 extern	void	del_invite __P((aClient *, aChannel *));
@@ -46,6 +47,7 @@ extern	int	can_send __P((aClient *, aChannel *));
 extern	int	is_chan_op __P((aClient *, aChannel *));
 extern	int	has_voice __P((aClient *, aChannel *));
 extern	int	count_channels __P((aClient *));
+extern	time_t	collect_channel_garbage __P((time_t));
 
 extern	aClient	*find_client __P((char *, aClient *));
 extern	aClient	*find_name __P((char *, aClient *));
@@ -77,7 +79,7 @@ extern	int	rehash __P((aClient *, aClient *, int));
 extern	int	initconf __P((int));
 extern	int	rehashed;
 
-extern	char	*MyMalloc __P((int)), *MyRealloc __P((char *, int));
+extern	char	*MyMalloc __P((size_t)), *MyRealloc __P((char *, size_t));
 extern	char	*debugmode, *configfile, *sbrk0;
 extern	char	*getfield __P((char *));
 extern	void	get_sockhost __P((aClient *, char *));
@@ -97,6 +99,7 @@ extern	int	check_client __P((aClient *));
 extern	int	check_server __P((aClient *, struct hostent *, \
 				    aConfItem *, aConfItem *, int));
 extern	int	check_server_init __P((aClient *));
+extern	int	hold_server __P((aClient *));
 extern	void	close_connection __P((aClient *));
 extern	void	close_listeners __P(());
 extern	int	connect_server __P((aConfItem *, aClient *, struct hostent *));
@@ -133,6 +136,8 @@ extern	void	sendto_channel_butone();
 /*VARARGS2*/
 extern	void	sendto_serv_butone();
 /*VARARGS2*/
+extern	void	sendto_serv_v();
+/*VARARGS2*/
 extern	void	sendto_common_channels();
 /*VARARGS3*/
 extern	void	sendto_channel_butserv();
@@ -151,6 +156,8 @@ extern	void	sendto_prefix_one();
 /*VARARGS2*/
 extern	void	sendto_flag();
 
+extern	void	setup_svchans __P(());
+
 extern	void	sendto_flog __P((char *, char *, time_t, char *, char *,
 				 char *, char *));
 extern	int	writecalls, writeb[];
@@ -158,6 +165,7 @@ extern	int	deliver_it __P((aClient *, char *, int));
 
 extern	int	check_registered __P((aClient *));
 extern	int	check_registered_user __P((aClient *));
+extern	int	check_registered_service __P((aClient *));
 extern	char	*get_client_name __P((aClient *, int));
 extern	char	*get_client_host __P((aClient *));
 extern	char	*my_name_for_link __P((char *, int));
@@ -171,6 +179,7 @@ extern	int hunt_server __P((aClient *,aClient *,char *,int,int,char **));
 extern	aClient	*next_client __P((aClient *, char *));
 #ifndef	CLIENT_COMPILE
 extern	int	do_nick_name __P((char *));
+extern	char	*canonize __P((char *));
 extern	int	m_umode __P((aClient *, aClient *, int, char **));
 extern	int	m_names __P((aClient *, aClient *, int, char **));
 extern	int	m_server_estab __P((aClient *));
@@ -181,10 +190,12 @@ extern	void	send_umode_out __P((aClient*, aClient *, int));
 extern	int	numclients;
 extern	void	free_client __P((aClient *));
 extern	void	free_link __P((Link *));
+extern	void	delist_conf __P((aConfItem *));
 extern	void	free_conf __P((aConfItem *));
 extern	void	free_class __P((aClass *));
 extern	void	free_user __P((anUser *, aClient *));
 extern	void	free_server __P((aServer *, aClient *));
+extern	void	free_service __P((aClient *));
 extern	Link	*make_link __P(());
 extern	anUser	*make_user __P((aClient *));
 extern	aConfItem *make_conf __P(());
@@ -196,6 +207,15 @@ extern	void	add_client_to_list __P((aClient *));
 extern	void	checklist __P(());
 extern	void	remove_client_from_list __P((aClient *));
 extern	void	initlists __P(());
+extern	void	add_fd __P((int, FdAry *));
+extern	int	del_fd __P((int, FdAry *));
+#ifdef HUB
+extern	void	add_active __P((int, FdAry *));
+extern	void	decay_activity __P(());
+extern	int	sort_active __P((const void *, const void *));
+extern	void	build_active __P(());
+#endif
+
 
 extern	void	add_class __P((int, int, int, int, long));
 extern	void	fix_class __P((aConfItem *, aConfItem *));
@@ -210,6 +230,7 @@ extern	struct	hostent	*get_res __P((char *));
 extern	struct	hostent	*gethost_byaddr __P((char *, Link *));
 extern	struct	hostent	*gethost_byname __P((char *, Link *));
 extern	void	flush_cache __P(());
+extern	u_long	cres_mem __P((aClient *, char *));
 extern	int	init_resolver __P((int));
 extern	time_t	timeout_query_list __P((time_t));
 extern	time_t	expire_cache __P((time_t));
@@ -218,6 +239,8 @@ extern	void    del_queries __P((char *));
 extern	void	inithashtables __P(());
 extern	int	add_to_client_hash_table __P((char *, aClient *));
 extern	int	del_from_client_hash_table __P((char *, aClient *));
+extern	int	add_to_server_hash_table __P((aServer *, aClient *));
+extern	int	del_from_server_hash_table __P((aServer *, aClient *));
 extern	int	add_to_channel_hash_table __P((char *, aChannel *));
 extern	int	del_from_channel_hash_table __P((char *, aChannel *));
 extern	aChannel *hash_find_channel __P((char *, aChannel *));
@@ -244,6 +267,9 @@ extern	void	debug();
 #if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
 extern	void	send_usage __P((aClient *, char *));
 extern	void	send_listinfo __P((aClient *, char *));
+extern	void	checklists __P(());
+extern	void	dumpcore();
+/*VARARGS?*/
 #endif
 
 #ifndef CLIENT_COMPILE

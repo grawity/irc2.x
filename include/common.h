@@ -55,6 +55,7 @@ char	*malloc(), *calloc();
 
 extern	char	*collapse __P((char *));
 extern	int	matches __P((char *, char *));
+extern	int	match __P((char *, char *));
 extern	int	mycmp __P((char *, char *));
 extern	int	myncmp __P((char *, char *, int));
 #ifdef NEED_STRTOK
@@ -65,6 +66,9 @@ extern	char	*strtoken __P((char **, char *, char *));
 #endif
 #ifdef NEED_INET_ADDR
 extern unsigned long inet_addr __P((char *));
+#else	/* OSF */
+# include <netinet/in.h>
+# include <arpa/inet.h>
 #endif
 
 #if defined(NEED_INET_NTOA) || defined(NEED_INET_NETOF)
@@ -139,8 +143,8 @@ extern unsigned char char_atribs[];
 		    ((u_char)(c) != (u_char)0x32))
 #define ispunct(c) (!(char_atribs[(u_char)(c)]&(CNTRL|ALPHA|DIGIT)))
 
-extern char *MyMalloc();
-extern void flush_connections();
-extern struct SLink *find_user_link(/* struct SLink *, struct Client * */);
+extern void	flush_connections __P((int));
+extern int	irc_sprintf();
+/*VARARGS?*/
 
 #endif /* __common_include__ */

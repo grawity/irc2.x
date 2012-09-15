@@ -58,6 +58,8 @@ static char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
 static char rcsid[] = "$Id: res_comp.c,v 8.3 1995/12/06 20:34:50 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 
+#include "config.h"
+
 #include <sys/param.h>
 #include <netinet/in.h>
 #include "nameser.h"
@@ -70,7 +72,6 @@ static char rcsid[] = "$Id: res_comp.c,v 8.3 1995/12/06 20:34:50 vixie Exp $";
 # include <unistd.h>
 # include <string.h>
 #endif
-# include "config.h"
 
 static int	dn_find __P((u_char *exp_dn, u_char *msg,
 			     u_char **dnptrs, u_char **lastdnptr));
@@ -100,7 +101,7 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 	/*
 	 * fetch next label in domain name
 	 */
-	while (n = *cp++) {
+	while ((n = *cp++)) {
 		/*
 		 * Check for indirection
 		 */
@@ -303,7 +304,7 @@ dn_find(exp_dn, msg, dnptrs, lastdnptr)
 	for (cpp = dnptrs; cpp < lastdnptr; cpp++) {
 		dn = exp_dn;
 		sp = cp = *cpp;
-		while (n = *cp++) {
+		while ((n = *cp++)) {
 			/*
 			 * check for indirection
 			 */

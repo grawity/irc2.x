@@ -73,12 +73,9 @@ aClient *find_service(name, cptr)
 char	*name;
 Reg	aClient *cptr;
     {
-	Reg	aClient	*acptr;
-
 	if (name)
-		acptr = hash_find_client(name, cptr);
-	if (acptr != cptr && acptr && !IsService(acptr))
-		acptr = cptr;
+		cptr = hash_find_client(name, cptr);
+	/* This needs support for multiple services.. */
 	return cptr;
     }
 
@@ -293,7 +290,7 @@ char	*buffer, *bufend;
     {
 	Reg	aClient *from = cptr;
 	Reg	char	*ch, *s;
-	Reg	int	len, i, numeric, paramcount;
+	Reg	int	len, i, numeric = 0, paramcount;
 	Reg	struct	Message *mptr = NULL;
 	int	ret;
 
@@ -463,15 +460,16 @@ char	*buffer, *bufend;
 		i = bufend - ((s) ? s : ch);
 		mptr->bytes += i;
 #ifndef	CLIENT_COMPILE
-		if ((mptr->flags & 1) && !(IsServer(cptr) || IsService(cptr)))
-		    {
-			cptr->since += (2 + i / 120) + mptr->penalty;
-					/* Allow only 1 msg per 2 seconds
-					 * (on average) to prevent dumping.
-					 * to keep the response rate up,
-					 * bursts of up to 5 msgs are allowed
-					 * -SRB
-					 */
+		if ((mptr->flags & MSG_LAG) &&
+		    !(IsServer(cptr) || IsService(cptr)))
+		    {	/* Flood control partly migrated into penalty */
+			cptr->since += (1 + i / 100);
+			/* Allow only 1 msg per 2 seconds
+			 * (on average) to prevent dumping.
+			 * to keep the response rate up,
+			 * bursts of up to 5 msgs are allowed
+			 * -SRB
+			 */
 			if (mptr->func != m_ison && mptr->func != m_mode)
 				cptr->ract += (2 + i /120);
 		    }
@@ -537,9 +535,11 @@ char	*buffer, *bufend;
 	Debug((DEBUG_DEBUG, "Function: %#x = %s parc %d parv %#x",
 		mptr->func, mptr->cmd, i, para));
 #ifndef	CLIENT_COMPILE
+/* replaced by penalty
 	if ((mptr->flags & MSG_PP) && !(IsServer(cptr) || IsService(cptr)) &&
 	    i > 2)
 		cptr->since += (i - 2);
+*/
 	if ((mptr->flags & MSG_REGU) && check_registered_user(from))
 		return -1;
 	if ((mptr->flags & MSG_SVC) && check_registered_service(from))
@@ -558,11 +558,33 @@ char	*buffer, *bufend;
 		return -1;
 	    }
 #endif
+	/*
+	** ALL m_functions return now UNIFORMLY:
+	**   -2  old FLUSH_BUFFER return value (unchanged).
+	**   -1  if parsing of a protocol message leads in a syntactic/semantic
+	**       error and NO penalty scoring should be applied.
+	**   >=0 if protocol message processing was successful. The return
+	**       value indicates the penalty score.
+	*/
 	ret = (*mptr->func)(cptr, from, i, para);
-	if (ret > 0)
+
+#ifndef       CLIENT_COMPILE
+	/*
+        ** Add penalty score for sucessfully parsed command if issued by
+	** a LOCAL user client.
+	*/
+	if ((ret > 0) && IsRegisteredUser(cptr))
+	    {
 		cptr->since += ret;
+/* only to lurk
+		sendto_one(cptr,
+			   ":%s NOTICE %s :*** Penalty INCR [%s] +%d",
+			   me.name, cptr->name, ch, ret);
+*/
+	    }
+#endif
 	return (ret != FLUSH_BUFFER) ? 2 : FLUSH_BUFFER;
-    }
+}
 
 /*
  * field breakup for ircd.conf file.

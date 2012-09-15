@@ -46,22 +46,22 @@ IRCDDIR = $(prefix)/lib/irc
 IRCLIBS=-lcurses -ltermcap
 #
 # use the following on MIPS:
-#CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
-# For Irix 4.x (SGI), use the following:
-#CFLAGS= -O -cckr -I$(INCLUDEDIR)
+#CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 $(INCLUDEDIR)
+# For IRIX (SGI) cc(1), use the following:
+#CFLAGS= -O -cckr $(INCLUDEDIR)
 #
 # on NEXT use:
-#CFLAGS=-bsd -I$(INCLUDEDIR)
+#CFLAGS=-bsd $(INCLUDEDIR)
 #on NeXT other than 2.0:
 #IRCDLIBS=-lsys_s
 #
 # AIX flags
-#CFLAGS=-D_BSD $(DEFS) -I$(INCLUDEDIR)
+#CFLAGS=-D_BSD $(DEFS) $(INCLUDEDIR)
 #IRCDLIBS=-lm -lbsd
 #IRCLIBS=-lcurses -lcur
 #
 # Dynix/ptx V2.0.x
-#CFLAGS= -I$(INCLUDEDIR) -O -Xo
+#CFLAGS= $(INCLUDEDIR) -O -Xo
 #IRCDLIBS= -lsocket -linet -lnsl -lseq
 #IRCLIBS=-ltermcap -lcurses -lsocket -linet -lnsl -lseq
 # 
@@ -76,10 +76,10 @@ IRCLIBS=-lcurses -ltermcap
 #IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
 #
 # ESIX
-#CFLAGS=-O -I$(INCLUDEDIR) -I/usr/ucbinclude
+#CFLAGS=-O $(INCLUDEDIR) -I/usr/ucbinclude
 #IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
 #
-#CFLAGS= -I$(INCLUDEDIR) -traditional -Wall -Dlint -g -pedantic
+#CFLAGS= $(INCLUDEDIR) -traditional -Wall -Dlint -g -pedantic
 #
 # LDFLAGS - flags to send the loader (ld). SunOS users may want to add
 # -Bstatic here.

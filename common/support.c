@@ -25,6 +25,7 @@ static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include "h.h"
 #include "patchlevel.h"
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
@@ -510,7 +511,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 	char	*inp[11];
 	Reg	char	*rp, *fp, *wp, **pp = inp;
 	Reg	char	f;
-	Reg	int	myi;
+	Reg	long	myi;
 	int	i;
 
 	inp[0] = i0;
@@ -550,7 +551,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 			 */
 			case 'd':
 			case 'u':
-				myi = (int)*pp++;
+				myi = (long)*pp++;
 				if ((myi < 100) || (myi > 999))
 				    {
 					(void)sprintf(outp, formp, i0, i1, i2,
@@ -566,7 +567,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 				*wp++ = (char)(myi + (int) '0');
 				break;
 			case 'c':
-				*wp++ = (char)(int)*pp++;
+				*wp++ = (char)(long)*pp++;
 				break;
 			case '%':
 				*wp++ = '%';

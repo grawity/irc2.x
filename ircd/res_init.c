@@ -58,6 +58,8 @@ static char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
 static char rcsid[] = "$Id: res_init.c,v 8.3 1995/06/29 09:26:28 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 
+#include "config.h"
+
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -68,12 +70,13 @@ static char rcsid[] = "$Id: res_init.c,v 8.3 1995/06/29 09:26:28 vixie Exp $";
 #include <stdio.h>
 #include <ctype.h>
 #include "resolv.h"
+
 #if defined(BSD) && (BSD >= 199103)
+/* This cannot hurt.. OSF has BSD < 199103, but needs these.. */
+#endif
 # include <unistd.h>
 # include <stdlib.h>
 # include <string.h>
-#endif
-#include "config.h"
 
 /*-------------------------------------- info about "sortlist" --------------
  * Marc Majka		1994/04/16
@@ -520,7 +523,7 @@ netinfo_res_init(haveenv, havesearch)
 			(void)strncpy(ircd_res.defdname,
 				      nl.ni_namelist_val[0],
 				      sizeof(ircd_res.defdname) - 1);
-			_res.defdname[sizeof(ircd_res.defdname) - 1] = '\0';
+			ircd_res.defdname[sizeof(ircd_res.defdname) - 1] = '\0';
 			ni_namelist_free(&nl);
 			*havesearch = 0;
 		    }
@@ -531,7 +534,7 @@ netinfo_res_init(haveenv, havesearch)
 			(void)strncpy(ircd_res.defdname,
 				      nl.ni_namelist_val[0],
 				      sizeof(ircd_res.defdname) - 1);
-			_res.defdname[sizeof(ircd_res.defdname) - 1] = '\0';
+			ircd_res.defdname[sizeof(ircd_res.defdname) - 1] = '\0';
 			/* copy  */
 			for (n = 0;
 			     n < nl.ni_namelist_len && n < MAXDNSRCH;

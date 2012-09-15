@@ -59,7 +59,7 @@ char	*parv[];
     {
 	char *tmp;
 	int i;
-	long l;		/* ctime(&l) on STATS L */
+	time_t l;		/* ctime(&l) on STATS L */
 	
 	/* ...make sure undefined parameters point to empty string */
 	for (i = parc; i < MAXPARA; parv[i++] = "");

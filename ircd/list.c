@@ -204,7 +204,6 @@ aServer	*make_server(cptr)
 aClient	*cptr;
 {
 	Reg	aServer	*serv = cptr->serv, *sp, *spp = NULL;
-	Reg	int	tok;
 
 	if (!serv)
 	    {
@@ -264,7 +263,7 @@ aClient	*cptr;
 
 	if (--user->refcnt <= 0)
 	    {
-		if (serv = user->servp)
+		if ((serv = user->servp))
 		    {
 			user->servp = NULL; /* to avoid some impossible loop */
 			free_server(serv, cptr);
@@ -313,7 +312,7 @@ aClient	*cptr;
 {
 	anUser *user;
 
-	if (user = serv->user)
+	if ((user = serv->user))
 	    {
 		if (user->refcnt == 1)
 		    {
@@ -644,7 +643,7 @@ char	*name;
 #endif
 
 
-add_fd(fd, ary)
+void	add_fd(fd, ary)
 int	fd;
 FdAry	*ary;
 {
@@ -679,7 +678,7 @@ FdAry	*ary;
 
 
 #ifdef	HUB
-add_active(fd, ary)
+void	add_active(fd, ary)
 int	fd;
 FdAry	*ary;
 {
@@ -743,8 +742,7 @@ const void	*a1, *a2;
 	return local[*(int *)a1]->priority - local[*(int *)a2]->priority;
 }
 
-
-build_active()
+void	build_active()
 {
 	aClient	*cptr;
 	FdAry	*ap = &fdaa;

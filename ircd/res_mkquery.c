@@ -70,8 +70,6 @@ static char rcsid[] = "$Id: res_mkquery.c,v 8.3 1995/06/29 09:26:28 vixie Exp $"
 #include "resolv.h"
 #if defined(BSD) && (BSD >= 199103)
 # include <string.h>
-#else
-# include "config.h"
 #endif
 
 #if defined(USE_OPTIONS_H)

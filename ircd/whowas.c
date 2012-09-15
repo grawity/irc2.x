@@ -270,7 +270,6 @@ time_t        timelimit;
 void	off_history(cptr)
 Reg	aClient	*cptr;
 {
-	Reg	aName	*wp;
 	Reg	Link	*uwas;
 
 	/*
@@ -278,7 +277,7 @@ Reg	aClient	*cptr;
 	** the whowas array which point back to it.
 	** They have to be removed, by pairs
 	*/
-	while (uwas = cptr->user->uwas)
+	while ((uwas = cptr->user->uwas))
 	    {
 		if (was[uwas->value.i].ww_online != cptr)
 #ifdef DEBUGMODE
@@ -346,13 +345,17 @@ char	*parv[];
  	if (parc < 2)
 	    {
 		sendto_one(sptr, err_str(ERR_NONICKNAMEGIVEN, parv[0]));
-		return 0;
+		return 1;
 	    }
 	if (parc > 2)
 		max = atoi(parv[2]);
 	if (parc > 3)
 		if (hunt_server(cptr,sptr,":%s WHOWAS %s %s :%s", 3,parc,parv))
-			return 0;
+			return 2;
+
+	parv[1] = canonize(parv[1]);
+	if (!MyConnect(sptr))
+		max = MIN(max, 20);
 
 	for (s = parv[1]; (nick = strtoken(&p, s, ",")); s = NULL)
 	    {
@@ -393,7 +396,7 @@ char	*parv[];
 			p[-1] = ',';
 	    }
 	sendto_one(sptr, rpl_str(RPL_ENDOFWHOWAS, parv[0]), parv[1]);
-	return 0;
+	return 1;
     }
 
 
@@ -408,7 +411,7 @@ u_long	*wwam;
 	u_long	am = 0;
 
 	for (i = 0; i < ww_size; i++)
-		if (tmp = was[i].ww_user)
+		if ((tmp = was[i].ww_user))
 		{
 			for (j = 0; j < i; j++)
 				if (was[j].ww_user == tmp)

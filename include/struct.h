@@ -23,7 +23,6 @@
 
 #include "config.h"
 #include "common.h"
-#include "service.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -36,7 +35,7 @@
 #endif
 #include <netdb.h>
 #include <assert.h>
-#ifdef HAVE_STDEF_H
+#ifdef HAVE_STDDEF_H
 # include <stddef.h>
 #endif
 
@@ -61,6 +60,8 @@ typedef	struct	SMode	Mode;
 typedef	struct	fdarray	FdAry;
 typedef	struct	CPing	aCPing;
 
+#include "service.h"
+
 #ifndef VMSP
 #include "class.h"
 #include "dbuf.h"	/* THIS REALLY SHOULDN'T BE HERE!!! --msa */
@@ -77,7 +78,7 @@ typedef	struct	CPing	aCPing;
 #define	USERLEN		10
 #define	REALLEN	 	50
 #define	TOPICLEN	80
-#define	CHANNELLEN	200
+#define	CHANNELLEN	50
 #define	PASSWDLEN 	20
 #define	KEYLEN		23
 #define	BUFSIZE		512		/* WARNING: *DONT* CHANGE THIS!!!! */
@@ -516,7 +517,6 @@ struct	Message	{
 		/* bit 0 set means that this command is allowed to be used
 		 * only on the average of once per 2 seconds -SRB */
 	u_long	bytes;
-	int	penalty;	/* extra penalty for clients executing it */
 };
 
 #define	MSG_LAG		0x0001

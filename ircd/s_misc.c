@@ -165,7 +165,7 @@ aClient	*sptr;
 }
 
 /*
-** check_registered service cancels message, if 'x' is not
+** check_registered_service cancels message, if 'x' is not
 ** a registered service.
 */
 int	check_registered_service(sptr)
@@ -384,7 +384,6 @@ char	*comment;	/* Reason for the exit */
 	time_t	on_for;
 #endif
 	char	comment1[HOSTLEN + HOSTLEN + 2];
-	int	status = sptr->status;
 	int	flags = 0;
 
 	if (MyConnect(sptr) || (sptr->flags & FLAGS_HELD))
@@ -619,7 +618,7 @@ char	*comment;	/* Reason for the exit */
 		else
 			sptr->flags |= FLAGS_QUIT;
 
-		if (MyConnect(sptr) && !(sptr->flags & FLAGS_QUIT))
+		if (sptr == cptr && !(sptr->flags & FLAGS_QUIT))
 		    {
 			/*
 			** This will avoid nick delay to be abused by
@@ -741,10 +740,7 @@ char	*comment;
 					   sptr->name, comment);
 #endif
 				if (sptr->flags & FLAGS_HIDDEN)
-				{
 					/* joys of hostmasking */
-					Reg	aConfItem *aconf;
-
 					for (i = fdas.highest; i >= 0; i--)
 					{
 						if (!(acptr =local[fdas.fd[i]])
@@ -756,9 +752,8 @@ char	*comment;
 							sendto_one(acptr,
 								":%s QUIT :%s",
 								   sptr->name,
-								   comment,ME);
+								   comment);
 					}
-				}
 			}
 #ifdef	USE_SERVICES
 			check_services_butone(SERVICE_WANT_QUIT, 
@@ -846,7 +841,7 @@ char	*comment;
 				if (matches(sptr->service->dist, acptr->name))
 					continue;
 				sendto_one(acptr, ":%s QUIT :%s", sptr->name,
-					   comment,ME);
+					   comment);
 			    }
 		    }
 #ifdef	USE_SERVICES

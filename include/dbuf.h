@@ -156,4 +156,12 @@ int dbuf_delete __P((dbuf *, int));
 
 extern	int	dbuf_getmsg __P((dbuf *, char *, int));
 
+/* dbuf_init--initialize a stretch of memory as dbufs.
+ * Doing this early on should save virtual memory if not real memory..
+ * at the very least, we get more control over what the server is doing
+ *
+ * mika@cs.caltech.edu 6/24/95
+ */
+extern	void	dbuf_init __P(());
+
 #endif /* __dbuf_include__ */

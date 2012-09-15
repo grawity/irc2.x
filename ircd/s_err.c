@@ -17,6 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "sys.h"
 #include "struct.h"
 #include "numeric.h"
 #include "common.h"
@@ -71,7 +72,7 @@ static	Numeric	numeric_errors[] = {
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 /* 431 */	ERR_NONICKNAMEGIVEN, ":No nickname given",
-/* 432 */	ERR_ERRONEUSNICKNAME, "%s :Erroneus Nickname",
+/* 432 */	ERR_ERRONEUSNICKNAME, "%s :Erroneous Nickname",
 /* 433 */	ERR_NICKNAMEINUSE, "%s :Nickname is already in use.",
 /* 434 */	ERR_SERVICENAMEINUSE, (char *)NULL,
 /* 435 */	ERR_SERVICECONFUSED, (char *)NULL,
@@ -201,7 +202,7 @@ static	Numeric	numeric_replies[] = {
 /* 385 */	RPL_NOTOPERANYMORE, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL,
-/* 391 */	RPL_TIME, ":%s",
+/* 391 */	RPL_TIME, "%s :%s",
 #ifdef	ENABLE_USERS
 /* 392 */	RPL_USERSSTART, ":UserID   Terminal  Host",
 /* 393 */	RPL_USERS, ":%-8s %-9s %-8s",
