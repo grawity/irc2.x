@@ -28,4 +28,4 @@
  *
  */
 
-#define PATCHLEVEL "2.6.1"
+#define PATCHLEVEL "2.6.1a.jp-new"

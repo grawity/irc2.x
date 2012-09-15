@@ -197,6 +197,7 @@ aChannel *para;
 {
   aChannel *ch2ptr;
 
+  tonewjis(chname);
   for (ch2ptr = channel; ch2ptr; ch2ptr = ch2ptr->nextch) 
     if (mycmp(ch2ptr->chname, chname) == 0)
       break;
@@ -519,6 +520,7 @@ int flag;
 	if (i == (char *) 0)
 		return NullChn;
 
+	tonewjis(i);
 	for ( ; ; chptr = chptr->nextch)
 	    {
 	      if (chptr == NullChn) {
@@ -830,3 +832,17 @@ char *parv[];
 	       me.name, ERR_NOTONCHANNEL, parv[0], who->name, chptr->chname);
   return (0);
 }
+
+tonewjis(chan)
+char *chan;
+{
+    if (chan)
+	for (; *chan; chan++)
+	    if (chan[0] == '\033') {
+		if (chan[1] == '$' && chan[2] == '@')
+		    chan[2] = 'B';
+		if (chan[1] == '(' && chan[2] == 'J')
+		    chan[2] = 'B';
+	    }
+}
+

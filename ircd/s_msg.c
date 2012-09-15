@@ -314,7 +314,7 @@ char *nick;
 
 #define isvalid(c) (((c) >= 'A' && (c) <= '}') || isdigit(c) || (c) == '-')
 
-    for (ch = nick; *ch && (ch - nick) <= NICKLEN; ch++)
+    for (ch = nick; *ch && (ch - nick) < NICKLEN; ch++)
 	if (!isvalid(*ch) || isspace(*ch))
 	    break;
 
@@ -795,6 +795,7 @@ char *parv[];
     mask = NULL;
   else
     channame = mask;
+  tonewjis(channame);
   if (channame &&
       (*channame == '+' || atoi(channame) || *channame == '#')) {
     Link *link;
@@ -2921,6 +2922,7 @@ char *parv[];
 
 	/* First, do all visible channels (public and the one user self is) */
 
+	tonewjis(para);
 	for (chptr = channel; chptr; chptr = chptr->nextch)
 	    {
 	        Link *link;
