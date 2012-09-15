@@ -176,7 +176,7 @@ typedef	struct	CPing	aCPing;
 #define	FLAGS_DOID	 0x2000	/* I-lines say must use ident return [unused]*/
 #define	FLAGS_NONL	 0x4000 /* No \n in buffer */
 #define	FLAGS_HELD	 0x8000	/* connection held and reconnect try */
-#define	FLAGS_CBURST	0x10000	/* st to mark connection being sent c. burt */
+#define	FLAGS_CBURST	0x10000	/* set to mark connection burst being sent */
 #define FLAGS_RILINE    0x20000 /* Restricted i-line */
 #define FLAGS_QUIT      0x40000 /* QUIT :comment shows it's not a split */
 #define FLAGS_SPLIT     0x80000 /* client QUITting because of a netsplit */
@@ -437,9 +437,9 @@ struct Client	{
 	aClient	*acpt;		/* listening client which we accepted from */
 	Link	*confs;		/* Configuration record associated */
 	int	authfd;		/* fd for rfc931 authentication */
-	int	priority;	/* priority for slection as active */
+	int	priority;	/* priority for selection as active */
 	u_short	ract;		/* no fear about this. */
-	u_short	port;	/* and the remote port# too :-) */
+	u_short	port;		/* and the remote port# too :-) */
 	struct	in_addr	ip;	/* keep real ip# too */
 	struct	hostent	*hostp;
 #ifdef	pyr
@@ -736,6 +736,7 @@ typedef	struct	{
 #define EXITC_PING	'P'	/* ping timeout */
 #define EXITC_SENDQ	'Q'	/* send queue exceeded */
 #define EXITC_RLINE	'r'	/* R-lined */
+#define EXITC_REF	'R'	/* Refused */
 
 /* misc variable externs */
 

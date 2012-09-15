@@ -28,9 +28,6 @@ static  char sccsid[] = "@(#)chkconf.c	1.1 1/21/95 (C) 1993 Darren Reed";
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifdef __hpux
-# include "inet.h"
-#endif
 #ifdef PCS
 #include <time.h>
 #endif

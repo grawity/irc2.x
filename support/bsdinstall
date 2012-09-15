@@ -4,9 +4,9 @@
 #
 cmd=/bin/mv
 strip="strip"
-chmod="chmod 755"
-chown="chown -f root"
-chgrp="chgrp -f bin"
+chmod="chmod 644"
+chown="chown"
+chgrp="chgrp"
 while true ; do
 	case $1 in
 		-s )	strip="strip"
@@ -19,11 +19,11 @@ while true ; do
 			shift
 			shift
 			;;
-		-o )	chown="chown -f $2"
+		-o )	chown="chown $2"
 			shift
 			shift
 			;;
-		-g )	chgrp="chgrp -f $2"
+		-g )	chgrp="chgrp $2"
 			shift
 			shift
 			;;
@@ -78,6 +78,6 @@ case $cmd in
 	;;
 esac
 
-$chown $file
-$chgrp $file
+[ -n "$chown" ] && $chown $file
+[ -n "$chgrp" ] && $chgrp $file
 $chmod $file

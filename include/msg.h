@@ -119,7 +119,7 @@ struct Message msgtab[] = {
   { MSG_KICK,    m_kick,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
   { MSG_WALLOPS, m_wallops,  0, MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0L},
   { MSG_PING,    m_ping,     0, MAXPARA, MSG_LAG|MSG_REG, 0L},
-  { MSG_PONG,    m_pong,     0, MAXPARA, MSG_LAG, 0L},
+  { MSG_PONG,    m_pong,     0, MAXPARA, MSG_LAG|MSG_REG, 0L},
   { MSG_ERROR,   m_error,    0, MAXPARA, MSG_LAG|MSG_REG|MSG_NOU, 0L},
 #ifdef	OPER_KILL
   { MSG_KILL,    m_kill,     0, MAXPARA,
@@ -132,12 +132,12 @@ struct Message msgtab[] = {
   { MSG_AWAY,    m_away,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
   { MSG_UMODE,   m_umode,    0, MAXPARA, MSG_LAG|MSG_REG, 0L},
   { MSG_ISON,    m_ison,     0, 1,	 MSG_LAG|MSG_REG, 0L},
-  { MSG_SERVER,  m_server,   0, MAXPARA, MSG_LAG, 0L},
+  { MSG_SERVER,  m_server,   0, MAXPARA, MSG_LAG|MSG_NOU, 0L},
   { MSG_SQUIT,   m_squit,    0, MAXPARA,
 				MSG_LAG|MSG_REG|MSG_OP|MSG_LOP, 0L},
   { MSG_WHOIS,   m_whois,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
-  { MSG_WHO,     m_who,      0, MAXPARA, MSG_LAG, 0L},
-  { MSG_WHOWAS,  m_whowas,   0, MAXPARA, MSG_LAG, 0L},
+  { MSG_WHO,     m_who,      0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_WHOWAS,  m_whowas,   0, MAXPARA, MSG_LAG|MSG_REG, 0L},
   { MSG_LIST,    m_list,     0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
   { MSG_NAMES,   m_names,    0, MAXPARA, MSG_LAG|MSG_REGU, 0L},
   { MSG_USERHOST,m_userhost, 0, MAXPARA, MSG_LAG|MSG_REG, 0L},
@@ -168,8 +168,8 @@ struct Message msgtab[] = {
 #endif
   { MSG_SQUERY,  m_squery,   0, MAXPARA, MSG_LAG|MSG_REG, 0L},
   { MSG_SERVLIST,m_servlist, 0, MAXPARA, MSG_LAG|MSG_REG, 0L},
-  { MSG_HASH,    m_hash,     0, MAXPARA, MSG_LAG, 0L},
-  { MSG_DNS,     m_dns,      0, MAXPARA, MSG_LAG, 0L},
+  { MSG_HASH,    m_hash,     0, MAXPARA, MSG_LAG|MSG_REG, 0L},
+  { MSG_DNS,     m_dns,      0, MAXPARA, MSG_LAG|MSG_REG, 0L},
 #if defined(OPER_REHASH) || defined(LOCOP_REHASH)
   { MSG_REHASH,  m_rehash,   0, MAXPARA, MSG_REGU|MSG_OP
 # ifdef	LOCOP_REHASH

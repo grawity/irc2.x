@@ -63,30 +63,36 @@ aClient *find_client(name, cptr)
 char	*name;
 Reg	aClient *cptr;
     {
-	if (name)
-		cptr = hash_find_client(name, cptr);
+	aClient *acptr = cptr;
 
-	return cptr;
+	if (name)
+		acptr = hash_find_client(name, cptr);
+
+	return acptr;
     }
 
 aClient *find_service(name, cptr)
 char	*name;
 Reg	aClient *cptr;
     {
+	aClient *acptr = cptr;
+
 	if (name)
-		cptr = hash_find_client(name, cptr);
+		acptr = hash_find_client(name, cptr);
 	/* This needs support for multiple services.. */
-	return cptr;
+	return acptr;
     }
 
 aClient	*find_nickserv(name, cptr)
 char	*name;
 Reg	aClient *cptr;
     {
-	if (name)
-		cptr = hash_find_nickserv(name, cptr);
+	aClient *acptr = cptr;
 
-	return cptr;
+	if (name)
+		acptr = hash_find_nickserv(name, cptr);
+
+	return acptr;
     }
 
 #else
@@ -159,9 +165,11 @@ aClient *find_server(name, cptr)
 char	*name;
 Reg	aClient *cptr;
 {
+	aClient *acptr = cptr;
+
 	if (name)
-		cptr = hash_find_server(name, cptr);
-	return cptr;
+		acptr = hash_find_server(name, cptr);
+	return acptr;
 }
 
 /*

@@ -251,7 +251,7 @@
  *
  * The default is no R_LINES as most people probably don't need it. --Jto
  */
-#define	R_LINES
+#undef	R_LINES
 
 #ifdef	R_LINES
 /* Also, even if you have R lines defined, you might not want them to be 
@@ -273,7 +273,7 @@
  *       starts up the server with a new conf file that has some extra
  *       O-lines. So don't use this unless you're debugging.
  */
-#define	CMDLINE_CONFIG /* allow conf-file to be specified on command line */
+#undef	CMDLINE_CONFIG /* allow conf-file to be specified on command line */
 
 /*
  * To use m4 as a preprocessor on the ircd.conf file, define M4_PREPROC.
@@ -555,7 +555,7 @@
 #define	HPUX
 #endif
 
-#ifdef	sgi
+#if defined(sgi) || defined(__sgi)	/* K&R || ANSI */
 #define	SGI
 #define vfork	fork
 #endif
@@ -652,5 +652,9 @@ error CLIENT_FLOOD undefined
 #endif
 
 #define Reg register
+
+#if (defined(sun) && (defined(__SVR4) || defined(__svr4__))) || defined(SGI)
+# define _DO_POLL_
+#endif
 
 #endif /* __config_include__ */

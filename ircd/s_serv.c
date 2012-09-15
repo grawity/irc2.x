@@ -241,7 +241,7 @@ char	*parv[];
 			    (timeconnected % 3600)/60, 
 			    timeconnected % 60);
 	    }
-	sendto_flag(SCH_NOTICE, "Received SQUIT %s from %s (%s)",
+	sendto_flag(SCH_SERVER, "Received SQUIT %s from %s (%s)",
 		    acptr->name, parv[0], comment);
 
 	return exit_client(cptr, acptr, sptr, comment);
@@ -623,11 +623,15 @@ Reg	aClient	*cptr;
 		** an already existing connection, remove the already
 		** existing connection if it has a sendq else remove the
 		** new and duplicate server. -avalon
+		** Remove existing link only if it has been linked for longer
+		** and has sendq higher than a threshold. -Vesa
 		*/
 		if ((acptr = find_name(host, NULL))
 		    || (acptr = find_mask(host, NULL)))
 		    {
-			if (MyConnect(acptr) && DBufLength(&acptr->sendQ))
+			if (MyConnect(acptr) &&
+			    DBufLength(&acptr->sendQ) > CHREPLLEN &&
+			    timeofday - acptr->firsttime > TIMESEC)
 				(void) exit_client(acptr, acptr, &me,
 						   "New Server");
 			else
@@ -1739,8 +1743,9 @@ char	*parv[];
     {
 	aConfItem *aconf;
 
-	if (hunt_server(cptr,sptr,":%s ADMIN :%s",1,parc,parv) != HUNTED_ISME)
-		return 1;
+	if (IsRegistered(cptr) &&	/* only local query for unregistered */
+	    hunt_server(cptr,sptr,":%s ADMIN :%s",1,parc,parv) != HUNTED_ISME)
+		return 2;
 	if ((aconf = find_admin()))
 	    {
 		sendto_one(sptr, rpl_str(RPL_ADMINME, parv[0]), ME);

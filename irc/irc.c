@@ -89,6 +89,7 @@ anUser	meUser;	/* User block for 'me' --msa */
 FILE	*logfile = NULL;
 char	*real_name(), *last_to_me(), *last_from_me();
 char	buf[BUFSIZE];
+char	*querychannel;
 int	portnum, termtype = CURSES_TERM;
 int	debuglevel = DEBUG_ERROR;
 int	unkill_flag = 0, cchannel = 0;
@@ -103,7 +104,6 @@ static	int	KillCount = 0;
 static	int	apu = 0;  /* Line number we're currently on screen */
 static	int	sock;     /* Server socket fd */
 static	char	currserver[HOSTLEN + 1];
-static	char	*querychannel;
 
 #if defined(HPUX) || defined(SVR3) || defined(SVR4)
 char	logbuf[BUFSIZ]; 
@@ -125,7 +125,7 @@ char	*argv[];
 {
   static char usage[] =
     "Usage: %s [-c channel] [-k passwd] [-p port] [-i] [-w] [-s] [nickname [server]]\n";
-	char	channel[CHANNELLEN+1];
+	char	channel[BUFSIZE+1];
 	int	length, mode = 0;
 	struct	passwd	*userdata;
 	char	*cp, *argv0=argv[0], *nickptr, *servptr, *getenv(), ch;
@@ -164,9 +164,9 @@ char	*argv[];
 			break;
 		case 'c':
 			if (argv[1][2] != '\0')
-				strncpy(channel, &argv[1][2], CHANNELLEN);
+				strncpy(channel, &argv[1][2], BUFSIZE);
 			else if (argc > 2) {
-				strncpy(channel, argv[2], CHANNELLEN);
+				strncpy(channel, argv[2], BUFSIZE);
 				argv++;
 				argc--;
 			}

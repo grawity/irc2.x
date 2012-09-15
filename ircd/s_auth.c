@@ -32,9 +32,6 @@ static  char sccsid[] = "%W% %G% (C) 1992-1995 Darren Reed";
 #ifdef	UNIXPORT
 # include <sys/un.h>
 #endif
-#if defined(__hpux)
-# include "inet.h"
-#endif
 #include <fcntl.h>
 #include "sock.h"	/* If FD_ZERO isn't define up to this point,  */
 			/* define it (BSD4.2 needs this) */

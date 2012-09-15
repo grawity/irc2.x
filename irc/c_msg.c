@@ -44,7 +44,7 @@ char c_msg_id[] = "c_msg.c v2.0 (c) 1988 University of Oulu, Computing Center\
 
 char	mybuf[513];
 
-extern	char	*last_to_me(), userhost[];
+extern	char	*last_to_me(), userhost[], *querychannel;
 extern	aClient	*client, me; /* 'me' from h.h	Vesa */
 
 void m_die() {
@@ -354,6 +354,11 @@ char *parv[];
 		(parv[2]) ? parv[2] : "*Unknown*",
 		(parv[1]) ? parv[1] : "*Unknown*",
 		parv[3]);
+	if (!mycmp(me.name, parv[2])) {
+		free(querychannel);
+		querychannel = (char *)malloc(strlen(me.name) + 1);
+		strcpy(querychannel, me.name);  /* Kludge? */
+	}
 	putline(mybuf);
   return 0;
 }

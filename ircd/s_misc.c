@@ -417,7 +417,7 @@ char	*comment;	/* Reason for the exit */
 				    sptr->username, &sptr->exitc);
 # endif
 		    }
-		else
+		else if (sptr->exitc != EXITC_REF)
 		    {
 # if defined(USE_SYSLOG) && defined(SYSLOG_CONN)
 			syslog(LOG_NOTICE, 

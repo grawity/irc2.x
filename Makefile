@@ -29,7 +29,7 @@ all install config configure:
 		echo "Configuring ${rev}"; \
 		mkdir -p ${rev}; \
 		cd ${rev}; \
-		sh ../support/configure ${CONFIGARGS}; \
+		${SHELL} ../support/configure ${CONFIGARGS}; \
 		if [ ! -f config.h ]; then \
 			/bin/cp ../include/config.h.dist config.h; \
 		fi; \

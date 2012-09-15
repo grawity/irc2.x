@@ -277,6 +277,9 @@ char	*to;
 	Reg	Numeric	*nptr;
 	Reg	int	num = numeric;
 
+	if (BadPtr(to))		/* for unregistered clients */
+		to = "*";
+
 	num -= numeric_errors[0].num_val;
 	if (num < 0 || num > ERR_USERSDONTMATCH)
 		SPRINTF(numbuff,
@@ -309,6 +312,9 @@ char	*to;
 
 	if (num > 4)
 		num -= (num > 300) ? 300 : 100;
+
+	if (BadPtr(to))		/* for unregistered clients */
+		to = "*";
 
 	if (num < 0 || num > 200)
 		SPRINTF(numbuff,

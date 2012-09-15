@@ -735,7 +735,7 @@ int	what;
 char	*mask, *pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 {
 	Reg	int	i;
-	Reg	aClient *cptr, *acptr;
+	Reg	aClient *cptr, *acptr = NULL;
 	Reg	anUser	*user;
   
 	for (i = 0; i <= highest_fd; i++)
@@ -753,6 +753,8 @@ char	*mask, *pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 					break;
 			if (!acptr)
 				continue;
+			sendto_prefix_one(cptr, from, pattern,
+					  p1, p2, p3, p4, p5, p6, p7, p8);
 		    }
 		/* my client, does he match ? */
 		else if (IsRegisteredUser(cptr) && match_it(cptr, mask, what))

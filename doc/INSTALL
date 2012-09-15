@@ -28,6 +28,7 @@ Overview of this document:
   3) Editing the Makefile
   4) Compiling IRC
   5) The ircd.conf file
+  6) Mailing list
 
 1) So that ircd/irc will compile and work correctly with your version of
    Unix, it is necessary that you run "make" first.  This will run
@@ -727,8 +728,12 @@ Field: 1    2           3                  4                 5         6
                           a large value, but if it is an important connection,
                           you might want a smaller value so that you connect
                           to it as soon as possible.
-             For clients: This defines the maximum number of clients from the
-                          same host (IP) will be allowed.
+             For clients: Positive value: defines the maximum number of
+                                          clients from the same host (IP)
+                                          will be allowed.
+                          Negative value: defines the maximum number of
+                                          clients from the same user@host (IP)
+                                          will be allowed.
 
    Field 5:  This field defines the maximum number of links this class
 	     will allow from automatic connections (C lines).  Using /CONNECT
@@ -1029,3 +1034,10 @@ Appendix B: Enabling Summon Messages
    The above commands read: "Give IRCD access to GROUP tty (which is /dev)
    and then when ANYONE runs the IRCD allow SETUID and SETGID priviliges
    so that they can use the /SUMMON command.
+
+
+6) ircd-users
+
+A mailing list is dedicated to the people using ircd. If you have trouble
+running ircd, or wish to discuss the future, you can subscribe by sending
+an email to majordomo@stealth.net, with "subscribe ircd-users" in the body.

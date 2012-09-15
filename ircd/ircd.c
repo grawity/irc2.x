@@ -622,6 +622,13 @@ char	*argv[];
 			strncpyzt(me.name, p, sizeof(me.name));
 			break;
 		    case 'i':
+			/* otherwise people wonder why it doesn't work,
+			   and since they don't RTFS (see below) -krys */
+			(void)fprintf(stderr,
+				      "%s: inetd support is not functional\n",
+				      myargv[0]);
+			exit(0);
+
 			bootopt |= BOOT_INETD|BOOT_AUTODIE;
 		        break;
 		    case 't':
@@ -1002,15 +1009,21 @@ static	void	setup_signals()
 void ircd_writetune(filename)
 char *filename;
 {
-	FILE	*fp;
+	int fd;
+	char buf[100];
 
-	if ((fp = fopen(filename, "w")))
+	if ((fd = open(filename, O_CREAT|O_WRONLY, 0600)) >= 0)
 	    {
-		(void) fprintf(fp, "%d\n%d\n%d\n%d\n%d\n%d\n", ww_size,
+		(void)sprintf(buf, "%d\n%d\n%d\n%d\n%d\n%d\n", ww_size,
 			       lk_size, _HASHSIZE, _CHANNELHASHSIZE,
 			       _SERVERSIZE, poolsize);
-		sendto_flag(SCH_NOTICE, "Wrote %s.", filename);
-		fclose(fp);
+		if (write(fd, buf, strlen(buf)) == -1)
+			sendto_flag(SCH_ERROR,
+				    "Failed (%d) to write tune file: %s.",
+				    errno, filename);
+		else
+			sendto_flag(SCH_NOTICE, "Updated %s.", filename);
+		close(fd);
 	    }
 	else
 		sendto_flag(SCH_ERROR, "Failed (%d) to open tune file: %s.",
@@ -1023,20 +1036,19 @@ char *filename;
 void ircd_readtune(filename)
 char *filename;
 {
-	FILE	*fp;
+	int fd;
+	char buf[100];
 
-	(void)alarm(3);
-	fp = fopen(filename, "r");
-	(void)alarm(0);
-	if (fp)
+	if ((fd = open(filename, O_RDONLY)) != -1)
 	    {
-		if (fscanf(fp, "%d\n%d\n%d\n%d\n%d\n%d\n", &ww_size, &lk_size,
-			   &_HASHSIZE, &_CHANNELHASHSIZE, &_SERVERSIZE,
-			   &poolsize) != 6)
+		read(fd, buf, 100);	/* no panic if this fails.. */
+		if (sscanf(buf, "%d\n%d\n%d\n%d\n%d\n%d\n", &ww_size,
+			    &lk_size, &_HASHSIZE, &_CHANNELHASHSIZE,
+			    &_SERVERSIZE, &poolsize) != 6)
 		    {
 			fprintf(stderr, "ircd tune file %s: bad format\n",
 				filename);
-			fclose(fp);
+			close(fd);
 			exit(1);
 		    }
 		/*
@@ -1046,6 +1058,6 @@ char *filename;
 		*/
 		if (lk_size < ww_size)
 			lk_size = ww_size;
-		fclose(fp);
+		close(fd);
 	    }
 }

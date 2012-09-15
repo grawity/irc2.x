@@ -92,7 +92,7 @@ inet_addr.o: ../common/inet_addr.c
 
 install: all
 	-if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
-		-mkdir ${IRCDDIR}; \
+		mkdir ${IRCDDIR}; \
 	fi
 	-${INSTALL} -c -s -m ${IRCDMODE} ircd ${BINDIR}
 	-${INSTALL} -c -s -m 700 chkconf ${BINDIR}

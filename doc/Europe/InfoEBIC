@@ -11,7 +11,7 @@ Help_IT			Requires DCC Chat
 
 - By WWW
 http://www.funet.fi/~irc/
-http://www.informatik.uni-oldenburg.de/~ircadm/
+http://irc.pages.de/
 http://www.nvg.unit.no/irc/IRCNO-page.html
 
 Public IRC servers in Europe
@@ -22,27 +22,26 @@ irc.Univ-Lyon1.FR	France
 
 - Open for national and some neighbouring domains
 irc.cdc.polimi.it	Italy
-irc.ethz.ch		Switzerland
-irc.nada.kth.se		Sweden
+irc.span.ch		Switzerland
+irc.ludd.luth.se	Sweden
 irc.nvg.unit.no		Norway
 irc.sci.kun.nl		Netherlands
-noc.belwue.de		Germany
+irc.uni-stuttgart.de	Germany
 stork.doc.ic.ac.uk	United Kingdom
 
 Anonymous FTP archives with IRC software in Europe
 ==================================================
 ftp.funet.fi:/pub/unix/irc
 ftp.informatik.tu-muenchen.de:/pub/comp/networking/irc
-ftp.math.ethz.ch:/pub/irc
 hplyot.obspm.fr:/irc
 src.doc.ic.ac.uk:/packages/irc
 
 Mailing list
 ============
 There is administrative mailing list for european IRC networking.
-The list address is irc-eu@grasp.insa-lyon.fr. This list is run by
+The list address is irc-eu@ifens01.insa-lyon.fr. This list is run by
 an automated mailing-list manager tool, so all requests concerning
-the list should be mailed to listserv@grasp.insa-lyon.fr. To get help,
+the list should be mailed to listserv@ifens01.insa-lyon.fr. To get help,
 send "help" in mail message to the listserv address, and you will
 get help file in reply.
 

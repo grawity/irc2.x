@@ -33,9 +33,6 @@
  *   Changes in check_access
  * Added SO_REUSEADDR fix from zessel@informatik.uni-kl.de
  */
-#if defined(sun) && (defined(__SVR4) || defined(__svr4__))
-# define _DO_POLL_
-#endif
 
 #ifndef lint
 static  char sccsid[] = "@(#)s_bsd.c	1.1 1/21/95 (C) 1988 University of Oulu, \
@@ -56,7 +53,7 @@ Computing Center and Jarkko Oikarinen";
 #if defined(SVR4)
 #include <sys/filio.h>
 #endif
-#if defined(UNIXPORT) && (!defined(SVR3) || defined(sgi) || \
+#if defined(UNIXPORT) && (!defined(SVR3) || defined(SGI) || \
     defined(_SEQUENT_))
 # include <sys/un.h>
 #endif
@@ -1622,7 +1619,7 @@ FdAry	*fdp;
 	time_t	delay2 = delay;
 	u_long	usec = 0;
 	int	res, length, fd, i, fdnew;
-	int	auth = 0, highfd = -1;
+	int	auth, highfd = -1;
 
 #ifdef NPATH
          note_delay(&delay);
@@ -1636,6 +1633,7 @@ FdAry	*fdp;
 	    {
 		FD_ZERO(&read_set);
 		FD_ZERO(&write_set);
+		auth = 0;
 
 		for (i = fdp->highest; i >= 0; i--)
 		    {
@@ -1768,12 +1766,12 @@ FdAry	*fdp;
 			read_authports(cptr);
 		    }
 	    }
-	for (i = fdp->highest; i >= 0; i--)
-		if ((cptr = local[fd = fdp->fd[i]]) &&
-		    FD_ISSET(fd, &read_set) && IsListening(cptr))
+	for (i = fdp->highest; i >= 0; i--) {
+		if (!(cptr = local[fd = fdp->fd[i]]))
+			continue;
+		if (FD_ISSET(fd, &read_set) && IsListening(cptr))
 		    {
 			FD_CLR(fd, &read_set);
-			nfds--;
 			cptr->lasttime = timeofday;
 			/*
 			** There may be many reasons for error return, but
@@ -1790,7 +1788,7 @@ FdAry	*fdp;
 			    {
 				report_error("Cannot accept connections %s:%s",
 						cptr);
-				break;
+				continue;
 			    }
 			ircstp->is_ac++;
 			if (fdnew >= MAXCLIENTS)
@@ -1807,25 +1805,24 @@ FdAry	*fdp;
 			    }
 			/*
 			 * Use of add_connection (which never fails :) meLazy
+			 * Never say never. MrMurphy visited here. -Vesa
 			 */
 #ifdef	UNIXPORT
 			if (IsUnixSocket(cptr))
 				add_unixconnection(cptr, fdnew);
 			else
 #endif
-				(void)add_connection(cptr, fdnew);
+				if (!add_connection(cptr, fdnew))
+					continue;
 			nextping = timeofday;
 			istat.is_unknown++;
+			continue;
 		    }
-
-	for (i = fdp->highest; i >= 0; i--)
-	    {
-		if (!(cptr = local[fd = fdp->fd[i]]) || IsMe(cptr))
+		if (IsMe(cptr))
 			continue;
 		if (FD_ISSET(fd, &write_set))
 		    {
 			int	write_err = 0;
-			nfds--;
 			/*
 			** ...room for writing, empty some queue then...
 			*/
@@ -1838,7 +1835,6 @@ FdAry	*fdp;
 deadsocket:
 				if (FD_ISSET(fd, &read_set))
 				    {
-					nfds--;
 					FD_CLR(fd, &read_set);
 				    }
 				cptr->exitc = EXITC_ERROR;
@@ -1857,7 +1853,6 @@ deadsocket:
 /*		else if (IsClient(cptr) && DBufLength(&cptr->recvQ))
 			length = client_packet(cptr);
 */
-		nfds--;
 		readcalls++;
 		if (length == FLUSH_BUFFER)
 			continue;
@@ -1920,7 +1915,7 @@ deadsocket:
 		(void)exit_client(cptr, cptr, &me, length >= 0 ?
 				  "EOF From client" :
 				  strerror(get_sockerr(cptr)));
-	    }
+	} /* for(i) */
 	return 0;
 }
 
@@ -1940,11 +1935,14 @@ FdAry	*fdp;
  *  eliminate the direct FD_<blah> macros as they are select() specific
  *  and replace them with a higher level abstraction that also works for
  *  poll()...
+ *  added POLLERR and POLLHUP into revents checking on input to catch
+ *  errors and hangups on streams..                            --DLR
  */
-#define POLLREADFLAGS (POLLIN|POLLRDNORM)
+#define POLLSETREADFLAGS (POLLIN|POLLRDNORM)
+#define POLLREADFLAGS (POLLSETREADFLAGS|POLLHUP|POLLERR)
 #define POLLWRITEFLAGS (POLLOUT|POLLWRNORM)
 #define SET_READ_EVENT( thisfd ){  CHECK_PFD( thisfd );\
-				   pfd->events |= POLLREADFLAGS;}
+				   pfd->events |= POLLSETREADFLAGS;}
 #define SET_WRITE_EVENT( thisfd ){ CHECK_PFD( thisfd );\
 				   pfd->events |= POLLWRITEFLAGS;}
 #define CHECK_PFD( thisfd ) 			\
@@ -1962,16 +1960,16 @@ FdAry	*fdp;
 	struct	timeval	nowt;
 	u_long	us;
 #endif
-	pollfd_t   poll_fdarray[MAXCONNECTIONS];
-	pollfd_t * pfd     = poll_fdarray;
-	pollfd_t * res_pfd = NULL;
-	pollfd_t * udp_pfd = NULL;
+	struct pollfd   poll_fdarray[MAXCONNECTIONS];
+	struct pollfd * pfd     = poll_fdarray;
+	struct pollfd * res_pfd = NULL;
+	struct pollfd * udp_pfd = NULL;
 	aClient	 * authclnts[MAXCONNECTIONS];	/* mapping of auth fds to client ptrs */
 	int	   nbr_pfds = 0;
 	time_t	   delay2 = delay;
 	u_long	   usec = 0;
 	int	   res, length, fd, i, fdnew;
-	int	   auth = 0;
+	int	   auth;
 
 #ifdef NPATH
          note_delay(&delay);
@@ -2097,20 +2095,17 @@ FdAry	*fdp;
 	 *  loop through all the polled fds testing for whether any 
 	 *  has an I/O ready 
 	 */
-	for ( pfd = poll_fdarray, i = 0; 
-		i < nbr_pfds; 
-		i++, pfd++ ) {
-
+	for (pfd = poll_fdarray, i = 0; i < nbr_pfds; i++, pfd++ ) {
 		fd = pfd->fd;
-
 		/* check for the auth completions - previously, this was it's
 	  	   own loop through the fds */
-		if (( auth > 0 ) && ( cptr = authclnts[fd]) && ( cptr->authfd == fd )) {
+		if ((auth > 0) && (cptr = authclnts[fd]) &&
+		    (cptr->authfd == fd)) {
 			/* auth I/O ready */
 			auth--;
 			if (pfd->revents & POLLWRITEFLAGS) 
 				send_authports(cptr);
-			else if (pfd->revents & POLLREADFLAGS) 
+			if (pfd->revents & POLLREADFLAGS) 
 				read_authports(cptr);
 			continue;
 	    	}
@@ -2120,7 +2115,7 @@ FdAry	*fdp;
 		 *  of this code embedded this test within the subsequent
 		 *  'if' statements - put it here for reusability
 		 */
-		if ( !(cptr = local[fd])) 
+		if (!(cptr = local[fd])) 
 			continue;
 
 		/*
@@ -2162,22 +2157,24 @@ FdAry	*fdp;
 			    }
 			/*
 			 * Use of add_connection (which never fails :) meLazy
+			 * Never say never. MrMurphy visited here. -Vesa
 			 */
 #ifdef	UNIXPORT
 			if (IsUnixSocket(cptr))
 				add_unixconnection(cptr, fdnew);
 			else
 #endif
-				(void)add_connection(cptr, fdnew);
+				if (!add_connection(cptr, fdnew))
+					continue;
 			nextping = timeofday;
 			istat.is_unknown++;
 			continue;
-		    }
+		    } /* if(READ&&Listening) */
 
 		/*
 	 	 *  was the next loop - check for actual work to be done
 		 */
-		if (IsMe( cptr ))
+		if (IsMe(cptr))
 			continue;
 		if (pfd->revents & POLLWRITEFLAGS )
 		    {
@@ -2270,7 +2267,7 @@ deadsocket:
 		(void)exit_client(cptr, cptr, &me, length >= 0 ?
 				  "EOF From client" :
 				  strerror(get_sockerr(cptr)));
-	    }
+	} /* for(i,pfd) */
 	return 0;
 }
 #endif /* _DO_POLL */
@@ -2503,7 +2500,7 @@ int	*lenp;
 	server.sin_port = htons((aconf->port > 0) ? aconf->port : portnum);
 	/*
 	 * Look for a duplicate IP#,port pair among already open connections
-	 * (This caters for unestablished connetsions).
+	 * (This caters for unestablished connections).
 	 */
 	for (i = highest_fd; i >= 0; i--)
 		if ((acptr = local[i]) &&

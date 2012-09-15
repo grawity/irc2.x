@@ -1666,17 +1666,23 @@ char	*parv[];
 		**  Remove user from the old channel (if any)
 		*/
 #ifdef V28PlusOnly
-		if (!index(name, ':'))
-		    {
-			if (*buf)
-				(void)strcat(buf, ",");
+		if (!index(name, ':')) {	/* channel:*.mask */
 			if (*name != '&')
-				(void)strcat(buf, name);
-		    }
-		else
-#endif
+# ifndef NoV28Links
+				if (*name == '+')	/* 2.8 has no +chan */
+					sendto_serv_v(cptr, SV_29, PartFmt,
+						      parv[0], name, comment);
+				else
+# endif /* NoV28Links */
+				{
+					if (*buf)
+						(void)strcat(buf, ",");
+					(void)strcat(buf, name);
+				}
+		} else
+#endif /* V28PlusOnly */
 			sendto_match_servs(chptr, cptr, PartFmt,
-				   parv[0], name, comment);
+				   	   parv[0], name, comment);
 		sendto_channel_butserv(chptr, sptr, PartFmt,
 				       parv[0], name, comment);
 		remove_user_from_channel(sptr, chptr);
@@ -2125,7 +2131,6 @@ char	*parv[];
 					(void)strcat(buf, "@");
 				else if (lp->flags & CHFL_VOICE)
 					(void)strcat(buf, "+");
-				(void)strcat(buf, " ");
 				(void)strcat(buf, parv[0]);
 			    }
 			rlen += strlen(buf);
@@ -2262,6 +2267,10 @@ aClient	*cptr, *user;
 		chptr = lp->value.chptr;
 		if (*chptr->chname == '&')
 			continue;
+#ifndef NoV28Links
+		if (*chptr->chname == '+' && cptr->serv->version == SV_OLD)
+			continue;
+#endif
 		if ((mask = index(chptr->chname, ':')))
 			if (matches(++mask, cptr->name))
 				continue;

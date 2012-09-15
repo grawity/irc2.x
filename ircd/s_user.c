@@ -350,33 +350,41 @@ char	*nick, *username;
 	    {
 		if ((i = check_client(sptr)))
 		    {
-			sendto_flag(SCH_LOCAL, "%s from %s.", (i == -4) ?
+			ircstp->is_ref++;
+			sptr->exitc = EXITC_REF;
+			sendto_flag(SCH_LOCAL, "%s from %s.", (i == -5) ?
+				    "Too many user connections" : (i == -4) ?
 				    "Too many host connections" :
 				    (i == -3) ? "Too many connections" :
 			 	    "Unauthorized connection",
 				    get_client_host(sptr));
-			ircstp->is_ref++;
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONN)
 			syslog(LOG_NOTICE, "%s ( %s ): <none>@%s [%s] %c\n",
-			       myctime(sptr->firsttime), 
+			       myctime(sptr->firsttime),
+			       (i == -5) ? " u@h max " :
 			       (i == -4) ? " IP  max " : (i == -3) ? 
 			       " No more " : " No Auth ",
 			       (IsUnixSocket(sptr)) ? me.sockhost :
 			       ((sptr->hostp) ? sptr->hostp->h_name :
-				sptr->sockhost), sptr->username, '-');
+				sptr->sockhost), sptr->username, sptr->exitc);
 #endif		    
 #ifdef FNAME_CONNLOG
 			sendto_flog(myctime(sptr->firsttime), 
+				    (i == -5) ? " u@h max " :
 				    (i == -4) ? " IP  max " : (i == -3) ? 
 				    " No more " : " No Auth ", 0, "<none>",
 				    (IsUnixSocket(sptr)) ? me.sockhost :
 				    ((sptr->hostp) ? sptr->hostp->h_name :
-				    sptr->sockhost), sptr->username, "-");
+				    sptr->sockhost), sptr->username,
+				    &sptr->exitc);
 #endif
-			return exit_client(cptr, sptr, &me, (i == -4) ?
-				   "No more connections from your host" :
-					   (i == -3) ? "No more connections" :
-					   "No Authorization");
+			return exit_client(cptr, sptr, &me,
+				(i == -5) ?
+					"No more connections from you" :
+				(i == -4) ?
+					"No more connections from your host" :
+				(i == -3) ? "No more connections" :
+					    "No Authorization");
 		    }
 		aconf = sptr->confs->value.aconf;
 		if (IsUnixSocket(sptr))
@@ -444,6 +452,7 @@ char	*nick, *username;
 			sendto_flag(SCH_LOCAL, "K-lined %s@%s.",
 				    sptr->user->username, sptr->sockhost);
 			ircstp->is_ref++;
+			sptr->exitc = EXITC_REF;
 #if defined(USE_SYSLOG) && defined(SYSLOG_CONN)
 			syslog(LOG_NOTICE, "%s ( K lined ): %s@%s [%s] %c\n",
 			       myctime(sptr->firsttime), sptr->user->username,
@@ -462,6 +471,7 @@ char	*nick, *username;
 			sendto_flag(SCH_LOCAL, "R-lined %s@%s.",
 				    sptr->user->username, sptr->sockhost);
 			ircstp->is_ref++;
+			sptr->exitc = EXITC_REF;
 # if defined(USE_SYSLOG) && defined(SYSLOG_CONN)
 			syslog(LOG_NOTICE, "%s ( R lined ): %s@%s [%s] %c\n",
 			       myctime(sptr->firsttime), sptr->user->username,
@@ -641,8 +651,7 @@ char	*parv[];
 	if (do_nick_name(nick) == 0 ||
 	    (IsServer(cptr) && strcmp(nick, parv[1])))
 	    {
-		sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME,
-					 BadPtr(parv[0]) ? "*" : parv[0]),
+		sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME, parv[0]),
 			   parv[1]);
 
 		if (IsServer(cptr))
@@ -679,8 +688,8 @@ char	*parv[];
 	if ((acptr = find_server(nick, NULL)))
 		if (MyConnect(sptr))
 		    {
-			sendto_one(sptr, err_str(ERR_NICKNAMEINUSE,
-				   BadPtr(parv[0]) ? "*" : parv[0]), nick);
+			sendto_one(sptr, err_str(ERR_NICKNAMEINUSE, parv[0]),
+				   nick);
 			return 1; /* NICK message ignored */
 		    }
 	/*
@@ -764,9 +773,8 @@ char	*parv[];
 		** send error reply and ignore the command.
 		*/
 		sendto_one(sptr, err_str((delayed) ? ERR_UNAVAILRESOURCE
-					 : ERR_NICKNAMEINUSE,
-			   /* parv[0] is empty when connecting */
-			   BadPtr(parv[0]) ? "*" : parv[0]), nick);
+						   : ERR_NICKNAMEINUSE,
+					 parv[0]), nick);
 		return 1; /* NICK message ignored */
 	    }
 	/*
@@ -1187,7 +1195,7 @@ char	*parv[];
 		if ((s = (char *)index(mask, ',')))
 		    {
 			parv[1] = ++s;
-			(void)m_who(cptr, sptr, parc, parv);
+			penalty = m_who(cptr, sptr, parc, parv);
 		    }
 		clean_channelname(mask);
 	    }
@@ -1197,8 +1205,6 @@ char	*parv[];
 		if ((lp = sptr->user->channel))
 			mychannel = lp->value.chptr;
 
-	/* Allow use of m_who without registering */
-	
 	/*
 	**  Following code is some ugly hacking to preserve the
 	**  functions of the old implementation. (Also, people
@@ -1953,7 +1959,7 @@ char	*parv[];
 	acptr = find_client(origin, NULL);
 	if (!acptr)
 		acptr = find_server(origin, NULL);
-	if (acptr && acptr != sptr)
+	if (!acptr || acptr != sptr)
 		origin = cptr->name;
 	if (!BadPtr(destination) && mycmp(destination, ME) != 0)
 	    {
@@ -1968,7 +1974,7 @@ char	*parv[];
 		    }
 	    }
 	else
-		sendto_one(sptr,":%s PONG %s :%s", ME,
+		sendto_one(sptr, ":%s PONG %s :%s", ME,
 			   (destination) ? destination : ME, origin);
 	return 1;
     }
@@ -2117,7 +2123,7 @@ char	*parv[];
 		*--s =  '@';
 		sendto_flag(SCH_NOTICE, "%s (%s@%s) is now operator (%c)",
 			    parv[0], sptr->user->username, sptr->user->host,
-			   IsOper(sptr) ? 'O' : 'o');
+			   IsOper(sptr) ? 'o' : 'O');
 		if (IsOper(sptr))
 			send_umode_out(cptr, sptr, old);
  		sendto_one(sptr, rpl_str(RPL_YOUREOPER, parv[0]));
@@ -2374,7 +2380,7 @@ char	*parv[];
 	Reg	int	flag;
 	Reg	int	*s;
 	Reg	char	**p, *m;
-	aClient	*acptr;
+	aClient	*acptr = NULL;
 	int	what, setflags, penalty = 0;
 
 	what = MODE_ADD;

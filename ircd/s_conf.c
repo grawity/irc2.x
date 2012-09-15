@@ -266,19 +266,34 @@ aClient *cptr;
 		if (aconf->clients >= ConfMaxLinks(aconf) &&
 		    ConfMaxLinks(aconf) > 0)
 			return -3;    /* Use this for printing error message */
-		if (ConfConFreq(aconf) > 0)
+		if (ConfConFreq(aconf) > 0)	/* special limit per host */
 		    {
 			Reg	aClient	*acptr;
 			Reg	int	i, cnt = 0;
 
 			for (i = highest_fd; i >= 0; i--)
 				if ((acptr = local[i]) && (cptr != acptr) &&
-				    !bcmp((char *)&cptr->ip, (char *)&acptr->ip,
+				    !bcmp((char *)&cptr->ip,
+					  (char *)&acptr->ip,
 					  sizeof(cptr->ip)))
 					cnt++;
 			if (cnt >= ConfConFreq(aconf))
-				return -4;	/* Use this for printing error message */
+				return -4;	/* for error message */
 		    }
+		if (ConfConFreq(aconf) < 0) { /* special limit per user@host */
+			Reg     aClient *acptr;
+			Reg     int     i, cnt = 0;
+
+			for (i = highest_fd; i >= 0; i--)
+				if ((acptr = local[i]) && (cptr != acptr) &&
+				    !bcmp((char *)&cptr->ip,(char *)&acptr->ip,
+					  sizeof(cptr->ip))
+				    && !strncasecmp(acptr->username,
+						    cptr->username, USERLEN))
+					cnt--;
+			if (cnt <= ConfConFreq(aconf))
+				return -5;      /* for error message */
+		}
 	    }
 
 	lp = make_link();
