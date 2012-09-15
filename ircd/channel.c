@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.44 6/28/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.47 11 Sep 1993 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -609,12 +609,8 @@ char	*parv[], *mbuf, *pbuf;
 			 * to make sure the right client is affected by the
 			 * mode change.
 			 */
-			if (!(who = find_chasing(cptr, parv[0], &chasing)))
-			    {
-	  			sendto_one(cptr, err_str(ERR_NOSUCHNICK),
-					   me.name, cptr->name, parv[0]);
+			if (!(who = find_chasing(sptr, parv[0], &chasing)))
 				break;
-			    }
 	  		if (!IsMember(who, chptr))
 			    {
 	    			sendto_one(cptr, err_str(ERR_USERNOTINCHANNEL),
@@ -691,6 +687,8 @@ char	*parv[], *mbuf, *pbuf;
 				    {
 					lp = &chops[opcnt++];
 					lp->value.cp = *parv;
+					if (strlen(lp->value.cp) > (size_t) KEYLEN)
+						lp->value.cp[KEYLEN] = '\0';
 					lp->flags = MODE_KEY|MODE_ADD;
 					keychange = 1;
 				    }
@@ -943,7 +941,7 @@ char	*parv[], *mbuf, *pbuf;
 				len++;
 				if (!ischop)
 					break;
-				if (strlen(cp) > KEYLEN)
+				if (strlen(cp) > (size_t) KEYLEN)
 					*(cp+KEYLEN) = '\0';
 				if (whatt == MODE_ADD)
 					strncpyzt(mode->key, cp,
@@ -1044,6 +1042,8 @@ char	*chname;
 {
 	Reg1	char	*s;
 
+	if (*chname == '&' && IsServer(cptr))
+		return -1;
 	s = rindex(chname, ':');
 	if (!s)
 		return 0;
@@ -1233,6 +1233,8 @@ char	*parv[];
 		clean_channelname(name);
 		if (check_channelmask(sptr, cptr, name)==-1)
 			continue;
+		if (*name == '&' && !MyConnect(sptr))
+			continue;
 		if (*name == '0')
 			*jbuf = '\0';
 		else if (!IsChannelName(name))
@@ -1408,7 +1410,7 @@ int	m_kick(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
-    {
+{
 	aClient *who;
 	aChannel *chptr;
 	int	chasing = 0;
@@ -1423,6 +1425,12 @@ char	*parv[];
 			   me.name, parv[0], "KICK");
 		return 0;
 	    }
+	if (IsServer(sptr))
+		sendto_ops_butone(NULL, "KICK from %s for %s %s",
+				  parv[0], parv[1], parv[2]);
+	comment = (BadPtr(parv[3])) ? parv[0] : parv[3];
+	if (strlen(comment) > (size_t) TOPICLEN)
+		comment[TOPICLEN] = '\0';
 
 	*nickbuf = *buf = '\0';
 
@@ -1457,9 +1465,6 @@ char	*parv[];
 				sendto_one(sptr,
 				   ":%s NOTICE %s :KICK changed from %s to %s",
 					   me.name, parv[0], user, who->name);
-			comment = (BadPtr(parv[3])) ? parv[0] : parv[3];
-			if (strlen(comment) > (size_t) TOPICLEN)
-				comment[TOPICLEN] = '\0';
 			if (IsMember(who, chptr))
 			    {
 				sendto_channel_butserv(chptr, sptr,
@@ -1468,7 +1473,7 @@ char	*parv[];
 #ifdef	V28PlusOnly
 				if (*nickbuf)
 					(void)strcat(nickbuf, ",");
-					(void)strcat(nickbuf, who->name);
+				(void)strcat(nickbuf, who->name);
 #else
 				sendto_match_servs(chptr, cptr,
 						   ":%s KICK %s %s :%s",
@@ -1493,12 +1498,12 @@ char	*parv[];
 
 #ifdef	V28PlusOnly
 	if (*buf && *nickbuf)
-		sendto_serv_butone(cptr, ":%s KICK %s %s",
-				   parv[0], buf, nickbuf);
+		sendto_serv_butone(cptr, ":%s KICK %s %s :%s",
+				   parv[0], buf, nickbuf, comment);
 #endif
 	return (0);
- }
-	
+}
+
 int	count_channels(sptr)
 aClient	*sptr;
 {
@@ -1902,6 +1907,8 @@ aClient	*cptr, *user;
 		if ((mask = index(chptr->chname, ':')))
 			if (matches(++mask, cptr->name))
 				continue;
+		if (*chptr->chname == '&')
+			continue;
 		if (strlen(chptr->chname) > (size_t) BUFSIZE - 2 - strlen(buf))
 		    {
 			if (cnt)

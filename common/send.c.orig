@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.27 02 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -270,11 +270,9 @@ va_dcl
 	va_list	vl;
 #endif
 
-/*
 # ifdef NPATH
         check_command((long)1, pattern, p1, p2, p3);
 # endif
-*/
 
 #ifdef VMS
 	extern int goodbye;

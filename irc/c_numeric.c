@@ -124,11 +124,11 @@ char	*parv[];
 	    case ERR_NICKNAMEINUSE:
 		sprintf(mybuf,
 			"*** Error: %s: Nickname %s is already in use. %s",
-			parv[0], parv[1], "Please choose another.");
+			parv[0], parv[2], "Please choose another.");
 		break;
 	    case ERR_SERVICENAMEINUSE:
 		sprintf(mybuf, "*** Error: %s: Service %s is already in use.",
-			parv[0], parv[1]);
+			parv[0], parv[2]);
 		break;
 	    case ERR_SERVICECONFUSED:
 		sprintf(mybuf, "Error: %s: Your service name is confused",
@@ -379,12 +379,11 @@ char	*parv[];
 	    case RPL_STATSQLINE:
 	    case RPL_STATSYLINE:
 		sprintf(mybuf, "*** %s: %s:%s:%s:%s:%s:%s",
-			parv[0], parv[3], parv[4], parv[5],
-			parv[6], parv[7], parv[8]);
+			parv[0], parv[2], parv[3], parv[4],
+			parv[5], parv[6], parv[7]);
 		break;
 	    case RPL_UMODEIS:
 		sprintf(mybuf, "*** %s: Mode for user %s is %s",
-			/* parv[0], parv[2], parv[3]);	-Vesa */
 			parv[0], parv[1], parv[2]);
 		break;
 	    case RPL_SERVICEINFO:

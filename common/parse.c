@@ -64,7 +64,7 @@ int	n;
 		if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
 			return 0;
 	    }
-	return (*str1 - *str2);
+	return (*s1 - *s2);
     }
 
 /*

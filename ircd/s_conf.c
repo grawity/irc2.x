@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.46 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.47 13 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -680,8 +680,11 @@ extern char *getfield();
 int 	initconf(opt)
 int	opt;
 {
+	static	char	quotes[9][2] = {{'b', '\b'}, {'f', '\f'}, {'n', '\n'},
+					{'r', '\r'}, {'t', '\t'}, {'v', '\v'},
+					{'\\', '\\'}, { 0, 0}};
 	Reg1	char	*tmp, *s;
-	int	fd;
+	int	fd, i;
 	char	line[512], c[80];
 	int	ccount = 0, ncount = 0;
 	aConfItem *aconf = NULL;
@@ -712,30 +715,19 @@ int	opt;
 		    {
 			if (*tmp == '\\')
 			    {
-				switch (*(tmp+1))
-				{
-				case 'n' :
-					*tmp = '\n';
-					break;
-				case 'r' :
-					*tmp = '\r';
-					break;
-				case 't' :
-					*tmp = '\t';
-					break;
-				case '0' :
-					*tmp = '\0';
-					break;
-				default :
+				for (i = 0; quotes[i][0]; i++)
+					if (quotes[i][0] == *(tmp+1))
+					    {
+						*tmp = quotes[i][1];
+						break;
+					    }
+				if (!quotes[i][0])
 					*tmp = *(tmp+1);
-					break;
-				}
 				if (!*(tmp+1))
 					break;
 				else
-					for (s = tmp; *s = *++s; )
+					for (s = tmp; *s = *(s+1); s++)
 						;
-				tmp++;
 			    }
 			else if (*tmp == '#')
 				*tmp = '\0';

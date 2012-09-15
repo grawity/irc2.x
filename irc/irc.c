@@ -94,11 +94,13 @@ int	intr();
 int	QuitFlag = 0;
 
 void	quit_intr();
+extern	void suspend_irc();
 
 static	int	KillCount = 0;
 static	int	apu = 0;  /* Line number we're currently on screen */
 static	int	sock;     /* Server socket fd */
 static	char	currserver[HOSTLEN + 1];
+static	char	*querychannel;
 
 #ifdef HPUX
 char	logbuf[BUFSIZ]; 
@@ -119,9 +121,9 @@ int	argc;
 char	*argv[];
 {
   static char usage[] =
-    "Usage: %s [ -c channel ] [ -p port ] [ nickname [ server ] ]\n";
+    "Usage: %s [-c channel] [-k passwd] [-p port] [-i] [-w] [-s] [nickname [server]]\n";
 	char	channel[CHANNELLEN+1];
-	int	length;
+	int	length, mode = 0;
 	struct	passwd	*userdata;
 	char	*cp, *argv0=argv[0], *nickptr, *servptr, *getenv(), ch;
 
@@ -171,6 +173,28 @@ char	*argv[];
 				printf(usage, argv0);
 				exit(1);
 			}
+			break;
+		case 'i':
+			mode |= FLAGS_INVISIBLE;
+			break;
+		case 's':
+			mode |= FLAGS_SERVNOTICE;
+			break;
+		case 'w':
+			mode |= FLAGS_WALLOP;
+			break;
+		case 'k':
+                        if (argv[1][2] != '\0')
+                                strncpy(me.passwd, &argv[1][2], PASSWDLEN);
+                        else if (argc > 2) {
+                                strncpy(me.passwd, argv[2], PASSWDLEN);
+                                argv++;
+                                argc--;
+                        }
+                        if (!me.passwd[0]) {
+                                printf(usage, argv0);
+                                exit(1);
+                        }
 			break;
 #ifdef DOTERMCAP
 			case 's':
@@ -238,6 +262,7 @@ char	*argv[];
 			strncpy(me.info, &argv0[1], REALLEN);
 			strncpy(meUser.username, argv[1], USERLEN);
 		} else {
+			sprintf(me.sockhost, "%d", mode);
 			if (cp = getenv("IRCNAME"))
 				strncpy(me.info, cp, REALLEN);
 			else if (cp = getenv("NAME"))
@@ -268,6 +293,7 @@ char	*argv[];
 		if (termtype == CURSES_TERM) {
 			initscr();
 			signal(SIGINT, quit_intr);
+			signal(SIGTSTP, suspend_irc);
 			noecho();
 			crmode();
 			clear();
@@ -286,12 +312,16 @@ char	*argv[];
 		sendto_one(&me, "NICK %s", me.name);
 		sendto_one(&me, "USER %s %s %s :%s", meUser.username,
 			   me.sockhost, meUser.server, me.info);
+	        querychannel = (char *)malloc(strlen(me.name) + 1);
+		strcpy(querychannel, me.name);	/* Kludge? */
 		if (channel[0])
 			do_channel(channel, "JOIN");
 		myloop(sock);
 		if (logfile)
 			do_log(NULL);
+		printf("Press any key.");
         	getchar();
+		printf("\n");
 #ifdef DOCURSES
 		if (termtype == CURSES_TERM) {
 			echo();
@@ -428,8 +458,6 @@ char	*buf1, *buf2;
 	return (0);
 }
 
-static	char	*querychannel = "0";
-
 int	do_mytext(buf1, temp)
 char	*buf1, *temp;
 {
@@ -489,8 +517,11 @@ char    *buf1, *tmp;
 	    }
 	else
        		sendto_one(&me, "%s %s", tmp, buf1);
-	if (*tmp == 'P')			/* PART */
-		querychannel = me.name;
+	if (*tmp == 'P') {			/* PART */
+		free(querychannel);
+	        querychannel = (char *)malloc(strlen(me.name) + 1);
+		strcpy(querychannel, me.name);	/* Kludge? */
+	}
 }
 
 /* "CMD PARA1 PARA2 [:PARA3]" */
@@ -852,8 +883,7 @@ char *ptr, *xtra;
 		return;
 	}
 
-	if (querychannel)
-		free((char *)querychannel);
+	free((char *)querychannel);
 
 	if (querychannel = (char *)malloc(strlen(ptr) + 1))
 	    {
@@ -867,7 +897,7 @@ char *ptr, *xtra;
 			strcpy(querychannel, buf);
 	    }
 	else
-		querychannel = me.name; /* kludge */
+		printf("Blah! Out of memory?\n");
 
 	sendto_one(&me, "%s %s", xtra, ptr);
 }

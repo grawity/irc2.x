@@ -27,7 +27,7 @@
 
 # Check the curses libraries if your systems wants them differently...
 
-INCLUDE=../include
+INCLUDEDIR=../include
 DFLAGS=-DCLIENT_COMPILE
 INSTALL=/usr/bin/install
 CFLAGS = -g -I${INCLUDEDIR}

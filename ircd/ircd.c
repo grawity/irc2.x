@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.43 6/21/93 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.44 10 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -396,8 +396,11 @@ int	argc;
 char	*argv[];
 {
 	int	portarg = 0;
+	uid_t	uid, euid;
 	time_t	delay = 0, now;
 
+	uid = getuid();
+	euid = geteuid();
 #ifdef	PROFIL
 	(void)monstartup(0, etext);
 	(void)moncontrol(1);
@@ -410,6 +413,7 @@ char	*argv[];
 		exit(-1);
 	    }
 #ifdef CHROOTDIR
+	res_init();
 	if (chroot(DPATH))
 	  {
 	    (void)fprintf(stderr,"ERROR:  Cannot chdir/chroot\n");
@@ -455,7 +459,7 @@ char	*argv[];
 			bootopt |= BOOT_QUICK;
 			break;
 		    case 'd' :
-                        (void)setuid((uid_t)getuid());
+                        (void)setuid((uid_t)uid);
 			dpath = p;
 			break;
 		    case 'o': /* Per user local daemon... */
@@ -464,7 +468,7 @@ char	*argv[];
 		        break;
 #ifdef CMDLINE_CONFIG
 		    case 'f':
-                        (void)setuid((uid_t)getuid());
+                        (void)setuid((uid_t)uid);
 			configfile = p;
 			break;
 #endif
@@ -479,12 +483,12 @@ char	*argv[];
 				portnum = portarg;
 			break;
 		    case 't':
-                        (void)setuid((uid_t)getuid());
+                        (void)setuid((uid_t)uid);
 			bootopt |= BOOT_TTY;
 			break;
 		    case 'x':
 #ifdef	DEBUGMODE
-                        (void)setuid((uid_t)getuid());
+                        (void)setuid((uid_t)uid);
 			debuglevel = atoi(p);
 			debugmode = *p ? p : "0";
 			bootopt |= BOOT_DEBUG;
@@ -501,14 +505,24 @@ char	*argv[];
 		    }
 	    }
 
-#if !defined(CHROOTDIR) || (defined(IRC_UID) && defined(IRC_GID))
-#ifndef	AIX
-	(void)setuid((uid_t)geteuid());
+#ifndef IRC_UID
+	if ((uid != euid) && !euid)
+	    {
+		(void)fprintf(stderr,
+			"ERROR: do not run ircd setuid root. Make it setuid a\
+ normal user.\n");
+		exit(-1);
+	    }
 #endif
+
+#if !defined(CHROOTDIR) || (defined(IRC_UID) && defined(IRC_GID))
+# ifndef	AIX
+	(void)setuid((uid_t)euid);
+# endif
 
 	if ((int)getuid() == 0)
 	    {
-#if defined(IRC_UID) && defined(IRC_GID)
+# if defined(IRC_UID) && defined(IRC_GID)
 
 		/* run as a specified user */
 		(void)fprintf(stderr,"WARNING: running ircd with uid = %d\n",
@@ -517,24 +531,23 @@ char	*argv[];
 		(void)setuid(IRC_UID);
 		(void)setgid(IRC_GID);
 #else
-	/* check for setuid root as usual */
+		/* check for setuid root as usual */
 		(void)fprintf(stderr,
 			"ERROR: do not run ircd setuid root. Make it setuid a\
  normal user.\n");
 		exit(-1);
-#endif	
+# endif	
 	    } 
 #endif /*CHROOTDIR/UID/GID*/
 
 	/* didn't set debuglevel */
-	if (debuglevel < 0)
-		/* but asked for debugging output to tty */
-        	if (bootopt & BOOT_TTY)
-		    {
-			(void)fprintf(stderr,
-				"you specified -t without -x. use -x 9...\n" );
-			exit(-1);
-		    }
+	/* but asked for debugging output to tty */
+	if ((debuglevel < 0) &&  (bootopt & BOOT_TTY))
+	    {
+		(void)fprintf(stderr,
+			"you specified -t without -x. use -x <n>\n");
+		exit(-1);
+	    }
 
 	if (argc > 0)
 		return bad_command(); /* This should exit out */
@@ -613,6 +626,9 @@ char	*argv[];
 		write_pidfile();
 
 	Debug((DEBUG_NOTICE,"Server ready..."));
+#ifdef USE_SYSLOG
+	syslog(LOG_NOTICE, "Server Ready");
+#endif
 
 	for (;;)
 	    {

@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.24 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.25 10 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -112,6 +112,7 @@ char	serveropts[] = {
 #endif
 '\0'};
 
+#include "numeric.h"
 #include "common.h"
 #include "sys.h"
 #include "whowas.h"
@@ -235,22 +236,25 @@ char	*nick;
 		secs = 1;
 
 	sendto_one(cptr,
-		   ":%s NOTICE %s :CPU Secs %d:%d User %d:%d System %d:%d",
-		   me.name, nick, secs/60, secs%60,
+		   ":%s %d %s :CPU Secs %d:%d User %d:%d System %d:%d",
+		   me.name, RPL_STATSDEBUG, nick, secs/60, secs%60,
 		   rus.ru_utime.tv_sec/60, rus.ru_utime.tv_sec%60,
 		   rus.ru_stime.tv_sec/60, rus.ru_stime.tv_sec%60);
-	sendto_one(cptr, ":%s NOTICE %s :RSS %d ShMem %d Data %d Stack %d",
-		   me.name, nick, rus.ru_maxrss,
+	sendto_one(cptr, ":%s %d %s :RSS %d ShMem %d Data %d Stack %d",
+		   me.name, RPL_STATSDEBUG, nick, rus.ru_maxrss,
 		   rus.ru_ixrss / (rup * hzz), rus.ru_idrss / (rup * hzz),
 		   rus.ru_isrss / (rup * hzz));
-	sendto_one(cptr, ":%s NOTICE %s :Swaps %d Reclaims %d Faults %d",
-		   me.name, nick, rus.ru_nswap, rus.ru_minflt, rus.ru_majflt);
-	sendto_one(cptr, ":%s NOTICE %s :Block in %d out %d",
-		   me.name, nick, rus.ru_inblock, rus.ru_oublock);
-	sendto_one(cptr, ":%s NOTICE %s :Msg Rcv %d Send %d",
-		   me.name, nick, rus.ru_msgrcv, rus.ru_msgsnd);
-	sendto_one(cptr, ":%s NOTICE %s :Signals %d Context Vol. %d Invol %d",
-		   me.name,nick,rus.ru_nsignals,rus.ru_nvcsw,rus.ru_nivcsw);
+	sendto_one(cptr, ":%s %d %s :Swaps %d Reclaims %d Faults %d",
+		   me.name, RPL_STATSDEBUG, nick, rus.ru_nswap,
+		   rus.ru_minflt, rus.ru_majflt);
+	sendto_one(cptr, ":%s %d %s :Block in %d out %d",
+		   me.name, RPL_STATSDEBUG, nick, rus.ru_inblock,
+		   rus.ru_oublock);
+	sendto_one(cptr, ":%s %d %s :Msg Rcv %d Send %d",
+		   me.name, RPL_STATSDEBUG, nick, rus.ru_msgrcv, rus.ru_msgsnd);
+	sendto_one(cptr, ":%s %d %s :Signals %d Context Vol. %d Invol %d",
+		   me.name, RPL_STATSDEBUG, nick, rus.ru_nsignals,
+		   rus.ru_nvcsw, rus.ru_nivcsw);
 #else
 # ifdef TIMES_2
 	struct	tms	tmsbuf;
@@ -274,28 +278,29 @@ char	*nick;
 	if (times(&tmsbuf) == -1)
 	    {
 		extern char *sys_errlist[];
-		sendto_one(cptr,":%s NOTICE %s :times(2) error: %s.",
-			   me.name, nick, strerror(errno));
+		sendto_one(cptr,":%s %d %s :times(2) error: %s.",
+			   me.name, RPL_STATSDEBUG, nick, strerror(errno));
 		return;
 	    }
 	secs = tmsbuf.tms_utime + tmsbuf.tms_stime;
 
 	sendto_one(cptr,
-		   ":%s NOTICE %s :CPU Secs %d:%d User %d:%d System %d:%d",
-		   me.name, nick, mins, secs, umin, usec, smin, ssec);
+		   ":%s %d %s :CPU Secs %d:%d User %d:%d System %d:%d",
+		   me.name, RPL_STATSDEBUG, nick, mins, secs, umin, usec,
+		   smin, ssec);
 # endif
 #endif
-	sendto_one(cptr, ":%s NOTICE %s :Reads %d Writes %d",
-		   me.name, nick, readcalls, writecalls);
-	sendto_one(cptr, ":%s NOTICE %s :DBUF alloc %d blocks %d",
-		   me.name, nick, dbufalloc, dbufblocks);
+	sendto_one(cptr, ":%s %d %s :Reads %d Writes %d",
+		   me.name, RPL_STATSDEBUG, nick, readcalls, writecalls);
+	sendto_one(cptr, ":%s %d %s :DBUF alloc %d blocks %d",
+		   me.name, RPL_STATSDEBUG, nick, dbufalloc, dbufblocks);
 	sendto_one(cptr,
-		   ":%s NOTICE %s :Writes:  <0 %d 0 %d <16 %d <32 %d <64 %d",
-		   me.name, nick,
+		   ":%s %d %s :Writes:  <0 %d 0 %d <16 %d <32 %d <64 %d",
+		   me.name, RPL_STATSDEBUG, nick,
 		   writeb[0], writeb[1], writeb[2], writeb[3], writeb[4]);
 	sendto_one(cptr,
-		   ":%s NOTICE %s :<128 %d <256 %d <512 %d <1024 %d >1024 %d",
-		   me.name, nick,
+		   ":%s %d %s :<128 %d <256 %d <512 %d <1024 %d >1024 %d",
+		   me.name, RPL_STATSDEBUG, nick,
 		   writeb[5], writeb[6], writeb[7], writeb[8], writeb[9]);
 	return;
 }
@@ -405,55 +410,58 @@ char	*nick;
 	for (cltmp = classes; cltmp; cltmp = cltmp->next)
 		cl++;
 
-	sendto_one(cptr, ":%s NOTICE %s :Client Local %d(%d) Remote %d(%d)",
-		   me.name, nick, lc, lcm, rc, rcm);
-	sendto_one(cptr, ":%s NOTICE %s :Users %d(%d) Invites %d(%d)",
-		   me.name, nick, us, us*sizeof(anUser), usi,
+	sendto_one(cptr, ":%s %d %s :Client Local %d(%d) Remote %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, lc, lcm, rc, rcm);
+	sendto_one(cptr, ":%s %d %s :Users %d(%d) Invites %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, us, us*sizeof(anUser), usi,
 		   usi * sizeof(Link));
-	sendto_one(cptr, ":%s NOTICE %s :User channels %d(%d) Aways %d(%d)",
-		   me.name, nick, usc, usc*sizeof(Link), aw, awm);
-	sendto_one(cptr, ":%s NOTICE %s :Attached confs %d(%d)",
-		   me.name, nick, lcc, lcc*sizeof(Link));
+	sendto_one(cptr, ":%s %d %s :User channels %d(%d) Aways %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, usc, usc*sizeof(Link),
+		   aw, awm);
+	sendto_one(cptr, ":%s %d %s :Attached confs %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, lcc, lcc*sizeof(Link));
 
 	totcl = lcm + rcm + us*sizeof(anUser) + usc*sizeof(Link) + awm;
 	totcl += lcc*sizeof(Link) + usi*sizeof(Link);
 
-	sendto_one(cptr, ":%s NOTICE %s :Conflines %d(%d)",
-		   me.name, nick, co, com);
+	sendto_one(cptr, ":%s %d %s :Conflines %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, co, com);
 
-	sendto_one(cptr, ":%s NOTICE %s :Classes %d(%d)",
-		   me.name, nick, cl, cl*sizeof(aClass));
+	sendto_one(cptr, ":%s %d %s :Classes %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, cl, cl*sizeof(aClass));
 
-	sendto_one(cptr, ":%s NOTICE %s :Channels %d(%d) Bans %d(%d)",
-		   me.name, nick, ch, chm, chb, chbm);
-	sendto_one(cptr, ":%s NOTICE %s :Channel membrs %d(%d) invite %d(%d)",
-		   me.name, nick, chu, chu*sizeof(Link),
+	sendto_one(cptr, ":%s %d %s :Channels %d(%d) Bans %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, ch, chm, chb, chbm);
+	sendto_one(cptr, ":%s %d %s :Channel membrs %d(%d) invite %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, chu, chu*sizeof(Link),
 		   chi, chi*sizeof(Link));
 
 	totch = chm + chbm + chu*sizeof(Link) + chi*sizeof(Link);
 
-	sendto_one(cptr, ":%s NOTICE %s :Whowas users %d(%d) away %d(%d)",
-		   me.name, nick, wwu, wwu*sizeof(anUser), wwa, wwam);
-	sendto_one(cptr, ":%s NOTICE %s :Whowas array %d(%d)",
-		   me.name, nick, NICKNAMEHISTORYLENGTH, wwm);
+	sendto_one(cptr, ":%s %d %s :Whowas users %d(%d) away %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, wwu, wwu*sizeof(anUser),
+		   wwa, wwam);
+	sendto_one(cptr, ":%s %d %s :Whowas array %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, NICKNAMEHISTORYLENGTH, wwm);
 
 	totww = wwu*sizeof(anUser) + wwam + wwm;
 
-	sendto_one(cptr, ":%s NOTICE %s :Hash: client %d(%d) chan %d(%d)",
-		   me.name, nick, HASHSIZE, sizeof(aHashEntry) * HASHSIZE,
+	sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, HASHSIZE,
+		   sizeof(aHashEntry) * HASHSIZE,
 		   CHANNELHASHSIZE, sizeof(aHashEntry) * CHANNELHASHSIZE);
 	db = dbufblocks * sizeof(dbufbuf);
-	sendto_one(cptr, ":%s NOTICE %s :Dbuf blocks %d(%d)",
-		   me.name, nick, dbufblocks, db);
+	sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
 
 	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db;
 	tot += sizeof(aHashEntry) * HASHSIZE;
 	tot += sizeof(aHashEntry) * CHANNELHASHSIZE;
 
-	sendto_one(cptr, ":%s NOTICE %s :Total: ww %d ch %d cl %d co %d db %d",
-		   me.name, nick, totww, totch, totcl, com, db);
-	sendto_one(cptr, ":%s NOTICE %s :TOTAL: %d sbrk(0)-etext: %d",
-		   me.name, nick, tot,
+	sendto_one(cptr, ":%s %d %s :Total: ww %d ch %d cl %d co %d db %d",
+		   me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, com, db);
+	sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %d",
+		   me.name, RPL_STATSDEBUG, nick, tot,
 #if !defined(AIX) && !defined(NEXT)
 		   (int)sbrk((ssize_t)0)-(int)etext);
 #else

@@ -37,7 +37,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)list.c	2.19 6/25/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)list.c	2.20 10 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -45,6 +45,7 @@ Computing Center and Jarkko Oikarinen";
 #include "common.h"
 #include "sys.h"
 #include "h.h"
+#include "numeric.h"
 #ifdef	DBMALLOC
 #include "malloc.h"
 #endif
@@ -369,41 +370,41 @@ char	*name;
 {
 	int	inuse = 0, mem = 0, tmp = 0;
 
-	sendto_one(cptr, ":%s NOTICE %s :Local: inuse: %d(%d)",
-		   me.name, name, inuse += cloc.inuse,
+	sendto_one(cptr, ":%s %d %s :Local: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, inuse += cloc.inuse,
 		   tmp = cloc.inuse * CLIENT_LOCAL_SIZE);
 	mem += tmp;
-	sendto_one(cptr, ":%s NOTICE %s :Remote: inuse: %d(%d)",
-		   me.name, name,
+	sendto_one(cptr, ":%s %d %s :Remote: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name,
 		   crem.inuse, tmp = crem.inuse * CLIENT_REMOTE_SIZE);
 	mem += tmp;
 	inuse += crem.inuse;
-	sendto_one(cptr, ":%s NOTICE %s :Users: inuse: %d(%d)",
-		   me.name, name, users.inuse,
+	sendto_one(cptr, ":%s %d %s :Users: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, users.inuse,
 		   tmp = users.inuse * sizeof(anUser));
 	mem += tmp;
 	inuse += users.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Servs: inuse: %d(%d)",
-		   me.name, name, servs.inuse,
+	sendto_one(cptr, ":%s %d %s :Servs: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, servs.inuse,
 		   tmp = servs.inuse * sizeof(aServer));
 	mem += tmp;
 	inuse += servs.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Links: inuse: %d(%d)",
-		   me.name, name, links.inuse,
+	sendto_one(cptr, ":%s %d %s :Links: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, links.inuse,
 		   tmp = links.inuse * sizeof(Link));
 	mem += tmp;
 	inuse += links.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Classes: inuse: %d(%d)",
-		   me.name, name, classs.inuse,
+	sendto_one(cptr, ":%s %d %s :Classes: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, classs.inuse,
 		   tmp = classs.inuse * sizeof(aClass));
 	mem += tmp;
 	inuse += classs.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Confs: inuse: %d(%d)",
-		   me.name, name, aconfs.inuse,
+	sendto_one(cptr, ":%s %d %s :Confs: inuse: %d(%d)",
+		   me.name, RPL_STATSDEBUG, name, aconfs.inuse,
 		   tmp = aconfs.inuse * sizeof(aConfItem));
 	mem += tmp;
 	inuse += aconfs.inuse,
-	sendto_one(cptr, ":%s NOTICE %s :Totals: inuse %d %d",
-		   me.name, name, inuse, mem);
+	sendto_one(cptr, ":%s %d %s :Totals: inuse %d %d",
+		   me.name, RPL_STATSDEBUG, name, inuse, mem);
 }
 #endif

@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.33 11 Jun 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.36 10 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -200,18 +200,30 @@ int	showip;
 
 	if (MyConnect(sptr))
 	    {
-		if (showip)
-			(void)sprintf(nbuf, "%s[%s@%s.%u]",
-				sptr->name, sptr->username,
-				inetntoa((char *)&sptr->ip),
-				(unsigned int)sptr->port);
+		if (IsUnixSocket(sptr))
+		    {
+			if (showip)
+				(void) sprintf(nbuf, "%s[%s]",
+					sptr->name, sptr->acpt->sockhost);
+			else
+				(void) sprintf(nbuf, "%s[%s]",
+					sptr->name, sptr->sockhost);
+		    }
 		else
 		    {
-			if (mycmp(sptr->name, sptr->sockhost))
-				(void)sprintf(nbuf, "%s[%s]",
-					sptr->name, sptr->sockhost);
+			if (showip)
+				(void)sprintf(nbuf, "%s[%s@%s.%u]",
+					sptr->name, sptr->username,
+					inetntoa((char *)&sptr->ip),
+					(unsigned int)sptr->port);
 			else
-				return sptr->name;
+			    {
+				if (mycmp(sptr->name, sptr->sockhost))
+					(void)sprintf(nbuf, "%s[%s]",
+						sptr->name, sptr->sockhost);
+				else
+					return sptr->name;
+			    }
 		    }
 		return nbuf;
 	    }
@@ -594,27 +606,28 @@ char	*name;
 			sp->is_ni++;
 	    }
 
-	sendto_one(cptr, ":%s NOTICE %s :accepts %u refused %u",
-		   me.name, name, sp->is_ac, sp->is_ref);
-	sendto_one(cptr, ":%s NOTICE %s :unknown commands %u prefixes %u",
-		   me.name, name, sp->is_unco, sp->is_unpf);
-	sendto_one(cptr, ":%s NOTICE %s :nick collisions %u unknown closes %u",
-		   me.name, name, sp->is_kill, sp->is_ni);
-	sendto_one(cptr, ":%s NOTICE %s :wrong direction %u empty %u",
-		   me.name, name, sp->is_wrdi, sp->is_empt);
-	sendto_one(cptr, ":%s NOTICE %s :numerics seen %u mode fakes %u",
-		   me.name, name, sp->is_num, sp->is_fake);
-	sendto_one(cptr, ":%s NOTICE %s :auth successes %u fails %u",
-		   me.name, name, sp->is_asuc, sp->is_abad);
-	sendto_one(cptr, ":%s NOTICE %s :local connections %u udp packets %u",
-		   me.name, name, sp->is_loc, sp->is_udp);
-	sendto_one(cptr, ":%s NOTICE %s :Client Server", me.name, name);
-	sendto_one(cptr, ":%s NOTICE %s :connected %u %u",
-		   me.name, name, sp->is_cl, sp->is_sv);
-	sendto_one(cptr, ":%s NOTICE %s :bytes sent %u %u",
-		   me.name, name, sp->is_cbs, sp->is_sbs);
-	sendto_one(cptr, ":%s NOTICE %s :bytes recv %u %u",
-		   me.name, name, sp->is_cbr, sp->is_sbr);
-	sendto_one(cptr, ":%s NOTICE %s :time connected %u %u",
-		   me.name, name, sp->is_cti, sp->is_sti);
+	sendto_one(cptr, ":%s %d %s :accepts %u refused %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_ac, sp->is_ref);
+	sendto_one(cptr, ":%s %d %s :unknown commands %u prefixes %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_unco, sp->is_unpf);
+	sendto_one(cptr, ":%s %d %s :nick collisions %u unknown closes %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_kill, sp->is_ni);
+	sendto_one(cptr, ":%s %d %s :wrong direction %u empty %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_wrdi, sp->is_empt);
+	sendto_one(cptr, ":%s %d %s :numerics seen %u mode fakes %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_num, sp->is_fake);
+	sendto_one(cptr, ":%s %d %s :auth successes %u fails %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_asuc, sp->is_abad);
+	sendto_one(cptr, ":%s %d %s :local connections %u udp packets %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_loc, sp->is_udp);
+	sendto_one(cptr, ":%s %d %s :Client Server",
+		   me.name, RPL_STATSDEBUG, name);
+	sendto_one(cptr, ":%s %d %s :connected %u %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_cl, sp->is_sv);
+	sendto_one(cptr, ":%s %d %s :bytes sent %u %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_cbs, sp->is_sbs);
+	sendto_one(cptr, ":%s %d %s :bytes recv %u %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_cbr, sp->is_sbr);
+	sendto_one(cptr, ":%s %d %s :time connected %u %u",
+		   me.name, RPL_STATSDEBUG, name, sp->is_cti, sp->is_sti);
 }

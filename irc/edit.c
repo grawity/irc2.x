@@ -91,6 +91,7 @@ char ch;
 		break;
 	case '\014':		/* ^L */
 		refresh_screen();	/* refresh screen */
+		write_statusline();
 		break;
 	case '\015':		/* ^M */
 		send_this_line(sock);	/* send this line */
@@ -215,15 +216,42 @@ del_ch_left()
 
 suspend_irc()
 {
-#if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20) || defined (_SEQUENT_)
+#if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20) || \
+    defined(_SEQUENT_) || defined(linux)
+#ifdef DOCURSES
+                if (termtype == CURSES_TERM) {
+                        echo();
+                        nocrmode();
+                } 
+#endif /* DOCURSES */
+#ifdef DOTERMCAP
+                if (termtype == TERMCAP_TERM)
+                        io_off();
+#endif /* DOTERMCAP */
 #ifdef SIGSTOP
 	kill(getpid(), SIGSTOP);
-#endif
-#else
+#endif /* SIGSTOP */
+#ifdef DOCURSES
+                if (termtype == CURSES_TERM) {
+                        /* initscr(); */
+                        noecho();
+                        crmode();
+                        clear();
+                        refresh();
+                }
+#endif /* DOCURSES */
+#ifdef DOTERMCAP
+                if (termtype == TERMCAP_TERM) {
+                        io_on(1);
+                        clearscreen();
+                }
+#endif /* DOTERMCAP */
+		write_statusline();
+#else /* || */
 #if !VMS
 	tstp(); 
-#endif
-#endif
+#endif /* !VMS */
+#endif /* || */
 }
 
 got_esc()

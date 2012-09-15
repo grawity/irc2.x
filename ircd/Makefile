@@ -50,7 +50,7 @@ CFLAGS= -g -I${INCLUDEDIR}
 #IRCDLIBS=-lBSD
 #
 # Solaris 2
-IRCDLIBS= -lsocket -lnsl -lresolv
+#IRCDLIBS= -lsocket -lnsl -lresolv
 #
 # ESIX
 #CFLAGS=-O -I${INCLUDEDIR} -I/usr/ucbinclude

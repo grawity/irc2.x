@@ -279,7 +279,7 @@ int	port;
 		highest_fd = cptr->fd;
 	cptr->ip.s_addr = inet_addr(ipname);
 	cptr->port = (int)ntohs(server.sin_port);
-	(void)listen(cptr->fd, 1);
+	(void)listen(cptr->fd, 5);
 	local[cptr->fd] = cptr;
 
 	return 0;
@@ -378,7 +378,7 @@ int	port;
 	    }
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
-	(void)listen(cptr->fd, 1);
+	(void)listen(cptr->fd, 5);
 	(void)chmod(path, 0755);
 	(void)chmod(unixpath, 0777);
 	cptr->flags |= FLAGS_UNIX;
@@ -1232,7 +1232,7 @@ int	fd;
 	/* Copy ascii address to 'sockhost' just in case. Then we
 	 * have something valid to put into error messages...
 	 */
-	get_sockhost(cptr, me.sockhost);
+	get_sockhost(acptr, me.sockhost);
 	if (cptr != &me)
 		aconf = cptr->confs->value.aconf;
 	if (aconf)

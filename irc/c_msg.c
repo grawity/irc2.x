@@ -243,8 +243,8 @@ aClient *cptr, *sptr;
 int parc;
 char *parv[];
 {
-  sprintf(mybuf,"*** Change: %s has left channel %s", 
-	  parv[0], parv[1]);
+  sprintf(mybuf,"*** Change: %s has left channel %s (%s)", 
+	  parv[0], parv[1], BadPtr(parv[2]) ? parv[1] : parv[2]);
   putline(mybuf);
 }
 

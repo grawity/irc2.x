@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.29 28 Jul 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.30 10 Sep 1993 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -90,7 +90,15 @@ int	op;
 		first = last = NULL;
 	    }
 	if (op & RES_CALLINIT)
+	    {
 		ret = res_init();
+		if (!_res.nscount)
+		    {
+			_res.nscount = 1;
+			_res.nsaddr_list[0].sin_addr.s_addr =
+				inet_addr("127.0.0.1");
+		    }
+	    }
 
 	if (op & RES_INITSOCK)
 		ret = resfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -660,7 +668,8 @@ char	*lp;
 		max = 1;
 
 	for (a = 0; a < max; a++)
-		if (!bcmp((char *)&sin.sin_addr,
+		if (!_res.nsaddr_list[a].sin_addr.s_addr ||
+		    !bcmp((char *)&sin.sin_addr,
 			  (char *)&_res.nsaddr_list[a].sin_addr,
 			  sizeof(struct in_addr)))
 			break;

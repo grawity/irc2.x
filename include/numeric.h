@@ -296,6 +296,7 @@
 #define	RPL_STATSOLINE       243
 #define	RPL_STATSHLINE       244
 #define	RPL_STATSSLINE       245
+#define	RPL_STATSDEBUG	     249
 
 #define	RPL_LUSERCLIENT      251
 #define RPL_LUSEROP          252

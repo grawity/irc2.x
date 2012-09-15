@@ -32,7 +32,7 @@
 #include "common.h"
 #include "h.h"
 
-#define VERSION "v1.9"
+#define VERSION "v1.9.1"
 
 #define NOTE_SAVE_FREQUENCY 30 /* Frequency of save time in minutes */
 #define NOTE_MAXSERVER_TIME 120 /* Max days for a request in the server */
@@ -332,26 +332,6 @@ static int number_fromname()
  return nr;         
 }
 
-static int StrCaseCmp(s1, s2)
-char *s1, *s2;
-{
- static unsigned char charmap[256];
- register unsigned char *cm = charmap, *us1 = (unsigned char *)s1,
-                        *us2 = (unsigned char *)s2;
- static int generated = 0;
- register int t = 0, t1 = 0;
-
- if (!generated) {
-     generated = 1;while (t < 65) charmap[t++] = t1++;
-     t1 = 97;while (t < 91) charmap[t++] = t1++;
-     t1 = 91;while (t < 193) charmap[t++] = t1++;
-     t1 = 225;while (t < 219) charmap[t++] = t1++;
-     t1 = 219;while (t < 256) charmap[t++] = t1++;
-   }
- while (cm[*us1] == cm[*us2++])
-        if (*us1++ == '\0') return 0;
- return (int)(cm[*us1] - cm[*--us2]);
-}
 
 static int first_tnl_indexnode(name)
 char *name;
@@ -363,7 +343,7 @@ char *name;
  while ((s = (b+t) >> 1) != b) {
        msgclient = ToNameList[s];
        tname = (msgclient->flags & FLAGS_NAME) ? 1 : 0;
-       if (StrCaseCmp(tname ? msgclient->toname : msgclient->tonick, name) < 0)
+       if (mycmp(tname ? msgclient->toname : msgclient->tonick, name) < 0)
         b = s; else t = s;
   }
  return t;
@@ -379,7 +359,7 @@ char *name;
  while ((s = (b+t) >> 1) != b) {
        msgclient = ToNameList[s];
        tname = (msgclient->flags & FLAGS_NAME) ? 1 : 0;
-       if (StrCaseCmp(tname ? msgclient->toname : msgclient->tonick, name) > 0)
+       if (mycmp(tname ? msgclient->toname : msgclient->tonick, name) > 0)
         t = s; else b = s;
    }
  return b;
@@ -392,7 +372,7 @@ char *fromname;
 
  if (!t) return 0;
  while ((s = (b+t) >> 1) != b)
-       if (StrCaseCmp(FromNameList[s]->fromname,fromname)<0) b = s; else t = s;
+       if (mycmp(FromNameList[s]->fromname,fromname)<0) b = s; else t = s;
  return t;
 }
 
@@ -403,7 +383,7 @@ char *fromname;
 
  if (!t) return 0;
  while ((s = (b+t) >> 1) != b)
-       if (StrCaseCmp(FromNameList[s]->fromname,fromname)>0) t = s; else b = s;
+       if (mycmp(FromNameList[s]->fromname,fromname)>0) t = s; else b = s;
  return b;
 }
 
@@ -504,10 +484,10 @@ long timeout,time,flags;
  last = last_fnl_indexnode(fromname);
  if (!(n = first)) n = 1;
  index_p = FromNameList+n;
- while (n <= last && StrCaseCmp(msgclient->fromhost,(*index_p)->fromhost)>0) {
+ while (n <= last && mycmp(msgclient->fromhost,(*index_p)->fromhost)>0) {
         index_p++;n++;
    }
- while (n <= last && StrCaseCmp(msgclient->fromnick,(*index_p)->fromnick)>=0){ 
+ while (n <= last && mycmp(msgclient->fromnick,(*index_p)->fromnick)>=0){ 
         index_p++;n++;
    }
  index_p = FromNameList+fromname_index;
@@ -612,7 +592,7 @@ static void init_messages()
         r_code(buf,fp);timeout = atol(buf);r_code(buf,fp);
         atime = atol(buf);r_code(message,fp);
         flags &= ~FLAGS_FROM_REG;
-        if (clock < timeout && *toname != '#' && *fromname != '#')  
+        if (clock > 0 && *toname != '#' && *fromname != '#')  
             new(passwd,fromnick,fromname,fromhost,tonick,toname,
                 tohost,flags,timeout,atime,message);
   }
@@ -1314,6 +1294,8 @@ aChannel *sptr_chn;
   }
  message = flag_send(aptr, sptr, qptr, nick, msgclient, mode, sptr_chn);
  if (!message
+     || (msgclient->flags & FLAGS_SERVER_GENERATED_NOTICE) && 
+        (mode != 'a' && mode != 'v')
      || msgclient->flags & FLAGS_SEND_ONLY_IF_SENDER_ON_IRC && !qptr) { 
     *repeat = 1; return NULLCHAR; 
   }
@@ -1494,8 +1476,8 @@ aChannel *sptr_chn;
       }
         end_this_flag:;
  }
- if (send && secret 
-     && mycmp(msgclient->tonick, sptr->name)
+
+ if (send && !right_tonick && hidden
      && !(msgclient->flags & FLAGS_SERVER_GENERATED_NOTICE)
      && !(msgclient->flags & FLAGS_FIND_CORRECT_DEST_SEND_ONCE)) {
      if (mode == 'v') nick = msgclient->tonick;
@@ -1554,15 +1536,19 @@ aChannel *sptr_chn;
             24*7*3600+clock, clock, mbuf);
         break;
   }
- if (msgclient->flags & FLAGS_REPEAT_UNTIL_TIMEOUT) *repeat = 1;
- while (send && qptr != sptr &&
+if (msgclient->flags & FLAGS_REPEAT_UNTIL_TIMEOUT) *repeat = 1;
+ 
+while (send && qptr != sptr &&
         (msgclient->flags & FLAGS_NOTICE_RECEIVED_MESSAGE
          || msgclient->flags & FLAGS_DISPLAY_IF_RECEIVED)) {
         time(&clock);
+        if (!right_tonick && hidden && clock-msgclient->time < 3600*24*7)
+	   { *repeat = 1; send = 0; break; }
         sprintf(buf,"%s (%s@%s) has received note queued %s before delivery.",
                 nick, UserName(sptr), sptr->user->host,
                 mytime(msgclient->time));
-        if (msgclient->flags & FLAGS_DISPLAY_IF_RECEIVED && qptr) {
+        if (msgclient->flags & FLAGS_DISPLAY_IF_RECEIVED && 
+            qptr && (right_tonick || !hidden)) {
            sendto_one(qptr,"NOTICE %s :### %s", qptr->name, buf);
            break;
          }
@@ -1920,6 +1906,7 @@ char *command, *par1, *par2, *par3;
  if ((c = (char *)index(nick, '[')) != NULL) *c = '\0';
  if (mode == 'm' && (c = (char *)index(command, '+')) != NULL) par3 = c;
  if (mode == 'm' && (c = (char *)index(command, '-')) != NULL) par3 = c;
+ if (mode == 'm' && (c = (char *)index(command, 'c')) != NULL) return;
  if (mode == 'j' && (c = (char *)index(command, '0')) != NULL) par2 = c+1;
 
  if (last_mode == mode && StrEq(last_nick, nick)) {

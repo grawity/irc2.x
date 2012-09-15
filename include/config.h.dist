@@ -23,7 +23,7 @@
 /* Type of host. These should be made redundant somehow. -avalon */
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
-/*	HPUX			Nothing needed (A.08.07) */
+/*	HPUX			Nothing needed (A.08/A.09) */
 /*	ULTRIX			Nothing needed (4.2) */
 /*	OSF			Nothing needed (1.2) */
 #undef	AIX			/* IBM ugly so-called Unix, AIX */

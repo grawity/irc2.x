@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.60 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.62 15 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -931,9 +931,6 @@ char	*parv[];
 	else
 		channame = mask;
 
-	sendto_one(sptr,":%s %d %s Channel User Host Server Nickname S :Name",
-		    me.name, RPL_WHOREPLY, parv[0]);
-
 	if (IsChannelName(channame))
 	    {
 		/*
@@ -1717,6 +1714,10 @@ char	*parv[];
 		sptr->flags |= (FLAGS_SERVNOTICE|FLAGS_WALLOP);
 		send_umode_out(cptr, sptr, old);
  		sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
+#if !defined(CRYPT_OPER_PASSWORD) && (defined(FNAME_OPERLOG) ||\
+    (defined(USE_SYSLOG) && defined(SYSLOG_OPER)))
+		encr = "";
+#endif
 #if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
 		syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",
 			name, encr,

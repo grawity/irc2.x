@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)match.c	2.2 7/3/93 2 %S (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)match.c	2.4 15 Sep 1993 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -37,19 +37,25 @@ Computing Center and Jarkko Oikarinen";
 int	matches(ma, na)
 char *ma, *na;
     {
+	int	quote = 0;
 	Reg1 unsigned char m, *mask = (unsigned char *)ma;
 	Reg2 unsigned char c, *name = (unsigned char *)na;
 
 	for (;; mask++, name++)
 	    {
-		m = tolower(*mask);
+		m = *mask;
+		if (m == '\\' && (*(mask+1) == '*' || *(mask+1) == '?'))
+			quote = 1, m = *++mask;
+		else
+			quote = 0;
+		m = tolower(m);
 		c = tolower(*name);
 		if (c == '\0')
 			break;
-		if ((m != '?' && m != c) || c == '*')
+		if (((m != '?' || quote) && m != c) || (c == '*' && !quote))
 			break;
 	    }
-	if (m == '*')
+	if ((m == '*') && !quote)
 	    {
 		for ( ; *mask == '*'; mask++);
 		if (*mask == '\0')
@@ -57,6 +63,5 @@ char *ma, *na;
 		for (; *name && matches((char *)mask, (char *)name); name++);
 		return(*name ? 0 : 1);
 	    }
-	else
-		return ((m == '\0' && c == '\0') ? 0 : 1);
+	return ((m == '\0' && c == '\0') ? 0 : 1);
     }
