@@ -108,13 +108,14 @@ depend:
 	done
 
 install: all
+	chmod +x ./install
 	@for i in ircd irc; do \
 		echo "Installing $$i";\
 		cd $$i;\
 		${MAKE} install; cd ..;\
 	done
-	${INSTALL} -c doc/ircd.8 ${MANDIR}/man8
-	${INSTALL} -c doc/irc.1 ${MANDIR}/man1
+	./install -cm 644 doc/ircd.8 ${MANDIR}/man8
+	./install -cm 644 doc/irc.1 ${MANDIR}/man1
 
 
 rcs:

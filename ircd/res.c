@@ -17,7 +17,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.21 4/30/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.22 5/17/93 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -259,7 +259,7 @@ time_t	now;
 		if (!next || rptr->timeout < next)
 			next = rptr->timeout;
 	    }
-	return next;
+	return (next > now) ? next : (now + AR_TTL);
 }
 
 /*
@@ -560,7 +560,6 @@ HEADER	*hptr;
 				(void)strcpy(hp->h_name, hostbuf);
 			    }
 			adr++;
-			bzero((char *)adr, sizeof(*adr));
 			cp += dlen;
  			break;
 		case T_PTR :
@@ -611,6 +610,9 @@ HEADER	*hptr;
 	return ans;
 }
 
+/*
+ * read a dns reply from the nameserver and process it.
+ */
 struct	hostent	*get_res(lp)
 char	*lp;
 {
@@ -723,7 +725,7 @@ char	*lp;
 		bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
 	cp = make_cache(rptr);
 #ifdef	DEBUG
-	Debug((DEBUG_INFO,"get_res:cp=0x%x rptr=0x%x (made)",cp,rptr));
+	Debug((DEBUG_INFO,"get_res:cp=%#x rptr=%#x (made)",cp,rptr));
 #endif
 
 	if (a > 0)
@@ -812,32 +814,32 @@ static	aCache	*add_to_cache(ocp)
 Reg1	aCache	*ocp;
 {
 	Reg1	aCache	*cp = NULL;
-	Reg2	int	hashv1, hashv2;
+	Reg2	int	hashv;
 
 #ifdef DEBUG
 	Debug((DEBUG_INFO,
-	      "add_to_cache:ocp x%x he x%x name x%x addrl x%x 0 x%x",
+	      "add_to_cache:ocp %#x he %#x name %#x addrl %#x 0 %#x",
 		ocp, &ocp->he, ocp->he.h_name, ocp->he.h_addr_list,
 		ocp->he.h_addr_list[0]));
 #endif
 	ocp->list_next = cachetop;
 	cachetop = ocp;
 
-	hashv1 = hash_name(ocp->he.h_name);
-	ocp->hname_next = hashtable[hashv1].name_list;
-	hashtable[hashv1].name_list = ocp;
+	hashv = hash_name(ocp->he.h_name);
+	ocp->hname_next = hashtable[hashv].name_list;
+	hashtable[hashv].name_list = ocp;
 
-	hashv2 = hash_number((char *)ocp->he.h_addr);
-	ocp->hnum_next = hashtable[hashv2].num_list;
-	hashtable[hashv2].num_list = ocp;
+	hashv = hash_number((char *)ocp->he.h_addr);
+	ocp->hnum_next = hashtable[hashv].num_list;
+	hashtable[hashv].num_list = ocp;
 
 #ifdef	DEBUG
-	Debug((DEBUG_INFO, "add_to_cache:added %s[%08x] cache x%x.",
+	Debug((DEBUG_INFO, "add_to_cache:added %s[%08x] cache %#x.",
 		ocp->he.h_name, ocp->he.h_addr_list[0], ocp));
 	Debug((DEBUG_INFO,
-		"add_to_cache:h1 %d h2 %x lnext x%x namenext x%x numbnext x%x",
-		hashv1, hashv2, ocp->list_next, ocp->hname_next,
-		ocp->hnum_next));
+		"add_to_cache:h1 %d h2 %x lnext %#x namnext %#x numnext %#x",
+		hash_name(ocp->he.h_name), hashv, ocp->list_next,
+		ocp->hname_next, ocp->hnum_next));
 #endif
 
 	/*
@@ -879,7 +881,7 @@ aCache	*cachep;
 			break;
 	if (!*cpp)
 		return;
-	*cpp = (*cpp)->list_next;
+	*cpp = cp->list_next;
 	cp->list_next = cachetop;
 	cachetop = cp;
 	if (!rptr)
@@ -928,10 +930,10 @@ aCache	*cachep;
 	/*
 	 * Do the same again for IP#'s.
 	 */
-	for (s = (char *)&rptr->he.h_addr; ((struct in_addr *)s)->s_addr;
-	     s += sizeof(struct in_addr))
+	for (s = (char *)&rptr->he.h_addr.s_addr;
+	     ((struct in_addr *)s)->s_addr; s += sizeof(struct in_addr))
 	    {
-		for (i = 0; (t = cp->he.h_addr_list[i]) && i < MAXADDRS; i++)
+		for (i = 0; (t = cp->he.h_addr_list[i]) && (i < MAXADDRS); i++)
 			if (!bcmp(s, t, sizeof(struct in_addr)))
 				break;
 		/*
@@ -942,7 +944,7 @@ aCache	*cachep;
 		 * the IP array *MUST* be preserved and the pointers into
 		 * it recalculated.
 		 */
-		if (!t && i < MAXADDRS)
+		if (!t && (addrcount < MAXADDRS))
 		    {
 			base = cp->he.h_addr_list;
 
@@ -1077,13 +1079,14 @@ static	aCache	*make_cache(rptr)
 ResRQ	*rptr;
 {
 	Reg1	aCache	*cp;
-	Reg2	int	i,n;
+	Reg2	int	i, n;
+	Reg3	char	*s, **t;
 
 	/*
 	** Make cache entry.  First check to see if the cache already exists
 	** and if so, return a pointer to it.
 	*/
-	if (cp = find_cache_number(rptr, (char *)&rptr->he.h_addr_list[0]))
+	if (cp = find_cache_number(rptr, (char *)&rptr->he.h_addr.s_addr))
 		return cp;
 	for (i = 1; rptr->he.h_addr_list[i].s_addr; i++)
 		if (cp = find_cache_number(rptr,
@@ -1099,29 +1102,38 @@ ResRQ	*rptr;
 		if (!rptr->he.h_addr_list[i].s_addr)
 			break;
 
-	cp->he.h_addr_list = (char **)MyMalloc(sizeof(char *) * (i+1));
-	bzero((char *)cp->he.h_addr_list, sizeof(char *) * (i+1));
-	*cp->he.h_addr_list = (char *)MyMalloc(sizeof(struct in_addr) * i);
-	bzero((char *)*cp->he.h_addr_list, sizeof(struct in_addr) * i);
+	/*
+	** build two arrays, one for IP#'s, another of pointers to them.
+	*/
+	t = cp->he.h_addr_list = (char **)MyMalloc(sizeof(char *) * (i+1));
+	bzero((char *)t, sizeof(char *) * (i+1));
+
+	t = (char **)MyMalloc(sizeof(struct in_addr) * i);
+	*cp->he.h_addr_list = (char *)t;
+	bzero((char *)t, sizeof(struct in_addr) * i);
 
 	for (n = 0; n < i; n++)
 	    {
-		cp->he.h_addr_list[n] = *cp->he.h_addr_list +
-					n * sizeof(struct in_addr);
-		bcopy((char *)&(rptr->he.h_addr_list[n].s_addr),
-		      (char *)cp->he.h_addr_list[n], sizeof(struct in_addr));
+		s = cp->he.h_addr_list[n] = (char *)(t + n *
+						     sizeof(struct in_addr));
+		bcopy((char *)&(rptr->he.h_addr_list[n]),
+		      s, sizeof(struct in_addr));
 	    }
 
+	/*
+	** an array of pointers to CNAMEs.
+	*/
 	for (i = 0; i < MAXALIASES; i++)
 		if (!rptr->he.h_aliases[i])
 			break;
 	i++;
-	cp->he.h_aliases = (char **)MyMalloc(sizeof(char *)*i);
-	for (n = 0; n < i; n++)
+	t = cp->he.h_aliases = (char **)MyMalloc(sizeof(char *) * i);
+	for (n = 0; n < i; n++, t++)
 	    {
-		cp->he.h_aliases[n] = rptr->he.h_aliases[n];
+		*t = rptr->he.h_aliases[n];
 		rptr->he.h_aliases[n] = NULL;
 	    }
+
 	cp->he.h_addrtype = rptr->he.h_addrtype;
 	cp->he.h_length = rptr->he.h_length;
 	cp->he.h_name = rptr->he.h_name;
@@ -1129,7 +1141,7 @@ ResRQ	*rptr;
 	cp->expireat = time(NULL) + cp->ttl;
 	rptr->he.h_name = NULL;
 #ifdef DEBUG
-	Debug((DEBUG_INFO,"make_cache:made cache 0x%x", cp));
+	Debug((DEBUG_INFO,"make_cache:made cache %#x", cp));
 #endif
 	return add_to_cache(cp);
 }
@@ -1160,7 +1172,7 @@ aCache	*ocp;
 	for (cp = &cachetop; *cp; cp = &((*cp)->list_next))
 		if (*cp == ocp)
 		    {
-			*cp = (*cp)->list_next;
+			*cp = ocp->list_next;
 			break;
 		    }
 	/*
@@ -1170,7 +1182,7 @@ aCache	*ocp;
 	for (cp = &hashtable[hashv].name_list; *cp; cp = &((*cp)->hname_next))
 		if (*cp == ocp)
 		    {
-			*cp = (*cp)->hname_next;
+			*cp = ocp->hname_next;
 			break;
 		    }
 	/*
@@ -1180,7 +1192,7 @@ aCache	*ocp;
 	for (cp = &hashtable[hashv].num_list; *cp; cp = &((*cp)->hnum_next))
 		if (*cp == ocp)
 		    {
-			*cp = (*cp)->hnum_next;
+			*cp = ocp->hnum_next;
 			break;
 		    }
 
@@ -1237,9 +1249,12 @@ time_t	now;
 		else if (!next || next > cp->expireat)
 			next = cp->expireat;
 	    }
-	return (next > now) ? next : now + AR_TTL;
+	return (next > now) ? next : (now + AR_TTL);
 }
 
+/*
+ * remove all dns cache entries.
+ */
 void	flush_cache()
 {
 	Reg1	aCache	*cp;

@@ -63,7 +63,7 @@ extern	aConfItem *find_conf_ip PROTO((Link *, char *, char *, int));
 extern	aConfItem *find_conf_name PROTO((char *, int));
 extern	int	find_kill PROTO((aClient *));
 extern	int	find_restrict PROTO((aClient *));
-extern	int	rehash PROTO((int));
+extern	int	rehash PROTO((aClient *, aClient *, int));
 extern	int	initconf PROTO((int));
 
 extern	char	*MyMalloc PROTO((int)), *MyRealloc PROTO((char *, int));

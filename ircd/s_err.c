@@ -21,7 +21,7 @@
 #include "numeric.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_err.c	1.10 4/23/93 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_err.c	1.11 5/17/93 (C) 1992 Darren Reed";
 #endif
 
 typedef	struct	{
@@ -243,8 +243,9 @@ static	Numeric	numeric_replies[] = {
 /* 242 */	RPL_STATSUPTIME, ":Server Up %d days, %d:%02d:%02d",
 /* 243 */	RPL_STATSOLINE, "%c %s * %s %d %d",
 /* 244 */	RPL_STATSHLINE, "%c %s * %s %d %d", 
+/* 245 */	RPL_STATSSLINE, "%c %s * %s %d %d", 
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
+		0, (char *)NULL, 0, (char *)NULL,
 /* 251 */	RPL_LUSERCLIENT,
 		":There are %d users and %d invisible on %d servers",
 /* 252 */	RPL_LUSEROP, "%d :operator(s) online",

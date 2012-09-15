@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.37 5/6/93 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.39 5/21/93 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -47,7 +47,7 @@ aChannel *channel = NullChn;
 
 static	void	sub1_from_channel PROTO((aChannel *));
 static	void	add_invite PROTO((aClient *, aChannel *));
-static	int	add_banid PROTO((aChannel *, char *));
+static	int	add_banid PROTO((aClient *, aChannel *, char *));
 static	int	del_banid PROTO((aChannel *, char *));
 static	int	check_channelmask PROTO((aClient *, aClient *, char *));
 static	int	set_mode PROTO((aClient *, aClient *, aChannel *, int,\
@@ -159,17 +159,29 @@ Reg1	char	*nick, *name, *host;
  */
 /* add_banid - add an id to be banned to the channel  (belongs to cptr) */
 
-static	int	add_banid(chptr, banid)
+static	int	add_banid(cptr, chptr, banid)
+aClient	*cptr;
 aChannel *chptr;
 char	*banid;
 {
 	Reg1	Link	*ban;
+	Reg2	int	cnt = 0, len = 0;
 
 	for (ban = chptr->banlist; ban; ban = ban->next)
-		if (mycmp(banid, ban->value.cp) == 0)
+	    {
+		len += strlen(ban->value.cp);
+		if (MyClient(cptr) &&
+		    ((len > MAXBANLENGTH) || (++cnt >= MAXBANS) ||
+		     !matches(ban->value.cp, banid) ||
+		     !matches(banid, ban->value.cp, banid)))
 			return -1;
+		else if (!mycmp(ban->value.cp, banid))
+			return -1;
+		
+	    }
 	ban = make_link();
 	bzero((char *)ban, sizeof(Link));
+	ban->flags = CHFL_BAN;
 	ban->next = chptr->banlist;
 	ban->value.cp = (char *)MyMalloc(strlen(banid)+1);
 	(void)strcpy(ban->value.cp, banid);
@@ -374,6 +386,52 @@ aChannel *chptr;
 	return;
 }
 
+static	void	send_mode_list(cptr, chname, top, mask, flag)
+aClient	*cptr;
+Link	*top;
+int	mask;
+char	flag, *chname;
+{
+	Reg1	Link	*lp;
+	Reg2	char	*cp, *name;
+	int	count = 0, send = 0;
+
+	cp = modebuf + strlen(modebuf);
+	if (*parabuf)	/* mode +l or +k xx */
+		count = 1;
+	for (lp = top; lp; lp = lp->next)
+	    {
+		if (!(lp->flags & mask))
+			continue;
+		if (mask == CHFL_BAN)
+			name = lp->value.cp;
+		else
+			name = lp->value.cptr->name;
+		if (strlen(parabuf) + strlen(name) + 10 < (size_t) MODEBUFLEN)
+		    {
+			(void)strcat(parabuf, " ");
+			(void)strcat(parabuf, name);
+			count++;
+			*cp++ = flag;
+			*cp = '\0';
+		    }
+		else if (*parabuf)
+			send = 1;
+		if (count == 3)
+			send = 1;
+		if (send)
+		    {
+			sendto_one(cptr, ":%s MODE %s %s %s",
+				   me.name, chname, modebuf, parabuf);
+			send = 0;
+			count = 0;
+			*parabuf = '\0';
+			cp = modebuf;
+			*cp++ = '+';
+			*cp = '\0';
+		    }
+	    }
+}
 /*
  * send "cptr" a full list of the modes for channel chptr.
  */
@@ -381,88 +439,28 @@ void	send_channel_modes(cptr, chptr)
 aClient *cptr;
 aChannel *chptr;
 {
-	Reg1	Link	*lp, *lp2;
-	Reg2	aClient *acptr;
-	Reg3	char	*cp;
-	int	count = 0, send = 0;
 
 	*modebuf = *parabuf = '\0';
 	channel_modes(modebuf, parabuf, chptr);
-	cp = modebuf + strlen(modebuf);
-	if (*parabuf)	/* mode +l xx */
-		count = 1;
+
+	send_mode_list(cptr, chptr->chname, chptr->members, CHFL_CHANOP, 'o');
+	if (modebuf[1] || *parabuf)
+		sendto_one(cptr, ":%s MODE %s %s %s",
+			   me.name, chptr->chname, modebuf, parabuf);
+
+	*modebuf = *parabuf = '\0';
+	send_mode_list(cptr, chptr->chname, chptr->banlist, CHFL_BAN, 'b');
+	if (modebuf[1] || *parabuf)
+		sendto_one(cptr, ":%s MODE %s %s %s",
+			   me.name, chptr->chname, modebuf, parabuf);
+
+	*modebuf = *parabuf = '\0';
 	if (chptr->mode.mode & MODE_KEY)
 	    {
 		(void)strcat(parabuf, " ");
 		(void)strcat(parabuf, chptr->mode.key);
-		count++;
 	    }
-	for (lp = chptr->members ; lp; )
-	    {
-		acptr = lp->value.cptr;
-		lp2 = find_user_link(chptr->members, acptr);
-		if (lp2 && !(lp2->flags & (CHFL_VOICE|CHFL_CHANOP)))
-		    {
-			lp = lp->next;
-			continue;
-		    }
-		if (strlen(parabuf) + strlen(acptr->name) + 10
-                    < (size_t) MODEBUFLEN)
-		    {
-			(void)strcat(parabuf, " ");
-			(void)strcat(parabuf, acptr->name);
-			count++;
-			if (lp2->flags == CHFL_VOICE)
-				*cp++ = 'v';
-			else
-				*cp++ = 'o';
-			*cp = '\0';
-			lp = lp->next;
-		    }
-		else if (*parabuf)
-			send = 1;
-		if (count == 3)
-			send = 1;
-		if (send)
-		    {
-			sendto_one(cptr, ":%s MODE %s %s %s",
-				   me.name, chptr->chname, modebuf, parabuf);
-			send = 0;
-			count = 0;
-			*parabuf = '\0';
-			cp = modebuf;
-			*cp++ = '+';
-			*cp = '\0';
-		    }
-	    }
-	for (lp = chptr->banlist ; lp; )
-	    {
-		if (strlen(parabuf) + strlen(lp->value.cp) + 10
-                    < (size_t) MODEBUFLEN)
-		    {
-			(void)strcat(parabuf, " ");
-			(void)strcat(parabuf, lp->value.cp);
-			count++;
-			*cp++ = 'b';
-			*cp = '\0';
-			lp = lp->next;
-		    }
-		else if (*parabuf)
-			send = 1;
-		if (count == 3)
-			send = 1;
-		if (send)
-		    {
-			sendto_one(cptr, ":%s MODE %s %s %s",
-				   me.name, chptr->chname, modebuf, parabuf);
-			send = 0;
-			count = 0;
-			*parabuf = '\0';
-			cp = modebuf;
-			*cp++ = '+';
-			*cp = '\0';
-		    }
-	    }
+	send_mode_list(cptr, chptr->chname, chptr->members, CHFL_VOICE, 'v');
 	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   me.name, chptr->chname, modebuf, parabuf);
@@ -567,6 +565,7 @@ char	*parv[], *mbuf, *pbuf;
 	Reg3	int	*ip;
 	int	whatt = MODE_ADD, limitset = 0, count = 0, chasing = 0;
 	int	nusers, ischop, new, len, keychange = 0, opcnt = 0;
+	char	fm = '\0';
 	aClient *who;
 	Mode	*mode, oldm;
 
@@ -635,6 +634,14 @@ char	*parv[], *mbuf, *pbuf;
 			    }
 			if (who == cptr && whatt == MODE_ADD && *curr == 'o')
 				break;
+			/*
+			 * to stop problems, don't allow +v and +o to mix
+			 * into the one message if from a client.
+			 */
+			if (!fm)
+				fm = *curr;
+			else if (MyClient(sptr) && (*curr != fm))
+				break;
 			if (whatt == MODE_ADD)
 			    {
 				lp = &chops[opcnt++];
@@ -664,6 +671,10 @@ char	*parv[], *mbuf, *pbuf;
 			if (BadPtr(*parv))
 				break;
 			if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
+				break;
+			if (!fm)
+				fm = *curr;
+			else if (MyClient(sptr) && (*curr != fm))
 				break;
 			if (whatt == MODE_ADD)
 			    {
@@ -956,7 +967,7 @@ char	*parv[], *mbuf, *pbuf;
 				break;
 			case MODE_BAN :
 				if (ischop && ((whatt & MODE_ADD) &&
-				     !add_banid(chptr, cp) ||
+				     !add_banid(sptr, chptr, cp) ||
 				     (whatt & MODE_DEL) &&
 				     !del_banid(chptr, cp)))
 				    {
@@ -1087,7 +1098,7 @@ aChannel *chptr;
 {
 	Reg1	Link	*inv, **tmp;
 
-	del_invite(cptr,chptr);
+	del_invite(cptr, chptr);
 	/*
 	 * delete last link in chain if the list is max length
 	 */

@@ -21,8 +21,8 @@
 
 #define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
 /*	HPUX			Nothing needed (A.08.07) */
-/*	ULTRIX			Nothing needed (4.2) *
-/*	OSF			Nothing needed (1.2) *
+/*	ULTRIX			Nothing needed (4.2) */
+/*	OSF			Nothing needed (1.2) */
 #undef	AIX			/* IBM ugly so-called Unix, AIX */
 #undef	MIPS			/* MIPS Unix */
 /*	SGI			Nothing needed (IRIX 4.0.4) */
@@ -403,6 +403,15 @@
 #define	IRC_GID	65534
 #endif
 
+/*
+ * CLIENT_FLOOD
+ *
+ * this controls the number of bytes the server will allow a client to
+ * send to the server without processing before disconnecting the client for
+ * flooding it.  Values greater than 4000 make no difference to the server.
+ */
+#define	CLIENT_FLOOD	1024
+
 /* Default server for standard client */
 #define	UPHOST	"coombs.anu.edu.au"
 
@@ -559,6 +568,7 @@
 
 #ifdef	CLIENT_COMPILE
 #undef	SENDQ_ALWAYS
+#undef	NPATH		/* _dl */
 #endif
 
 #ifdef DEBUGMODE
@@ -622,6 +632,12 @@ error You stuffed up config.h signals #defines use only one.
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
+/*
+ * safety margin so we can always have one spare fd, for motd/authd or
+ * whatever else.
+ */
+#define	MAXCLIENTS	(MAXCONNECTIONS-1)
+
 #ifndef	HUB
 #define	MAXIMUM_LINKS	1
 #undef	MAXSENDQLENGTH
@@ -642,6 +658,15 @@ error You stuffed up config.h signals #defines use only one.
 
 #ifndef	UNIXPORT
 #undef	UNIXPORTPATH
+#endif
+
+#if defined(CLIENT_FLOOD)
+# if	CLIENT_FLOOD > 4000	/* > than 4000 is pointless */
+#undef	CLIENT_FLOOD
+#define	CLIENT_FLOOD	1000	/* >:-) */
+# endif
+#else
+#define	CLIENT_FLOOD	512
 #endif
 
 /*
@@ -671,9 +696,3 @@ error You stuffed up config.h signals #defines use only one.
 #define Reg8 register
 #define Reg9 register
 #define Reg10 register
-#define Reg11 
-#define Reg12 
-#define Reg13 
-#define Reg14 
-#define Reg15 
-#define Reg16

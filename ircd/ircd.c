@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.39 5/4/93 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.41 5/21/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -51,12 +51,14 @@ int	bootopt = 0;			/* Server boot option flags */
 char	*debugmode = "";		/*  -"-    -"-   -"-  */
 static	int	dorehash = 0;
 
-time_t	nextconnect = -1;		/* time for next try_connections call */
-time_t	nextping = -1;		/* same as above for check_pings() */
-time_t	nextdnscheck = -1;	/* next time to poll dns to force timeouts */
-time_t	nextexpire = -1;	/* next expire run on the dns cache */
+time_t	nextconnect = 1;	/* time for next try_connections call */
+time_t	nextping = 1;		/* same as above for check_pings() */
+time_t	nextdnscheck = 0;	/* next time to poll dns to force timeouts */
+time_t	nextexpire = 1;	/* next expire run on the dns cache */
 
 #ifdef	PROFIL
+extern	etext();
+
 VOIDSIG	s_monitor()
 {
 	static	int	mon = 0;
@@ -143,13 +145,15 @@ void	server_reboot()
 #ifdef USE_SYSLOG
 	(void)closelog();
 #endif
-	for (i = 0; i < MAXCONNECTIONS; i++)
-		if (i == 2 && (bootopt & BOOT_TTY) ||
-		    i == 0 && (bootopt & (BOOT_OPER|BOOT_INETD)))
-			continue;
-		else
-			(void)close(i);
-	(void)execv(MYNAME, myargv);
+	for (i = 3; i < MAXCONNECTIONS; i++)
+		(void)close(i);
+	if (!(bootopt & (BOOT_TTY|BOOT_DEBUG)))
+		(void)close(2);
+	(void)close(1);
+	if ((bootopt & BOOT_CONSOLE) || isatty(0))
+		(void)close(0);
+	if (!(bootopt & (BOOT_INETD|BOOT_OPER)))
+		(void)execv(MYNAME, myargv);
 #ifdef USE_SYSLOG
 	/* Have to reopen since it has been closed above */
 
@@ -157,7 +161,7 @@ void	server_reboot()
 	syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", MYNAME, myargv[0]);
 	closelog();
 #endif
-	Debug((DEBUG_FATAL,"Couldn't restart server !!!!!!!!"));
+	Debug((DEBUG_FATAL,"Couldn't restart server: %s", strerror(errno)));
 	exit(-1);
 }
 
@@ -621,7 +625,7 @@ char	*argv[];
 		/*
 		** DNS checks. One to timeout queries, one for cache expiries.
 		*/
-		if (nextdnscheck && now >= nextdnscheck)
+		if (now >= nextdnscheck)
 			nextdnscheck = timeout_query_list(now);
 		if (now >= nextexpire)
 			nextexpire = expire_cache(now);
@@ -634,8 +638,7 @@ char	*argv[];
 			delay = MIN(nextping, nextconnect);
 		else
 			delay = nextping;
-		if (nextdnscheck)
-			delay = MIN(nextdnscheck, delay);
+		delay = MIN(nextdnscheck, delay);
 		delay = MIN(nextexpire, delay);
 		delay -= now;
 		/*
@@ -669,7 +672,7 @@ char	*argv[];
 
 		if (dorehash)
 		    {
-			(void)rehash(1);
+			(void)rehash(&me, &me, 1);
 			dorehash = 0;
 		    }
 		/*

@@ -22,9 +22,8 @@
 IRCDDIR=$1
 M4=$IRCDDIR/ircd.m4
 /bin/rm -f $M4
-echo -n "define(VERSION," >$M4
-grep PATCHLEVEL ../include/patchlevel.h | \
-sed -e 's/[^"]*"\([^"]*\)"/\1)/' >>$M4
+egrep "^#def[^P]*PATCHLEVEL" ../include/patchlevel.h | \
+sed -e 's/[^\"]*\"\([^\"]*\)\"/define(VERSION,\1)/' >>$M4
 DEBUG=`egrep "^#define[		]*DEBUGMODE" ../include/config.h`
 if [ -n "$DEBUG" ] ; then
 	echo "define(DEBUGMODE,1)" >>$M4

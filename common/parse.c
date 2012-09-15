@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.23 5/3/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.24 5/11/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -66,9 +66,9 @@ int	n;
 	    {
 		str1++; str2++; n--;
 		if (n == 0 || (*str1 == '\0' && *str2 == '\0'))
-			return(0);
+			return 0;
 	    }
-	return(1);
+	return (*str1 - *str2);
     }
 
 /*
@@ -91,11 +91,11 @@ char	*s2;
 #endif
 	    {
 		if (*str1 == '\0')
-			return(0);
+			return 0;
 		str1++;
 		str2++;
 	    }
-	return 1;
+	return (*str1 - *str2);
     }
 #endif
 

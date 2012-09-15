@@ -146,7 +146,7 @@ struct Message msgtab[] = {
   { MSG_INFO,    m_info,     0, MAXPARA, 1 ,0L },
   { MSG_MOTD,    m_motd,     0, MAXPARA, 1 ,0L },
   { MSG_CLOSE,   m_close,    0, MAXPARA, 1 ,0L },
-#ifdef NPATH
+#if defined(NPATH) && !defined(CLIENT_COMPILE)
   { MSG_NOTE,    m_note,     0, 1, 1 ,0L },
 #endif
 #undef USE_SERVICES

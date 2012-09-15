@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.40 4/30/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.41 5/8/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -502,7 +502,8 @@ int	statmask;
  * as a result of an operator issuing this command, else assume it has been
  * called as a result of the server receiving a HUP signal.
  */
-int	rehash(sig)
+int	rehash(cptr, sptr, sig)
+aClient	*cptr, *sptr;
 int	sig;
 {
 	Reg1	aConfItem *tmp = conf, *tmp2;
@@ -536,7 +537,9 @@ int	sig;
 			    {
 				sendto_ops("Restricting %s, closing lp",
 					   get_client_name(acptr,FALSE));
-				ret = exit_client(cptr,acptr,sptr,"R-lined");
+				if (exit_client(cptr,acptr,sptr,"R-lined") ==
+				    FLUSH_BUFFER)
+					ret = FLUSH_BUFFER;
 			    }
 #endif
 		    }

@@ -68,6 +68,8 @@ typedef	struct	SMode	Mode;
 #define	KEYLEN		23
 #define	BUFSIZE		512		/* WARNING: *DONT* CHANGE THIS!!!! */
 #define	MAXRECIPIENTS 	20
+#define	MAXBANS		20
+#define	MAXBANLENGTH	1024
 
 #define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)
 
@@ -413,6 +415,7 @@ struct Channel	{
 
 #define	CHFL_CHANOP     0x0001 /* Channel operator */
 #define	CHFL_VOICE      0x0002 /* the power to speak */
+#define	CHFL_BAN	0x0004 /* ban channel flag */
 
 /* Channel Visibility macros */
 

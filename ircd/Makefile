@@ -134,12 +134,13 @@ install: all
 	if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
 		mkdir ${IRCDDIR}; \
 	fi
-	$(INSTALL) -csm ${IRCDMODE} ircd ${BINDIR}
-	$(INSTALL) -csm 700 chkconf ${BINDIR}
+	../install -csm ${IRCDMODE} ircd ${BINDIR}
+	../install -csm 700 chkconf ${BINDIR}
 	$(CP) ../doc/example.conf ${IRCDDIR}
 	$(TOUCH) ${IRCDDIR}/ircd.motd
 	$(RM) -f ${IRCDDIR}/ircd.m4
 	$(TOUCH) ${IRCDDIR}/ircd.m4
+	chmod +x ./buildm4
 	./buildm4 ${IRCDDIR}
 
 clean:

@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.41 5/4/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.43 5/17/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -811,7 +811,8 @@ char	*parv[];
 		return 0;
 	if (parc < 2 || *parv[1] == '\0')
 	    {
-		sendto_one(sptr, err_str(ERR_NORECIPIENT), me.name, parv[0]);
+		sendto_one(sptr, err_str(ERR_NORECIPIENT),
+			   me.name, parv[0], "SUMMON");
 		return 0;
 	    }
 	user = parv[1];
@@ -917,7 +918,7 @@ char	*parv[];
 **            it--not reversed as in ircd.conf!
 */
 
-static int report_array[10][3] = {
+static int report_array[11][3] = {
 		{ CONF_CONNECT_SERVER,    RPL_STATSCLINE, 'C'},
 		{ CONF_NOCONNECT_SERVER,  RPL_STATSNLINE, 'N'},
 		{ CONF_CLIENT,            RPL_STATSILINE, 'I'},
@@ -927,6 +928,7 @@ static int report_array[10][3] = {
 		{ CONF_OPERATOR,	  RPL_STATSOLINE, 'O'},
 		{ CONF_HUB,		  RPL_STATSHLINE, 'H'},
 		{ CONF_LOCOP,		  RPL_STATSOLINE, 'o'},
+		{ CONF_SERVICE,		  RPL_STATSSLINE, 'S'},
 		{ 0, 0}
 				};
 
@@ -1062,6 +1064,9 @@ char	*parv[];
 #ifdef DEBUGMODE
 		send_usage(sptr,parv[0]);
 #endif
+		break;
+	case 'S' : case 's' :
+		report_configured_links(sptr, CONF_SERVICE);
 		break;
 	case 'T' : case 't' :
 		tstats(sptr, parv[0]);
@@ -1530,7 +1535,7 @@ char	*parv[];
 #ifdef USE_SYSLOG
 	syslog(LOG_INFO, "REHASH From %s\n", get_client_name(sptr, FALSE));
 #endif
-	return rehash(0);
+	return rehash(cptr, sptr, 0);
 }
 #endif
 
@@ -1575,13 +1580,13 @@ int	m_trace(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
-    {
-	aClient	*acptr;
+{
+	Reg1	int	i;
+	Reg2	aClient	*acptr;
 	aClass	*cltmp;
+	char	*tname;
 	int	doall, link_s[MAXCONNECTIONS], link_u[MAXCONNECTIONS];
 	int	cnt = 0, wilds, dow;
-	Reg1	int	i;
-	Reg2	aClient	*acptr2;
 
 	if (check_registered(sptr))
 		return 0;
@@ -1591,15 +1596,20 @@ char	*parv[];
 				2, parc, parv))
 			return 0;
 
+	if (parc > 1)
+		tname = parv[1];
+	else
+		tname = me.name;
+
 	switch (hunt_server(cptr, sptr, ":%s TRACE :%s", 1, parc, parv))
 	{
 	case HUNTED_PASS: /* note: gets here only if parv[1] exists */
 	    {
 		aClient	*ac2ptr;
 
-		ac2ptr = next_client(client, parv[1]);
+		ac2ptr = next_client(client, tname);
 		sendto_one(sptr, rpl_str(RPL_TRACELINK), me.name, parv[0],
-			   version, debugmode, parv[1], ac2ptr->from->name);
+			   version, debugmode, tname, ac2ptr->from->name);
 		return 0;
 	    }
 	case HUNTED_ISME:
@@ -1608,25 +1618,25 @@ char	*parv[];
 		return 0;
 	}
 
-	doall = (parv[1] && (parc > 1)) ? !matches(parv[1],me.name): TRUE;
-	wilds = !parv[1] || index(parv[1], '*') || index(parv[1], '?');
+	doall = (parv[1] && (parc > 1)) ? !matches(tname, me.name): TRUE;
+	wilds = !parv[1] || index(tname, '*') || index(tname, '?');
 	dow = wilds || doall;
 
 	for (i = 0; i < MAXCONNECTIONS; i++)
 		link_s[i] = 0, link_u[i] = 0;
 
 	if (doall)
-		for (acptr2 = client; acptr2; acptr2 = acptr2->next)
+		for (acptr = client; acptr; acptr = acptr->next)
 #ifdef	SHOW_INVISIBLE_LUSERS
-			if (IsPerson(acptr2))
-				link_u[acptr2->from->fd]++;
+			if (IsPerson(acptr))
+				link_u[acptr->from->fd]++;
 #else
-			if (IsPerson(acptr2) &&
-			    (!IsInvisible(acptr2) || IsOper(sptr)))
-				link_u[acptr2->from->fd]++;
+			if (IsPerson(acptr) &&
+			    (!IsInvisible(acptr) || IsOper(sptr)))
+				link_u[acptr->from->fd]++;
 #endif
-			else if (IsServer(acptr2))
-				link_s[acptr2->from->fd]++;
+			else if (IsServer(acptr))
+				link_s[acptr->from->fd]++;
 
 	/* report all direct connections */
 	
@@ -1637,9 +1647,15 @@ char	*parv[];
 
 		if (!(acptr = local[i])) /* Local Connection? */
 			continue;
-		name = get_client_name(acptr,FALSE);
-		if (!doall && matches(parv[1],acptr->name))
+		if (IsInvisible(acptr) && dow &&
+		    !(MyConnect(sptr) && IsOper(sptr)) &&
+		    !IsAnOper(acptr) && (acptr != sptr))
 			continue;
+		if (!doall && wilds && matches(tname, acptr->name))
+			continue;
+		if (!dow && mycmp(tname, acptr->name))
+			continue;
+		name = get_client_name(acptr,FALSE);
 		class = get_client_class(acptr);
 
 		switch(acptr->status)

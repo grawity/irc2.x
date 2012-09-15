@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.51 5/6/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.52 5/17/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -237,7 +237,7 @@ int	port;
 		report_error("opening stream socket %s:%s", cptr);
 		return -1;
 	    }
-	else if (cptr->fd >= MAXCONNECTIONS)
+	else if (cptr->fd >= MAXCLIENTS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
 		(void)close(cptr->fd);
@@ -348,7 +348,7 @@ int	port;
 		report_error("error opening unix domain socket %s:%s", cptr);
 		return -1;
 	    }
-	else if (cptr->fd >= MAXCONNECTIONS)
+	else if (cptr->fd >= MAXCLIENTS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
 		(void)close(cptr->fd);
@@ -495,7 +495,8 @@ void	init_sys()
 	if (!(bootopt & BOOT_DEBUG))
 		(void)close(2);
 
-	if (!(bootopt & (BOOT_INETD|BOOT_OPER)))
+	if (((bootopt & BOOT_CONSOLE) || isatty(0)) &&
+	    !(bootopt & (BOOT_INETD|BOOT_OPER)))
 	    {
 		if (fork())
 			exit(0);
@@ -550,9 +551,9 @@ void	write_pidfile()
  * from either the server's sockhost (if client fd is a tty or localhost)
  * or from the ip# converted into a string. 0 = success, -1 = fail.
  */
-static	int	check_init(cptr, sockn, full, socka)
+static	int	check_init(cptr, sockn, socka)
 Reg1	aClient	*cptr;
-Reg2	char	*full, *sockn;
+Reg2	char	*sockn;
 Reg3	struct	sockaddr_in *socka;
 {
 	int	len = sizeof(struct sockaddr_in);
@@ -560,9 +561,8 @@ Reg3	struct	sockaddr_in *socka;
 #ifdef	UNIXPORT
 	if (IsUnixSocket(cptr))
 	    {
-		strncpyzt(full, cptr->acpt->sockhost, HOSTLEN+1);
-		strncpyzt(sockn, full, HOSTLEN+1);
-		get_sockhost(cptr, full);
+		strncpyzt(sockn, cptr->acpt->sockhost, HOSTLEN+1);
+		get_sockhost(cptr, sockn);
 		bcopy((char *)&cptr->ip, (char *)&socka->sin_addr,
 			sizeof(struct in_addr));
 		socka->sin_family = AF_INET;
@@ -574,7 +574,7 @@ Reg3	struct	sockaddr_in *socka;
 	/* If descriptor is a tty, special checking... */
 	if (isatty(cptr->fd))
 	    {
-		(void)strncpy(full, me.sockhost, HOSTLEN);
+		(void)strncpy(sockn, me.sockhost, HOSTLEN);
 		bzero((char *)socka, sizeof(struct sockaddr_in));
 	    }
 	else if (getpeername(cptr->fd, socka, &len) == -1)
@@ -584,9 +584,8 @@ Reg3	struct	sockaddr_in *socka;
 	    }
 	(void)strcpy(sockn, (char *)inetntoa((char *)&socka->sin_addr));
 	if (inet_netof(socka->sin_addr) == IN_LOOPBACKNET)
-		(void)strncpy(full, me.sockhost, HOSTLEN);
-	else
-		(void)strcpy(full, sockn);
+		(void)strncpy(sockn, me.sockhost, HOSTLEN);
+
 	bcopy((char *)&socka->sin_addr, (char *)&cptr->ip,
 		sizeof(struct in_addr));
 	cptr->port = (int)(ntohs(socka->sin_port));
@@ -604,7 +603,7 @@ Reg3	struct	sockaddr_in *socka;
 int	check_client(cptr)
 Reg1	aClient	*cptr;
 {
-	static	char	sockname[HOSTLEN+1], fullname[HOSTLEN+1];
+	static	char	sockname[HOSTLEN+1];
 	Reg2	struct	hostent *hp = NULL;
 	Reg3	int	i;
 	struct	sockaddr_in sk;
@@ -613,7 +612,7 @@ Reg1	aClient	*cptr;
 	Debug((DEBUG_DNS, "ch_cl: check access for %s[%s]",
 		cptr->name, inetntoa((char *)&cptr->ip)));
 
-	if (check_init(cptr, sockname, fullname, &sk))
+	if (check_init(cptr, sockname, &sk))
 		return -2;
 
 	if (!IsUnixSocket(cptr))
@@ -640,12 +639,13 @@ Reg1	aClient	*cptr;
 	if (attach_Iline(cptr, hp, sockname))
 	    {
 		Debug((DEBUG_DNS,"ch_cl: access denied: %s[%s]",
-			cptr->name, fullname));
+			cptr->name, sockname));
 		return -1;
 	    }
 
 	Debug((DEBUG_DNS, "ch_cl: access ok: %s[%s]",
-		cptr->name, fullname));
+		cptr->name, sockname));
+
 	if (inet_netof(cptr->ip) == IN_LOOPBACKNET || IsUnixSocket(cptr) ||
 	    inet_netof(cptr->ip) == inet_netof(mysk.sin_addr))
 	    {
@@ -738,7 +738,7 @@ aClient	*cptr;
 			ClearAccess(cptr);
 			lin.value.aconf = aconf;
 			lin.flags = ASYNC_CONF;
-			nextdnscheck = -1;
+			nextdnscheck = 1;
 			if (s = index(aconf->host, '@'))
 				s++;
 			else
@@ -1149,13 +1149,12 @@ add_con_refuse:
 
 		lin.flags = ASYNC_CLIENT;
 		lin.value.cptr = acptr;
-		nextdnscheck = -1;
 		Debug((DEBUG_DNS, "lookup %s",
 			inetntoa((char *)&addr.sin_addr)));
 		acptr->hostp = gethost_byaddr((char *)&acptr->ip, &lin);
 		if (!acptr->hostp)
 			SetDNS(acptr);
-		nextdnscheck = -1;
+		nextdnscheck = 1;
 	    }
 
 	acptr->fd = fd;
@@ -1254,6 +1253,12 @@ fd_set	*rfd;
 		*/
 		if (dbuf_put(&cptr->recvQ, readbuf, length) < 0)
 			return exit_client(cptr, cptr, cptr, "dbuf_put fail");
+
+#ifdef	CLIENT_FLOOD
+		if (IsPerson(cptr) &&
+		    DBufLength(&cptr->recvQ) > CLIENT_FLOOD)
+			return exit_client(cptr, cptr, cptr, "Excess Flood");
+#endif
 
 		while (DBufLength(&cptr->recvQ) &&
 		       ((cptr->status < STAT_UNKNOWN) ||
@@ -1454,7 +1459,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 				break;
 			    }
 			ircstp->is_ac++;
-			if (fd >= MAXCONNECTIONS)
+			if (fd >= MAXCLIENTS)
 			    {
 				ircstp->is_ref++;
 				sendto_ops("All connections in use. (%s)",
@@ -1571,17 +1576,14 @@ struct	hostent	*hp;
 
 		lin.flags = ASYNC_CONNECT;
 		lin.value.aconf = aconf;
-		nextdnscheck = -1;
+		nextdnscheck = 1;
 		s = (char *)index(aconf->host, '@');
 		s++; /* should NEVER be NULL */
 		hp = gethost_byname(s, &lin);
 		Debug((DEBUG_NOTICE, "co_sv: hp %x ac %x na %s ho %s",
 			hp, aconf, aconf->name, s));
 		if (!hp)
-		    {
-			nextdnscheck = -1;
 			return 0;
-		    }
 		bcopy(hp->h_addr, (char *)&aconf->ipnum,
 			sizeof(struct in_addr));
 	    }
@@ -1685,7 +1687,7 @@ int	*lenp;
 	 * with it so if it fails its useless.
 	 */
 	cptr->fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (cptr->fd >= MAXCONNECTIONS)
+	if (cptr->fd >= MAXCLIENTS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
 		return NULL;
@@ -1755,7 +1757,7 @@ int	*lenp;
 		report_error("Connect to host %s failed: %s", cptr);
 		return NULL;
 	    }
-	else if (cptr->fd >= MAXCONNECTIONS)
+	else if (cptr->fd >= MAXCLIENTS)
 	    {
 		sendto_ops("No more connections allowed (%s)", cptr->name);
 		return NULL;

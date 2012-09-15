@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.23 4/15/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.24 5/10/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -725,8 +725,8 @@ va_dcl
 		if ((cptr = local[i]) && !IsServer(cptr) && !IsMe(cptr) &&
 		    SendServNotice(cptr))
 		    {
-			(void)sprintf(nbuf, "NOTICE %s :*** Notice -- ",
-					cptr->name);
+			(void)sprintf(nbuf, ":%s NOTICE %s :*** Notice -- ",
+					me.name, cptr->name);
 			(void)strncat(nbuf, pattern,
 					sizeof(nbuf) - strlen(nbuf));
 #ifdef	USE_VARARGS

@@ -61,6 +61,9 @@ all: build
 
 build: irc
 
+install: all
+	$(INSTALL) -csm 711 irc $(BINDIR)
+
 irc: $(OBJS) $(COMMONOBJS)
 	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(IRCLIBS) $(LIBFLAGS)
 

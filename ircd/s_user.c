@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_user.c	2.52 5/5/93 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_user.c	2.53 5/17/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -887,7 +887,7 @@ int	m_who(cptr, sptr, parc, parv)
 aClient *cptr, *sptr;
 int	parc;
 char	*parv[];
-    {
+{
 	Reg1	aClient *acptr;
 	Reg2	char	*mask = parc > 1 ? parv[1] : NULL;
 	Reg3	Link	*lp;
@@ -959,7 +959,7 @@ char	*parv[];
 	else for (acptr = client; acptr; acptr = acptr->next)
 	    {
 		aChannel *ch2ptr = NULL;
-		int showperson, isinvis;
+		int	showperson, isinvis;
 
 		if (!IsPerson(acptr))
 			continue;
@@ -980,7 +980,7 @@ char	*parv[];
 			member = IsMember(sptr, chptr);
 			if (isinvis && !member)
 				continue;
-			if (!isinvis && ShowChannel(sptr, chptr))
+			if (member || (!isinvis && ShowChannel(sptr, chptr)))
 			    {
 				ch2ptr = chptr;
 				showperson = 1;
@@ -1009,7 +1009,7 @@ char	*parv[];
 	sendto_one(sptr, rpl_str(RPL_ENDOFWHO), me.name, parv[0],
 		   BadPtr(mask) ?  "*" : mask);
 	return 0;
-    }
+}
 
 /*
 ** m_whois
@@ -1684,16 +1684,16 @@ char	*parv[];
 
 		s = index(aconf->host, '@');
 		*s++ = '\0';
-		sptr->flags |= (FLAGS_SERVNOTICE|FLAGS_WALLOP);
 		if ((matches(s,me.sockhost) && !IsLocal(sptr)) ||
 		    aconf->status == CONF_LOCOP)
 			SetLocOp(sptr);
 		else
 			SetOper(sptr);
 		*--s =  '@';
-		send_umode_out(cptr, sptr, old);
 		sendto_ops("%s is now operator (%c)", parv[0],
 			   IsOper(sptr) ? 'O' : 'o');
+		sptr->flags |= (FLAGS_SERVNOTICE|FLAGS_WALLOP);
+		send_umode_out(cptr, sptr, old);
  		sendto_one(sptr, rpl_str(RPL_YOUREOPER), me.name, parv[0]);
 #if defined(USE_SYSLOG) && defined(SYSLOG_OPER)
 		syslog(LOG_INFO, "OPER (%s) (%s) by (%s!%s@%s)",

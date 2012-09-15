@@ -35,6 +35,8 @@ all: build
 
 build: $(OBJS)
 
+install:
+
 clean:
 	${RM} -f *.o *~ core #* *.bak
 
