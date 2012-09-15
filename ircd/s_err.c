@@ -21,7 +21,7 @@
 #include "numeric.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_err.c	1.12 01 Nov 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_err.c	1.12 11/1/93 (C) 1992 Darren Reed";
 #endif
 
 typedef	struct	{

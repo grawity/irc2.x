@@ -36,7 +36,7 @@
 */
 
 #ifndef lint
-static  char sccsid[] = "@(#)dbuf.c	2.16 20 Oct 1993 (C) 1990 Markku Savela";
+static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
 #endif
 
 #include <stdio.h>
@@ -65,7 +65,7 @@ static	dbufbuf	*freelist = NULL;
 */
 static dbufbuf *dbuf_alloc()
 {
-#ifdef	VALLOC
+#if defined(VALLOC) && !defined(DEBUGMODE)
 	Reg1	dbufbuf	*dbptr, *db2ptr;
 	Reg2	int	num;
 #else
@@ -73,7 +73,7 @@ static dbufbuf *dbuf_alloc()
 #endif
 
 	dbufalloc++;
-	if (dbptr = freelist)
+	if ((dbptr = freelist))
 	    {
 		freelist = freelist->next;
 		return dbptr;
@@ -345,7 +345,7 @@ getmsg_init:
 		length--;
 		if (!--i)
 		    {
-			if (d = d->next)
+			if ((d = d->next))
 			    {
 				s = d->data;
 				i = MIN(DBUFSIZ, dlen);

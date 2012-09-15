@@ -2,11 +2,13 @@
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include "h.h"
+#include "irc.h"
 
 
 #define	CTCP_CHAR	0x1
 
-check_ctcp(cptr, sptr, parc, parv)
+void check_ctcp(cptr, sptr, parc, parv)
 aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];

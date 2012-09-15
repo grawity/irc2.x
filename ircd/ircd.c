@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "@(#)ircd.c	2.46 10 Oct 1993 (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	2.48 3/9/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -47,6 +47,7 @@ char	*configfile = CONFIGFILE;	/* Server configuration file */
 int	debuglevel = -1;		/* Server debug level */
 int	bootopt = 0;			/* Server boot option flags */
 char	*debugmode = "";		/*  -"-    -"-   -"-  */
+char	*sbrk0;				/* initial sbrk(0) */
 static	int	dorehash = 0;
 static	char	*dpath = DPATH;
 
@@ -285,7 +286,7 @@ time_t	currenttime;
 		 * Ok, so goto's are ugly and can be avoided here but this code
 		 * is already indented enough so I think its justified. -avalon
 		 */
-		if (!killflag && !rflag &&
+		if (!killflag && !rflag && IsRegistered(cptr) &&
 		    (ping >= currenttime - cptr->lasttime))
 			goto ping_timeout;
 		/*
@@ -298,25 +299,30 @@ time_t	currenttime;
 		    ((currenttime - cptr->lasttime) >= (2 * ping) &&
 		     (cptr->flags & FLAGS_PINGSENT)) ||
 		    (!IsRegistered(cptr) &&
-		     (currenttime - cptr->since) >= ping))
+		     (currenttime - cptr->firsttime) >= ping))
 		    {
-			if (!IsRegistered(cptr) &&
-			    (DoingDNS(cptr) || DoingAuth(cptr)))
+			if (!IsRegistered(cptr) && IsUnknown(cptr))
 			    {
-				if (cptr->authfd >= 0)
+				if (DoingDNS(cptr) || DoingAuth(cptr))
 				    {
-					(void)close(cptr->authfd);
-					cptr->authfd = -1;
-					cptr->count = 0;
-					*cptr->buffer = '\0';
+					if (cptr->authfd >= 0)
+					    {
+						(void)close(cptr->authfd);
+						cptr->authfd = -1;
+						cptr->count = 0;
+						*cptr->buffer = '\0';
+					    }
+					Debug((DEBUG_NOTICE,
+						"DNS/AUTH timeout %s",
+						get_client_name(cptr,TRUE)));
+					del_queries((char *)cptr);
+					ClearAuth(cptr);
+					ClearDNS(cptr);
+					SetAccess(cptr);
+					cptr->firsttime = currenttime;
+					continue;
 				    }
-				Debug((DEBUG_NOTICE,"DNS/AUTH timeout %s",
-					get_client_name(cptr,TRUE)));
-				del_queries((char *)cptr);
-				ClearAuth(cptr);
-				ClearDNS(cptr);
-				SetAccess(cptr);
-				cptr->since = currenttime;
+				exit_client(cptr, cptr, &me, "Ping timeout");
 				continue;
 			    }
 			if (IsServer(cptr) || IsConnecting(cptr) ||
@@ -338,14 +344,10 @@ time_t	currenttime;
 					   get_client_name(cptr,FALSE));
 #endif
 			(void)exit_client(cptr, cptr, &me, "Ping timeout");
-			/*
-			 * need to start loop over because the close can
-			 * affect the ordering of the local[] array.- avalon
-			 */
-			i = 0;
 			continue;
 		    }
-		else if ((cptr->flags & FLAGS_PINGSENT) == 0)
+		else if (IsRegistered(cptr) &&
+			 (cptr->flags & FLAGS_PINGSENT) == 0)
 		    {
 			/*
 			 * if we havent PINGed the connection and we havent
@@ -399,6 +401,7 @@ char	*argv[];
 	uid_t	uid, euid;
 	time_t	delay = 0, now;
 
+	sbrk0 = (char *)sbrk((size_t)0);
 	uid = getuid();
 	euid = geteuid();
 #ifdef	PROFIL

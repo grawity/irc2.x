@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)parse.c	2.30 17 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)parse.c	2.33 1/30/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 #include "struct.h"
@@ -39,60 +39,15 @@ Computing Center and Jarkko Oikarinen";
  * NOTE: parse() should not be called recursively by other functions!
  */
 static	char	*para[MAXPARA+1];
-#ifndef	CLIENT_COMPILE
-static	int	cancel_clients PROTO((aClient *, aClient *, char *));
-static	void	remove_unknown PROTO((aClient *, char *));
-#endif
 
 #ifdef	CLIENT_COMPILE
 static	char	sender[NICKLEN+USERLEN+HOSTLEN+3];
 char	userhost[USERLEN+HOSTLEN+2];
 #else
 static	char	sender[HOSTLEN+1];
+static	int	cancel_clients PROTO((aClient *, aClient *, char *));
+static	void	remove_unknown PROTO((aClient *, char *));
 #endif
-
-int	myncmp(str1, str2, n)
-char	*str1;
-char	*str2;
-int	n;
-    {
-	Reg1	unsigned char	*s1 = (unsigned char *)str1;
-	Reg2	unsigned char	*s2 = (unsigned char *)str2;
-	Reg3	int		res;
-
-	while ((res = toupper(*s1) - toupper(*s2)) == 0)
-	    {
-		s1++; s2++; n--;
-		if (n == 0 || (*s1 == '\0' && *s2 == '\0'))
-			return 0;
-	    }
-	return (res);
-    }
-
-/*
-**  Case insensitive comparison of two NULL terminated strings.
-**
-**	returns	 0, if s1 equal to s2
-**		<0, if s1 lexicographically less than s2
-**		>0, if s1 lexicographically greater than s2
-*/
-int	mycmp(s1, s2)
-char	*s1;
-char	*s2;
-    {
-	Reg1	unsigned char	*str1 = (unsigned char *)s1;
-	Reg2	unsigned char	*str2 = (unsigned char *)s2;
-	Reg3	int		res;
-
-	while ((res = toupper(*str1) - toupper(*str2)) == 0)
-	    {
-		if (*str1 == '\0')
-			return 0;
-		str1++;
-		str2++;
-	    }
-	return (res);
-    }
 
 /*
 **  Find a client (server or user) by name.
@@ -204,7 +159,7 @@ aClient *cptr;
 	if (!name)
 		return c2ptr;
 
-	if (c2ptr = hash_find_server(name, cptr))
+	if ((c2ptr = hash_find_server(name, cptr)))
 		return (c2ptr);
 	if (!index(name, '*'))
 		return c2ptr;
@@ -295,12 +250,12 @@ struct	Message *mptr;
 				*s++ = *ch; /* leave room for NULL */
 		*s = '\0';
 #ifdef CLIENT_COMPILE
-		if (s = index(sender, '!'))
+		if ((s = index(sender, '!')))
 		    {
 			*s++ = '\0';
 			strncpyzt(userhost, s, sizeof(userhost));
 		    }
-		else if (s = index(sender, '@'))
+		else if ((s = index(sender, '@')))
 		    {
 			*s++ = '\0';
 			strncpyzt(userhost, s, sizeof(userhost));
@@ -418,13 +373,6 @@ struct	Message *mptr;
 #ifdef	CLIENT_COMPILE
 				Debug((DEBUG_ERROR,"Unknown (%s) from %s[%s]",
 					ch, cptr->name, cptr->sockhost));
-				/*
-				** This concerns only client ... --Armin
-				*/
-				if (me.user)
-					Debug((DEBUG_ERROR,
-						"*** Error: %s %s from server",
-						"Unknown command", ch));
 #else
 				Debug((DEBUG_ERROR,"Unknown (%s) from %s",
 					ch, get_client_name(cptr, TRUE)));
@@ -551,7 +499,10 @@ char	*cmd;
 	 * then the same deal.
 	 */
 	if (IsServer(sptr) || IsMe(sptr))
+	    {
+		sendto_ops("Dropping server %s", cptr->name);
 		return exit_client(cptr, cptr, &me, "Fake Direction");
+	    }
 	/*
 	 * Ok, someone is trying to impose as a client and things are
 	 * confused.  If we got the wrong prefix from a server, send out a

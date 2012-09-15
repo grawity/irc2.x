@@ -27,6 +27,7 @@ char c_bsd_id[] = "c_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #ifndef AUTOMATON
 #include <curses.h>
 #endif
@@ -34,6 +35,8 @@ char c_bsd_id[] = "c_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include "sys.h"
 #include "sock.h"	/* If FD_ZERO isn't defined up to this point, */
 			/* define it (BSD4.2 needs this) */
+#include "h.h"
+#include "irc.h"
 
 #ifdef AUTOMATON
 #ifdef DOCURSES
@@ -55,66 +58,40 @@ char	*host;
 int	portnum;
 aClient	*cptr;
 {
-	int	sock, tryagain = 1;
+	int	sock;
 	static	struct	hostent *hp;
 	static	struct	sockaddr_in server;
 
-	gethostname(me.sockhost,HOSTLEN);
-
-	/* FIX:  jtrim@duorion.cair.du.edu -- 3/4/89 
-	   and jto@tolsun.oulu.fi -- 3/7/89 */
-
-	while (tryagain) {
-		sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock < 0) {
-			perror("opening stream socket");
-			exit(1);
-		}
-		server.sin_family = AF_INET;
- 
-		/* MY FIX -- jtrim@duorion.cair.du.edu   (2/10/89) */
-		if ( isdigit(*host))
-			server.sin_addr.s_addr = inet_addr(host);
-		else { 
-			hp = gethostbyname(host);
-			if (hp == 0) {
-				fprintf(stderr, "%s: unknown host\n", host);
-				exit(2);
-			}
-			bcopy(hp->h_addr, &server.sin_addr, hp->h_length);
-		}
-		server.sin_port = htons(portnum);
-		/* End Fix */
-		if (connect(sock, &server, sizeof(server)) == -1) {
-			if (StrEq(host, me.sockhost) && tryagain == 1) {
-			/* - server is SUID/SGID to ME so it's my UID */
-				if (fork() == 0) {
-					execl(MYNAME, "ircd", (char *)0);
-					exit(1);
-					}
-				printf("Connection refused at your host!\n");
-				printf("Rebooting IRCD Daemon...\n");
-				printf("Please wait a moment...\n");
-				close(sock);
-				sock = -1;
-				sleep(5);
-				tryagain = 2;
-			} else {
-				perror("irc");
-			 	exit(1);
-			}
-		} else
-			tryagain = 0;
-
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock < 0) {
+		perror("opening stream socket");
+		exit(1);
 	}
+	server.sin_family = AF_INET;
+ 
+	if (isdigit(*host))
+		server.sin_addr.s_addr = inet_addr(host);
+	else { 
+		hp = gethostbyname(host);
+		if (hp == 0) {
+			fprintf(stderr, "%s: unknown host\n", host);
+			exit(2);
+		}
+		bcopy(hp->h_addr, (char *)&server.sin_addr, hp->h_length);
+	}
+	server.sin_port = htons(portnum);
+	if (connect(sock, &server, sizeof(server)) == -1) {
+		perror("irc");
+	 	exit(1);
+	}
+
 	cptr->acpt = cptr;
 	cptr->port = server.sin_port;
 	cptr->ip.s_addr = server.sin_addr.s_addr;
 	return(sock);
 }
-/* End Fix */
 
-client_loop(sock)
+void client_loop(sock)
 int	sock;
 {
 	int	i = 0, size, pos;
@@ -123,7 +100,7 @@ int	sock;
 
 	do {
 		if (sock < 0 || QuitFlag)
-			return(-1);
+			return;
 		FD_ZERO(&ready);
 		FD_SET(sock, &ready);
 		FD_SET(0, &ready);
@@ -144,7 +121,7 @@ int	sock;
 				perror("receiving stream packet");
 			if (size <= 0) {
 				close(sock);
-				return(-1);
+				return;
 			}
 			dopacket(&me, apubuf, size);
 		}
@@ -152,7 +129,7 @@ int	sock;
 		if (FD_ISSET(0, &ready)) {
 			if ((size = read(0, apubuf, STDINBUFSIZE)) < 0) {
 				putline("FATAL ERROR: End of stdin file !");
-				return -1;
+				return;
 			}
 			for (pos = 0; pos < size; pos++) {
 				i=do_char(apubuf[pos]);

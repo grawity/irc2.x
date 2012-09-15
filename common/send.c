@@ -23,7 +23,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)send.c	2.30 07 Nov 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)send.c	2.32 2/28/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -73,8 +73,7 @@ char	*notice;
 	DBufClear(&to->recvQ);
 	DBufClear(&to->sendQ);
 #ifndef CLIENT_COMPILE
-	if (notice != (char *)NULL && !IsPerson(to) && !IsUnknown(to) &&
-	    !(to->flags & FLAGS_CLOSING))
+	if (!IsPerson(to) && !IsUnknown(to) && !(to->flags & FLAGS_CLOSING))
 		sendto_ops(notice, get_client_name(to, FALSE));
 	Debug((DEBUG_ERROR, notice, get_client_name(to, FALSE)));
 #endif
@@ -134,7 +133,7 @@ int	len;
 			sendto_ops("Max SendQ limit exceeded for %s: %d > %d",
 			   	get_client_name(to, FALSE),
 				DBufLength(&to->sendQ), get_sendq(to));
-		return dead_link(to, NULL);
+		return dead_link(to, "Max Sendq exceeded");
 	    }
 # endif
 	else if (dbuf_put(&to->sendQ, msg, len) < 0)
@@ -188,7 +187,7 @@ int	len;
 			sendto_ops("Max SendQ limit exceeded for %s : %d > %d",
 				   get_client_name(to, FALSE),
 				   DBufLength(&to->sendQ), get_sendq(to));
-			return dead_link(to, NULL);
+			return dead_link(to, "Max Sendq exceeded");
 		    }
 # endif
 		else if (dbuf_put(&to->sendQ,msg+rlen,len-rlen) < 0)
@@ -203,10 +202,6 @@ int	len;
 	me.sendM += 1;
 	if (to->acpt != &me)
 		to->acpt->sendM += 1;
-	to->sendB += rlen;
-	me.sendB += rlen;
-	if (to->acpt != &me)
-		to->acpt->sendB += 1;
 	return 0;
 }
 #endif
@@ -248,10 +243,6 @@ aClient *to;
 			return dead_link(to,"Write error to %s, closing link");
 		(void)dbuf_delete(&to->sendQ, rlen);
 		to->lastsq = DBufLength(&to->sendQ)/1024;
-		to->sendB += rlen;
-		me.sendB += rlen;
-		if (to->acpt != &me)
-			to->acpt->sendB += rlen;
 		if (rlen < len) /* ..or should I continue until rlen==0? */
 			break;
 	    }

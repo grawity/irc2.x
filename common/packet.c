@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)packet.c	2.10 28 Sep 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)packet.c	2.12 1/30/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
  
@@ -48,11 +48,29 @@ Reg4	int	length;
 {
 	Reg1	char	*ch1;
 	Reg2	char	*ch2;
+	aClient	*acpt = cptr->acpt;
  
 	me.receiveB += length; /* Update bytes received */
 	cptr->receiveB += length;
-	if (cptr->acpt != &me)
-		cptr->acpt->receiveB += length;
+	if (cptr->receiveB > 1023)
+	    {
+		cptr->receiveK += (cptr->receiveB >> 10);
+		cptr->receiveB &= 0x03ff;	/* 2^10 = 1024, 3ff = 1023 */
+	    }
+	if (acpt != &me)
+	    {
+		acpt->receiveB += length;
+		if (acpt->receiveB > 1023)
+		    {
+			acpt->receiveK += (acpt->receiveB >> 10);
+			acpt->receiveB &= 0x03ff;
+		    }
+	    }
+	else if (me.receiveB > 1023)
+	    {
+		me.receiveK += (me.receiveB >> 10);
+		me.receiveB &= 0x03ff;
+	    }
 	ch1 = cptr->buffer + cptr->count;
 	ch2 = buffer;
 	while (--length >= 0)

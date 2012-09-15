@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#if defined(SGI) || defined(AIX)
+#ifdef STDDEFH
 # include <stddef.h>
 #endif
 
@@ -36,6 +36,9 @@
 # ifdef SYSSYSLOGH
 #  include <sys/syslog.h>
 # endif
+#endif
+#ifdef	pyr
+#include <sys/time.h>
 #endif
 
 typedef	struct	ConfItem aConfItem;
@@ -157,6 +160,7 @@ typedef	struct	SMode	Mode;
 
 #define	SEND_UMODES	(FLAGS_INVISIBLE|FLAGS_OPER|FLAGS_WALLOP)
 #define	ALL_UMODES	(SEND_UMODES|FLAGS_SERVNOTICE)
+#define	FLAGS_ID	(FLAGS_DOID|FLAGS_GOTID)
 
 /*
  * flags macros.
@@ -229,21 +233,22 @@ struct	ConfItem	{
 	struct	ConfItem *next;
 };
 
-#define	CONF_ILLEGAL            0x80000000
-#define	CONF_QUARANTINED_SERVER 0x0001
-#define	CONF_CLIENT             0x0002
-#define	CONF_CONNECT_SERVER     0x0004
-#define	CONF_NOCONNECT_SERVER   0x0008
-#define	CONF_LOCOP              0x0010
-#define	CONF_OPERATOR           0x0020
-#define	CONF_ME                 0x0040
-#define	CONF_KILL               0x0080
-#define	CONF_ADMIN              0x0100
-#ifdef R_LINES
-#define	CONF_RESTRICT           0x0200
+#define	CONF_ILLEGAL		0x80000000
+#define	CONF_MATCH		0x40000000
+#define	CONF_QUARANTINED_SERVER	0x0001
+#define	CONF_CLIENT		0x0002
+#define	CONF_CONNECT_SERVER	0x0004
+#define	CONF_NOCONNECT_SERVER	0x0008
+#define	CONF_LOCOP		0x0010
+#define	CONF_OPERATOR		0x0020
+#define	CONF_ME			0x0040
+#define	CONF_KILL		0x0080
+#define	CONF_ADMIN		0x0100
+#ifdef 	R_LINES
+#define	CONF_RESTRICT		0x0200
 #endif
-#define	CONF_CLASS              0x0400
-#define	CONF_SERVICE            0x0800
+#define	CONF_CLASS		0x0400
+#define	CONF_SERVICE		0x0800
 #define	CONF_LEAF		0x1000
 #define	CONF_LISTEN_PORT	0x2000
 #define	CONF_HUB		0x4000
@@ -300,6 +305,7 @@ struct Client	{
 #ifdef USE_SERVICES
 	aService *service;
 #endif
+	int	hashv;		/* raw hash value */
 	time_t	lasttime;	/* ...should be only LOCAL clients? --msa */
 	time_t	firsttime;	/* time client was created */
 	time_t	since;		/* last time we parsed something */
@@ -324,15 +330,20 @@ struct Client	{
 	dbuf	sendQ;		/* Outgoing message queue--if socket full */
 	dbuf	recvQ;		/* Hold for data incoming yet to be parsed */
 	long	sendM;		/* Statistics: protocol messages send */
-	long	sendB;		/* Statistics: total bytes send */
+	long	sendK;		/* Statistics: total k-bytes send */
 	long	receiveM;	/* Statistics: protocol messages received */
-	long	receiveB;	/* Statistics: total bytes received */
+	long	receiveK;	/* Statistics: total k-bytes received */
+	u_short	sendB;		/* counters to count upto 1-k lots of bytes */
+	u_short	receiveB;	/* sent and received. */
 	aClient	*acpt;		/* listening client which we accepted from */
 	Link	*confs;		/* Configuration record associated */
 	int	authfd;		/* fd for rfc931 authentication */
 	struct	in_addr	ip;	/* keep real ip# too */
 	unsigned short	port;	/* and the remote port# too :-) */
 	struct	hostent	*hostp;
+#ifdef	pyr
+	struct	timeval	lw;
+#endif
 	char	sockhost[HOSTLEN+1]; /* This is the host name from the socket
 				  ** and after which the connection was
 				  ** accepted.
@@ -350,10 +361,14 @@ struct	stats {
 	unsigned int	is_cl;	/* number of client connections */
 	unsigned int	is_sv;	/* number of server connections */
 	unsigned int	is_ni;	/* connection but no idea who it was */
-	unsigned long	is_cbs;	/* bytes sent to clients */
-	unsigned long	is_cbr;	/* bytes received to clients */
-	unsigned long	is_sbs;	/* bytes sent to servers */
-	unsigned long	is_sbr;	/* bytes received to servers */
+	unsigned short	is_cbs;	/* bytes sent to clients */
+	unsigned short	is_cbr;	/* bytes received to clients */
+	unsigned short	is_sbs;	/* bytes sent to servers */
+	unsigned short	is_sbr;	/* bytes received to servers */
+	unsigned long	is_cks;	/* k-bytes sent to clients */
+	unsigned long	is_ckr;	/* k-bytes received to clients */
+	unsigned long	is_sks;	/* k-bytes sent to servers */
+	unsigned long	is_skr;	/* k-bytes received to servers */
 	time_t 		is_cti;	/* time spent connected by clients */
 	time_t		is_sti;	/* time spent connected by servers */
 	unsigned int	is_ac;	/* connections accepted */
@@ -409,6 +424,7 @@ struct	SLink	{
 
 struct Channel	{
 	struct	Channel *nextch, *prevch, *hnextch;
+	int	hashv;		/* raw hash value */
 	Mode	mode;
 	char	topic[TOPICLEN+1];
 	int	users;

@@ -24,7 +24,7 @@
 
 /* Type of host. These should be made redundant somehow. -avalon */
 
-#define	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
+/*	BSD			Nothing Needed 4.{2,3} BSD, SunOS 3.x, 4.x */
 /*	HPUX			Nothing needed (A.08/A.09) */
 /*	ULTRIX			Nothing needed (4.2) */
 /*	OSF			Nothing needed (1.2) */
@@ -318,7 +318,7 @@
                                  /*                    300000 for backbones */
 /*
  *  BUFFERPOOL is the maximum size of the total of all sendq's.
- *  Recommended value is twice the MAXSENDQLENGTH.
+ *  Recommended value is 2 * MAXSENDQLENGTH, for hubs, 5 *.
  */
 #define	BUFFERPOOL     (2 * MAXSENDQLENGTH)
 
@@ -356,7 +356,7 @@
 
 /* Define this if you want the server to accomplish ircII standard */
 /* Sends an extra NOTICE in the beginning of client connection     */
-#define	IRCII_KLUDGE
+#undef	IRCII_KLUDGE
 
 /*   STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP  */
 
@@ -556,7 +556,7 @@ error You stuffed up config.h signals #defines use only one.
 #define	HAVE_RELIABLE_SIGNALS
 #endif
 
-#ifdef	SYSYV_UNRELIABLE_SIGNALS
+#ifdef	SYSV_UNRELIABLE_SIGNALS
 # ifdef	POSIX_SIGNALS
 error You stuffed up config.h signals #defines use only one.
 # endif

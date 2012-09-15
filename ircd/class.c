@@ -18,7 +18,7 @@
  */
 
 #ifndef	lint
-static char sccsid[] = "@(#)class.c	1.4 28 Jun 1993 (C) 1990 Darren Reed";
+static char sccsid[] = "@(#)class.c	1.4 6/28/93 (C) 1990 Darren Reed";
 #endif
 
 #include "struct.h"

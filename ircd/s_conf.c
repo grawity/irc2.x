@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_conf.c	2.49 27 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	2.56 02 Apr 1994 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -62,7 +62,7 @@ Computing Center and Jarkko Oikarinen";
 #ifdef __hpux
 #include "inet.h"
 #endif
-#if defined(PCS) || defined(AIX) || defined(DYNIXPTX)
+#if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
 #include <time.h>
 #endif
 #ifdef	R_LINES
@@ -255,7 +255,7 @@ aClient *cptr;
 		return -1;
 	if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR | CONF_CLIENT)) &&
 	    aconf->clients >= ConfMaxLinks(aconf) && ConfMaxLinks(aconf) > 0)
-		return -1;
+		return -3;	/* Use this for printing error message */
 	lp = make_link();
 	lp->next = cptr->confs;
 	lp->value.aconf = aconf;
@@ -504,10 +504,11 @@ int	statmask;
  */
 aConfItem *find_conf_entry(aconf, mask)
 aConfItem *aconf;
+u_int	mask;
 {
 	Reg1	aConfItem *bconf;
 
-	for (bconf = conf; bconf; bconf = bconf->next)
+	for (bconf = conf, mask &= ~CONF_ILLEGAL; bconf; bconf = bconf->next)
 	    {
 		if (!(bconf->status & mask) || (bconf->port != aconf->port))
 			continue;
@@ -552,7 +553,7 @@ int	sig;
 	Reg2	int	i;
 	int	ret = 0;
 
-	if (sig)
+	if (sig == 1)
 	    {
 		sendto_ops("Got signal SIGHUP, reloading ircd conf. file");
 #ifdef	ULTRIX
@@ -584,8 +585,9 @@ int	sig;
 #endif
 		    }
 
+	close_listeners();
+
 	while ((tmp2 = *tmp))
-	    {
 		if (tmp2->clients)
 		    {
 			/*
@@ -594,7 +596,7 @@ int	sig;
 			** that it will be deleted when the last client
 			** exits...
 			*/
-			if (!(tmp2->status & CONF_LISTEN_PORT))
+			if (!(tmp2->status & (CONF_LISTEN_PORT|CONF_CLIENT)))
 			    {
 				*tmp = tmp2->next;
 				tmp2->next = NULL;
@@ -608,7 +610,6 @@ int	sig;
 			*tmp = tmp2->next;
 			free_conf(tmp2);
 	    	    }
-	    }
 
 	/*
 	 * We don't delete the class table, rather mark all entries
@@ -617,9 +618,21 @@ int	sig;
 	for (cltmp = NextClass(FirstClass()); cltmp; cltmp = NextClass(cltmp))
 		MaxLinks(cltmp) = -1;
 
-	close_listeners();
-	flush_cache();
+	if (sig != 2)
+		flush_cache();
 	(void) initconf(0);
+
+	/*
+	 * flush out deleted I and P lines although still in use.
+	 */
+	for (tmp = &conf; (tmp2 = *tmp); )
+		if (!(tmp2->status & CONF_ILLEGAL))
+			tmp = &tmp2->next;
+		else
+		    {
+			*tmp = tmp2->next;
+			tmp2->next = NULL;
+		    }
 	return ret;
 }
 
@@ -742,10 +755,7 @@ int	opt;
                         continue;
                     }
 		if (aconf)
-		    {
 			free_conf(aconf);
-			aconf = NULL;
-		    }
 		aconf = make_conf();
 
 		tmp = getfield(line);
@@ -863,16 +873,24 @@ int	opt;
 				  tmp ? atoi(tmp) : 0);
 			continue;
 		    }
-		if (aconf->status & CONF_LISTEN_PORT)
+		if (aconf->status & (CONF_LISTEN_PORT|CONF_CLIENT))
 		    {
 			aConfItem *bconf;
 
-			if (bconf = find_conf_entry(aconf, CONF_LISTEN_PORT))
+			if (bconf = find_conf_entry(aconf, aconf->status))
 			    {
 				bconf->status &= ~CONF_ILLEGAL;
+				if (aconf->status == CONF_CLIENT &&
+				    aconf->class != bconf->class)
+				    {
+					bconf->class->links -= bconf->clients;
+					bconf->class = aconf->class;
+					bconf->class->links += bconf->clients;
+				    }
 				continue;
 			    }
-			else if (aconf->host)
+			else if (aconf->host &&
+				 aconf->status == CONF_LISTEN_PORT)
 				(void)add_listener(aconf);
 		    }
 		if (aconf->status & CONF_SERVER_MASK)
@@ -1019,7 +1037,8 @@ aClient	*cptr;
 	for (tmp = conf; tmp; tmp = tmp->next)
  		if ((tmp->status == CONF_KILL) && tmp->host && tmp->name &&
 		    (matches(tmp->host, host) == 0) &&
- 		    (!name || matches(tmp->name, name) == 0))
+ 		    (!name || matches(tmp->name, name) == 0) &&
+		    (!tmp->port || (tmp->port == cptr->acpt->port)))
  			if (BadPtr(tmp->passwd) ||
  			    check_time_interval(tmp->passwd, reply))
  			break;
@@ -1029,7 +1048,7 @@ aClient	*cptr;
 			   me.name, ERR_YOUREBANNEDCREEP, cptr->name);
 	else if (tmp)
 		sendto_one(cptr,
-			   ":%s %d %s :*** Ghosts are not allowed on IRC.",
+			   ":%s %d %s :*** You are not welcome to this server.",
 			   me.name, ERR_YOUREBANNEDCREEP, cptr->name);
 
  	return (tmp ? -1 : 0);

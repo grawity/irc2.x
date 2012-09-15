@@ -1,8 +1,9 @@
 /*
- * ircd/res.c (C)opyright 1992 Darren Reed. All rights reserved.
- * This file may not be distributed without the author's permission in any
- * shape or form. The author takes no responsibility for any damage or loss
- * of property which results from the use of this software.
+ * ircd/res.c (C)opyright 1992, 1993, 1994 Darren Reed. All rights reserved.
+ * This file may not be distributed without the author's prior permission in
+ * any shape or form. The author takes no responsibility for any damage or
+ * loss of property which results from the use of this software.  Distribution
+ * of this file must include this notice.
  */
 #include "struct.h"
 #include "common.h"
@@ -18,7 +19,7 @@
 #include "resolv.h"
 
 #ifndef lint
-static  char sccsid[] = "@(#)res.c	2.34 03 Nov 1993 (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)res.c	2.38 4/13/94 (C) 1992 Darren Reed";
 #endif
 
 #undef	DEBUG	/* because there is a lot of debug code in here :-) */
@@ -241,7 +242,7 @@ time_t	now;
 					if (check_server(cptr, NULL,
 							 NULL, NULL, 1))
 						(void)exit_client(cptr, cptr,
-							cptr, "No Permission");
+							&me, "No Permission");
 					break;
 				case ASYNC_CONNECT :
 					sendto_ops("Host %s unknown",
@@ -389,22 +390,6 @@ Reg1	ResRQ	*rptr;
 		len++;
 		(void)strncat(hname, _res.defdname, sizeof(hname) - len -1);
 	    }
-	else if (rptr && (hname[len-1] != '.'))
-	    {
-		(void)strncat(hname, dot, sizeof(hname)-len-1);
-		len++;
-		/*
-		 * NOTE: The logical relationship between DNSRCH and DEFNAMES
-		 * is implies. ie no DEFNAMES, no DNSRCH.
-		 * Or So I thought...perhaps not anymore...
-		 */
-		if (_res.options & RES_DNSRCH)
-		    {
-			if (_res.dnsrch[rptr->srch])
-				(void)strncat(hname, _res.dnsrch[rptr->srch],
-					sizeof(hname) - len -1);
-		    }
-	    }
 
 	/*
 	 * Store the name passed as the one to lookup and generate other host
@@ -470,15 +455,17 @@ ResRQ	*rptr;
 		return r;
 	    }
 	hptr = (HEADER *)buf;
-#ifdef GETTIMEOFDAY
-	(void) gettimeofday(&tv, NULL);
-	do {
-		hptr->id = htons(ntohs(hptr->id) + k +
-				 (u_short)(tv.tv_usec & 0xffff));
-#endif /* GETTIMEOFDAY */
 #ifdef LRAND48
         do {
 		hptr->id = htons(ntohs(hptr->id) + k + lrand48() & 0xffff);
+#else
+	(void) gettimeofday(&tv, NULL);
+	do {
+		/* htons/ntohs can be assembler macros, which cannot
+		   be nested. Thus two lines.	-Vesa		    */
+		u_short nstmp = ntohs(hptr->id) + k +
+				(u_short)(tv.tv_usec & 0xffff);
+		hptr->id = htons(nstmp);
 #endif /* LRAND48 */
 		k++;
 	} while (find_id(ntohs(hptr->id)));
@@ -541,13 +528,12 @@ HEADER	*hptr;
 	/*
 	 * proccess each answer sent to us blech.
 	 */
-	while (hptr->ancount-- > 0 && cp < eob) {
+	while (hptr->ancount-- > 0 && cp && cp < eob) {
 		n = dn_expand(buf, eob, cp, hostbuf, sizeof(hostbuf));
 		cp += n;
 		if (n <= 0)
 			return ans;
 
-		ans++;
 		type = (int)_getshort(cp);
 		cp += sizeof(short);
 		class = (int)_getshort(cp);
@@ -558,11 +544,16 @@ HEADER	*hptr;
 		cp += sizeof(short);
 		rptr->type = type;
 
+		len = strlen(hostbuf);
 		/* name server never returns with trailing '.' */
 		if (!index(hostbuf,'.') && (_res.options & RES_DEFNAMES))
 		    {
 			(void)strcat(hostbuf, dot);
-			(void)strcat(hostbuf, _res.defdname);
+			len++;
+			(void)strncat(hostbuf, _res.defdname,
+				sizeof(hostbuf) - 1 - len);
+			len = MIN(len + strlen(_res.defdname),
+				  sizeof(hostbuf) - 1);
 		    }
 
 		switch(type)
@@ -576,12 +567,12 @@ HEADER	*hptr;
 			adr->s_addr = dr.s_addr;
 			Debug((DEBUG_INFO,"got ip # %s for %s",
 				inetntoa((char *)adr), hostbuf));
-			len = strlen(hostbuf);
 			if (!hp->h_name)
 			    {
 				hp->h_name =(char *)MyMalloc(len+1);
 				(void)strcpy(hp->h_name, hostbuf);
 			    }
+			ans++;
 			adr++;
 			cp += dlen;
  			break;
@@ -589,11 +580,10 @@ HEADER	*hptr;
 			if((n = dn_expand(buf, eob, cp, hostbuf,
 					  sizeof(hostbuf) )) < 0)
 			    {
-				cp += n;
-				continue;
+				cp = NULL;
+				break;
 			    }
 			cp += n;
-			n = strlen(hostbuf) + 1;
 			Debug((DEBUG_INFO,"got host %s",hostbuf));
 			/*
 			 * copy the returned hostname into the host name
@@ -602,7 +592,7 @@ HEADER	*hptr;
 			 */
 			if (hp->h_name)
 			    {
-				*alias = (char *)MyMalloc(n);
+				*alias = (char *)MyMalloc(len + 1);
 				(void)strcpy(*alias++, hostbuf);
 				*alias = NULL;
 			    }
@@ -611,16 +601,17 @@ HEADER	*hptr;
 				hp->h_name = (char *)MyMalloc(n);
 				(void)strcpy(hp->h_name, hostbuf);
 			    }
+			ans++;
 			break;
 		case T_CNAME :
 			cp += dlen;
 			if (alias >= &(hp->h_aliases[MAXALIASES-1]))
 				continue;
-			n = strlen(hostbuf)+1;
 			Debug((DEBUG_INFO,"got cname %s",hostbuf));
-			*alias = (char *)MyMalloc(n);
+			*alias = (char *)MyMalloc(len + 1);
 			(void)strcpy(*alias++, hostbuf);
 			*alias = NULL;
+			ans++;
 			break;
 		default :
 #ifdef DEBUG
@@ -677,8 +668,6 @@ char	*lp;
 	 * check against possibly fake replies
 	 */
 	max = MIN(_res.nscount, rptr->sends);
-	if (_res.options & RES_PRIMARY)
-		max = 1;
 	if (!max)
 		max = 1;
 
@@ -732,7 +721,7 @@ char	*lp;
 #ifdef DEBUG
 	Debug((DEBUG_INFO,"get_res:Proc answer = %d",a));
 #endif
-	if (rptr->type == T_PTR)
+	if (a && rptr->type == T_PTR)
 	    {
 		struct	hostent	*hp2 = NULL;
 
@@ -766,15 +755,17 @@ char	*lp;
 		return hp2;
 	    }
 
-	if (lp)
-		bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
-	cp = make_cache(rptr);
+	if (a > 0)
+	    {
+		if (lp)
+			bcopy((char *)&rptr->cinfo, lp, sizeof(Link));
+		cp = make_cache(rptr);
 #ifdef	DEBUG
 	Debug((DEBUG_INFO,"get_res:cp=%#x rptr=%#x (made)",cp,rptr));
 #endif
 
-	if (a > 0)
 		rem_request(rptr);
+	    }
 	else
 		if (!rptr->sent)
 			rem_request(rptr);
@@ -789,26 +780,10 @@ getres_err:
 		if (h_errno != TRY_AGAIN)
 		    {
 			/*
-			 * Try again using different hostnames (append a
-			 * different domain to the query name).
-			 */
-			if (_res.options & (RES_DNSRCH|RES_DEFNAMES) ==
-					    (RES_DNSRCH|RES_DEFNAMES))
-			    {
-				if (_res.dnsrch[++rptr->srch])
-				    {
-					rptr->retries = _res.retry;
-					rptr->sends = 0;
-					rptr->resend = 1;
-					resend_query(rptr);
-				    }
-			    }
-			/*
 			 * If we havent tried with the default domain and its
 			 * set, then give it a try next.
 			 */
-			else if (_res.options & RES_DEFNAMES &&
-				 ++rptr->srch == 0)
+			if (_res.options & RES_DEFNAMES && ++rptr->srch == 0)
 			    {
 				rptr->retries = _res.retry;
 				rptr->sends = 0;
@@ -962,7 +937,10 @@ aCache	*cachep;
 #endif
 			base[addrcount-1] = s;
 			base[addrcount] = NULL;
-			rptr->he.h_aliases[i-1] = NULL;
+			if (i)
+				rptr->he.h_aliases[i-1] = NULL;
+			else
+				rptr->he.h_name = NULL;
 		    }
 	    }
 	for (i = 0; cp->he.h_addr_list[i]; i++)

@@ -32,7 +32,7 @@
  */
 
 #ifndef	lint
-static	char sccsid[] = "@(#)channel.c	2.53 07 Nov 1993 (C) 1990 University of Oulu, Computing\
+static	char sccsid[] = "@(#)channel.c	2.58 2/18/94 (C) 1990 University of Oulu, Computing\
  Center and Jarkko Oikarinen";
 #endif
 
@@ -463,15 +463,19 @@ aChannel *chptr;
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   me.name, chptr->chname, modebuf, parabuf);
 
-	*modebuf = *parabuf = '\0';
+	*parabuf = '\0';
+	*modebuf = '+';
+	modebuf[1] = '\0';
 	send_mode_list(cptr, chptr->chname, chptr->banlist, CHFL_BAN, 'b');
-	if (*modebuf || *parabuf)
+	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   me.name, chptr->chname, modebuf, parabuf);
 
-	*modebuf = *parabuf = '\0';
+	*parabuf = '\0';
+	*modebuf = '+';
+	modebuf[1] = '\0';
 	send_mode_list(cptr, chptr->chname, chptr->members, CHFL_VOICE, 'v');
-	if (*modebuf || *parabuf)
+	if (modebuf[1] || *parabuf)
 		sendto_one(cptr, ":%s MODE %s %s %s",
 			   me.name, chptr->chname, modebuf, parabuf);
 }
@@ -670,6 +674,12 @@ char	*parv[], *mbuf, *pbuf;
 			if (keychange)
 				break;
 			*parv = check_string(*parv);
+			{
+				u_char	*s;
+
+				for (s = (u_char *)*parv; *s; s++)
+					*s &= 0x7f;
+			}
 			if (MyClient(sptr) && opcnt >= MAXMODEPARAMS)
 				break;
 			if (!fm)
@@ -742,7 +752,7 @@ char	*parv[], *mbuf, *pbuf;
 			 * limit 'l' to only *1* change per mode command but
 			 * eat up others.
 			 */
-			if (limitset)
+			if (limitset || !ischop)
 			    {
 				if (whatt == MODE_ADD && --parc > 0)
 					parv++;
@@ -1232,7 +1242,7 @@ char	*parv[];
 			continue;
 		if (*name == '&' && !MyConnect(sptr))
 			continue;
-		if (*name == '0')
+		if (*name == '0' && !atoi(name))
 			*jbuf = '\0';
 		else if (!IsChannelName(name))
 		    {

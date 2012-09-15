@@ -50,11 +50,11 @@ CFLAGS= -g -I${INCLUDEDIR}
 #IRCDLIBS=-lBSD
 #
 # Solaris 2
-#IRCDLIBS= -lsocket -lnsl -lresolv
+#IRCDLIBS=-lsocket -lnsl
 #
 # ESIX
 #CFLAGS=-O -I${INCLUDEDIR} -I/usr/ucbinclude
-#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
+#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lns -lnsl
 #
 #When profiling:
 #IRCDLIBS=-lc_p
@@ -67,19 +67,11 @@ LINTFLAGS=-hba
 #LDFLAGS=-Bstatic
 #LDFLAGS=-Wl,-a,archive
 #
-# RES - if you are missing the resolv library (man 5 resolv.conf), or you
-# experience probems with ip# to hostname lookups for local machines or
-# the server wont compile because _res is missing, uncomment RES.
-# For those who know what these are, if you normally use the resolv+
-# libraries and have setup /etc/resolv.conf, these are fromm resolv+ if they
-# are not part of your system libraries.  In all cases you should try your
-# system libraries before these.
-#
 #RES=res_init.o res_comp.o res_mkquery.o
 
-COMMONOBJS=../common/bsd.o ../common/dbuf.o \
-           ../common/packet.o ../common/send.o\
-           ../common/match.o ../common/parse.o ../common/support.o
+COMMONOBJS=../common/bsd.o ../common/dbuf.o ../common/packet.o \
+           ../common/send.o ../common/match.o ../common/parse.o \
+           ../common/support.o ../common/inet_addr.o
 
 OBJS=channel.o class.o hash.o ircd.o list.o res.o s_auth.o s_bsd.o s_conf.o \
 	s_debug.o s_err.o s_misc.o s_numeric.o s_serv.o s_user.o whowas.o \
@@ -105,7 +97,8 @@ ircd: $(OBJS) ../include/patchlevel.h
 
 chkconf: ../include/struct.h ../include/config.h ../include/sys.h \
 	 ../include/common.h chkconf.c
-	$(CC) $(CFLAGS) chkconf.c $(LDFLAGS) $(IRCDLIBS) -o chkconf
+	$(CC) $(CFLAGS) chkconf.c ../common/match.o \
+	$(LDFLAGS) $(IRCDLIBS) -o chkconf
 
 saber: $(SRC)
 	#load -I../include $(SRC) $(COMMONSRC) version.c $(IRCDLIBS)
@@ -134,13 +127,16 @@ lint:
 ../common/support.o: ../common/support.c ../include/config.h ../include/sys.h\
 		     ../include/common.h
 	(cd ../common; $(MAKE) build);
+../common/inet_addr.o: ../common/inet_addr.c ../include/sys.h \
+		       ../include/common.h
+	(cd ../common; $(MAKE) build);
 
 install: all
 	-if [ ! -d ${IRCDDIR} -a ! -f ${IRCDDIR} ] ; then \
-		-mkdir ${IRCDDIR}; \
+		mkdir ${IRCDDIR}; \
 	fi
-	../install -c -s -m ${IRCDMODE} ircd ${BINDIR}
-	../install -c -s -m 700 chkconf ${BINDIR}
+	../bsdinstall -c -s -m ${IRCDMODE} ircd ${BINDIR}
+	../bsdinstall -c -s -m 700 chkconf ${BINDIR}
 	$(CP) ../doc/example.conf ${IRCDDIR}
 	$(TOUCH) ${IRCDDIR}/ircd.motd
 	$(RM) -f ${IRCDDIR}/ircd.m4
@@ -222,11 +218,11 @@ whowas.o: ../include/struct.h ../include/config.h ../include/sys.h \
 hash.o: ../include/struct.h ../include/sys.h ../include/hash.h hash.c \
 	../include/common.h ../include/config.h s_bsd.c s_serv.c s_user.c \
 	channel.c s_misc.c
-	@crypt/sums
+#	@crypt/sums
 	$(CC) $(CFLAGS) -c hash.c
-	@/bin/rm -f hash.c
-	@/bin/mv -f hash.c.old hash.c
-	@touch hash.o
+#	@/bin/rm -f hash.c
+#	@/bin/mv -f hash.c.old hash.c
+#	@touch hash.o
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

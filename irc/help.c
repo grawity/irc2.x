@@ -24,10 +24,11 @@ char help_id[]="help.c v2.0 (c) 1988 University of Oulu, Computing Center and Ja
 #include "common.h"
 #include "sys.h"
 #include "help.h"
+#include "irc.h"
 
 char helpbuf[80];
 
-do_help(ptr, temp)
+void do_help(ptr, temp)
 char *ptr, *temp;
 {
   struct Help *hptr;
@@ -60,7 +61,7 @@ char *ptr, *temp;
     if (hptr->command == (char *) 0) {
       putline("*** There is no help information for that command.");
       putline("*** Type \"/HELP\" to get a list of commands.");
-      return(0);
+      return;
     }
     sprintf(helpbuf, "*** Help: %s", hptr->syntax);
     putline(helpbuf);
@@ -71,6 +72,5 @@ char *ptr, *temp;
       }
     putline("*** End Help");
   }
-  return(0);
 }
 

@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
+static  char sccsid[] = "@(#)chkconf.c	1.9 1/30/94 (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -26,6 +26,7 @@ static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
 #include "sys.h"
 #include "numeric.h"
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #ifdef __hpux
 #include "inet.h"
@@ -46,11 +47,12 @@ static  char sccsid[] = "@(#)chkconf.c	1.7 27 Oct 1993 (C) 1993 Darren Reed";
 #define	MyMalloc(x)	malloc(x)
 
 static	void	new_class();
-static	char	*getfield();
-static	int	openconf(), initconf();
+static	char	*getfield(), confchar ();
+static	int	openconf(), validate();
 static	aClass	*get_class();
+static	aConfItem	*initconf();
 
-static	int	numclasses = 0, *classarr = (int *)NULL;
+static	int	numclasses = 0, *classarr = (int *)NULL, debugflag = 0;
 static	char	*configfile = CONFIGFILE;
 static	char	nullfield[] = "";
 static	char	maxsendq[12];
@@ -66,9 +68,16 @@ char	*argv[];
 		perror("chdir");
 		exit(-1);
 	    }
+	if (argc > 1 && !strncmp(argv[1], "-d", 2))
+   	    {
+		debugflag = 1;
+		if (argv[1][2])
+			debugflag = atoi(argv[1]+2);
+		argc--, argv++;
+	    }
 	if (argc > 1)
 		configfile = argv[1];
-	(void)initconf();
+	return validate(initconf());
 }
 
 /*
@@ -122,13 +131,13 @@ static	int	openconf()
 **             0, if file opened
 */
 
-static	int 	initconf(opt)
+static	aConfItem 	*initconf(opt)
 int	opt;
 {
 	int	fd;
 	char	line[512], *tmp, c[80], *s;
-	int	ccount = 0, ncount = 0, dh;
-	aConfItem conf, *aconf = &conf;
+	int	ccount = 0, ncount = 0, dh, flags = 0;
+	aConfItem *aconf = NULL, *ctop = NULL;
 
 	(void)fprintf(stderr, "initconf(): ircd.conf = %s\n", configfile);
 	if ((fd = openconf()) == -1)
@@ -136,22 +145,23 @@ int	opt;
 #ifdef	M4_PREPROC
 		(void)wait(0);
 #endif
-		return -1;
+		return NULL;
 	    }
-
-	aconf->host = (char *)NULL;
-	aconf->passwd = (char *)NULL;
-	aconf->name = (char *)NULL;
 
 	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
 	while ((dh = dgets(fd, line, sizeof(line) - 1)) > 0)
 	    {
-		if (aconf->host)
-			(void)free(aconf->host);
-		if (aconf->passwd)
-			(void)free(aconf->passwd);
-		if (aconf->name)
-			(void)free(aconf->name);
+		if (aconf)
+		    {
+			if (aconf->host)
+				(void)free(aconf->host);
+			if (aconf->passwd)
+				(void)free(aconf->passwd);
+			if (aconf->name)
+				(void)free(aconf->name);
+		    }
+		else
+			aconf = (aConfItem *)malloc(sizeof(*aconf));
 		aconf->host = (char *)NULL;
 		aconf->passwd = (char *)NULL;
 		aconf->name = (char *)NULL;
@@ -203,7 +213,6 @@ int	opt;
 		    *line == ' ' || *line == '\t')
 			continue;
 
-		/* Could we test if it's conf line at all?	-Vesa */
 		if (line[1] != ':')
 		    {
                         (void)fprintf(stderr, "ERROR: Bad config line (%s)\n",
@@ -211,7 +220,8 @@ int	opt;
                         continue;
                     }
 
-		(void)printf("\n%s\n",line);
+		if (debugflag)
+			(void)printf("\n%s\n",line);
 		(void)fflush(stdout);
 
 		tmp = getfield(line);
@@ -365,6 +375,34 @@ int	opt;
 
 		if (aconf->status & CONF_LISTEN_PORT)
 		    {
+#ifdef	UNIXPORT
+			struct	stat	sb;
+
+			if (!aconf->host)
+				(void)fprintf(stderr, "\tERROR: %s\n",
+					"null host field in P-line");
+			else if (index(aconf->host, '/'))
+			    {
+				if (stat(aconf->host, &sb) == -1)
+				    {
+					(void)fprintf(stderr, "\tERROR: (%s) ",
+						aconf->host);
+					perror("stat");
+				    }
+				else if ((sb.st_mode & S_IFMT) != S_IFDIR)
+					(void)fprintf(stderr,
+						"\tERROR: %s not directory\n",
+						aconf->host);
+			    }
+#else
+			if (!aconf->host)
+				(void)fprintf(stderr, "\tERROR: %s\n",
+					"null host field in P-line");
+			else if (index(aconf->host, '/'))
+				(void)fprintf(stderr, "\t%s %s\n",
+					"WARNING: / present in P-line", 
+					"for non-UNIXPORT configuration");
+#endif
 			aconf->class = get_class(0);
 			goto print_confline;
 		    }
@@ -413,17 +451,33 @@ int	opt;
 			aconf->passwd = nullfield;
 		if (!aconf->host)
 			aconf->host = nullfield;
+		if (aconf->status & (CONF_ME|CONF_ADMIN))
+		    {
+			if (flags & aconf->status)
+				(void)fprintf(stderr,
+					"ERROR: multiple %c-lines\n",
+					toupper(confchar(aconf->status)));
+			else
+				flags |= aconf->status;
+		    }
 print_confline:
-		(void)printf("(%d) (%s) (%s) (%s) (%d) (%s)\n",
-		      aconf->status, aconf->host, aconf->passwd,
-		      aconf->name, aconf->port, maxsendq);
+		if (debugflag > 8)
+			(void)printf("(%d) (%s) (%s) (%s) (%d) (%s)\n",
+			      aconf->status, aconf->host, aconf->passwd,
+			      aconf->name, aconf->port, maxsendq);
 		(void)fflush(stdout);
+		if (aconf->status & (CONF_SERVER_MASK|CONF_HUB|CONF_LEAF))
+		    {
+			aconf->next = ctop;
+			ctop = aconf;
+			aconf = NULL;
+		    }
 	    }
 	(void)close(fd);
 #ifdef	M4_PREPROC
 	(void)wait(0);
 #endif
-	return 0;
+	return ctop;
 }
 
 static	aClass	*get_class(cn)
@@ -591,4 +645,85 @@ dgetsreturnbuf:
 	    }
 	*tail = '\0';
 	goto dgetsagain;
+}
+
+
+static	int	validate(top)
+aConfItem *top;
+{
+	Reg1	aConfItem *aconf, *bconf;
+	u_int	otype, valid = 0;
+
+	if (!top)
+		return 0;
+
+	for (aconf = top; aconf; aconf = aconf->next)
+	    {
+		if (aconf->status & CONF_MATCH)
+			continue;
+
+		if (aconf->status & CONF_SERVER_MASK)
+		    {
+			if (aconf->status & CONF_CONNECT_SERVER)
+				otype = CONF_NOCONNECT_SERVER;
+			else if (aconf->status & CONF_NOCONNECT_SERVER)
+				otype = CONF_CONNECT_SERVER;
+
+			for (bconf = top; bconf; bconf = bconf->next)
+			    {
+				if (bconf == aconf || !(bconf->status & otype))
+					continue;
+				if (bconf->class == aconf->class &&
+				    !mycmp(bconf->name, aconf->name) &&
+				    !mycmp(bconf->host, aconf->host))
+				    {
+					aconf->status |= CONF_MATCH;
+					bconf->status |= CONF_MATCH;
+						break;
+				    }
+			    }
+		    }
+		else
+			for (bconf = top; bconf; bconf = bconf->next)
+			    {
+				if ((bconf == aconf) ||
+				    !(bconf->status & CONF_SERVER_MASK))
+					continue;
+				if (!mycmp(bconf->name, aconf->name))
+				    {
+					aconf->status |= CONF_MATCH;
+					break;
+				    }
+			    }
+	    }
+
+	(void) fprintf(stderr, "\n");
+	for (aconf = top; aconf; aconf = aconf->next)
+		if (aconf->status & CONF_MATCH)
+			valid++;
+		else
+			(void)fprintf(stderr, "Unmatched %c:%s:%s:%s\n",
+				confchar(aconf->status), aconf->host,
+				aconf->passwd, aconf->name);
+	return valid ? 0 : -1;
+}
+
+static	char	confchar(status)
+u_int	status;
+{
+	static	char	letrs[] = "QICNoOMKARYSLPH";
+	char	*s = letrs;
+
+	status &= ~(CONF_MATCH|CONF_ILLEGAL);
+
+	for (; *s; s++, status >>= 1)
+		if (status & 1)
+			return *s;
+	return '-';
+}
+
+outofmemory()
+{
+	(void)write(2, "Out of memory\n", 14);
+	exit(-1);
 }

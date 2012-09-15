@@ -67,7 +67,7 @@ extern	int	rehash PROTO((aClient *, aClient *, int));
 extern	int	initconf PROTO((int));
 
 extern	char	*MyMalloc PROTO((int)), *MyRealloc PROTO((char *, int));
-extern	char	*debugmode, *configfile;
+extern	char	*debugmode, *configfile, *sbrk0;
 extern	char	*getfield PROTO((char *));
 extern	void	get_sockhost PROTO((aClient *, char *));
 extern	char	*rpl_str PROTO((int)), *err_str PROTO((int));
@@ -141,6 +141,7 @@ extern	int	deliver_it PROTO((aClient *, char *, int));
 extern	int	check_registered PROTO((aClient *));
 extern	int	check_registered_user PROTO((aClient *));
 extern	char	*get_client_name PROTO((aClient *, int));
+extern	char	*get_client_host PROTO((aClient *));
 extern	char	*my_name_for_link PROTO((char *, aConfItem *));
 extern	char	*myctime PROTO((time_t)), *date PROTO((time_t));
 extern	int	exit_client PROTO((aClient *, aClient *, aClient *, char *));
@@ -176,6 +177,7 @@ extern	void	remove_client_from_list PROTO((aClient *));
 extern	void	initlists PROTO(());
 
 extern	void	add_class PROTO((int, int, int, int, long));
+extern	void	fix_class PROTO((aConfItem *, aConfItem *));
 extern	long	get_sendq PROTO((aClient *));
 extern	int	get_con_freq PROTO((aClass *));
 extern	int	get_client_ping PROTO((aClient *));
@@ -221,3 +223,4 @@ extern	void	send_usage PROTO((aClient *, char *));
 extern	void	send_listinfo PROTO((aClient *, char *));
 extern	void	count_memory PROTO((aClient *, char *));
 #endif
+

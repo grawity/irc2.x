@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_serv.c	2.50 07 Nov 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_serv.c	2.55 2/7/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -32,6 +32,9 @@ Computing Center and Jarkko Oikarinen";
 #include "numeric.h"
 #include "msg.h"
 #include "channel.h"
+#if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
+#include <time.h>
+#endif
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <utmp.h>
@@ -342,6 +345,12 @@ char	*parv[];
 		sendto_one(cptr,"ERROR :Nickname %s already exists!", host);
 		sendto_ops("Link %s cancelled: Server/nick collision on %s",
 			   inpath, host);
+                sendto_serv_butone(NULL, /* all servers */
+                                   ":%s KILL %s :%s (%s <- %s)",
+                                   me.name, acptr->name, me.name,
+                                   acptr->from->name, host);
+                acptr->flags |= FLAGS_KILLED;
+		(void)exit_client(NULL, acptr, &me, "Nick collision");
 		return exit_client(cptr, cptr, cptr, "Nick as Server");
 	    }
 
@@ -476,7 +485,7 @@ char	*parv[];
 	default :
 		ircstp->is_ref++;
 		sendto_ops("Received unauthorized connection from %s.",
-		           get_client_name(cptr,FALSE));
+		           get_client_host(cptr));
 		return exit_client(cptr, cptr, cptr, "No C/N conf lines");
 	}
 
@@ -1037,8 +1046,8 @@ char	*parv[];
 				   get_client_name(acptr, TRUE) :
 				   get_client_name(acptr, FALSE),
 				   (int)DBufLength(&acptr->sendQ),
-				   (int)acptr->sendM, (int)acptr->sendB,
-				   (int)acptr->receiveM, (int)acptr->receiveB,
+				   (int)acptr->sendM, (int)acptr->sendK,
+				   (int)acptr->receiveM, (int)acptr->receiveK,
 				   time(NULL) - acptr->firsttime);
 		    }
 		break;
@@ -1359,10 +1368,15 @@ char	*parv[];
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 		if (aconf->status == CONF_CONNECT_SERVER &&
-		    (matches(parv[1], aconf->name) == 0 ||
-		     matches(parv[1], aconf->host) == 0 ||
-		     matches(parv[1], index(aconf->host, '@')+1) == 0))
+		    matches(parv[1], aconf->name) == 0)
 		  break;
+	/* Checked first servernames, then try hostnames. */
+	if (!aconf)
+        	for (aconf = conf; aconf; aconf = aconf->next)
+                	if (aconf->status == CONF_CONNECT_SERVER &&
+                            (matches(parv[1], aconf->host) == 0 ||
+                             matches(parv[1], index(aconf->host, '@')+1) == 0))
+                  		break;
 
 	if (!aconf)
 	    {
@@ -1550,7 +1564,7 @@ char	*parv[];
 #ifdef USE_SYSLOG
 	syslog(LOG_INFO, "REHASH From %s\n", get_client_name(sptr, FALSE));
 #endif
-	return rehash(cptr, sptr, 0);
+	return rehash(cptr, sptr, (parc > 1) ? ((*parv[1] == 'q')?2:0) : 0);
 }
 #endif
 
@@ -1722,7 +1736,8 @@ char	*parv[];
 			else
 				sendto_one(sptr, rpl_str(RPL_TRACESERVER),
 					   me.name, parv[0], class, link_s[i],
-					   link_u[i], name, "*", "*", me.name);
+					   link_u[i], name, *(acptr->serv->by) ?
+					   acptr->serv->by : "*", "*", me.name);
 			cnt++;
 			break;
 		case STAT_SERVICE:
@@ -1778,6 +1793,8 @@ char	*parv[];
 	int	fd;
 	char	line[80];
 	Reg1	char	 *tmp;
+	struct	stat	sb;
+	struct	tm	*tm;
 
 	if (check_registered(sptr))
 		return 0;
@@ -1796,7 +1813,12 @@ char	*parv[];
 		sendto_one(sptr, err_str(ERR_NOMOTD), me.name, parv[0]);
 		return 0;
 	    }
+	(void)fstat(fd, &sb);
 	sendto_one(sptr, rpl_str(RPL_MOTDSTART), me.name, parv[0], me.name);
+	tm = localtime(&sb.st_mtime);
+	sendto_one(sptr, ":%s %d %s :- %d/%d/%d %d:%02d", me.name, RPL_MOTD,
+		   parv[0], tm->tm_mday, tm->tm_mon + 1, 1900 + tm->tm_year,
+		   tm->tm_hour, tm->tm_min);
 	(void)dgets(-1, NULL, 0); /* make sure buffer is at empty pos */
 	while (dgets(fd, line, sizeof(line)-1) > 0)
 	    {

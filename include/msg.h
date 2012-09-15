@@ -71,23 +71,25 @@
 #define	MSG_RESTART  "RESTART"	/* REST */
 #define	MSG_CLOSE    "CLOSE"	/* CLOS */
 #define	MSG_DIE	     "DIE"
-#ifndef CLIENT_COMPILE
 #define	MSG_HASH     "HASH"	/* HASH */
 #define	MSG_DNS      "DNS"	/* DNS  -> DNSS */
-#endif
 
 #define MAXPARA    15 
 
-extern int m_private(), m_who(), m_whois(), m_user(), m_list();
-extern int m_topic(), m_invite(), m_version(), m_quit();
-extern int m_server(), m_kill(), m_info(), m_links(), m_summon(), m_stats();
-extern int m_users(), m_nick(), m_error(), m_help();
+extern int m_private(), m_topic(), m_join(), m_part(), m_mode();
+extern int m_ping(), m_pong(), m_wallops(), m_kick();
+extern int m_nick(), m_error(), m_notice();
+extern int m_invite(), m_quit(), m_kill();
+#ifndef CLIENT_COMPILE
+extern int m_motd(), m_who(), m_whois(), m_user(), m_list();
+extern int m_server(), m_info(), m_links(), m_summon(), m_stats();
+extern int m_users(), m_version(), m_help();
 extern int m_squit(), m_away(), m_connect();
-extern int m_ping(), m_pong(), m_oper(), m_pass(), m_trace();
+extern int m_oper(), m_pass(), m_trace();
 extern int m_time(), m_names(), m_admin();
-extern int m_notice(), m_lusers(), m_umode(), m_note(), m_close();
-extern int m_motd(), m_whowas(), m_wallops(), m_mode(), m_kick();
-extern int m_join(), m_part(), m_service(), m_userhost(), m_ison();
+extern int m_lusers(), m_umode(), m_note(), m_close();
+extern int m_motd(), m_whowas();
+extern int m_service(), m_userhost(), m_ison();
 extern int m_service(), m_servset(), m_servlist(), m_squery();
 #if defined(OPER_REHASH) || defined(LOCOP_REHASH)
 extern	int	m_rehash();
@@ -98,24 +100,29 @@ extern	int	m_restart();
 #if defined(OPER_DIE) || defined(LOCOP_DIE)
 extern	int	m_die();
 #endif
-#ifndef CLIENT_COMPILE
 extern int m_hash(), m_dns();
-#endif
+#endif /* !CLIENT_COMPILE */
 
 #ifdef MSGTAB
 struct Message msgtab[] = {
   { MSG_PRIVATE, m_private,  0, MAXPARA, 1 ,0L },
   { MSG_NICK,    m_nick,     0, MAXPARA, 1 ,0L },
   { MSG_NOTICE,  m_notice,   0, MAXPARA, 1 ,0L },
-  { MSG_USER,    m_user,     0, MAXPARA, 1 ,0L },
   { MSG_JOIN,    m_join,     0, MAXPARA, 1 ,0L },
   { MSG_MODE,    m_mode,     0, MAXPARA, 1 ,0L },
   { MSG_QUIT,    m_quit,     0, MAXPARA, 1 ,0L },
   { MSG_PART,    m_part,     0, MAXPARA, 1 ,0L },
-  { MSG_AWAY,    m_away,     0, MAXPARA, 1 ,0L },
   { MSG_TOPIC,   m_topic,    0, MAXPARA, 1 ,0L },
   { MSG_INVITE,  m_invite,   0, MAXPARA, 1 ,0L },
   { MSG_KICK,    m_kick,     0, MAXPARA, 1 ,0L },
+  { MSG_WALLOPS, m_wallops,  0, MAXPARA, 1 ,0L },
+  { MSG_PING,    m_ping,     0, MAXPARA, 1 ,0L },
+  { MSG_PONG,    m_pong,     0, MAXPARA, 1 ,0L },
+  { MSG_ERROR,   m_error,    0, MAXPARA, 1 ,0L },
+  { MSG_KILL,    m_kill,     0, MAXPARA, 1 ,0L },
+#ifndef CLIENT_COMPILE
+  { MSG_USER,    m_user,     0, MAXPARA, 1 ,0L },
+  { MSG_AWAY,    m_away,     0, MAXPARA, 1 ,0L },
   { MSG_ISON,    m_ison,     0, 1, 1 ,0L },
   { MSG_SERVER,  m_server,   0, MAXPARA, 1 ,0L },
   { MSG_SQUIT,   m_squit,    0, MAXPARA, 1 ,0L },
@@ -124,8 +131,6 @@ struct Message msgtab[] = {
   { MSG_WHOWAS,  m_whowas,   0, MAXPARA, 1 ,0L },
   { MSG_LIST,    m_list,     0, MAXPARA, 1 ,0L },
   { MSG_NAMES,   m_names,    0, MAXPARA, 1 ,0L },
-  { MSG_KILL,    m_kill,     0, MAXPARA, 1 ,0L },
-  { MSG_PING,    m_ping,     0, MAXPARA, 1 ,0L },
   { MSG_USERHOST,m_userhost, 0, 1, 1 ,0L },
   { MSG_TRACE,   m_trace,    0, MAXPARA, 1 ,0L },
   { MSG_PASS,    m_pass,     0, MAXPARA, 1 ,0L },
@@ -133,13 +138,10 @@ struct Message msgtab[] = {
   { MSG_TIME,    m_time,     0, MAXPARA, 1 ,0L },
   { MSG_OPER,    m_oper,     0, MAXPARA, 1 ,0L },
   { MSG_CONNECT, m_connect,  0, MAXPARA, 1 ,0L },
-  { MSG_WALLOPS, m_wallops,  0, MAXPARA, 1 ,0L },
   { MSG_VERSION, m_version,  0, MAXPARA, 1 ,0L },
-  { MSG_PONG,    m_pong,     0, MAXPARA, 1 ,0L },
   { MSG_STATS,   m_stats,    0, MAXPARA, 1 ,0L },
   { MSG_LINKS,   m_links,    0, MAXPARA, 1 ,0L },
   { MSG_ADMIN,   m_admin,    0, MAXPARA, 1 ,0L },
-  { MSG_ERROR,   m_error,    0, MAXPARA, 1 ,0L },
   { MSG_USERS,   m_users,    0, MAXPARA, 1 ,0L },
   { MSG_SUMMON,  m_summon,   0, MAXPARA, 1 ,0L },
   { MSG_HELP,    m_help,     0, MAXPARA, 1 ,0L },
@@ -156,10 +158,8 @@ struct Message msgtab[] = {
   { MSG_SQUERY,  m_squery,   0, MAXPARA, 1 ,0L },
   { MSG_SERVLIST,m_servlist, 0, MAXPARA, 1 ,0L },
 #endif
-#ifndef CLIENT_COMPILE
   { MSG_HASH,    m_hash,     0, MAXPARA, 1 ,0L },
   { MSG_DNS,     m_dns,      0, MAXPARA, 1 ,0L },
-#endif
 #if defined(OPER_REHASH) || defined(LOCOP_REHASH)
   { MSG_REHASH,  m_rehash,   0, MAXPARA, 1 ,0L },
 #endif
@@ -169,6 +169,7 @@ struct Message msgtab[] = {
 #if defined(OPER_DIE) || defined(LOCOP_DIE)
   { MSG_DIE, m_die,  0, MAXPARA, 1 ,0L },
 #endif
+#endif /* !CLIENT_COMPILE */
   { (char *) 0, (int (*)()) 0 , 0, 0, 0, 0L}
 };
 #else

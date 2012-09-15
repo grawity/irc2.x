@@ -1,5 +1,11 @@
 #!/bin/sh
 #
+# (C) 1993, 1994 By Darren Reed, avalon@coombs.anu.edu.au
+# You may distribute this file without changes freely providing this notice
+# remains intact.  This file may not be redistributed or made available for
+# distribution without the author's prior consent.
+#
+trap "" 13 14 15
 MV=/bin/mv
 RM=/bin/rm
 SETUP=include/setup.h
@@ -12,10 +18,12 @@ PARAMH=undef
 UNISTDH=undef
 STRINGH=undef
 STRINGSH=undef
+NOINDEX=undef
 NSTRERROR=undef
 NSTRTOKEN=undef
 NSTRTOK=undef
 NINETADDR=undef
+NINETATON=undef
 NINETNTOA=undef
 NINETNETOF=undef
 GETTIMEOFDAY=undef
@@ -35,6 +43,12 @@ if [ "`eval echo -n 'a'`" = "-n a" ] ; then
 else
 	n='-n'
 fi
+#if [ ! -f Makefile.bak ] ; then
+#	mv Makefile Makefile.bak
+#	cp Makefile.bak Makefile
+#	chmod ugo-xw Makefile Makefile.bak
+#	chmod u+w Makefile
+#fi
 echo " "
 echo "   Welcome to autoconfigure for the IRC server."
 echo "Before running this script and expecting it to work, please fix the"
@@ -44,7 +58,7 @@ echo "preferences, etc"
 echo " "
 echo "Enter \"none\" at any prompt to effect a null entry."
 echo " "
-FOO=`egrep "^CC=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
+FOO=`egrep "^CC=" Makefile 2>/dev/null | sed -e 's/^[^=]*[ 	]*=\(.*\)/\1/'`
 while [ -z "$CCPATH" ] ; do
 	MYP=`echo "$PATH" | sed -e 's/:/ /g'`
 	echo "Which compiler do you use, gcc or cc or...?"
@@ -77,10 +91,26 @@ if [ "$FOO" != "$cc" ] ; then
 fi
 echo "Compiler selected: $CCPATH"
 echo " "
+# Check it out
+cat > $TMP <<_EOF_
+main() {}
+_EOF_
+$CCPATH $TMP -o $EXEC >/dev/null 2>&1
+if [ ! -f $EXEC ] ; then
+        echo "You don't have $CCPATH or it's broken!"
+        exit 1
+fi
+# Fix Makefile
+#
+#$RM -f $TMP
+#sed -e "s@^CC=\(.*\)@CC=$CCPATH@" Makefile > $TMP
+#cp $TMP Makefile
+#$RM -f $TMP
+#
 echo "Enter additional flags to give to $CCPATH"
-FOO=`egrep "^CFLAGS=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
+FOO=`egrep "^CFLAGS=" Makefile 2>/dev/null | sed -e 's/^[^=]*=[	 ]*\(.*\)/\1/'`
 INC=`egrep "^INCLUDEDIR=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/'`
-FOO=`echo "$FOO" | sed -e "s@\$(INCLUDEDIR)@$INC@"`
+FOO=`echo "$FOO" | sed -e "s@\\$(INCLUDEDIR)@$INC@"`
 echo $n "[$FOO] -> $c"
 read cc
 if [ "$cc" = "none" ] ; then
@@ -89,12 +119,19 @@ elif [ -z "$cc" ] ; then
 	cc=$FOO
 fi
 CFLAGS=$cc
+# Fix Makefile
+#
+#$RM -f $TMP
+#sed -e "s@^CFLAGS=\(.*\)@CFLAGS=$CFLAGS@" Makefile > $TMP
+#cp $TMP Makefile
+#$RM -f $TMP
+#
 echo " "
 echo "If you need to use any extra libraries when compiling the server,"
 echo "please tell me now (might need to look at the Makefiles) and please"
 echo "include all the -l and -L flags (I'm lame)."
 LIBS=`egrep "^IRCDLIBS=" Makefile 2>/dev/null | sed -e 's/^[^=]*=\(.*\)/\1/' | tr -d "\012"`
-echo $n "[IRCDLIBS=$LIBS] -> $c"
+echo $n "[$LIBS] -> $c"
 read cc;
 if [ "$cc" = "none" ] ; then
 	cc=''
@@ -102,7 +139,14 @@ elif [ -z "$cc" ] ; then
 	cc=$LIBS
 fi
 LIBS=$cc
-COMP="$CCPATH $CFLAGS $TMP -o $EXEC $LIBS >/dev/null 2>&1"
+# Fix Makefile
+#
+#$RM -f $TMP
+#sed -e "s@^IRCDLIBS=\(.*\)@IRCDLIBS=$LIBS@" Makefile > $TMP
+#cp $TMP Makefile
+#$RM -f $TMP
+#
+COMP="$CCPATH $CFLAGS $TMP -o $EXEC $LIBS"
 #
 #
 echo 'Checking out /usr/include'
@@ -113,9 +157,18 @@ if [ -r /usr/include/stdlib.h ] ; then
 else
 	echo 'not found :('
 fi
-echo $n "...Looking for /usr/include/stddef.h...$c"
-if [ -r /usr/include/stddef.h ] ; then
+# gcc has its own stddef.h
+FOO=''
+if [ ! -z "`echo $CCPATH | grep gcc`" ] ; then
+	FOO=`$CCPATH -v 2>&1 | head -1 | \
+	    sed -e 's/Reading specs from //' -e 's/specs$/include/'`
+fi
+echo $n "...Looking for stddef.h...$c"
+if [ -r $FOO/stddef.h ] ; then
 	STDDEFH=define
+        echo "found in $FOO!"
+elif [ -r /usr/include/stddef.h ] ; then
+        STDDEFH=define
 	echo  'found!'
 else
 	echo 'not found :('
@@ -181,7 +234,7 @@ main()
 	exit(0);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
 	echo "and so it shall be! bcopy/bzero/bcmp are about!"
 	BZERO=bzero
@@ -200,7 +253,7 @@ main()
    (void) gettimeofday(&tv, NULL);
  }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
 	echo "We have a winner! gettimeofday found."
 	GETTIMEOFDAY=define
@@ -213,7 +266,7 @@ main()
    a=lrand48();
 }
 _EOF_
-	eval $COMP
+	$COMP >/dev/null 2>&1
 	if [ $? -eq 0 ] ; then
  		echo "Bingo! lrand48!"
 		LRAND48=define
@@ -228,35 +281,57 @@ if [ -f $TMP -o -d $TMP ] ; then
 	$RM -f $TMP
 fi
 cat > $PLATE <<_EOF_
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/file.h>
+#include <signal.h>
+alarmed()
+{
+	exit(1);
+}
 main()
 {
-	int f;
-	f = fcntl(0, F_SETFL, BLOCKING);
+	char b[12], x[32];
+	int f, l = sizeof(x);
+	f = socket(AF_INET, SOCK_DGRAM, 0);
+	if (f >= 0 && !(fcntl(f, F_SETFL, BLOCKING))) {
+		signal(SIGALRM, alarmed);
+		alarm(3);
+		recvfrom(f, b, 12, 0, x, &l);
+		alarm(0);
+		exit(0);
+	}
+	exit(1);
 }
 _EOF_
 sed -e 's/BLOCKING/O_NONBLOCK/' $PLATE > $TMP
-`eval $COMP`
+$COMP >/dev/null 2>&1
+if [ 0 -eq $? ] ; then
+	$EXEC
+fi
 if [ 0 -eq $? ] ; then
 	BLOCK=O_NONBLOCK
 else
-	echo 'O_NONBLOCK not present in fcntl.h or sys/ioctl.h'
+	echo 'O_NONBLOCK not present/working in fcntl.h or sys/ioctl.h'
 	if [ -f $TMP -o -d $TMP ] ; then
 		$RM -f $TMP $EXEC;
 	fi
 	sed -e 's/BLOCKING/O_NDELAY/' $PLATE > $TMP
-	eval $COMP
+	$COMP >/dev/null 2>&1
+	if [ 0 -eq $? ] ; then
+		$EXEC
+	fi
 	if [ 0 -eq $? ] ; then
 		BLOCK=O_NDELAY
 	else
-		echo 'O_NDELAY not present in fcntl.h or sys/ioctl.h'
+		echo 'O_NDELAY not present/working in fcntl.h or sys/ioctl.h'
 		if [ -f $TMP -o -d $TMP ] ; then
 			$RM -f $TMP $EXEC;
 		fi
 		sed -e 's/BLOCKING/FIONBIO/' $PLATE > $TMP
-		eval $COMP
+		$COMP >/dev/null 2>&1
 		if [ 0 -eq $? ] ; then
 			echo 'FIONBIO not found!  No option found!'
 			BLOCK=none
@@ -280,7 +355,7 @@ main()
 	sigaction(SIGTERM, (struct sigaction *)0L, (struct sigaction *)0L);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
 	echo "Ooooh, you are a lucky one! 'action from POSIX!"
 	SIGNAL=posix
@@ -305,7 +380,7 @@ main()
 }
 _EOF_
 	echo $n "Nope, but you have...$c"
-	eval $COMP
+	$COMP >/dev/null 2>&1
 	$EXEC
 	if [ $? -eq 0 ] ; then
 		echo 'reliable signals! Cheers BSD!'
@@ -333,12 +408,11 @@ main()
 	exit(0);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
-	INDEX=index
 	echo "Cool...you have index()!"
 else
-	INDEX=strchr
+	NOINDEX=define
 	echo "Grmpf...I guess there is a strchr() out there somewhere..."
 fi
 $RM -f $EXEC $TMP
@@ -356,7 +430,7 @@ main()
 	(void)getrusage(RUSAGE_SELF, &rus);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -eq 0 ] ; then
 	TIMES=getrusage
 	echo "getrusage()"
@@ -372,7 +446,7 @@ main()
 	(void)times(&tmsbuf);
 }
 _EOF_
-	eval $COMP
+	$COMP >/dev/null 2>&1
 	if [ $? -eq 0 ] ; then
 		TIMES=times
 		echo "times()"
@@ -393,7 +467,7 @@ main()
 	exit(0);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " strerror$c"
 	NSTRERROR=define
@@ -416,7 +490,7 @@ main()
 	exit(1);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " strtoken$c"
 	NSTRTOKEN=define
@@ -445,7 +519,7 @@ main()
 	exit(1);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " strtok$c"
 	NSTRTOK=define
@@ -466,10 +540,25 @@ main()
 	(void)inet_addr("1.2.3.4");
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " inet_addr$c"
 	NINETADDR=define
+fi
+$RM -f $EXEC $TMP
+cat > $TMP << _EOF_
+#include <sys/types.h>
+#include <netinet/in.h>
+main()
+{
+	struct	in_addr in;
+	(void)inet_aton("1.2.3.4", &in);
+}
+_EOF_
+$COMP >/dev/null 2>&1
+if [ $? -ne 0 ] ; then
+	echo $n " inet_aton$c"
+	NINETATON=define
 fi
 $RM -f $EXEC $TMP
 cat > $TMP << _EOF_
@@ -482,7 +571,7 @@ main()
 	(void)inet_ntoa(in);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " inet_ntoa$c"
 fi
@@ -497,7 +586,7 @@ main()
 	(void)inet_netof(in);
 }
 _EOF_
-eval $COMP
+$COMP >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
 	echo $n " inet_netof$c"
 	NINETNETOF=define
@@ -553,6 +642,8 @@ TIMES=$cc
 $RM -f $EXEC $TMP $PLATE
 $MV -f $SETUP $SETUP.bak 2>/dev/null
 cat > $SETUP  <<_EOF_
+#ifndef __setup_include__
+#define __setup_include__
 #$PARAMH	PARAMH
 #$UNISTDH	UNISTDH
 #$STRINGH	STRINGH
@@ -560,10 +651,12 @@ cat > $SETUP  <<_EOF_
 #$STDLIBH	STDLIBH
 #$STDDEFH	STDDEFH
 #$SYSSYSLOGH	SYSSYSLOGH
+#$NOINDEX	NOINDEX
 #$NSTRERROR	NEED_STRERROR
 #$NSTRTOKEN	NEED_STRTOKEN
 #$NSTRTOK	NEED_STRTOK
 #$NINETADDR	NEED_INET_ADDR
+#$NINETATON	NEED_INET_ATON
 #$NINETNTOA	NEED_INET_NTOA
 #$NINETNETOF	NEED_INET_NETOF
 #$GETTIMEOFDAY	GETTIMEOFDAY
@@ -580,10 +673,6 @@ if [ "$BZERO" = "memset" ] ; then
 #define	bcopy(a,b,c)	memcpy(b,a,c)
 #define	bcmp	memcmp
 _EOF_
-fi
-if [ "$INDEX" = "strchr" ] ; then
-	echo "#define	index	strchr" >> $SETUP
-	echo "#define	rindex	strrchr" >> $SETUP
 fi
 if [ "$BLOCK" = "O_NONBLOCK" ] ; then
 	echo "#define	NBLOCK_POSIX" >> $SETUP
@@ -609,6 +698,7 @@ else
 	echo "#undef	TIMES_2" >> $SETUP
 	echo "#undef	GETRUSAGE_2" >> $SETUP
 fi
+echo "#endif" >> $SETUP
 touch include/config.h
 echo " "
 echo "If you would like to issue any shell commands before proceeding, do so"
@@ -616,6 +706,6 @@ echo "now.  My findings are in include/setup.h if you wish to change them."
 echo $n "--> $c"
 read cc
 if [ ! -z "$cc" ] ; then
-	eval $cc
+	$cc
 fi
 exit 0

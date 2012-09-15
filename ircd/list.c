@@ -37,7 +37,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)list.c	2.22 15 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)list.c	2.23 12/15/93 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -245,7 +245,7 @@ Reg1	aClient	*cptr;
 	    }
 	if (cptr->next)
 		cptr->next->prev = cptr->prev;
-	if (cptr->user)
+	if (IsPerson(cptr) && cptr->user)
 	    {
 		add_history(cptr);
 		off_history(cptr);

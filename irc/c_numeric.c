@@ -38,6 +38,7 @@ char c_numeric_id[] = "numeric.c (c) 1989 Jarkko Oikarinen";
 #include "msg.h"
 #include "sys.h"
 #include "h.h"
+#include "irc.h"
 
 extern char mybuf[];
 /*
@@ -284,7 +285,7 @@ char	*parv[];
 	    case RPL_INFO:
 		sprintf(mybuf, "*** %s: Info: %s", parv[0], parv[2]);
 		break;
-#if 0
+#if 1
 	    case RPL_MOTD:
 		sprintf(mybuf, "*** %s: Motd: %s", parv[0], parv[2]);
 		break;
@@ -335,9 +336,10 @@ char	*parv[];
 			sprintf(mybuf,"*** %s Class: %s %s: %s",
 				parv[0], parv[3], parv[2], parv[4]);
 		else
-			sprintf(mybuf,"*** %s %s Class: %s %s (%s %s)",
+			sprintf(mybuf,"*** %s %s Class: %s %s (%s %s) %s",
 				parv[0], parv[2], parv[3], parv[6],
-				parv[4], parv[5]);
+				parv[4], parv[5],
+				BadPtr(parv[7]) ? "" : parv[7]);
 		break;
 	    case RPL_TRACECONNECTING:
 	    case RPL_TRACEHANDSHAKE:
@@ -377,9 +379,13 @@ char	*parv[];
 		break;
 	    case RPL_STATSKLINE:
 	    case RPL_STATSQLINE:
-	    case RPL_STATSYLINE:
 		sprintf(mybuf, "*** %s: %s:%s:%s:%s:%s:%s",
 			parv[0], parv[2], parv[3], parv[4],
+			parv[5], parv[6], parv[7]);
+		break;
+	    case RPL_STATSYLINE:
+		sprintf(mybuf, "*** %s: Cl:%s Pf:%s Cf:%s Max:%s Sq:%s",
+			parv[0], parv[3], parv[4],
 			parv[5], parv[6], parv[7]);
 		break;
 	    case RPL_UMODEIS:

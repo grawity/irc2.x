@@ -22,7 +22,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_misc.c	2.39 27 Oct 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_misc.c	2.42 3/1/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -37,7 +37,7 @@ Computing Center and Jarkko Oikarinen";
     !defined(__convex__)
 # include <sys/param.h>
 #endif
-#if defined(PCS) || defined(AIX)
+#if defined(PCS) || defined(AIX) || defined(SVR3)
 # include <time.h>
 #endif
 #ifdef HPUX
@@ -232,6 +232,25 @@ int	showip;
 	return sptr->name;
 }
 
+char	*get_client_host(cptr)
+aClient	*cptr;
+{
+	static char nbuf[HOSTLEN * 2 + USERLEN + 5];
+
+	if (!MyConnect(cptr))
+		return cptr->name;
+	if (!cptr->hostp)
+		return get_client_name(cptr, FALSE);
+	if (IsUnixSocket(cptr))
+		(void) sprintf(nbuf, "%s[%s]", cptr->name, me.name);
+	else
+		(void)sprintf(nbuf, "%s[%-.*s@%-.*s]",
+			cptr->name, USERLEN,
+			(!(cptr->flags & FLAGS_GOTID)) ? "" : cptr->username,
+			HOSTLEN, cptr->hostp->h_name);
+	return nbuf;
+}
+
 /*
  * Form sockhost such that if the host is of form user@host, only the host
  * portion is copied.
@@ -346,11 +365,13 @@ char	*comment;	/* Reason for the exit */
 		    (logfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)) != -1)
 		    {
 			(void)alarm(0);
-			(void)sprintf(linebuf, "%s (%3d:%02d:%02d): %s@%s\n",
+			(void)sprintf(linebuf,
+				"%s (%3d:%02d:%02d): %s@%s [%s]\n",
 				myctime(sptr->firsttime),
 				on_for / 3600, (on_for % 3600)/60,
 				on_for % 60,
-				sptr->user->username, sptr->user->host);
+				sptr->user->username, sptr->user->host,
+				sptr->username);
 			(void)alarm(3);
 			(void)write(logfile, linebuf, strlen(linebuf));
 			(void)alarm(0);
@@ -594,15 +615,39 @@ char	*name;
 		    {
 			sp->is_sbs += acptr->sendB;
 			sp->is_sbr += acptr->receiveB;
+			sp->is_sks += acptr->sendK;
+			sp->is_skr += acptr->receiveK;
 			sp->is_sti += now - acptr->firsttime;
 			sp->is_sv++;
+			if (sp->is_sbs > 1023)
+			    {
+				sp->is_sks += (sp->is_sbs >> 10);
+				sp->is_sbs &= 0x3ff;
+			    }
+			if (sp->is_sbr > 1023)
+			    {
+				sp->is_skr += (sp->is_sbr >> 10);
+				sp->is_sbr &= 0x3ff;
+			    }
 		    }
 		else if (IsClient(acptr))
 		    {
 			sp->is_cbs += acptr->sendB;
 			sp->is_cbr += acptr->receiveB;
+			sp->is_cks += acptr->sendK;
+			sp->is_ckr += acptr->receiveK;
 			sp->is_cti += now - acptr->firsttime;
 			sp->is_cl++;
+			if (sp->is_cbs > 1023)
+			    {
+				sp->is_cks += (sp->is_cbs >> 10);
+				sp->is_cbs &= 0x3ff;
+			    }
+			if (sp->is_cbr > 1023)
+			    {
+				sp->is_ckr += (sp->is_cbr >> 10);
+				sp->is_cbr &= 0x3ff;
+			    }
 		    }
 		else if (IsUnknown(acptr))
 			sp->is_ni++;
@@ -626,10 +671,12 @@ char	*name;
 		   me.name, RPL_STATSDEBUG, name);
 	sendto_one(cptr, ":%s %d %s :connected %u %u",
 		   me.name, RPL_STATSDEBUG, name, sp->is_cl, sp->is_sv);
-	sendto_one(cptr, ":%s %d %s :bytes sent %u %u",
-		   me.name, RPL_STATSDEBUG, name, sp->is_cbs, sp->is_sbs);
-	sendto_one(cptr, ":%s %d %s :bytes recv %u %u",
-		   me.name, RPL_STATSDEBUG, name, sp->is_cbr, sp->is_sbr);
+	sendto_one(cptr, ":%s %d %s :bytes sent %u.%uK %u.%uK",
+		   me.name, RPL_STATSDEBUG, name,
+		   sp->is_cks, sp->is_cbs, sp->is_sks, sp->is_sbs);
+	sendto_one(cptr, ":%s %d %s :bytes recv %u.%uK %u.%uK",
+		   me.name, RPL_STATSDEBUG, name,
+		   sp->is_ckr, sp->is_cbr, sp->is_skr, sp->is_sbr);
 	sendto_one(cptr, ":%s %d %s :time connected %u %u",
 		   me.name, RPL_STATSDEBUG, name, sp->is_cti, sp->is_sti);
 }

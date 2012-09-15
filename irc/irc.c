@@ -46,7 +46,9 @@ char irc_id[]="irc.c v2.0 (c) 1988 University of Oulu, Computing\
 #include "common.h"
 #include "msg.h"
 #include "sys.h"
+#define IRCCMDS
 #include "irc.h"
+#undef IRCCMDS
 #include "h.h"
 
 #include <pwd.h>
@@ -90,11 +92,12 @@ char	buf[BUFSIZE];
 int	portnum, termtype = CURSES_TERM;
 int	debuglevel = DEBUG_ERROR;
 int	unkill_flag = 0, cchannel = 0;
-int	intr();
 int	QuitFlag = 0;
 
+void	intr();
 void	quit_intr();
-extern	void suspend_irc();
+void	myloop();
+void	write_statusline();
 
 static	int	KillCount = 0;
 static	int	apu = 0;  /* Line number we're currently on screen */
@@ -102,7 +105,7 @@ static	int	sock;     /* Server socket fd */
 static	char	currserver[HOSTLEN + 1];
 static	char	*querychannel;
 
-#ifdef HPUX
+#if defined(HPUX) || defined(SVR3)
 char	logbuf[BUFSIZ]; 
 #endif
 
@@ -116,7 +119,7 @@ struct itmlst
 	       &persname, &perslength}};
 #endif
 
-main(argc, argv)
+int main(argc, argv)
 int	argc;
 char	*argv[];
 {
@@ -134,9 +137,6 @@ char	*argv[];
 	channel[0] = '\0';
 	me.user = &meUser;
 	me.from = &me;
-	/* Let's drop this.. ?	-Vesa
-	initconf(currserver, me.passwd, me.sockhost, &meUser.channel);
-	*/
 	setuid(getuid());
 
 	while (argc > 1 && argv[1][0] == '-') {
@@ -209,7 +209,7 @@ char	*argv[];
 	me.name[0] = me.buffer[0] = '\0';
 	me.next = NULL;
 	me.status = STAT_ME;
-	if (servptr = getenv("IRCSERVER"))
+	if ((servptr = getenv("IRCSERVER")))
 		strncpyzt(currserver, servptr, HOSTLEN);
 	if (argc > 2)
 		strncpyzt(currserver, argv[2], HOSTLEN);
@@ -245,7 +245,7 @@ char	*argv[];
 		if (!*me.name) {
 			if (argc >= 2) {
 				strncpy(me.name, argv[1], NICKLEN);
-			} else if (nickptr = getenv("IRCNICK")) {
+			} else if ((nickptr = getenv("IRCNICK"))) {
 				strncpy(me.name, nickptr, NICKLEN);
 			} else
 #ifdef AUTOMATON
@@ -263,9 +263,9 @@ char	*argv[];
 			strncpy(meUser.username, argv[1], USERLEN);
 		} else {
 			sprintf(me.sockhost, "%d", mode);
-			if (cp = getenv("IRCNAME"))
+			if ((cp = getenv("IRCNAME")))
 				strncpy(me.info, cp, REALLEN);
-			else if (cp = getenv("NAME"))
+			else if ((cp = getenv("NAME")))
 				strncpy(me.info, cp, REALLEN);
 			else {
 #ifdef AUTOMATON
@@ -338,7 +338,7 @@ char	*argv[];
 	exit(0);
 }
 
-intr()
+void intr()
 {
 	if (logfile)
 		do_log(NULL);
@@ -357,7 +357,7 @@ intr()
 	exit(0);
 }
 
-myloop(sock)
+void myloop(sock)
 int	sock;
 {
 	write_statusline();
@@ -373,29 +373,27 @@ int	sock;
 static	char	cmdch = '/';
 static	char	queryuser[QUERYLEN+2] = "";
 
-int	do_cmdch(ptr, temp)
+void	do_cmdch(ptr, temp)
 char	*ptr, *temp;
 {
 	if (BadPtr(ptr)) {
 		putline("Error: Command character not changed");
-		return (-1);
+		return;
 	}
 	cmdch = *ptr;
-	return (0);
 }
 
-int	do_quote(ptr, temp)
+void	do_quote(ptr, temp)
 char	*ptr, *temp;
 {
 	if (BadPtr(ptr)) {
 		putline("*** Error: Empty command");
-		return (-1);
+		return;
 	}
 	sendto_one(&me,"%s", ptr);
-	return (0);
 }
 
-int	do_query(ptr, temp)
+void	do_query(ptr, temp)
 char	*ptr, *temp;
 {
 	if (BadPtr(ptr)) {
@@ -408,17 +406,16 @@ char	*ptr, *temp;
 			queryuser);
 		putline(buf);
 	}
-	return (0);
 }
 
-int	do_mypriv(buf1, buf2)
+void	do_mypriv(buf1, buf2)
 char	*buf1, *buf2;
 {
 	char	*tmp = index(buf1, ' ');
 
 	if (tmp == NULL) {
 		putline("*** Error: Empty message not sent");
-		return (-1);
+		return;
 	}
 	if (buf1[0] == ',' && buf1[1] == ' ') {
 		sendto_one(&me, "PRIVMSG %s :%s", last_to_me(NULL), &buf1[2]);
@@ -441,33 +438,30 @@ char	*buf1, *buf2;
 			sprintf(buf,"->%s> %s", buf1, tmp);
 		putline(buf);
 	}
-	return (0);
 }
 
-int	do_myqpriv(buf1, buf2)
+void	do_myqpriv(buf1, buf2)
 char	*buf1, *buf2;
 {
 	if (BadPtr(buf1)) {
 		putline("*** Error: Empty message not sent");
-		return (-1);
+		return;
 	}
 	sendto_one(&me, "PRIVMSG %s :%s", queryuser, buf1);
 
 	sprintf(buf,"-> *%s* %s", queryuser, buf1);
 	putline(buf);
-	return (0);
 }
 
-int	do_mytext(buf1, temp)
+void	do_mytext(buf1, temp)
 char	*buf1, *temp;
 {
 	sendto_one(&me, "PRIVMSG %s :%s", querychannel, buf1);
 	sprintf(buf,"%s> %s", querychannel, buf1);
 	putline(buf);
-	return (0);
 }
 
-int	do_unkill(buf, temp)
+void	do_unkill(buf, temp)
 char	*buf, *temp;
 {
 	if (unkill_flag)
@@ -478,10 +472,9 @@ char	*buf, *temp;
 	sprintf(buf, "*** Unkill feature turned %s",
 		(unkill_flag) ? "on" : "off");
 	putline(buf);
-	return (0);
 }
 
-int	do_bye(buf, tmp)
+void	do_bye(buf, tmp)
 char	*buf, *tmp;
 {
 	unkill_flag = 0;
@@ -500,11 +493,10 @@ char	*buf, *tmp;
 #endif
 	exit(0);
 #endif
-	return (0);
 }
 
 /* KILL, PART, SQUIT, TOPIC	"CMD PARA1 [:PARA2]" */
-do_kill(buf1, tmp)	/* 9.1.1993	-Vesa */
+void do_kill(buf1, tmp)
 char    *buf1, *tmp;
 {
 	char *b2;
@@ -525,7 +517,7 @@ char    *buf1, *tmp;
 }
 
 /* "CMD PARA1 PARA2 [:PARA3]" */
-do_kick(buf1, tmp)	/* 23.1.1993	-Vesa */
+void do_kick(buf1, tmp)
 char    *buf1, *tmp;
 {
 	char *b2, *b3;
@@ -543,13 +535,13 @@ char    *buf1, *tmp;
 }
 
 /* "CMD :PARA1" */
-do_away(buf1, tmp)	/* 27.6.1993	-Vesa */
+void do_away(buf1, tmp)
 char    *buf1, *tmp;
 {
 	sendto_one(&me, "%s :%s", tmp, buf1);
 }
 
-int	do_server(buf, tmp)
+void do_server(buf, tmp)
 char	*buf, *tmp;
 {
 	strncpyzt(currserver, buf, HOSTLEN);
@@ -557,11 +549,9 @@ char	*buf, *tmp;
 	sendto_one(&me,"QUIT");
 	close(sock);
 	QuitFlag = 1;
-	return (-1);
 }
 
-sendit(sock,line)
-int	sock;
+void sendit(line)
 char	*line;
 {
 	char	*ptr = NULL;
@@ -579,7 +569,7 @@ char	*line;
 		do_mytext(&line[2], NULL);
 	else if (line[1]) {
 		for ( ; cmd->name; cmd++)
-			if (ptr = mycncmp(&line[1], cmd->name))
+			if ((ptr = mycncmp(&line[1], cmd->name)))
 				break;
 		if (!cmd->name)
 			putline("*** Error: Unknown command");
@@ -608,7 +598,8 @@ char	*str1, *str2;
 	char	*s1;
 
 	for (s1 = str1; *s1 != ' ' && *s1 && *str2; s1++, str2++) {
-		if (!isascii(*s1))
+		/* if (!isascii(*s1)) */
+		if (*s1 & 0x80)
 			return 0;
 		*s1 = toupper(*s1);
 		if (*s1 != *str2)
@@ -624,7 +615,7 @@ char	*str1, *str2;
 		return s1;
 }
 
-do_clear(buf, temp)
+void do_clear(buf, temp)
 char	*buf, *temp;
 {
 #ifdef DOCURSES
@@ -646,7 +637,7 @@ char	*buf, *temp;
 #endif
 }
 
-putline(line)
+void putline(line)
 char *line;
 
 {
@@ -765,7 +756,7 @@ int	unixuser()
 #endif
 }
 
-do_log(ptr, temp)
+void do_log(ptr, temp)
 char	*ptr, *temp;
 {
 	long	tloc;
@@ -779,7 +770,7 @@ char	*ptr, *temp;
 #endif
 
 	if (!unixuser())
-		return /* -1 */ ;
+		return;
 	if (!logfile) {		          /* logging currently off */
 		if (BadPtr(ptr))
 			putline("*** You must specify a filename to log to.");
@@ -791,7 +782,7 @@ char	*ptr, *temp;
 				putline(buf);
 			} else {
 #ifndef VMS
-# ifdef HPUX 
+# if defined(HPUX) || defined(SVR3)
 				setvbuf(logfile,logbuf,_IOLBF,sizeof(logbuf));
 # else
 #  ifndef _SEQUENT_
@@ -873,7 +864,7 @@ char	*ptr, *xtra;
 
 /* Fake routine (it's only in server...) */
 
-do_channel(ptr, xtra)
+void do_channel(ptr, xtra)
 char *ptr, *xtra;
 {
 	char *p1;
@@ -885,13 +876,13 @@ char *ptr, *xtra;
 
 	free((char *)querychannel);
 
-	if (querychannel = (char *)malloc(strlen(ptr) + 1))
+	if ((querychannel = (char *)malloc(strlen(ptr) + 1)))
 	    {
 		/* Copy only channel name from *ptr	-Vesa */
 		strcpy(buf, ptr);
-		if (p1 = index(buf, ' '))
+		if ((p1 = index(buf, ' ')))
 			*p1 = '\0';
-		if (p1 = rindex(buf, ','))	/* The last channel */
+		if ((p1 = rindex(buf, ',')))	/* The last channel */
 			strcpy(querychannel, p1 + 1);
 		else				/* The only channel */
 			strcpy(querychannel, buf);
@@ -902,7 +893,7 @@ char *ptr, *xtra;
 	sendto_one(&me, "%s %s", xtra, ptr);
 }
 
-write_statusline()
+void write_statusline()
 {
 #ifdef DOCURSES
 	char	header[HEADERLEN];

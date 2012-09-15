@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_debug.c	2.28 07 Nov 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_debug.c	2.30 1/3/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -37,6 +37,9 @@ char	serveropts[] = {
 #ifdef	CMDLINE_CONFIG
 'C',
 #endif
+#ifdef	DO_ID
+'d',
+#endif
 #ifdef	DEBUGMODE
 'D',
 #endif
@@ -45,6 +48,9 @@ char	serveropts[] = {
 #endif
 #ifdef	OPER_REHASH
 'E',
+#endif
+#ifdef	NOTE_FORWARDER
+'f',
 #endif
 #ifdef	HUB
 'H',
@@ -153,10 +159,8 @@ char	serveropts[] = {
 #include "h.h"
 
 #ifndef ssize_t
-#define ssize_t int
+#define ssize_t unsigned int
 #endif
-
-extern	etext;
 
 #ifdef DEBUGMODE
 static	char	debugbuf[1024];
@@ -466,12 +470,8 @@ char	*nick;
 
 	sendto_one(cptr, ":%s %d %s :Total: ww %d ch %d cl %d co %d db %d",
 		   me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, com, db);
-	sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %d",
+	sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %u",
 		   me.name, RPL_STATSDEBUG, nick, tot,
-#if !defined(AIX) && !defined(NEXT)
-		   (int)sbrk((ssize_t)0)-(int)etext);
-#else
-		   (int)sbrk((ssize_t)0));
-#endif
+		   (u_int)sbrk((size_t)0)-(u_int)sbrk0);
 	return;
 }

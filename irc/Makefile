@@ -49,7 +49,7 @@ IRCLIBS=-lcurses -ltermcap
 #CC=/bin/cc
 CC=cc
 RM=/bin/rm
-OBJS=c_bsd.o c_conf.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
+OBJS=c_bsd.o c_msg.o c_numeric.o c_version.o edit.o help.o ignore.o\
      irc.o screen.o str.o c_debug.o ctcp.o
 
 COMMONOBJS=bsd.o dbuf.o packet.o send.o match.o parse.o support.o
@@ -65,12 +65,12 @@ all: build
 build: irc
 
 install: all
-	../install -c -s -m 711 irc $(BINDIR)
+	../bsdinstall -c -s -m 711 irc $(BINDIR)
 
 irc: $(OBJS) $(COMMONOBJS)
 	$(CC) $(OBJS) $(COMMONOBJS) -o irc $(IRCLIBS) $(LIBFLAGS)
 
-parse.o: ../common/parse.c ../include/msg.h
+parse.o: ../common/parse.c
 	${CC} ${CFLAGS} ${DFLAGS} -c ../common/parse.c
 
 bsd.o: ../common/bsd.c
@@ -91,53 +91,46 @@ match.o: ../common/match.c
 support.o: ../common/support.c
 	${CC} ${CFLAGS} ${DFLAGS} -c ../common/support.c
 
-c_bsd.o: ../include/struct.h ../include/config.h ../include/dbuf.h c_bsd.c
+c_bsd.o: c_bsd.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_bsd.c
 
-c_conf.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	  ../include/sys.h c_conf.c
+c_conf.o: c_conf.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_conf.c
 
-c_msg.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 ../include/msg.h c_msg.c
+c_msg.o: c_msg.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_msg.c
 
-c_numeric.o: ../include/config.h ../include/sys.h ../include/struct.h \
-	     ../include/dbuf.h ../include/numeric.h ../include/struct.h \
-	     c_numeric.c
+ctcp.o: c_msg.c
+	${CC} ${CFLAGS} ${DFLAGS} -c ctcp.c
+
+c_numeric.o: c_numeric.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_numeric.c
 
-c_version.o: ../include/patchlevel.h c_version.c ../include/config.h \
-	     ../include/dbuf.h
+c_version.o: c_version.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_version.c
 
-edit.o: ../include/struct.h ../include/config.h ../include/dbuf.h edit.c
+edit.o: edit.c
 	${CC} ${CFLAGS} ${DFLAGS} -c edit.c
 
-help.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 /usr/include/pwd.h ../include/sys.h help.c help.h
+help.o: help.c
 	${CC} ${CFLAGS} ${DFLAGS} -c help.c
 
-ignore.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 /usr/include/pwd.h ../include/sys.h ignore.c
+ignore.o: ignore.c
 	${CC} ${CFLAGS} ${DFLAGS} -c ignore.c
 
-irc.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 ../include/msg.h ../include/sys.h irc.c irc.h
+irc.o: irc.c
 	${CC} ${CFLAGS} ${DFLAGS} -c irc.c
 
-screen.o: ../include/struct.h ../include/config.h ../include/dbuf.h screen.c
+screen.o: screen.c
 	${CC} ${CFLAGS} ${DFLAGS} -c screen.c
 
-str.o: ../include/struct.h ../include/config.h ../include/dbuf.h \
-	 ../include/sys.h str.c
+str.o: str.c
 	${CC} ${CFLAGS} ${DFLAGS} -c str.c
 
-swear.o: ../include/struct.h ../include/config.h \
-	 ../include/dbuf.h ../include/sys.h /usr/include/pwd.h swear.c
+swear.o: swear.c
 	${CC} ${CFLAGS} ${DFLAGS} -c swear.c
 
-c_debug.o: ../include/struct.h c_debug.c
+c_debug.o: c_debug.c
 	${CC} ${CFLAGS} ${DFLAGS} -c c_debug.c
 
 clean:

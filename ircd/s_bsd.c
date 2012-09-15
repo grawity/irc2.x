@@ -35,7 +35,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_bsd.c	2.68 07 Nov 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_bsd.c	2.78 2/7/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -48,6 +48,9 @@ Computing Center and Jarkko Oikarinen";
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
+#if defined(SOL20)
+#include <sys/filio.h>
+#endif
 #if defined(UNIXPORT) && (!defined(SVR3) || defined(sgi) || \
     defined(_SEQUENT_))
 # include <sys/un.h>
@@ -471,7 +474,7 @@ void	init_sys()
 	    }
 # endif
 #endif
-#if defined(PCS) || defined(DYNIXPTX)
+#if defined(PCS) || defined(DYNIXPTX) || defined(SVR3)
 	char	logbuf[BUFSIZ];
 
 	(void)setvbuf(stderr,logbuf,_IOLBF,sizeof(logbuf));
@@ -635,11 +638,11 @@ Reg1	aClient	*cptr;
 		    }
 	    }
 
-	if (attach_Iline(cptr, hp, sockname))
+	if ((i = attach_Iline(cptr, hp, sockname)))
 	    {
 		Debug((DEBUG_DNS,"ch_cl: access denied: %s[%s]",
 			cptr->name, sockname));
-		return -1;
+		return i;
 	    }
 
 	Debug((DEBUG_DNS, "ch_cl: access ok: %s[%s]",
@@ -940,14 +943,38 @@ aClient *cptr;
 		ircstp->is_sv++;
 		ircstp->is_sbs += cptr->sendB;
 		ircstp->is_sbr += cptr->receiveB;
+		ircstp->is_sks += cptr->sendK;
+		ircstp->is_skr += cptr->receiveK;
 		ircstp->is_sti += time(NULL) - cptr->firsttime;
+		if (ircstp->is_sbs > 1023)
+		    {
+			ircstp->is_sks += (ircstp->is_sbs >> 10);
+			ircstp->is_sbs &= 0x3ff;
+		    }
+		if (ircstp->is_sbr > 1023)
+		    {
+			ircstp->is_skr += (ircstp->is_sbr >> 10);
+			ircstp->is_sbr &= 0x3ff;
+		    }
 	    }
 	else if (IsClient(cptr))
 	    {
 		ircstp->is_cl++;
 		ircstp->is_cbs += cptr->sendB;
 		ircstp->is_cbr += cptr->receiveB;
+		ircstp->is_cks += cptr->sendK;
+		ircstp->is_ckr += cptr->receiveK;
 		ircstp->is_cti += time(NULL) - cptr->firsttime;
+		if (ircstp->is_cbs > 1023)
+		    {
+			ircstp->is_cks += (ircstp->is_cbs >> 10);
+			ircstp->is_cbs &= 0x3ff;
+		    }
+		if (ircstp->is_cbr > 1023)
+		    {
+			ircstp->is_ckr += (ircstp->is_cbr >> 10);
+			ircstp->is_cbr &= 0x3ff;
+		    }
 	    }
 	else
 		ircstp->is_ni++;
@@ -1040,10 +1067,13 @@ aClient	*cptr;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_REUSEADDR) %s:%s", cptr);
 #endif
-#if  defined(SO_DEBUG) && defined(DEBUGMODE)
+#if  defined(SO_DEBUG) && defined(DEBUGMODE) && 0
+/* Solaris with SO_DEBUG writes to syslog by default */
+#if !defined(SOL20) || defined(USE_SYSLOG)
 	opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_DEBUG, &opt, sizeof(opt)) < 0)
 		report_error("setsockopt(SO_DEBUG) %s:%s", cptr);
+#endif /* SOL20 */
 #endif
 #ifdef	SO_USELOOPBACK
 	opt = 1;
@@ -1286,7 +1316,8 @@ fd_set	*rfd;
 		/*
 		 * If not ready, fake it so it isnt closed
 		 */
-		if (length == -1 && errno == EWOULDBLOCK)
+		if (length == -1 &&
+			((errno == EWOULDBLOCK) || (errno == EAGAIN)))
 			return 1;
 		if (length <= 0)
 			return length;
@@ -1382,15 +1413,26 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 	Reg1	aClient	*cptr;
 	Reg2	int	nfds;
 	struct	timeval	wait;
+#ifdef	pyr
+	struct	timeval	nowt;
+	u_long	us;
+#endif
 	fd_set	read_set, write_set;
 	time_t	delay2 = delay, now;
+	u_long	usec = 0;
 	int	res, length, fd, i;
 	int	auth = 0;
 
 #ifdef NPATH
 	check_command(&delay, NULL);
 #endif
+#ifdef	pyr
+	(void) gettimeofday(&nowt, NULL);
+	now = nowt.tv_sec;
+#else
 	now = time(NULL);
+#endif
+
 	for (res = 0;;)
 	    {
 		FD_ZERO(&read_set);
@@ -1428,7 +1470,24 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			    }
 
 			if (DBufLength(&cptr->sendQ) || IsConnecting(cptr))
+#ifndef	pyr
 				FD_SET(i, &write_set);
+#else
+			    {
+				if (!(cptr->flags & FLAGS_BLOCKED))
+					FD_SET(i, &write_set);
+				else
+					delay2 = 0, usec = 500000;
+			    }
+			if (now - cptr->lw.tv_sec &&
+			    nowt.tv_usec - cptr->lw.tv_usec < 0)
+				us = 1000000;
+			else
+				us = 0;
+			us += nowt.tv_usec;
+			if (us - cptr->lw.tv_usec > 500000)
+				cptr->flags &= ~FLAGS_BLOCKED;
+#endif
 		    }
 
 		if (udpfd >= 0)
@@ -1437,7 +1496,7 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 			FD_SET(resfd, &read_set);
 
 		wait.tv_sec = MIN(delay2, delay);
-		wait.tv_usec = 0;
+		wait.tv_usec = usec;
 #ifdef	HPUX
 		nfds = select(FD_SETSIZE, (int *)&read_set, (int *)&write_set,
 				0, &wait);
@@ -1521,6 +1580,9 @@ time_t	delay; /* Don't ever use ZERO here, unless you mean to poll and then
 				ircstp->is_ref++;
 				sendto_ops("All connections in use. (%s)",
 					   get_client_name(cptr, TRUE));
+				(void)send(fd,
+					"ERROR :All connections in use\r\n",
+					32, 0);
 				(void)close(fd);
 				break;
 			    }
@@ -1631,6 +1693,11 @@ struct	hostent	*hp;
 	    {
 		sendto_ops("Server %s already present from %s",
 			   aconf->name, get_client_name(c2ptr, TRUE));
+		if (by && IsPerson(by) && !MyClient(by))
+		  sendto_one(by,
+                             ":%s NOTICE %s :Server %s already present from %s",
+                             me.name, by->name, aconf->name,
+			     get_client_name(c2ptr, TRUE));
 		return -1;
 	    }
 
@@ -1694,6 +1761,10 @@ struct	hostent	*hp;
 		errtmp = errno; /* other system calls may eat errno */
 		(void)alarm(0);
 		report_error("Connect to host %s failed: %s",cptr);
+                if (by && IsPerson(by) && !MyClient(by))
+                  sendto_one(by,
+                             ":%s NOTICE %s :Connect to host %s failed.",
+			     me.name, by->name, cptr);
 		(void)close(cptr->fd);
 		cptr->fd = -2;
 		free_client(cptr);
@@ -1719,6 +1790,10 @@ struct	hostent	*hp;
 	    {
       		sendto_ops("Host %s is not enabled for connecting:no C/N-line",
 			   aconf->host);
+                if (by && IsPerson(by) && !MyClient(by))
+                  sendto_one(by,
+                             ":%s NOTICE %s :Connect to host %s failed.",
+			     me.name, by->name, cptr);
 		det_confs_butmask(cptr, 0);
 		(void)close(cptr->fd);
 		cptr->fd = -2;
@@ -1734,7 +1809,8 @@ struct	hostent	*hp;
 		(void)strcpy(cptr->serv->by, by->name);
 		cptr->serv->user = by->user;
 		by->user->refcnt++;
-	    }
+	    } else
+		(void)strcpy(cptr->serv->by, "AutoConn.");
 	(void)strcpy(cptr->serv->up, me.name);
 	if (cptr->fd > highest_fd)
 		highest_fd = cptr->fd;
@@ -2095,21 +2171,31 @@ int	setup_ping()
 	if (setsockopt(udpfd, SOL_SOCKET, SO_REUSEADDR,
 			(char *)&on, sizeof(on)) == -1)
 	    {
+#ifdef	USE_SYSLOG
+		syslog(LOG_ERR, "setsockopt udp fd %d : %m", udpfd);
+#endif
 		Debug((DEBUG_ERROR, "setsockopt so_reuseaddr : %s",
 			strerror(errno)));
 		(void)close(udpfd);
+		udpfd = -1;
 		return -1;
 	    }
 	if (bind(udpfd, (struct sockaddr *)&from, sizeof(from))==-1)
 	    {
+#ifdef	USE_SYSLOG
+		syslog(LOG_ERR, "bind udp.%d fd %d : %m",
+			from.sin_port, udpfd);
+#endif
 		Debug((DEBUG_ERROR, "bind : %s", strerror(errno)));
 		(void)close(udpfd);
+		udpfd = -1;
 		return -1;
 	    }
 	if (fcntl(udpfd, F_SETFL, FNDELAY)==-1)
 	    {
 		Debug((DEBUG_ERROR, "fcntl fndelay : %s", strerror(errno)));
 		(void)close(udpfd);
+		udpfd = -1;
 		return -1;
 	    }
 	return udpfd;
@@ -2137,6 +2223,8 @@ static	void	polludp()
 			mlen = 0;
 	    }
 	Debug((DEBUG_DEBUG,"udp poll"));
+
+	n = recvfrom(udpfd, readbuf, mlen, 0, &from, &fromlen);
 	now = time(NULL);
 	if (now == last)
 		if (++cnt > 14)
@@ -2144,14 +2232,13 @@ static	void	polludp()
 	cnt = 0;
 	last = now;
 
-	n = recvfrom(udpfd, readbuf, sizeof(readbuf), 0, &from, &fromlen);
 	if (n == -1)
 	    {
-		if (errno == EWOULDBLOCK)
+		if ((errno == EWOULDBLOCK) || (errno == EAGAIN))
 			return;
 		else
 		    {
-			report_error("udp port recvfrom : %s", &me);
+			report_error("udp port recvfrom (%s): %s", &me);
 			return;
 		    }
 	    }
@@ -2159,10 +2246,7 @@ static	void	polludp()
 	if (n  < 8)
 		return;
 
-	/*
-	 * first 8 bytes...sequence # and 4 bytes data..
-	 */
-	s = readbuf + 12;
+	s = readbuf + n;
 	/*
 	 * attach my name and version for the reply
 	 */
@@ -2203,6 +2287,7 @@ static	void	do_dns_async()
 	case ASYNC_CLIENT :
 		if ((cptr = ln.value.cptr))
 		    {
+			del_queries((char *)cptr);
 			ClearDNS(cptr);
 			if (!DoingAuth(cptr))
 				SetAccess(cptr);
@@ -2229,6 +2314,7 @@ static	void	do_dns_async()
 		break;
 	case ASYNC_SERVER :
 		cptr = ln.value.cptr;
+		del_queries((char *)cptr);
 		ClearDNS(cptr);
 		if (check_server(cptr, hp, NULL, NULL, 1))
 			(void)exit_client(cptr, cptr, &me,

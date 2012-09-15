@@ -28,6 +28,7 @@ char debug_id[] = "debug.c v2.0 (c) 1988 University of Oulu, Computing Center an
 #ifdef HPUX
 #include <fcntl.h>
 #endif
+#include "irc.h"
 
 extern int debuglevel;
 struct	stats	ircst, *ircstp = &ircst;

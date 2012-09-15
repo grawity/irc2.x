@@ -23,13 +23,13 @@ INCLUDEDIR=../include
 
 # Default flags:
 CFLAGS= -I$(INCLUDEDIR) -O
-IRCDLIBS=
+#IRCDLIBS=
 IRCLIBS=-lcurses -ltermcap
 #
 # use the following on MIPS:
 #CFLAGS= -systype bsd43 -DSYSTYPE_BSD43 -I$(INCLUDEDIR)
 # For Irix 4.x (SGI), use the following:
-#CFLAGS= -O -cckr -I$(INCLUDEDIR)
+#CFLAGS= -g -cckr -I$(INCLUDEDIR)
 #
 # on NEXT use:
 #CFLAGS=-bsd -I$(INCLUDEDIR)
@@ -50,15 +50,15 @@ IRCLIBS=-lcurses -ltermcap
 #IRCDLIBS= -lsocket -linet -lnsl -lseq
 #
 #use the following on SUN OS without nameserver libraries inside libc
-#IRCDLIBS= -lresolv
+#IRCDLIBS=
 #
 # Solaris 2
-#IRCDLIBS= -lresolv -lsocket -lnsl
-#IRCLIBS=-lcurses -ltermcap -lsocket -lnsl
+#IRCDLIBS=-lsocket -lnsl
+#IRCLIBS=-lcurses -ltermcap -lresolv -lsocket -lnsl
 #
 # ESIX
 #CFLAGS=-O -I$(INCLUDEDIR) -I/usr/ucbinclude
-#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lresolv -lns -lnsl
+#IRCDLIBS=-L/usr/ucblib -L/usr/lib -lsocket -lucb -lns -lnsl
 #
 # LDFLAGS - flags to send the loader (ld). SunOS users may want to add
 # -Bstatic here.
@@ -68,8 +68,10 @@ IRCLIBS=-lcurses -ltermcap
 #Dell SVR4
 #CC=gcc
 #CFLAGS= -I$(INCLUDEDIR) -O2
-#IRCDLIBS=-lsocket -lnsl -lucb -lresolv
-#IRCLIBS=-lcurses -lsocket -lnsl -lucb
+#IRCDLIBS=-lsocket -lnsl -lucb
+#IRCLIBS=-lcurses -lresolv -lsocket -lnsl -lucb
+
+
 
 # IRCDMODE is the mode you want the binary to be.
 # The 4 at the front is important (allows for setuidness)
@@ -120,7 +122,9 @@ clean:
 		cd $$i;\
 		${MAKE} clean; cd ..;\
 	done
-	@echo "To really restart installation, remove include/setup.h"
+	-@if [ -f include/setup.h ] ; then \
+	echo "To really restart installation, remove include/setup.h" ; \
+	fi
 
 depend:
 	@for i in $(SUBDIRS); do \
@@ -130,7 +134,7 @@ depend:
 	done
 
 install: all
-	chmod +x ./install
+	chmod +x ./bsdinstall
 	@for i in ircd irc doc; do \
 		echo "Installing $$i";\
 		cd $$i;\

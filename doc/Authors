@@ -96,7 +96,7 @@ the Makefile macros, numerous reformatting of server text messages, and
 added mkversion.sh to keep track of compilation statistics. Numerous
 bug fixes and enhancements, and co-coordinator of the 2.4 release.
 
-jarlek@ifi.uio.no added mail functions to irc.
+Jarle Lyngaas (nmijl@alf.uib.no) added Note functions to ircd.
 
 Armin Gruner <gruner@informatik.tu-muenchen.de> / May, June 1990:
 * Patched KILL-line feature for ircd.conf, works now.

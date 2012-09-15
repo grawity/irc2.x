@@ -25,6 +25,13 @@
 #include <sys/errno.h>
 #endif
 
+#include "setup.h"
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include "cdefs.h"
+#include "bitypes.h"
+
 #ifdef	UNISTDH
 #include <unistd.h>
 #endif
@@ -34,15 +41,20 @@
 
 #ifdef	STRINGSH
 #include <strings.h>
-#endif
-#ifdef	STRINGH
-#include <string.h>
+#else
+# ifdef	STRINGH
+# include <string.h>
+# endif
 #endif
 #define	strcasecmp	mycmp
 #define	strncasecmp	myncmp
-#ifndef	index
+#ifdef NOINDEX
+#define   index   strchr
+#define   rindex  strrchr
+/*
 extern	char	*index PROTO((char *, char));
 extern	char	*rindex PROTO((char *, char));
+*/
 #endif
 
 #ifdef AIX

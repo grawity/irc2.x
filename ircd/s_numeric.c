@@ -20,7 +20,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_numeric.c	2.12 07 Aug 1993 (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_numeric.c	2.14 1/30/94 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -92,8 +92,20 @@ char	*parv[];
 			** And so it was done. -avalon
 			** And regretted. Dont do it that way. Make sure
 			** it goes only to non-servers. -avalon
+			** Check added to make sure servers don't try to loop
+			** with numerics which can happen with nick collisions.
+			** - Avalon
 			*/
-			if (!IsMe(acptr))
+			if (!IsMe(acptr) && IsPerson(acptr))
+				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
+					parv[0], numeric, nick, buffer);
+			else if (IsServer(acptr) && acptr->from != cptr)
+				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
+					parv[0], numeric, nick, buffer);
+		    }
+		else if ((acptr = find_server(nick, (aClient *)NULL)))
+		    {
+			if (!IsMe(acptr) && acptr->from != cptr)
 				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 					parv[0], numeric, nick, buffer);
 		    }
