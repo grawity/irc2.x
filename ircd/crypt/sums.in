@@ -3,22 +3,22 @@
 trap "" 1 2 3 13 14 15 
 /bin/cp hash.c hash.c.old 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ s_bsd.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ s_bsd.c) 2>/dev/null`
 sed -e "s/SUSER/[${csum}]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ s_user.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ s_user.c) 2>/dev/null`
 sed -e "s/SSERV/[${csum}]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ s_serv.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ s_serv.c) 2>/dev/null`
 sed -e "s/SBSDC/[${csum}]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ channel.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ channel.c) 2>/dev/null`
 sed -e "s/CHANC/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ ircd.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ ircd.c) 2>/dev/null`
 sed -e "s/IRCDC/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ s_misc.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ s_misc.c) 2>/dev/null`
 sed -e "s/SMISC/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
 csum=`@SUM@ hash.c.old 2>/dev/null`
@@ -27,7 +27,7 @@ sed -e "s/HASHC/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 csum=`@SUM@ version.c.SH 2>/dev/null`
 sed -e "s/VERSH/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 /bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1
-csum=`@SUM@ s_bsd.c 2>/dev/null`
+csum=`(cd ../ircd; @SUM@ s_bsd.c) 2>/dev/null`
 sed -e "s/MAKEF/[$csum]/g" hash.c.temp > hash.c 2>/dev/null
 if [ -f /bin/hostid ] ; then
 	/bin/mv -f hash.c hash.c.temp 1>/dev/null 2>&1

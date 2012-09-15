@@ -20,12 +20,17 @@
 
 #include <sys/types.h>
 
-#include "config.h"
+#include "struct.h"
 #include "common.h"
+#include "numeric.h"
+#include "msg.h"
+#include "sys.h"
+#include "h.h"
+#include "irc.h"
 #include "patchlevel.h"
 
 char *intro = "Internet Relay Chat v%s";
-char *version = PATCHLEVEL;
+char *version;
 char *infotext[] =
     {
 	"Original code written by Jarkko Oikarinen <jto@tolsun.oulu.fi>",

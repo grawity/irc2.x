@@ -17,6 +17,11 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+
+Tue Mar 22 17:32:33 1994  Helen T. Rose Davis  (hrose@rocza.kei.com)
+
+	* Re-rewrite of documentation to coincide with 2.8.17 release.
+
 Mon Mar 29 01:26:16 1993
 
 	* INTSALL	updated.

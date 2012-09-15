@@ -8,7 +8,6 @@
 
 static	aService	*svctop = NULL;
 
-
 aService	*make_service(cptr)
 aClient	*cptr;
 {
@@ -47,6 +46,8 @@ aClient	*cptr;
 		    }
 		serv->prevs = NULL;
 		serv->nexts = NULL;
+		if (serv->servp)
+			free_server(serv->servp, cptr);
 
 		MyFree(serv);
 		cptr->service = NULL;
@@ -83,11 +84,11 @@ aClient *cptr;
  
 
 #ifdef	USE_SERVICES
-void	check_services_butone(action, cptr, fmt, p1, p2, p3, p4,
+void	check_services_butone(action, server, cptr, fmt, p1, p2, p3, p4,
 			      p5, p6, p7, p8)
 long	action;
 aClient	*cptr;
-char	*fmt;
+char	*fmt, *server;
 void	*p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 {
 	Reg	aClient	*acptr;
@@ -98,7 +99,12 @@ void	*p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 		if (!(acptr = local[i]) || !IsService(acptr) ||
 		    (cptr && acptr == cptr->from))
 			continue;
-		if (acptr->service->wants & action)
+		/*
+		** found a (local) service, check if action matches what's
+		** wanted AND if it comes from a server matching the dist
+		*/
+		if ((acptr->service->wants & action)
+		    && (!server || !matches(acptr->service->dist, server)))
 			sendto_one(acptr, fmt, p1, p2, p3, p4, p5, p6, p7, p8);
 	    }
 	return;
@@ -170,7 +176,13 @@ char	*parv[];
 	Reg	aConfItem *aconf;
 	aServer	*sp = NULL;
 	char	*dist, *server, *info;
-	int	type, metric, len, i, tok = 1;
+	int	type, metric, len, i/*, tok = 1*/;
+
+	if (sptr->user)
+	    {
+		sendto_one(sptr, err_str(ERR_ALREADYREGISTRED, parv[0]));
+		return 0;
+	    }
 
 	if (parc < 7 || *parv[1] == '\0' || *parv[2] == '\0' ||
 	    *parv[3] == '\0' || *parv[6] == '\0')
@@ -192,16 +204,20 @@ char	*parv[];
 		strncpyzt(sptr->name, parv[1], sizeof(sptr->name));
 		server = parv[2];
 		metric = atoi(parv[5]);
-		if (cptr->serv->version)
+		if (cptr->serv->version != SV_OLD)
 			sp = find_tokserver(atoi(server), cptr, NULL);
-		else if ((acptr = find_server(server, NULL)))
+		else if ((acptr = find_server(server, NULL))) /* uhh.. */
 			sp = acptr->serv;
+/*
 		if (sp)
 			tok = sp->ltok;
+*/
 	    }
 #ifndef	USE_SERVICES
-	else
+	    {
+		sendto_one(cptr, "ERROR :Server doesn't support services");
 		return 0;
+	    }
 #endif
 
 	dist = parv[3];
@@ -213,15 +229,16 @@ char	*parv[];
 	    {
 		metric = 0;
 		server = ME;
+		sp = me.serv;
 		if (!do_nick_name(parv[1]))
 		    {
 			sendto_one(sptr, err_str(ERR_ERRONEUSNICKNAME,
 				   parv[0]));
 			return 0;
 		    }
-		if (strlen(parv[1]) + strlen(server) + 2 >= HOSTLEN)
+		if (strlen(parv[1]) + strlen(server) + 2 >= (size_t) HOSTLEN)
 		    {
-			sendto_one(acptr, "ERROR Servicename is too long.");
+			sendto_one(acptr, "ERROR :Servicename is too long.");
 			sendto_flag(SCH_ERROR,
 				    "Access for service %d (%s) denied (%s)",
 				    type, parv[1], "servicename too long");
@@ -258,36 +275,41 @@ char	*parv[];
 		    }
 		attach_conf(sptr, aconf);
 		sendto_one(sptr, rpl_str(RPL_WELCOME, sptr->name), sptr->name);
-		sendto_one(sptr, rpl_str(RPL_MYINFO, sptr->name), version);
+		sendto_one(sptr, rpl_str(RPL_MYINFO, sptr->name), ME, version);
 		sendto_flag(SCH_NOTICE, "Service %s connected",
 			    get_client_name(sptr, TRUE));
+		istat.is_myservice++;
 	    }
 #endif
 
+	istat.is_service++;
 	svc = make_service(sptr);
 	SetService(sptr);
-	strncpyzt(svc->server, server, HOSTLEN);
+	svc->server = mystrdup(server);
 	strncpyzt(svc->dist, dist, HOSTLEN);
 	strncpyzt(sptr->info, info, REALLEN);
 	svc->wants = 0;
 	svc->type = type;
 	sptr->hopcount = metric;
-	SPRINTF(svc->tok, "%d", tok);
-	if ((svc->servp = sp))
+/*	SPRINTF(svc->tok, "%d", tok);*/
+	if ((svc->servp = sp)) /* why if ? */
 		sp->refcnt++;
 	(void)add_to_client_hash_table(sptr->name, sptr);
 
 #ifdef	USE_SERVICES
-	check_services_butone(SERVICE_WANT_SERVICE, sptr,
+	check_services_butone(SERVICE_WANT_SERVICE, NULL, sptr,
 				"SERVICE %s %s %s %d %d :%s", sptr->name,
 				server, dist, type, metric, info);
 #endif
 
-	for (i = 0; i <= highest_fd; i++)
-	    {
-		if (!(acptr = local[i]) || !IsServer(acptr) || acptr == cptr)
+	for (i = fdas.highest; i >= 0; i--)
+	{
+		if (!(acptr = local[fdas.fd[i]]) || !IsServer(acptr) ||
+		    acptr == cptr)
 			continue;
 		if (matches(dist, acptr->name))
+			continue;
+		if (acptr->serv->version == SV_OLD)
 			continue;
 		sendto_one(acptr, "SERVICE %s %s %s %d %d :%s", sptr->name,
 			   server, dist, type, metric+1, info);
@@ -329,7 +351,7 @@ aClient	*cptr, *sptr;
 int	parc;
 char	*parv[];
 {
-	if (!IsService(sptr))
+	if (!IsService(sptr) || (IsService(sptr) && sptr->service->wants))
 	    {
 		sendto_one(sptr, err_str(ERR_NOPRIVILEGES, parv[0]));
 		return;
@@ -341,7 +363,7 @@ char	*parv[];
 		return;
 	    }
 	if (!sptr->service->wants)
-		sptr->service->wants = atoi(parv[1]);
+		sptr->service->wants = atoi(parv[1]) & sptr->service->type;
 	return 0;
 }
 #endif

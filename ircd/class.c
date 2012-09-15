@@ -18,7 +18,7 @@
  */
 
 #ifndef	lint
-static char sccsid[] = "%W% %G% (C) 1990 Darren Reed";
+static char sccsid[] = "@(#)class.c	1.1 1/21/95 (C) 1990 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -144,6 +144,7 @@ long	sendq;
 		NextClass(p) = NextClass(t);
 		NextClass(t) = p;
 		MaxSendq(p) = QUEUELEN;
+		istat.is_class++;
 	    }
 	else
 		p = t;
@@ -187,7 +188,10 @@ void	check_class()
 		    {
 			NextClass(cltmp2) = NextClass(cltmp);
 			if (Links(cltmp) <= 0)
+			{
 				free_class(cltmp);
+				istat.is_class--;
+			}
 		    }
 		else
 			cltmp2 = cltmp;
@@ -197,6 +201,7 @@ void	check_class()
 void	initclass()
 {
 	classes = (aClass *)make_class();
+	istat.is_class++;
 
 	Class(FirstClass()) = 0;
 	ConFreq(FirstClass()) = CONNECTFREQUENCY;

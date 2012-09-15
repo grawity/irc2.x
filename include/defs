@@ -1,0 +1,107 @@
+#undef	BSD			/* 4.2 BSD, 4.3 BSD, SunOS 3.x, 4.x, Apollo */
+#undef	AIX			/* IBM ugly so-called Unix, AIX */
+#undef	MIPS			/* MIPS Unix */
+#undef	SVR3			/* SVR3 stuff - being worked on where poss. */
+#undef	DYNIXPTX		/* Sequents Brain-dead Posix implement.
+#undef	SOL20			/* Solaris2 */
+#undef	VMS			/* Should work for IRC client, not server */
+#undef	MAIL50			/* If you're running VMS 5.0 */
+#undef	PCS			/* PCS Cadmus MUNIX, use with BSD flag! */
+#undef	VALLOC			/* Define this if you have valloc(3) */
+#define	RESTARTING_SYSTEMCALLS
+#undef  USE_VARARGS
+#define	DEBUGMODE		/* define DEBUGMODE to enable debugging mode.*/
+#define	HAVECURSES		/* If you have curses, and want to use it.  */
+#undef	HAVETERMCAP		/* If you have termcap, and want to use it. */
+#define NPATH "/usr/lib/irc/.ircdnote"
+#define DPATH "/home/ch1/avalon/"
+#define	SPATH "ircd"
+#define	CPATH "ircd.conf"
+#define	MPATH "ircd.motd"
+#define	LPATH "/tmp/ircd.log" /* Where the debug file lives, if DEBUGMODE */
+#define	PPATH "ircd.pid"
+#undef CHROOTDIR
+#define	ENABLE_SUMMON	/* local summon */
+#define	ENABLE_USERS	/* enables local /users (same as who/finger output) */
+#undef	SHOW_INVISIBLE_LUSERS
+#define	NO_DEFAULT_INVISIBLE
+#undef	OPER_KILL
+#define	OPER_REHASH
+#undef	OPER_RESTART
+#undef  LOCAL_KILL_ONLY
+#define MAXIMUM_LINKS 1
+#define	HUB
+#define	R_LINES
+#define R_LINES_REHASH
+#define R_LINES_OFTEN
+#define	CMDLINE_CONFIG /* allow conf-file to be specified on command line */
+#undef	M4_PREPROC
+#undef	USE_SYSLOG
+#undef	SYSLOG_KILL	/* log all operator kills to syslog */
+#undef	SYSLOG_SQUIT	/* log all remote squits for all servers to syslog */
+#undef	SYSLOG_CONNECT	/* log remote connect messages for other all servs */
+#undef	SYSLOG_USERS	/* send userlog stuff to syslog */
+#undef	SYSLOG_OPER	/* log all users who successfully become an Op */
+#define LOG_FACILITY LOG_DAEMON
+#define	CRYPT_OPER_PASSWORD
+#define	CRYPT_LINK_PASSWORD
+#undef	LEAST_IDLE
+#undef IDLE_FROM_MSG
+#define MAXSENDQLENGTH 100000    /* Recommended value: 100000 for leaves */
+#define	BUFFERPOOL	(40000)
+#define USE_OUR_CTYPE
+#define	UNIXPORT
+#undef	IRC_UID
+#undef	IRC_GID
+#define	IRC_UID	65534	/* eg for what to do to enable this feature */
+#define	IRC_GID	65534
+#define	IRCII_KLUDGE
+#define PORTNUM 6667		/* Recommended values: 6667 or 6666 */
+#define MAXCONNECTIONS	50
+#define NICKNAMEHISTORYLENGTH 800
+#define TIMESEC  60		/* Recommended value: 60 */
+#define PINGFREQUENCY    120	/* Recommended value: 120 */
+#define CONNECTFREQUENCY 600	/* Recommended value: 600 */
+#define HANGONRETRYDELAY 10	/* Recommended value: 10 seconds */
+#define HANGONGOODLINK 300	/* Recommended value: 10 minutes */
+#define WRITEWAITDELAY     15	/* Recommended value: 15 */
+#define	CONNECTTIMEOUT     30   /* Recommended value: 30 */
+#define KILLCHASETIMELIMIT 90   /* Recommended value: 90 */
+#define MAXCHANNELSPERUSER  10	/* Recommended value: 10 */
+#define	SENDQ_ALWAYS
+#define MOTD MPATH
+#define	MYNAME SPATH
+#define	CONFIGFILE CPATH
+#define	IRCD_PIDFILE PPATH
+#define	OSF
+#undef BSD
+#define BSD
+#define	ULTRIX
+#define	HPUX
+#define	SGI
+#undef	SENDQ_ALWAYS
+#undef	GETRUSAGE_2
+#undef	TIMES_2
+#define	MAXCLIENTS	(MAXCONNECTIONS-1)
+#undef	SENDQ_ALWAYS
+#undef SYSV
+#undef BSD
+#define BSD             1       /* mips only works in bsd43 environment */
+#define SEQ_NOFILE    128        /* set to your current kernel impl, */
+#define	POSIX_SIGNALS
+#define	HAVE_RELIABLE_SIGNALS
+#undef	HAVE_RELIABLE_SIGNALS
+#define	HAVE_RELIABLE_SIGNALS
+#define	MAXIMUM_LINKS	1
+#undef	UNIXPORTPATH
+#define Reg1 register
+#define Reg2 register
+#define Reg3 register
+#define Reg4 register
+#define Reg5 register
+#define Reg6 register
+#define Reg7 register
+#define Reg8 register
+#define Reg9 register
+#define Reg10 register
+#define	CLIENT_FLOOD	12000

@@ -25,11 +25,25 @@ static  char sccsid[] = "%W% %G% 1990, 1991 Armin Gruner;\
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
+#include "patchlevel.h"
 
 extern	int errno; /* ...seems that errno.h doesn't define this everywhere */
 #ifndef	CLIENT_COMPILE
 extern	void	outofmemory();
 #endif
+
+char	*mystrdup(s)
+char	*s;
+{
+	/* Portable strdup(), contributed by mrg, thanks!  -roy */
+
+	char	*t;
+
+	t = (char *) MyMalloc(strlen(s) + 1);
+	if (t)
+		return ((char *)strcpy(t, s));
+	return NULL;
+}
 
 #ifdef NEED_STRTOKEN
 /*
@@ -205,8 +219,11 @@ char	*msg, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 	sendto_flag(SCH_ERROR, msg, p1, p2, p3, p4, p5, p6, p7, p8, p9);
 	(void)s_die();
 }
+#endif
 
-static	char	*marray[20000];
+#if defined(DEBUGMODE) && !defined(CLIENT_COMPILE) && defined(DO_DEBUG_MALLOC)
+
+static	char	*marray[100000];
 static	int	mindex = 0;
 
 #define	SZ_EX	(sizeof(char *) + sizeof(size_t) + 4)
@@ -239,7 +256,7 @@ size_t	x;
 	Debug((DEBUG_MALLOC, "MyMalloc(%ld) = %#x", x, ret + SZ_CHST));
 	for(i = 0, s = marray; *s && i < mindex; i++, s++)
 		;
- 	if (i < 20000)
+ 	if (i < 100000)
 	    {
 		*s = ret;
 		if (i == mindex)
@@ -258,12 +275,15 @@ size_t	y;
 	size_t	i;
 	int	k;
 
-	x -= SZ_CHST;
-	bcopy(x, (char *)&cp, SZ_CH);
-	bcopy(x + SZ_CH, (char *)&i, SZ_ST);
-	bcopy(x + (int)i + SZ_CHST, (char *)&k, 4);
-	if (bcmp((char *)&k, "VAVA", 4) || (x != cp))
-		dumpcore("MyRealloc %#x %d %d %#x %#x", x, y, i, cp, k);
+	if (x != NULL)
+	  {
+	      x -= SZ_CHST;
+	      bcopy(x, (char *)&cp, SZ_CH);
+	      bcopy(x + SZ_CH, (char *)&i, SZ_ST);
+	      bcopy(x + (int)i + SZ_CHST, (char *)&k, 4);
+	      if (bcmp((char *)&k, "VAVA", 4) || (x != cp))
+		      dumpcore("MyRealloc %#x %d %d %#x %#x", x, y, i, cp, k);
+	  }
 	ret = (char *)realloc(x, y + (size_t)SZ_EX);
 
 	if (!ret)
@@ -287,7 +307,7 @@ size_t	y;
 		Debug((DEBUG_MALLOC, "%#x !found", x));
 	for(l = 0, s = marray; *s && l < mindex; l++,s++)
 		;
- 	if (l < 20000)
+ 	if (l < 100000)
 	    {
 		*s = ret;
 		if (l == mindex)
@@ -329,7 +349,6 @@ char	*x;
 	else if (l == mindex)
 		Debug((DEBUG_MALLOC, "%#x !found", x));
 }
-
 #else
 char	*MyMalloc(x)
 size_t	x;
@@ -547,7 +566,7 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 				*wp++ = (char)(myi + (int) '0');
 				break;
 			case 'c':
-				*wp++ = (char)*pp++;
+				*wp++ = (char)(int)*pp++;
 				break;
 			case '%':
 				*wp++ = '%';
@@ -559,4 +578,23 @@ char	*i0, *i1, *i2, *i3, *i4, *i5, *i6, *i7, *i8, *i9, *i10;
 			}
 	*wp = '\0';
 	return wp - outp;
+}
+
+/*
+ * Make 'readable' version string.
+ */
+char *make_version()
+{
+        int ve, re, pl, be, al;
+	char ver[15];
+
+        sscanf(PATCHLEVEL, "%2d%2d%2d%2d%2d", &ve, &re, &pl, &be, &al);
+        sprintf(ver, "%d.%d", ve, re);	/* version & revision */
+        if (pl)
+                sprintf(ver + strlen(ver), ".%d", pl);	/* patchlevel */
+        if (be)
+                sprintf(ver + strlen(ver), "b%d", be);	/* beta */
+        if (al)
+                sprintf(ver + strlen(ver), "a%d", al);	/* alpha */
+	return mystrdup(ver);
 }

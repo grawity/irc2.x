@@ -241,22 +241,22 @@ void del_ch_left()
 void suspend_irc()
 {
 #if defined(HPUX) || defined(mips) || defined(AIX) || defined(SOL20) || \
-    defined(_SEQUENT_) || defined(linux) || defined(SVR4)
+    defined(_SEQUENT_) || defined(linux) || defined(SVR4) || defined(OSF)
 	signal(SIGTSTP, (void(*)__P((int)))suspend_irc);
-#ifdef DOCURSES
+# ifdef DOCURSES
                 if (termtype == CURSES_TERM) {
                         echo();
                         nocrmode();
                 } 
-#endif /* DOCURSES */
-#ifdef DOTERMCAP
+# endif /* DOCURSES */
+# ifdef DOTERMCAP
                 if (termtype == TERMCAP_TERM)
                         io_off();
-#endif /* DOTERMCAP */
-#ifdef SIGSTOP
+# endif /* DOTERMCAP */
+# ifdef SIGSTOP
 	kill(getpid(), SIGSTOP);
-#endif /* SIGSTOP */
-#ifdef DOCURSES
+# endif /* SIGSTOP */
+# ifdef DOCURSES
                 if (termtype == CURSES_TERM) {
                         /* initscr(); */
                         noecho();
@@ -264,18 +264,18 @@ void suspend_irc()
                         clear();
                         refresh();
                 }
-#endif /* DOCURSES */
-#ifdef DOTERMCAP
+# endif /* DOCURSES */
+# ifdef DOTERMCAP
                 if (termtype == TERMCAP_TERM) {
                         io_on(1);
                         clearscreen();
                 }
-#endif /* DOTERMCAP */
+# endif /* DOTERMCAP */
 		write_statusline();
 #else /* || */
-#if !defined(VMS) && !defined(SVR3)
+# if !defined(VMS) && !defined(SVR3)
 	tstp(); 
-#endif /* !VMS */
+# endif /* !VMS */
 #endif /* || */
 }
 

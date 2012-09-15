@@ -39,17 +39,26 @@
 static  char sccsid[] = "@(#)dbuf.c	2.17 1/30/94 (C) 1990 Markku Savela";
 #endif
 
+/* Do not define until it is fixed. -krys
+#define	DBUF_TAIL
+ */
+
 #include <stdio.h>
 #include "struct.h"
 #include "common.h"
 #include "sys.h"
 
+#undef VALLOC
+#define	DBUF_INIT	10
+
 #if !defined(VALLOC) && !defined(valloc)
 #define	valloc malloc
 #endif
 
-int	dbufalloc = 0, dbufblocks = 0, poolsize = BUFFERPOOL;
-static	dbufbuf	*freelist = NULL;
+int	dbufalloc = 0, dbufblocks = 0;
+int	poolsize = BUFFERPOOL;
+dbufbuf	*freelist = NULL;
+
 
 /* This is a dangerous define because a broken compiler will set DBUFSIZ
 ** to 4, which will work but will be very inefficient. However, there
@@ -59,31 +68,61 @@ static	dbufbuf	*freelist = NULL;
 
 #define DBUFSIZ sizeof(((dbufbuf *)0)->data)
 
+#ifdef DBUF_INIT
+
+/* dbuf_init--initialize a stretch of memory as dbufs.
+   Doing this early on should save virtual memory if not real memory..
+   at the very least, we get more control over what the server is doing
+
+   mika@cs.caltech.edu 6/24/95
+*/
+
+void dbuf_init()
+{
+	dbufbuf *dbp;
+	int i = 0, nb;
+
+	nb = poolsize / sizeof(dbufbuf);
+	freelist = (dbufbuf *)valloc(nb * sizeof(dbufbuf));
+	if (!freelist)
+		return; /* screw this if it doesn't work */
+	dbp = freelist;
+	for( ; i < (nb - 1); i++, dbp++, dbufblocks++)
+		dbp->next = (dbp + 1);
+	dbp->next = NULL;
+	dbufblocks++;
+}
+
+#endif /* DBUF_INIT */
+
 /*
 ** dbuf_alloc - allocates a dbufbuf structure either from freelist or
 ** creates a new one.
+** Return: 0 on success, -1 on fatal alloc error, -2 on pool exceeding
 */
-static dbufbuf *dbuf_alloc()
+static int dbuf_alloc(dbptr)
+dbufbuf **dbptr;
 {
 #if defined(VALLOC) && !defined(DEBUGMODE)
-	Reg	dbufbuf	*dbptr, *db2ptr;
+	Reg	dbufbuf	*db2ptr;
 	Reg	int	num;
-#else
-	Reg	dbufbuf *dbptr;
 #endif
 
 	dbufalloc++;
-	if ((dbptr = freelist))
+	if ((*dbptr = freelist))
 	    {
 		freelist = freelist->next;
-		return dbptr;
+		return 0;
 	    }
 	if (dbufalloc * DBUFSIZ > poolsize)
 	    {
 		dbufalloc--;
-		return NULL;
+		return -2;	/* Not fatal, go back and increase poolsize */
 	    }
 
+#if defined(_SC_PAGE_SIZE) && !defined(_SC_PAGESIZE)
+#define	_SC_PAGESIZE	_SC_PAGE_SIZE
+#endif
 #if defined(VALLOC) && !defined(DEBUGMODE)
 # if defined(SOL20) || defined(_SC_PAGESIZE)
 	num = sysconf(_SC_PAGESIZE)/sizeof(dbufbuf);
@@ -95,21 +134,23 @@ static dbufbuf *dbuf_alloc()
 
 	dbufblocks += num;
 
-	dbptr = (dbufbuf *)valloc(num*sizeof(dbufbuf));
-	if (!dbptr)
-		return (dbufbuf *)NULL;
+	*dbptr = (dbufbuf *)valloc(num*sizeof(dbufbuf));
+	if (!*dbptr)
+		return -1;
 
 	num--;
-	for (db2ptr = dbptr; num; num--)
+	for (db2ptr = *dbptr; num; num--)
 	    {
 		db2ptr = (dbufbuf *)((char *)db2ptr + sizeof(dbufbuf));
 		db2ptr->next = freelist;
 		freelist = db2ptr;
 	    }
-	return dbptr;
+	return 0;
 #else
 	dbufblocks++;
-	return (dbufbuf *)MyMalloc(sizeof(dbufbuf));
+	if (!(*dbptr = (dbufbuf *)MyMalloc(sizeof(dbufbuf))))
+		return -1;
+	return 0;
 #endif
 }
 /*
@@ -128,7 +169,7 @@ Reg	dbufbuf	*ptr;
 ** there is no reason to continue this buffer...). After this
 ** the "dbuf" has consistent EMPTY status... ;)
 */
-static int dbuf_malloc_error(dyn)
+int dbuf_malloc_error(dyn)
 dbuf *dyn;
     {
 	dbufbuf *p;
@@ -140,6 +181,9 @@ dbuf *dyn;
 		dyn->head = p->next;
 		dbuf_free(p);
 	    }
+#ifdef DBUF_TAIL
+	dyn->tail = dyn->head;
+#endif
 	return -1;
     }
 
@@ -149,19 +193,42 @@ dbuf	*dyn;
 char	*buf;
 int	length;
 {
-	Reg	dbufbuf	**h, *d;
+	Reg	dbufbuf	**h;
+	dbufbuf *d;
+#ifdef DBUF_TAIL
+	dbufbuf *dtail;
+	Reg	int	off;
+#else
 	Reg	int	nbr, off;
-	Reg	int	chunk;
+#endif
+	Reg	int	chunk, i, dlength;
 
 	off = (dyn->offset + dyn->length) % DBUFSIZ;
+#ifndef DBUF_TAIL
 	nbr = (dyn->offset + dyn->length) / DBUFSIZ;
+#else
+	dtail = dyn->tail;
+#endif
+	dlength = dyn->length;
 	/*
 	** Locate the last non-empty buffer. If the last buffer is
 	** full, the loop will terminate with 'd==NULL'. This loop
 	** assumes that the 'dyn->length' field is correctly
 	** maintained, as it should--no other check really needed.
 	*/
+#ifdef DBUF_TAIL
+        if (!dyn->length)
+                h = &(dyn->head);
+        else
+        {
+                if (off)
+                        h = &(dyn->tail);
+                else
+                        h = &(dyn->tail->next);
+        }
+#else
 	for (h = &(dyn->head); (d = *h) && --nbr >= 0; h = &(d->next));
+#endif
 	/*
 	** Append users data to buffer, allocating buffers as needed
 	*/
@@ -171,8 +238,29 @@ int	length;
 	    {
 		if ((d = *h) == NULL)
 		    {
-			if ((d = (dbufbuf *)dbuf_alloc()) == NULL)
-				return dbuf_malloc_error(dyn);
+			if ((i = dbuf_alloc(&d)))
+			    {
+				if (i == -1)	/* out of memory, cleanup */
+					dbuf_malloc_error(dyn);
+				else
+				/* If we run out of bufferpool, visit upper
+				 * level to increase it and retry. -Vesa
+				 */
+				    {
+					/*
+					** Cancel this dbuf_put as well,
+					** since it is incomplete. -krys
+					*/
+					dyn->length = dlength;
+#ifdef DBUF_TAIL
+					dyn->tail = dtail;
+#endif
+				    }
+				return i;
+			    }
+#ifdef DBUF_TAIL
+			dyn->tail = d;
+#endif
 			*h = d;
 			d->next = NULL;
 		    }
@@ -194,6 +282,9 @@ int	*length;
     {
 	if (dyn->head == NULL)
 	    {
+#ifdef DBUF_TAIL
+		dyn->tail = NULL;
+#endif
 		*length = 0;
 		return NULL;
 	    }
@@ -222,15 +313,24 @@ int	length;
 		dyn->length -= chunk;
 		if (dyn->offset == DBUFSIZ || dyn->length == 0)
 		    {
-			d = dyn->head;
-			dyn->head = d->next;
+			if ((d = dyn->head))
+			    {	/* What did I do? A memory leak.. ? */
+				dyn->head = d->next;
+				dbuf_free(d);
+			    }
 			dyn->offset = 0;
-			dbuf_free(d);
 		    }
 		chunk = DBUFSIZ;
 	    }
 	if (dyn->head == (dbufbuf *)NULL)
+#ifdef DBUF_TAIL
+	{
+		dyn->tail = NULL;
+#endif
 		dyn->length = 0;
+#ifdef DBUF_TAIL
+	}
+#endif
 	return 0;
     }
 

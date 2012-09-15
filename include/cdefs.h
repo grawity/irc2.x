@@ -58,8 +58,9 @@
  *	$Id: cdefs.h,v 4.9.1.3 1993/09/08 00:00:07 vixie Exp $
  */
 
-#ifndef	_CDEFS_H_
+#if !defined(_CDEFS_H_) && !defined(_SYS_CDEFS_H_)
 #define	_CDEFS_H_
+#define	_SYS_CDEFS_H_
 
 #if defined(__cplusplus)
 #define	__BEGIN_DECLS	extern "C" {
@@ -77,12 +78,16 @@
  * strings produced by the __STRING macro, but this only works with ANSI C.
  */
 #if defined(__STDC__) || defined(__cplusplus)
+#ifndef __P
 #define	__P(protos)	protos		/* full-blown ANSI C */
+#endif
 #define	__CONCAT(x,y)	x ## y
 #define	__STRING(x)	#x
 
 #else	/* !(__STDC__ || __cplusplus) */
+#ifndef __P
 #define	__P(protos)	()		/* traditional C preprocessor */
+#endif
 #define	__CONCAT(x,y)	x/**/y
 #define	__STRING(x)	"x"
 

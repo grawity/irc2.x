@@ -23,23 +23,29 @@
 
 Overview of this document:
 
-  1) The config.h file
-  2) Editing the Makefile
-  3) Compiling IRC
-  4) The ircd.conf file
+  1) Installing IRC
+  2) The config.h file
+  3) Editing the Makefile
+  4) Compiling IRC
+  5) The ircd.conf file
 
+1) So that ircd/irc will compile and work correctly with your version of
+   Unix, it is necessary that you run "make" first.  This will run
+   configure which will probe your system for any peculiarities it has 
+   and setup the Makefile and a file of default #define's ($arch/setup.h).
+   To change the default directory into which ircd will install using
+   "make install", invoke "make" using the "CONFIGARGS=--prefix=/dir"
+   command line option.
 
-1) Edit the "config.h" file and make changes to the various #DEFINE's:
+2) Edit the "config.h" file and make changes to the various #DEFINE's:
  
-   a) Copy the config.h.dist file to config.h before editing.
-  
-   b) Define what type of UNIX your machine uses.
+   a) Define what type of UNIX your machine uses.
 
       Pick the machine type which best describes your machine and change
       the #undef to #define (if needed).  Some flavours of Unix require no
       #define and in such cases all others should be #undef'd.
 
-   c) DEBUGMODE
+   b) DEBUGMODE
 
 	Define DEBUGMODE if you want to see the ircd debugging information
       as the daemon is running. Normally this function will be undefined
@@ -48,14 +54,14 @@ Overview of this document:
       this induces a large overhead for the server as it does a large amount
       of self diagnostics whilst running.
       
-   d) SPATH, CPATH, MPATH, LPATH, PPATH
+   c) SPATH, CPATH, MPATH, LPATH, PPATH, TPATH
 
 	Define SPATH to be the directory path to ircd.  This is usually
       /usr/local/bin/ircd, unless you don't have installation permission
       there. 
 
-      Define CPATH to be the directory path to the "irc.conf" file.
-      This path is usually /usr/local/lib/irc.conf. The format of this file 
+      Define CPATH to be the directory path to the "ircd.conf" file.
+      This path is usually /usr/local/lib/ircd.conf. The format of this file 
       will be discussed later.
 
       The LPATH #define should be set to "/dev/null" unless you plan to 
@@ -70,13 +76,17 @@ Overview of this document:
       file.  It is used for storing the server's PID so a ps(1) isn't
       necessary.
 
-   e) CHROOTDIR
+      Define TPATH to be the directory path to the "ircd.tune" file.
+      This path is usually /usr/local/lib/ircd.tune.  This file is used
+      by the server to optimize memory use.
+
+   d) CHROOTDIR
 
 	To use the CHROOTDIR feature, make sure it is #define'd and that
       the server is being run as root.  The server will chroot to the
-      directory name provded by DPATH.
+      directory name provded by IRCDDIR (in Makefile).
 
-   f) ENABLE_SUMMON, ENABLE_USERS
+   e) ENABLE_SUMMON, ENABLE_USERS
 
 	For security conscious server admins, they may wish to leave
       ENABLE_USERS undefined, disabling the USERS command which can be used
@@ -84,7 +94,7 @@ Overview of this document:
       whether the server will attempt to summon local users to irc by
       writing a message similar to that from talk(1) to a user's tty.
 
-   g) SHOW_INVISIBLE_LUSERS, NO_DEFAULT_INVISIBLE
+   f) SHOW_INVISIBLE_LUSERS, NO_DEFAULT_INVISIBLE
 
 	On large IRC networks, the number of invisible users is likely to
       be large and reporting that number cause no pain.  To aid and effect
@@ -93,7 +103,7 @@ Overview of this document:
       operators.  The NO_DEFAULT_INVISIBLE define is used to toggle whether
       clients are automatically made invisible when they register.
 
-   h) OPER_KILL, OPER_REHASH, OPER_RESTART, LOCAL_KILL_ONLY
+   g) OPER_KILL, OPER_REHASH, OPER_RESTART, LOCAL_KILL_ONLY
 
 	The three operator only commands, KILL, REHASH and RESTART, may all
       be disabled to ensure that an operator who does not have the correct
@@ -101,28 +111,24 @@ Overview of this document:
       To further curb the actions of guest operators, LOCAL_KILL_ONLY can
       be defined to only allow locally connected clients to be KILLed.
 
-   i) The rest of the user changable #define's should be pretty much self
+   h) The rest of the user changable #define's should be pretty much self
       explanatory in the config.h file.  It is *NOT* recommended that any
       of the file undef the line with "STOP STOP" in it be changed.
-
-2) Using configure.
-
-     So that ircd/irc will compile and work correctly with your version of
-   Unix, it is necessary that you run "configure" first.  This will probe
-   your system for any peculiarities it has and setup the Makefile and a
-   file of default #define's (include/setup.h).  To change the default
-   directory into which ircd will install using "make install", invoke
-   configure using the --prefix=/dir command line option.
 
 3) Editting Makefile and compilation.
 
       Once configure has been run, it is safe to edit the Makefile.  You
-   will most likely need to uncomment the correct IRCDLIBS and IRCLIBS
-   lines.  To now build and install the server, type "make && make install".
+   will most likely need to uncomment the correct IRCDLIBS, IRCLIBS and
+   IRCDDIR lines.
+
+      To now build and install the server, type "make && make install".
+
+      If you have trouble compiling ircd, copy Makefile.in to Makefile and
+   edit Makefile as appropriate.
 
 4) The ircd.conf file.
 
-   After installing the ircd and irc programs, edit the irc.conf file
+   After installing the ircd and irc programs, edit the ircd.conf file
    as per the instructions in this section and  install it in the 
    location you specified in the config.h file.  There is a sample
    conf file called example.conf in the /doc directory.
@@ -131,12 +137,12 @@ Overview of this document:
    names.  If you are unfamiliar with this, you should probably scan 
    through it before proceeding.
 
-   The irc.conf file contains various records that specify configuration
+   The ircd.conf file contains various records that specify configuration
    options.  The record types are as follows:
    
    1.  Server connections   	(C,N)
    2.  Machine information	(M)
-   3.  Client connections	(I)
+   3.  Client connections	(I,i)
    4.  Default local server	(U)
    5.  Operator priviliges	(O)
    6.  Administrative info	(A)
@@ -178,22 +184,22 @@ Overview of this document:
         (remember the old rwho program with traffic problems when
         the number of machines increased).
 
-   The format for the CONNECT entry in the "irc.conf" is:
+   The format for the CONNECT entry in the "ircd.conf" is:
 
-       C:<TARGET Host Addr>:<Password>:<TARGET Host NAME>:<TARGET Host PORT>
-Field: 1        2              3                4               5
+       C:<TARGET Host Addr>:<Password>:<TARGET Host NAME>:<TARGET PORT>:<Class>
+Field: 1        2              3                4               5          6
 
    for example:
    
-    C:nic.funet.fi:passwd:nic.funet.fi:6667 
+    C:nic.funet.fi:passwd:nic.funet.fi:6667:1
 
           - or -
 
-    C:128.214.6.100:passwd:nic.funet.fi:6667
+    C:128.214.6.100:passwd:nic.funet.fi:6667:1
 
           - or -
 
-    C:root@nic.funet.fi:passwd:nic.funet.fi:6667
+    C:root@nic.funet.fi:passwd:nic.funet.fi:6667:1
 
 
     Explanation:
@@ -222,24 +228,32 @@ Field: 1        2              3                4               5
              If this field is left blank, then no connections will 
              be attempted to the TARGET host, and your host will accept
              connections FROM the TARGET host instead.
+	     The port field can contain 2 ports, separated by a .
+	     In this case, the first port is used when auto-connecting,
+	     the second port is used for the UDP pings to the targer
+	     server.
+
+    Field 6: The class field should refer to an existing class and
+             determines the maximum number of simultaneous uses of the
+             C-line allowable through the max. links field in the Y-line.
 
    Some examples:
 
-            C:nic.funet.fi::nic.funet.fi:6667
+            C:nic.funet.fi::nic.funet.fi:6667:1
  
             This reads: Connect to host "nic.funet.fi", with no password
             and expect this server to identify itself to you as
             "nic.funet.fi". Your machine will connect to this host to
             PORT 6667.
 
-            C:18.72.0.252:Jeff:garfield.mit.edu:6667
+            C:18.72.0.252:Jeff:garfield.mit.edu:6667:1
 
             This reads: Connect to a host at address "18.72.0.252", using a
             password of "Jeff".  The TARGET server should identify
             itself as "garfield.mit.edu".  You will connect to Internet
             Port 6667 on this host.
 
-            C:irc.nada.kth.se::irc.nada.kth.se
+            C:irc.nada.kth.se::irc.nada.kth.se:1
 
             This reads: do not attempt to connect to "irc.nada.kth.se",
 			but if "irc.nada.kth.se" requests a connection,
@@ -252,9 +266,9 @@ Field: 1        2              3                4               5
 
    Here's how it would look if we connected "nic.funet.fi" first:
 
-	C:garfield.mit.edu::garfield.mit.edu:6667
-	C:irc.nada.kth.se::irc.nada.kth.se:6667
-	C:nic.funet.fi::nic.funet.fi:6667
+	C:garfield.mit.edu::garfield.mit.edu:6667:1
+	C:irc.nada.kth.se::irc.nada.kth.se:6667:1
+	C:nic.funet.fi::nic.funet.fi:6667:1
 
    Ircd will attempt to connect to nic.funet.fi first, then to irc.nada
    and finally to garfield.
@@ -267,6 +281,11 @@ Field: 1        2              3                4               5
    they can connect to you.  These entries are of the same format as
    the "C" entries.
     
+   The format for the NOCONNECT entry in the "ircd.conf" is:
+
+       N:<TARGET Host Addr>:<Password>:<TARGET Host NAME>:<Domain Mask>:<Class>
+Field: 1        2              3                4               5          6
+
    Let us assume that "garfield.mit.edu" connects to your server
    and you want to place password authorization authorization on garfield.
    The "N" entry would be:
@@ -283,6 +302,30 @@ Field: 1        2              3                4               5
    don't expect login password.  The connecting host should identify itself
    as "garfield.mit.edu". 
 
+    Explanation:
+
+    Each field is separated with a ":" charcter:
+
+    Field 1: "N" corresponds to a server Noconnect option.
+
+    Field 2: Specifies the host name or IP address of the machine to connect
+	     to.  If "user@" prefixes the actual hostname or IP address
+	     the server will require that the remote username returned by
+	     the ident server be the same as the one given before the "@".
+
+    Field 3: The password of the other host.  A password must always be
+	     present for the line to be recognized. If CRYPT_LINK_PASSWORD
+             is defined in config.h, this password must be crypted.
+
+    Field 4: The full hostname of the target machine. This is the name that 
+	     the TARGET server will identify itself with when you connect 
+	     to it.  If you were connecting to nic.funet.fi you would receive
+	     "nic.funet.fi" and that is what you should place in 
+	     this field.
+  
+    Field 5: Domain masking, see below.
+
+    Field 6: The class field should refer to an existing class.
   
    Wildcards domains: 
 	To reduce the great amount of servers in IRCnet wildcard
@@ -321,8 +364,8 @@ Field: 1        2              3                4               5
    IRC needs to know a few things about your UNIX site, and the "M" command
    specifies this information for IRC.  The fomat of this command is:
 
-           M:<YOUR Host NAME>:xxx:<Geographic Location>:<Internet Port>
-   Field:  1         2         3           4                 5
+           M:<YOUR Host NAME>:xxx:<Geographic Location>
+   Field:  1         2         3           4
 
    Explanation:
 
@@ -340,25 +383,20 @@ Field: 1        2              3                4               5
                I say: "Denver Colorado, USA".  Finnish sites (like
                tolsun.oulu.fi generally say something like "Oulu, Finland".
  
-      Field 5: The Internet port your server will use.  Should be set to
-	       the same value as in the config.h file.
-
-
       Example:
-                M:tolsun.oulu.fi::Oulu, Finland:6667
+                M:tolsun.oulu.fi::Oulu, Finland
 
                 This line reads: My Host's name is "tolsun.oulu.fi" and
-                my site is located in "Oulu, Finland".  My ircd will use
-		Internet Port 6667.
+                my site is located in "Oulu, Finland".
 
-
-                M:orion.cair.du.edu::Denver Colorado, USA:6667
+                M:orion.cair.du.edu::Denver Colorado, USA
 
                 This line reads: My Hosts name is "orion.cair.du.edu"
                 and my site is located in "Denver Colorado, USA".
-	        I have defined Internet Port number "6667" to be used
-                as my IRCD Socket Port.
 
+   NEW!!!
+      As of the 2.9.1 version of the server, the field 5 disappears.
+      To define on which port your server listens, use Port lines.
 
    3. CLIENT CONNECTIONS -   How to let clients connect to your IRCD.
 
@@ -367,7 +405,7 @@ Field: 1        2              3                4               5
    program is the C client.  Each person that talks via IRC is running
    their own client.
 
-   The irc.conf files contains entries that specify which clients are allowed
+   The ircd.conf files contains entries that specify which clients are allowed
    to connect to your irc daemon.  Obviously you want to allow your cwn
    machine's clients to connect.  You may want to allow clients from 
    other sites to connect.  These remote clients will use your server
@@ -376,8 +414,9 @@ Field: 1        2              3                4               5
 
    The format of this entry in the conf file is:
 
-          I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Internet Port>
-    Field:1         2               3             4                5
+          I:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Port>:<Class>
+    Field:1         2               3             4              5     6
+          i:<TARGET Host Addr>:<Password>:<TARGET Hosts NAME>:<Port>:<Class>
 
 
       For example, if you were installing IRC on tolsun.oulu.fi and you wanted
@@ -385,29 +424,27 @@ Field: 1        2              3                4               5
       tolsun and you wanted to let your own clients to connect to your
       server, you would add this entry to the file:
 
-      I:128.214.5.6::tolsun.oulu.fi
-      or
-      I:tolsun.oulu.fi::tolsun.oulu.fi
+      I:128.214.5.6::tolsun.oulu.fi::1
 
       If you wanted to let remote clients connect, you could add the
       following lines:
 
-      I:*.du.edu::*.du.edu
+      I:x::*.du.edu::1
 
       Allow any clients from machines whose names end in "du.edu" to connect
       with no password.
 
-      I:128.214.6.100::nic.funet.fi
+      I:128.214.6.100::nic.funet.fi::1
 
       Allow clients from a machine with that IP number and the name 
       nic.funet.fi to connect.
 
-      I:*.tut.fi:secret:*.tut.fi
+      I:x:secret:*.tut.fi::1
 
       Allow clients from machines matching *.tut.fi to connect
       with the password 'secret'.
 
-      I:*::*
+      I:*::*::1
 
       Allow anyone from anywhere to connect your server.
       This is the easiest way, but it also allows people to for example
@@ -415,6 +452,17 @@ Field: 1        2              3                4               5
       sockets per process your OS allows) clients to your machine
       and take your network ports. Of course the same things can be
       done by simply telnetting to your machine's SMTP port (for example).
+
+      I:x::*.fi:6667:1
+
+      Allow clients from machines matching *.fi to connect on the port
+      6667.
+
+      I:*@*::*@*::1
+
+      Allow clients from anywhere to connect your server.
+      If the client machine does not reply to your server ident query,
+      the client's username will be prefixed by ~
 
    NEW!!!
       As of the 2.7.2d version of the server, the server is able to accept
@@ -425,6 +473,13 @@ Field: 1        2              3                4               5
       which allows the host access as normal, but the port field of the
       I-line must match that of the port of the socket accepting the
       connectiion. A port number of 0 is a wildcard (matches all ports).
+
+   NEW!!!
+      As of the 2.9.1 version of the server, i lines are introduced. They
+      work the same way as I lines, but the clients matching an i line
+      will have a restricted connection. (no nick/mode change, no kick)
+      Such users will have their username prefixed by +, = or - depending
+      on the ident reply.
 
    4. DEFAULT HOSTS (for local clients)
 
@@ -450,7 +505,7 @@ Field: 1        2              3                4               5
 
    To become an IRC Administrator, IRC must know who is authorized to become
    an operator and what their "Nickname" and "Password" is.  To add this
-   information, EDIT your "irc.conf" file and add the following command
+   information, EDIT your "ircd.conf" file and add the following command
    line to it:
 
           O:<TARGET Host NAME>:<password>:<nickname>:<port>:<class>
@@ -476,7 +531,7 @@ Field: 1        2              3                4               5
 
      Field 3: If your AUTHORIZATION Password - this is the password that 
               let's IRC know you are who you say you are!  Never tell anyone
-              your password and always keep the "irc.conf" file protected
+              your password and always keep the "ircd.conf" file protected
               from all of the other users.
  
      Field 4: The Nickname you usually go by - but you can make this what
@@ -562,8 +617,8 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
 
   The format of this command is:
 
-         K:<Host Name>:<time interval(s)>:<User>
-  Field: 1     2               3            4
+         K:<Host Name>:<time interval(s)|comment>:<User>:<port>
+  Field: 1     2                     3               4      5
 
   Explanation:
 
@@ -580,7 +635,7 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
                  very smart thing to do though, why would you run an ircd
                  if you allow nobody to connect to it anyways ?
 
-       Field 3:  Either leave this field empty (no spaces), then then lines
+       Field 3:  Either leave this field empty or put a comment, then the line
 		 is active continuously for the specified user/host machine.
 		 You may also specify intervals during the line should be
 		 active, see examples above.
@@ -588,25 +643,28 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
        Field 4:  The USERNAME of the user you want removed from IRC.  For
                  example 'root'.
 
+       Field 5:  The port on which the Kill line will be effective.
+		 0 means all ports.
+
    
    Some Examples:
-                   K:orion.cair.du.edu::jtrim
+                   K:orion.cair.du.edu::jtrim:0
  
                If user 'jtrim' connects to IRC from host "orion.cair.du.edu"
                then IMMEDIATELY REMOVE HIM from my IRCD.
 
-                   K:*.cair.du.edu::root
+                   K:*.cair.du.edu::root:0
 
                If user 'root' connects to IRC from any host that has the 
                suffix "cair.du.edu" - then IMMEDIATELY REMOVE THEM from
                my IRCD.
 
-                   K:*::vijay
+                   K:*::vijay:0
 
                This line reads "I don't care WHAT HOST user 'vijay' is on,
                I will NEVER allow username 'vijay' to login to my IRCD.
 
-	           K:*.oulu.fi:0800-1200,1400-1900:*
+	           K:*.oulu.fi:0800-1200,1400-1900:*:0
 
 	       This disallows all users from hosts with enddomain 'oulu.fi'
 	       access to your server between 8 and 12am, 2 and 7pm.
@@ -643,36 +701,42 @@ isis}!udenva!jtrim:Terve! Heippa!  Have you said hello in Finnish today?;)
    Each line for a server should have the same number as the sixth
    field.  If it is absent, the server deaults it to 0, using the
    defaults from the config.h file.  To define a connection class,
-   you need to include a Y: line in the irc.conf file.  This enables
+   you need to include a Y: line in the ircd.conf file.  This enables
    you to define the ping frequency, connection frequency and maximum
    number of links that class should have.  Currently, the Y: line MUST
-   appear in the irc.conf file BEFORE it is used in any other way.
+   appear in the ircd.conf file BEFORE it is used in any other way.
 
    The format for the line is:
 
-       Y:<CLASS>:<PING FREQUENCY>:<CONNECT FREQUENCY>:<MAX LINKS>:<SENDQ>
-Field: 1    2                3                4                5     6
+       Y:<CLASS>:<PING FREQUENCY>:<CONNECT FREQ|MAX IP>:<MAX LINKS>:<SENDQ>
+Field: 1    2           3                  4                 5         6
 
    Field 2:  This is the class number which gains the following attributes
-   and should match that which is on the end of the C/N line.
+             and should match that which is on the end of the C/N/I/O line.
 
    Field 3:  This field defines how long the server will let the connection
-   remain "silent" before sending a PING message to make sure it is still
-   alive.  Unless you are sure of what you are doing, use the default value
-   which is in your config.h file.
+             remain "silent" before sending a PING message to make sure it
+	     is still alive.  Unless you are sure of what you are doing,
+	     use the default value which is in your config.h file.
 
-   Field 4:  By changing this number, you change how often your server
-   checks to see if it can connect to this server.  If you want to check
-   very occasionally, use a large value, but if it is an important
-   connection, you might want a smaller value so that you connect to it
-   as soon as possible.
+   Field 4:  This field has a different meaning depending on the use of the
+             Y line:
+             For servers: By changing this number, you change how often your
+                          server checks to see if it can connect to this
+                          server. If you want to check very occasionally, use
+                          a large value, but if it is an important connection,
+                          you might want a smaller value so that you connect
+                          to it as soon as possible.
+             For clients: This defines the maximum number of clients from the
+                          same host (IP) will be allowed.
 
    Field 5:  This field defines the maximum number of links this class
-   will allow from automatic connections.  Using /CONNECT overrides this
-   feature.
+	     will allow from automatic connections (C lines).  Using /CONNECT
+	     overrides this feature.  Also defines the maximum number of
+	     users in this class (I/O lines).
 
    Field 6:  This field defines the 'sendq' value for this class.  If this
-   field is not present, the default (from config.h) is assigned.
+	     field is not present, the default (from config.h) is assigned.
 
    NOTE: leaving any of the fields out means their value is 0 (ZERO)!!
 
@@ -713,69 +777,75 @@ Field: 1    2                3                4                5     6
        L:<SERVER MASK>:*:<SERVER NAME>:<MAX DEPTH>
 Field: 1       2       3       4            5
 
-   Field 2 is a mask of which servers the leaf-like attributes are used on
-   when the server receives SERVER messages.  The wildcards * and ? may be
-   used within this field for matching purposes.  If this field is empty,
-   it acts the same as if it were a single * (ie matches everything).
+   Field 2: mask of which servers the leaf-like attributes are used on
+	    when the server receives SERVER messages.  The wildcards * 
+	    and ? may be used within this field for matching purposes.  
+	    If this field is empty, it acts the same as if it were a
+	    single * (ie matches everything).
 
-   Field 4 is the the server connectted to you that for which you want to
-   enforce leaf-like attributes upon.
+   Field 4: the name of the server connected to you that for which you 
+	    want to enforce leaf-like attributes upon.
 
-   Field 5 is the maximum depth allowed on that leaf and if not specified,
-   a value of 1 is assumed.  The depth is checked each time a SERVER message
-   is received by the server, the hops to the server being the field checked
-   against this max depth and if greater, the connection to the server that
-   made its leaf too deep has its connection dropped.
-   For the L-line to come into effect, both fields, 2 and 4, must match up
-   with the new server being introduced and the server which is responsible
-   for introducing this new server.
+   Field 5: maximum depth allowed on that leaf and if not specified,
+	    a value of 1 is assumed.  The depth is checked each time a
+	    SERVER message is received by the server, the hops to the 
+            server being the field checked against this max depth and
+	    if greater, the connection to the server that made its leaf
+	    too deep has its connection dropped.  For the L-line to come
+	    into effect, both fields, 2 and 4, must match up with the new
+	    server being introduced and the server which is responsible
+	    for introducing this new server.
 
- 11. Service Connections (Not yet implemented)
+ 11. Service Connections (Not Fully Implemented Yet)
 
   Introduction.
    The Service is a special kind of IRC client. It does not have the full
    abilities of a normal user but can behave in a more active manner than
-   a normal client. Services as they stand now are not fully implemented.
-   The following line can be added to your ircd.conf file to enable a
-   service:
+   a normal client. The following line can be added to your ircd.conf file
+   to enable a service:
   
-          S:<TARGET Host Mask>:<password>:<service_name>
-  Field:  1          2             3          4
+          S:<TARGET Host Mask>:<password>:<service_name>:<service type>:<class>
+  Field:  1          2             3          4               5            6
 
   Explanation:
 
-    Field 2:
-	The host mask should be set to match the hosts(s) from which the
-	service will be connecting from. This may be either an IP# or full
-	name (prefered).
+    Field 2: The host mask should be set to match the hosts(s) from which
+             the service will be connecting from. This may be either an
+             IP# or full name (prefered).
 
-   Field 3:
-	This is the password which must be passed in the SERVICE command.
+    Field 3: This is the password which must be passed in the SERVICE command.
  
-   Field 4:
-	The 'service name' is only used for the purpose of finding the
-	right S-line from the ircd.conf file for password matching. The
-	actual service name used is that set by NICK commands prior to
-	SERVICE being sent.
+    Field 4: The name used by the service. Services don't have nicknames, but
+	     a static name defined by the S line.
+
+    Field 5: The type of service. It defines the priviledges given to the
+	     service. Be very careful in the types you allow.
+             The types can be found in include/service.h
+
+    Field 6: The class field should refer to an existing class.
 
    To connect a service to your server, you must first create an S-line
    entry in your ircd.conf file and get your server to read this in (ie
    rehash or reboot). Once your server has updated itself, you can then
    attempt to register your connection as a service.
-   Registering as a service is similar to registering as a normal user
-   except that you must send NICK first and then SERVICE. The service
-   command should look something like this:
+   Registering as a service is done by sending a SERVICE command to the
+   server:
 
-	SERVICE secretpassword referencename :Service information
+	SERVICE servicename servername distribution servicetype 0 :Information
 
    A successfull registering of a service at the server will result in
    a RPL_YOURESERVICE (383) being sent back to you. Any other reply as
    a result of sending service indicates an error has occured.
 
    A service is not a very useful sort of client, it cannot join channels
-   or issue certain commands although most are available to it. Services,
-   however, are not affected by flood control. It is therefore wise to
-   oversee the use of S-lines with some care.
+   or issue certain commands although most are available to it. Services
+   are rejected upon sending an unknown or unallowed command. Services
+   however, are not affected by flood control and can be granted special
+   priviledges. It is therefore wise to oversee the use of S-lines with
+   much care.
+
+   Services can be listed using the SERVLIST command, and can be sent
+   messages using the SQUERY command.
 
  12. Port Connections
 
@@ -827,6 +897,8 @@ Field: 1        2             3   4     5
 
 	Creates a unix socket in the /tmp/.ircd directory called "6667".
 	The unix socket (file) must be a numerical.
+
+     NOTE: You need at least one P line.
 
 13.  Hub Connections
 

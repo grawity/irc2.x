@@ -20,11 +20,13 @@
 #ifndef	__common_include__
 #define __common_include__
 
-#ifndef CDEFSH
+#ifdef HAVE_SYS_CDEFS_H
+#include <sys/cdefs.h>
+#else
 #include "cdefs.h"
 #endif
 
-#ifdef	PARAMH
+#ifdef	HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 
@@ -43,11 +45,12 @@
 #define FALSE (0)
 #define TRUE  (!FALSE)
 
-#ifndef	MALLOCH
+#if 0
+#ifndef	HAVE_SYS_MALLOC_H
 char	*malloc(), *calloc();
-void	free();
 #else
 /*#include MALLOCH*/
+#endif
 #endif
 
 extern	char	*collapse __P((char *));
@@ -66,14 +69,6 @@ extern unsigned long inet_addr __P((char *));
 
 #if defined(NEED_INET_NTOA) || defined(NEED_INET_NETOF)
 #include <netinet/in.h>
-#endif
-
-#ifdef NEED_INET_NTOA
-extern char *inet_ntoa __P((struct in_addr));
-#endif
-
-#ifdef NEED_INET_NETOF
-extern int inet_netof __P((struct in_addr));
 #endif
 
 extern char *myctime __P((time_t));

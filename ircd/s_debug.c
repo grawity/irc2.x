@@ -1,7 +1,7 @@
 /************************************************************************
  *   IRC - Internet Relay Chat, ircd/s_debug.c
  *   Copyright (C) 1990 Jarkko Oikarinen and
- *                      University of Oulu, Computing Center
+ *		      University of Oulu, Computing Center
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -37,10 +37,10 @@ char	serveropts[] = {
 #ifdef	CMDLINE_CONFIG
 'C',
 #endif
-#ifdef	DO_ID
-'d',
-#endif
 #ifdef	DEBUGMODE
+'D',
+#endif
+#ifdef	RANDOM_NDELAY
 'D',
 #endif
 #ifdef	LOCOP_REHASH
@@ -49,11 +49,14 @@ char	serveropts[] = {
 #ifdef	OPER_REHASH
 'E',
 #endif
-#ifdef	NOTE_FORWARDER
-'f',
+#ifdef	SUN_GSO_BUG
+'g',
 #endif
 #ifdef	HUB
 'H',
+#endif
+#ifdef	BETTER_CDELAY
+'h',
 #endif
 #ifdef	SHOW_INVISIBLE_LUSERS
 'i',
@@ -77,14 +80,17 @@ char	serveropts[] = {
 #ifdef	IDLE_FROM_MSG
 'M',
 #endif
+#ifdef	NPATH
+'N',
+#endif
+#ifdef	BETTER_NDELAY
+'n',
+#endif
 #ifdef	CRYPT_OPER_PASSWORD
 'p',
 #endif
 #ifdef	CRYPT_LINK_PASSWORD
 'P',
-#endif
-#ifdef	NPATH
-'N',
 #endif
 #ifdef	LOCOP_RESTART
 'r',
@@ -92,20 +98,23 @@ char	serveropts[] = {
 #ifdef	OPER_RESTART
 'R',
 #endif
+#ifdef	USE_SERVICES
+'s',
+#endif
 #ifdef	ENABLE_SUMMON
 'S',
 #endif
 #ifdef	OPER_REMOTE
 't',
 #endif
-#ifdef	IRCII_KLUDGE
-'u',
-#endif
 #ifdef	ENABLE_USERS
 'U',
 #endif
 #ifdef	VALLOC
 'V',
+#endif
+#ifdef	NOWRITEALARM
+'w',
 #endif
 #ifdef	UNIXPORT
 'X',
@@ -116,6 +125,12 @@ char	serveropts[] = {
 #ifdef	V28PlusOnly
 '8',
 #endif
+' ',
+'V',
+#ifndef NoV28Links
+'0',
+#endif
+'1',
 '\0'};
 
 #include "common.h"
@@ -180,8 +195,8 @@ va_dcl
 	int	err = errno;
 
 #ifdef	USE_SYSLOG
-	if (level == LOG_ERR)
-		syslog(LOG_ERR, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+	if (level == DEBUG_ERROR)
+		syslog(LOG_ERR, form, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
 #endif
 	if ((debuglevel >= 0) && (level <= debuglevel))
 	    {
@@ -241,7 +256,7 @@ char	*nick;
 		return;
 	    }
 	secs = rus.ru_utime.tv_sec + rus.ru_stime.tv_sec;
-	rup = time(NULL) - me.since;
+	rup = timeofday - me.since;
 	if (secs == 0)
 		secs = 1;
 
@@ -315,9 +330,38 @@ char	*nick;
 }
 #endif
 
-void	count_memory(cptr, nick)
+void	send_defines(cptr, nick)
+aClient *cptr;
+char	*nick;
+{
+#ifdef HUB
+    	sendto_one(cptr, 
+	   ":%s %d %s :HUB:%d LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
+		   ME, RPL_STATSDEFINE, nick, HUB, LISTENQUEUE, 
+		   MAXCONNECTIONS, TIMESEC, HANGONRETRYDELAY, HANGONGOODLINK,
+		   WRITEWAITDELAY, CONNECTTIMEOUT);
+#else
+    	sendto_one(cptr,
+		   ":%s %d %s :LQ:%d MXC:%d TS:%d HRD:%d HGL:%d WWD:%d CTO:%d",
+		   ME, RPL_STATSDEFINE, nick, LISTENQUEUE, MAXCONNECTIONS,
+		   TIMESEC, HANGONRETRYDELAY, HANGONGOODLINK, WRITEWAITDELAY,
+		   CONNECTTIMEOUT);
+#endif
+    	sendto_one(cptr, ":%s %d %s :KCTL:%d DCTL:%d CF:%d MCPU:%d",
+		   ME, RPL_STATSDEFINE, nick, KILLCHASETIMELIMIT,
+		   DELAYCHASETIMELIMIT, CLIENT_FLOOD, MAXCHANNELSPERUSER);
+	sendto_one(cptr, ":%s %d %s :H:%d N:%d U:%d R:%d T:%d C:%d P:%d K:%d",
+		   ME, RPL_STATSDEFINE, nick, HOSTLEN, NICKLEN, USERLEN,
+		   REALLEN, TOPICLEN, CHANNELLEN, PASSWDLEN, KEYLEN);
+	sendto_one(cptr, ":%s %d %s :BS:%d MXR:%d MXB:%d MXBL:%d",
+		   ME, RPL_STATSDEFINE, nick, BUFSIZE, MAXRECIPIENTS, MAXBANS,
+		   MAXBANLENGTH);
+}
+
+void	count_memory(cptr, nick, debug)
 aClient	*cptr;
 char	*nick;
+int	debug;
 {
 	extern	aChannel	*channel;
 	extern	aClass	*classes;
@@ -330,150 +374,283 @@ char	*nick;
 	Reg	aConfItem *aconf;
 	Reg	aClass	*cltmp;
 
-	int	lc = 0,		/* local clients */
-		ch = 0,		/* channels */
-		lcc = 0,	/* local client conf links */
-		rc = 0,		/* remote clients */
-		us = 0,		/* user structs */
-		chu = 0,	/* channel users */
-		chi = 0,	/* channel invites */
-		chb = 0,	/* channel bans */
-		wwu = 0,	/* whowas users */
-		cl = 0,		/* classes */
-		co = 0;		/* conf lines */
+	int	lc = 0, d_lc = 0,	/* local clients */
+		ch = 0, d_ch = 0,	/* channels */
+		lcc = 0, d_lcc = 0,	/* local client conf links */
+		rc = 0, d_rc = 0,	/* remote clients */
+		us = 0, d_us = 0,	/* user structs */
+		chu = 0, d_chu = 0,	/* channel users */
+		chi = 0, d_chi = 0,	/* channel invites */
+		chb = 0, d_chb = 0,	/* channel bans */
+		chh = 0, d_chh = 0,	/* channel in history */
+		wwu = 0, d_wwu = 0,	/* whowas users */
+		cl = 0, d_cl = 0,	/* classes */
+		co = 0, d_co = 0;	/* conf lines */
 
-	int	usi = 0,	/* users invited */
-		usc = 0,	/* users in channels */
-		aw = 0,		/* aways set */
-		wwa = 0;	/* whowas aways */
+	int	usi = 0, d_usi = 0,	/* users invited */
+		usc = 0, d_usc = 0,	/* users in channels */
+		aw = 0, d_aw = 0,	/* aways set */
+		wwa = 0, d_wwa = 0,	/* whowas aways */
+		wwuw = 0, d_wwuw = 0;   /* whowas uwas */
 
-	u_long	chm = 0,	/* memory used by channels */
-		chbm = 0,	/* memory used by channel bans */
-		lcm = 0,	/* memory used by local clients */
-		rcm = 0,	/* memory used by remote clients */
-		awm = 0,	/* memory used by aways */
-		wwam = 0,	/* whowas away memory used */
-		wwm = 0,	/* whowas array memory used */
-		com = 0,	/* memory used by conf lines */
-		db = 0,		/* memory used by dbufs */
-		rm = 0,		/* res memory used */
-		totcl = 0,
-		totch = 0,
-		totww = 0,
-		tot = 0;
+	u_long	chm = 0, d_chm = 0,	/* memory used by channels */
+		chhm = 0, d_chhm = 0,	/* memory used by channel in history */
+		chbm = 0, d_chbm = 0,	/* memory used by channel bans */
+		lcm = 0, d_lcm = 0,	/* memory used by local clients */
+		rcm = 0, d_rcm = 0,	/* memory used by remote clients */
+		awm = 0, d_awm = 0,	/* memory used by aways */
+		wwam = 0, d_wwam = 0,	/* whowas away memory used */
+		wwm = 0, d_wwm = 0,	/* whowas array memory used */
+		dm = 0, d_dm = 0,	/* delay array memory used */
+		com = 0, d_com = 0,	/* memory used by conf lines */
+		db = 0, d_db = 0,	/* memory used by dbufs */
+		rm = 0, d_rm = 0,	/* res memory used */
+		totcl = 0, d_totcl = 0,
+		totch = 0, d_totch = 0,
+		totww = 0, d_totww = 0,
+		tot = 0, d_tot = 0;
+	time_t	start;
 
-	count_whowas_memory(&wwu, &wwa, &wwam);
-	wwm = sizeof(aName) * ww_size;
-
-	for (acptr = client; acptr; acptr = acptr->next)
+	if (debug)
 	    {
-		if (MyConnect(acptr))
-		    {
-			lc++;
-			for (link = acptr->confs; link; link = link->next)
-				lcc++;
-		    }
-		else
-			rc++;
-		if (acptr->user)
-		   {
-			us++;
-			for (link = acptr->user->invited; link;
-			     link = link->next)
-				usi++;
-			for (link = acptr->user->channel; link;
-			     link = link->next)
-				usc++;
-			if (acptr->user->away)
-			    {
-				aw++;
-				awm += (strlen(acptr->user->away)+1);
-			    }
-		   }
+		start = time(NULL);
+		count_whowas_memory(&d_wwu, &d_wwa, &d_wwam, &d_wwuw);
+		d_wwm = sizeof(aName) * ww_size;
+		d_dm = sizeof(aLock) * lk_size;
 	    }
+	wwu = istat.is_wwusers;
+	wwa = istat.is_wwaways;
+	wwam = istat.is_wwawaysmem;
+	wwuw = istat.is_wwuwas;
+	wwm = sizeof(aName) * ww_size;
+	dm = sizeof(aLock) * lk_size;
+
+	/*lc = istat.is_unknown + istat.is_myclnt + istat.is_serv;*/
+	lc = istat.is_localc;
+	lcc = istat.is_conflink;
+	rc = istat.is_remc;
+	us = istat.is_users;
+	usi = istat.is_useri;
+	usc = istat.is_userc;
+	aw = istat.is_away;
+	awm = istat.is_awaymem;
+
+	if (debug)
+		for (acptr = client; acptr; acptr = acptr->next)
+		    {
+			if (MyConnect(acptr))
+			    {
+				d_lc++;
+				for (link =acptr->confs; link; link=link->next)
+					d_lcc++;
+			}
+			    else
+				d_rc++;
+			if (acptr->user)
+			    {
+				d_us++;
+				for (link = acptr->user->invited; link;
+				     link = link->next)
+					d_usi++;
+				d_usc += acptr->user->joined;
+				if (acptr->user->away)
+				    {
+					d_aw++;
+					d_awm += (strlen(acptr->user->away)+1);
+				    }
+			    }
+		    }
+
 	lcm = lc * CLIENT_LOCAL_SIZE;
 	rcm = rc * CLIENT_REMOTE_SIZE;
 
-	for (chptr = channel; chptr; chptr = chptr->nextch)
+	d_lcm = d_lc * CLIENT_LOCAL_SIZE;
+	d_rcm = d_rc * CLIENT_REMOTE_SIZE;
+
+	ch = istat.is_chan;
+	chm = istat.is_chanmem;
+	chh = istat.is_hchan;
+	chhm = istat.is_hchanmem;
+	chi = istat.is_invite;
+	chb = istat.is_bans;
+	chbm = istat.is_banmem + chb * sizeof(Link);
+	chu = istat.is_chanusers;
+
+	if (debug)
 	    {
-		ch++;
-		chm += (strlen(chptr->chname) + sizeof(aChannel));
-		for (link = chptr->members; link; link = link->next)
-			chu++;
-		for (link = chptr->invites; link; link = link->next)
-			chi++;
-		for (link = chptr->banlist; link; link = link->next)
+		for (chptr = channel; chptr; chptr = chptr->nextch)
 		    {
-			chb++;
-			chbm += (strlen(link->value.cp)+1+sizeof(Link));
+			if (chptr->users == 0)
+			    {
+				d_chh++;
+				d_chhm+=strlen(chptr->chname)+sizeof(aChannel);
+			    }
+			else
+			    {
+				d_ch++;
+				d_chm += (strlen(chptr->chname) +
+					  sizeof(aChannel));
+			    }
+			for (link = chptr->members; link; link = link->next)
+				d_chu++;
+			for (link = chptr->invites; link; link = link->next)
+				d_chi++;
+			for (link = chptr->banlist; link; link = link->next)
+			    {
+				d_chb++;
+				d_chbm += strlen(link->value.cp) + 1;
+			    }
 		    }
+		d_chbm += d_chb * sizeof(Link);
 	    }
 
-	for (aconf = conf; aconf; aconf = aconf->next)
+	co = istat.is_conf;
+	com = istat.is_confmem;
+	cl = istat.is_class;
+
+	if (debug)
 	    {
-		co++;
-		com += aconf->host ? strlen(aconf->host)+1 : 0;
-		com += aconf->passwd ? strlen(aconf->passwd)+1 : 0;
-		com += aconf->name ? strlen(aconf->name)+1 : 0;
-		com += aconf->ping ? sizeof(*aconf->ping) : 0;
-		com += sizeof(aConfItem);
+		for (aconf = conf; aconf; aconf = aconf->next)
+		    {
+			d_co++;
+			d_com += aconf->host ? strlen(aconf->host)+1 : 0;
+			d_com += aconf->passwd ? strlen(aconf->passwd)+1 : 0;
+			d_com += aconf->name ? strlen(aconf->name)+1 : 0;
+			d_com += aconf->ping ? sizeof(*aconf->ping) : 0;
+			d_com += sizeof(aConfItem);
+		    }
+		for (cltmp = classes; cltmp; cltmp = cltmp->next)
+			d_cl++;
 	    }
 
-	for (cltmp = classes; cltmp; cltmp = cltmp->next)
-		cl++;
+	if (debug)
+		sendto_one(cptr, ":%s %d %s :Request processed in %u seconds",
+			   me.name, RPL_STATSDEBUG, nick, time(NULL) - start);
 
 	sendto_one(cptr, ":%s %d %s :Client Local %d(%d) Remote %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, lc, lcm, rc, rcm);
-	sendto_one(cptr, ":%s %d %s :Users %d(%d) Invites %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, us, us*sizeof(anUser), usi,
-		   usi * sizeof(Link));
+	if (debug
+	    && (lc != d_lc || lcm != d_lcm || rc != d_rc || rcm != d_rcm))
+		sendto_one(cptr,
+			":%s %d %s :Client Local %d(%d) Remote %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_lc, d_lcm, d_rc,
+			   d_rcm);
+	sendto_one(cptr,
+		   ":%s %d %s :Users %d in/visible %d/%d(%d) Invites %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, us, istat.is_user[1],
+		   istat.is_user[0], us*sizeof(anUser), usi,
+		   usi*sizeof(Link));
+	if (debug && (us != d_us || usi != d_usi))
+		sendto_one(cptr,
+			   ":%s %d %s :Users %d(%d) Invites %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_us,
+			   d_us*sizeof(anUser), d_usi, d_usi * sizeof(Link));
 	sendto_one(cptr, ":%s %d %s :User channels %d(%d) Aways %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, usc, usc*sizeof(Link),
 		   aw, awm);
+	if (debug && (usc != d_usc || aw != d_aw || awm != d_awm))
+		sendto_one(cptr,
+			":%s %d %s :User channels %d(%d) Aways %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_usc,
+			   d_usc*sizeof(Link), d_aw, d_awm);
 	sendto_one(cptr, ":%s %d %s :Attached confs %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, lcc, lcc*sizeof(Link));
+	if (debug && lcc != d_lcc)
+		sendto_one(cptr, ":%s %d %s :Attached confs %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_lcc,
+			   d_lcc*sizeof(Link));
 
 	totcl = lcm + rcm + us*sizeof(anUser) + usc*sizeof(Link) + awm;
 	totcl += lcc*sizeof(Link) + usi*sizeof(Link);
+	d_totcl = d_lcm + d_rcm + d_us*sizeof(anUser) + d_usc*sizeof(Link);
+	d_totcl += d_awm + d_lcc*sizeof(Link) + d_usi*sizeof(Link);
 
 	sendto_one(cptr, ":%s %d %s :Conflines %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, co, com);
+	if (debug && (co != d_co || com != d_com))
+		sendto_one(cptr, ":%s %d %s :Conflines %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_co, d_com);
 
 	sendto_one(cptr, ":%s %d %s :Classes %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, cl, cl*sizeof(aClass));
+	if (debug && cl != d_cl)
+		sendto_one(cptr, ":%s %d %s :Classes %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_cl,
+			   d_cl*sizeof(aClass));
 
-	sendto_one(cptr, ":%s %d %s :Channels %d(%d) Bans %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, ch, chm, chb, chbm);
-	sendto_one(cptr, ":%s %d %s :Channel membrs %d(%d) invite %d(%d)",
+	sendto_one(cptr,
+		   ":%s %d %s :Channels %d(%d) Bans %d(%d) History %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, ch, chm, chb, chbm,chh,chhm);
+	if (debug && (ch != d_ch || chm != d_chm || chb != d_chb
+		      || chbm != d_chbm || chh != d_chh || chhm != d_chhm))
+		sendto_one(cptr,
+	       ":%s %d %s :Channels %d(%d) Bans %d(%d) History %d(%d) [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_ch, d_chm, d_chb,
+			   d_chbm, d_chh, d_chhm);
+	sendto_one(cptr, ":%s %d %s :Channel members %d(%d) invite %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, chu, chu*sizeof(Link),
 		   chi, chi*sizeof(Link));
+	if (debug && (chu != d_chu || chi != d_chi))
+		sendto_one(cptr,
+		   ":%s %d %s :Channel members %d(%d) invite %d(%d) [REAL]",
+		   me.name, RPL_STATSDEBUG, nick, d_chu, d_chu*sizeof(Link),
+		   d_chi, d_chi*sizeof(Link));
 
-	totch = chm + chbm + chu*sizeof(Link) + chi*sizeof(Link);
+	totch = chm + chhm + chbm + chu*sizeof(Link) + chi*sizeof(Link);
+	d_totch = d_chm + d_chhm + d_chbm + d_chu*sizeof(Link)
+		  + d_chi*sizeof(Link);
 
-	sendto_one(cptr, ":%s %d %s :Whowas users %d(%d) away %d(%d)",
+	sendto_one(cptr,
+		   ":%s %d %s :Whowas users %d(%d) away %d(%d) links %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, wwu, wwu*sizeof(anUser),
-		   wwa, wwam);
-	sendto_one(cptr, ":%s %d %s :Whowas array %d(%d)",
-		   me.name, RPL_STATSDEBUG, nick, ww_size, wwm);
+		   wwa, wwam, wwuw, wwuw*sizeof(Link));
+	if (debug && (wwu != d_wwu || wwa != d_wwa || wwam != d_wwam
+		      || wwuw != d_wwuw))
+		sendto_one(cptr,
+	     ":%s %d %s :Whowas users %d(%d) away %d(%d) links %d(%d) [REAL]",
+		   me.name, RPL_STATSDEBUG, nick, d_wwu, d_wwu*sizeof(anUser),
+		   d_wwa, d_wwam, d_wwuw, d_wwuw*sizeof(Link));
+	sendto_one(cptr, ":%s %d %s :Whowas array %d(%d) Delay array %d(%d)",
+		   me.name, RPL_STATSDEBUG, nick, ww_size, wwm, lk_size, dm);
+	if (debug && (wwm != d_wwm || dm != d_dm))
+		sendto_one(cptr,
+		   ":%s %d %s :Whowas array %d(%d) Delay array %d(%d) [REAL]",
+		   me.name, RPL_STATSDEBUG, nick, ww_size, d_wwm, lk_size,
+		   d_dm);
 
 	totww = wwu*sizeof(anUser) + wwam + wwm;
+	d_totww = d_wwu*sizeof(anUser) + d_wwam + d_wwm;
 
 	sendto_one(cptr, ":%s %d %s :Hash: client %d(%d) chan %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, _HASHSIZE,
 		   sizeof(aHashEntry) * _HASHSIZE,
 		   _CHANNELHASHSIZE, sizeof(aHashEntry) * _CHANNELHASHSIZE);
+	d_db = db = dbufblocks * sizeof(dbufbuf);
 	db = dbufblocks * sizeof(dbufbuf);
 	sendto_one(cptr, ":%s %d %s :Dbuf blocks %d(%d)",
 		   me.name, RPL_STATSDEBUG, nick, dbufblocks, db);
 
-	rm = cres_mem(cptr);
+	d_rm = rm = cres_mem(cptr, nick);
 
 	tot = totww + totch + totcl + com + cl*sizeof(aClass) + db + rm;
 	tot += sizeof(aHashEntry) * _HASHSIZE;
 	tot += sizeof(aHashEntry) * _CHANNELHASHSIZE;
+	d_tot = d_totww + d_totch + d_totcl + d_com + d_cl*sizeof(aClass);
+	d_tot += d_db + d_rm;
+	d_tot += sizeof(aHashEntry) * _HASHSIZE;
+	d_tot += sizeof(aHashEntry) * _CHANNELHASHSIZE;
 
 	sendto_one(cptr, ":%s %d %s :Total: ww %d ch %d cl %d co %d db %d",
-		   me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, com, db);
+		   me.name, RPL_STATSDEBUG, nick, totww, totch, totcl, com,db);
+	if (debug && tot != d_tot)
+	    {
+		sendto_one(cptr,
+		   ":%s %d %s :Total: ww %d ch %d cl %d co %d db %d [REAL]",
+		   me.name, RPL_STATSDEBUG, nick, d_totww, d_totch, d_totcl,
+		   d_com, d_db);
+		sendto_one(cptr, ":%s %d %s :TOTAL: %d [REAL]",
+			   me.name, RPL_STATSDEBUG, nick, d_tot);
+	    }
 	sendto_one(cptr, ":%s %d %s :TOTAL: %d sbrk(0)-etext: %u",
 		   me.name, RPL_STATSDEBUG, nick, tot,
 		   (u_int)sbrk((size_t)0)-(u_int)sbrk0);

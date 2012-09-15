@@ -1,4 +1,6 @@
 ############################################################################
+list updated the 29.6.1996
+############################################################################
 
 	If you like in future to establish a link inside the EBIC area,
 	please contact the coordinator of the affected toplevel domain.
@@ -10,54 +12,76 @@
 	These toplevel domains are currently participating EBIC:
 ############################################################################
 
-  *.at  *.ch  *.de  *.dk  *.fi  *.fr  *.it  *.nl  *.no  *.pl  *.se  *.uk
+	at be ch zc de dk fi fr hr hu is it nl no pl ru(/su) se si sk uk
 
 ############################################################################
-    The following national coordinators have been choosen for 92/93:
+    The following national coordinators have been choosen for '95:
 ############################################################################
 
 *.at	EASINET, ACONET
-	1. Tom		Tom Kovar		<Tom.Kovar@rcvie.co.at>
+	1. Fingwe,	Bernhard Lorenz		<Bernhard.Lorenz@wu-wien.ac.at>
+
+*.be	BELNET
+	1. Frans	Francis Vanhemmens	<vanhemme@ulb.ac.be>
+	2. mro		Marc Roger		<Marc.Roger@belnet.be>
 
 *.ch	SWITCH, EUNET/CH
-	1. StarNet	Karim Saouli		<Karim.Saouli@epfl.ch>
-	2. Maxim	Maxim Samo		<samo@nessie.cs.id.ethz.ch>
+	1. ksa		Karim Saouli		<Karim.Saouli@span.ch>
 
-*.de	WIN, BelWue
+*.cz	CESNET, PASNET 
+	1. Kratz	Tomas Kraus		<xkraus@sun.felk.cvut.cz>
+
+*.de	WIN, BelWue				<irc-oper@leo.org>
 	1. YeggMan	Volker Paulsen		<Volker.Paulsen@gmd.de>
 	2. Haegar	Thomas Thissen		<tici@uni-paderborn.de>
 
 *.dk	DENET, DKNET
-	1. karthy	Karsten Thygesen	<karthy@iesd.auc.dk>
-	2. MAGNA	Jens Fallesen		<fallesen@login.dkuug.dk>
+	1. karthy	Karsten Thygesen	<karthy@sunsite.auc.dk>
 
 *.fi	FUNET
 	1. Vesa		Vesa Ruokonen		<Vesa.Ruokonen@lut.fi>
 	2. Visti	Hannu Visti		<visti@sauna.cs.hut.fi>
 
-*.fr	EASINET/ROCAD, RENATER
+*.fr	EASINET/ROCAD, RENATER			<irc-fr@grasp.insa-lyon.fr>
 	1. Nono		Arnaud Girsch		<Arnaud.Girsch@insa-lyon.fr>
-	2. Le_Chat	Laurent Montaron	<irc@eurecom.fr>
+	2. Dumpty	Marie-Laure Bruneton	<brunetom@poly.polytechnique.fr>
 
-*.it	CILEA
-	1. Allanon	Riccardo Facchetti	<riccardo@cdc835.cdc.polimi.it>
-	2. mAu		Maurizio Paoluzi	<paoluzi@mercurio.dm.unirm1.it>
+*.hr	CARNET
+	1. Mozz		Mario Mikocevic		<mozgy@smile.srce.hr>
+
+*.hu	HUNGARNET
+	1. keksz	Revoly Andras		<cakes@sch.bme.hu>
+
+*.is	ISnet
+	1. ra		Richard Allen		<ra@rhi.hi.is>
+
+*.it	CILEA					<ebic-it@ccii.unipi.it>
+	1. Francesco	Francesco Messineo	<frank@nowhere.ccii.unipi.it>
+	2. Coccy	Cosimo Riglietti	<pez0004@cdc715_3.cdc.polimi.it>
 
 *.nl	SURFNET/NLNET
-	1. scorpio	Cor Bosman		<bosman@gene.fwi.uva.nl>
-	2. Erwin	Erwin Bolwidt           <erwin@mars.let.uva.nl>
+	1. cor		Cor Bosman		<cor@xs4all.nl>
+	2. Steven	Steven Hessing		<steven@nijenrode.nl>
 
 *.no	UNINETT
-	1. Veggen	Vegard Engen		<vegard@bih.no>
+	1. Veggen	Vegard Engen		<Vegard.Engen@uninett.no>
 
 *.pl	POLIP
-	1. Artur	Artur Jaroszek		<artur@vulcan.mimuw.edu.pl>
+	1. Krzysio	Krzysztof Mlynarski	<krzysio@hydra.mimuw.edu.pl>
+
+*.ru (*.su) DEMOS/RELCOM
+	1. mishania	Mikhail Alexeyevitch Sokolov	<mishania@demos.su>
 
 *.se	SUNET
-	1. Black	Christer H. Jansson	<svarten@solace.hsh.se>
-	2. Sorg		Owe A Rasmussen		<d1rasmus@dtek.chalmers.se>
+	1. Omnion	Per Persson		<pp@pfawww.pp.se>
+
+*.sk	UAKOM 
+	1. Koleso	Tibor Weis		<tibor@uvt.tuzvo.sk>
+
+*.si	
+	1. Iztok	Iztok Umek		<Iztok.Umek@uni-lj.si>
 
 *.uk	JANET, JIPS
-	1. ScottM	Scott A. McIntyre       <scott@shrug.dur.ac.uk>
+	1. jim_bob	James R. Grinter	<jrg@doc.ic.ac.uk>
 
 

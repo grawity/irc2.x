@@ -24,7 +24,7 @@
  * -avalon
  */
 
-extern	time_t	nextconnect, nextdnscheck, nextping;
+extern	time_t	nextconnect, nextdnscheck, nextping, timeofday;
 extern	aClient	*client, me, *local[];
 extern	aChannel *channel;
 extern	struct	stats	*ircstp;
@@ -33,6 +33,7 @@ extern	int	bootopt;
 extern	aServer	*svrtop;
 extern	aService *svctop;
 extern	anUser	*usrtop;
+extern	istat_t istat;
 extern	FdAry	fdas, fdall, fdaa;
 #endif
 
@@ -48,6 +49,7 @@ extern	int	count_channels __P((aClient *));
 
 extern	aClient	*find_client __P((char *, aClient *));
 extern	aClient	*find_name __P((char *, aClient *));
+extern	aClient	*find_mask __P((char *, aClient *));
 extern	aClient	*find_person __P((char *, aClient *));
 extern	aClient	*find_server __P((char *, aClient *));
 extern	aServer	*find_tokserver __P((int, aClient *, aClient *));
@@ -83,7 +85,7 @@ extern	char	*rpl_str __P((int, char *)), *err_str __P((int, char *));
 extern	char	*strerror __P((int));
 extern	int	dgets __P((int, char *, int));
 extern	void	ircsprintf __P(());
-extern	char	*inetntoa __P((char *));
+extern	char	*inetntoa __P((char *)), *mystrdup __P((char *));
 
 extern	int	dbufalloc, dbufblocks, debuglevel, errno, h_errno, poolsize;
 extern	int	highest_fd, debuglevel, portnum, debugtty, maxusersperchannel;
@@ -111,6 +113,8 @@ extern	int	unixport __P((aClient *, char *, int));
 extern	int	utmp_open __P(());
 extern	int	utmp_read __P((int, char *, char *, char *, int));
 extern	int	utmp_close __P((int));
+extern	void	ircd_readtune(), ircd_writetune();
+extern	char	*tunefile;
 
 extern	void	start_auth __P((aClient *));
 extern	void	read_authports __P((aClient *));
@@ -123,7 +127,7 @@ extern	void	terminate __P(()), write_pidfile __P(());
 
 extern	int	send_queued __P((aClient *));
 /*VARARGS2*/
-extern	void	sendto_one();
+extern	int	sendto_one();
 /*VARARGS4*/
 extern	void	sendto_channel_butone();
 /*VARARGS2*/
@@ -147,6 +151,8 @@ extern	void	sendto_prefix_one();
 /*VARARGS2*/
 extern	void	sendto_flag();
 
+extern	void	sendto_flog __P((char *, char *, time_t, char *, char *,
+				 char *, char));
 extern	int	writecalls, writeb[];
 extern	int	deliver_it __P((aClient *, char *, int));
 
@@ -159,7 +165,7 @@ extern	char	*myctime __P((time_t)), *date __P((time_t));
 extern	int	exit_client __P((aClient *, aClient *, aClient *, char *));
 extern	void	initstats __P(()), tstats __P((aClient *, char *));
 
-extern	int	parse __P((aClient *, char *, char *, struct Message *));
+extern	int	parse __P((aClient *, char *, char *));
 extern	int	do_numeric __P((int, aClient *, aClient *, int, char **));
 extern	int hunt_server __P((aClient *,aClient *,char *,int,int,char **));
 extern	aClient	*next_client __P((aClient *, char *));
@@ -220,9 +226,10 @@ extern	aClient	*hash_find_client __P((char *, aClient *));
 extern	aClient	*hash_find_nickserv __P((char *, aClient *));
 extern	aClient	*hash_find_server __P((char *, aClient *));
 
-extern	int	ww_size;
-extern	void	add_history __P((aClient *));
+extern	int	ww_size, lk_size;
+extern	void	add_history __P((aClient *, aClient *));
 extern	aClient	*get_history __P((char *, time_t));
+extern	int	find_history __P((char *, time_t));
 extern	void	initwhowas __P(());
 extern	void	off_history __P((aClient *));
 
@@ -237,6 +244,16 @@ extern	void	debug();
 #if defined(DEBUGMODE) && !defined(CLIENT_COMPILE)
 extern	void	send_usage __P((aClient *, char *));
 extern	void	send_listinfo __P((aClient *, char *));
-extern	void	count_memory __P((aClient *, char *));
 #endif
 
+#ifndef CLIENT_COMPILE
+extern	void	count_memory __P((aClient *, char *, int));
+extern	void	send_defines __P((aClient *, char *));
+#endif
+
+#ifdef KRYS
+extern	char	*find_server_string __P((int));
+extern	int	find_server_num __P((char *));
+#endif
+
+extern	char	*make_version();

@@ -105,7 +105,7 @@ static	int	sock;     /* Server socket fd */
 static	char	currserver[HOSTLEN + 1];
 static	char	*querychannel;
 
-#if defined(HPUX) || defined(SVR3)
+#if defined(HPUX) || defined(SVR3) || defined(SVR4)
 char	logbuf[BUFSIZ]; 
 #endif
 
@@ -138,6 +138,7 @@ char	*argv[];
 	me.user = &meUser;
 	me.from = &me;
 	setuid(getuid());
+	version = make_version();
 
 	while (argc > 1 && argv[1][0] == '-') {
 		switch(ch = argv[1][1])
@@ -194,10 +195,13 @@ char	*argv[];
                         }
 			break;
 #ifdef DOTERMCAP
-			case 's':
-				termtype = TERMCAP_TERM;
-				break;
+		case 's':
+			termtype = TERMCAP_TERM;
+			break;
 #endif
+		case 'v':
+			(void)printf("irc %s\n", version);
+			exit(0);
 		}
 		argv++;
 		argc--;
@@ -779,13 +783,11 @@ char	*ptr, *temp;
 				putline(buf);
 			} else {
 #ifndef VMS
-# if defined(HPUX) || defined(SVR3)
+# if defined(HPUX) || defined(SVR3) || defined(SVR4)
 				setvbuf(logfile,logbuf,_IOLBF,sizeof(logbuf));
 # else
-#  ifndef _SEQUENT_
-#   ifndef SOL20
+#  if !defined(_SEQUENT_) && !defined(SVR4)
 				setlinebuf(logfile);
-#   endif
 #  endif
 # endif
 #endif

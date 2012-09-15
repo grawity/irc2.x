@@ -19,42 +19,57 @@
 
 #ifndef	__sys_include__
 #define __sys_include__
+
 #ifdef ISC202
-#include <net/errno.h>
+# include <net/errno.h>
 #else
-#include <sys/errno.h>
+# include <sys/errno.h>
 #endif
 
 #include "setup.h"
 #include <stdio.h>
 #include <sys/types.h>
-#ifndef CDEFSH
-#include "cdefs.h"
-#endif
-#include "bitypes.h"
-
-#ifdef	UNISTDH
-#include <unistd.h>
-#endif
-#ifdef	STDLIBH
-#include <stdlib.h>
-#endif
-
-#ifdef	STRINGSH
-#include <strings.h>
+#ifdef HAVE_SYS_CDEFS_H
+# include <sys/cdefs.h>
 #else
-# ifdef	STRINGH
-# include <string.h>
+# include "cdefs.h"
+#endif
+#ifdef HAVE_SYS_BITYPES_H
+# include <sys/bitypes.h>
+#else
+# include "bitypes.h"
+#endif
+
+#ifdef	HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#ifdef	HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
+
+#ifdef	HAVE_STRINGS_H
+# include <strings.h>
+#else
+# ifdef	HAVE_STRING_H
+#  include <string.h>
 # endif
 #endif
 #define	strcasecmp	mycmp
 #define	strncasecmp	myncmp
-#ifdef NOINDEX
-#define   index   strchr
-#define   rindex  strrchr
+#if defined(NOINDEX)
+# define   index   strchr
+# define   rindex  strrchr
 #endif
+#if !defined(HAVE_STRINGS_H) && !defined(HAVE_STRING_H)
 extern	char	*index __P((char *, char));
 extern	char	*rindex __P((char *, char));
+#endif
+
+#if defined(NEED_BCMP) || defined(NEED_BZERO)
+# define	bcmp(a,b,c)	memcmp(a,b,c)
+# define	bzero(a,b)	memset(a,0,b)
+# define	bcopy(a,b,c)	memmove(b,a,c)
+#endif
 
 #ifdef AIX
 # include <sys/select.h>
@@ -65,22 +80,22 @@ extern	char	*rindex __P((char *, char));
 # include <sys/time.h>
 #endif
 
-#if !defined(DEBUGMODE) || defined(CLIENT_COMPILE)
-#define MyFree(x)       if ((x) != NULL) free(x)
+#if defined(DEBUGMODE) && !defined(CLIENT_COMPILE) && defined(DO_DEBUG_MALLOC)
+# define	free(x)		MyFree(x)
 #else
-#define	free(x)		MyFree(x)
+# define	MyFree(x)       if ((x) != NULL) free(x)
 #endif
 
 #ifdef NEXT
-#define VOIDSIG int	/* whether signal() returns int of void */
+# define VOIDSIG int	/* whether signal() returns int of void */
 #else
-#define VOIDSIG void	/* whether signal() returns int of void */
+# define VOIDSIG void	/* whether signal() returns int of void */
 #endif
 
 extern	VOIDSIG	dummy();
 
 #ifdef	DYNIXPTX
-#define	NO_U_TYPES
+# define	NO_U_TYPES
 #endif
 
 #ifdef	NO_U_TYPES
@@ -91,7 +106,28 @@ typedef	unsigned int	u_int;
 #endif
 
 #ifdef	USE_VARARGS
-#include <varargs.h>
+# include <varargs.h>
 #endif
+
+#define	SETSOCKOPT(fd, o1, o2, p1, o3)	setsockopt(fd, o1, o2, (char *)p1,\
+						   sizeof(o3))
+
+#define	GETSOCKOPT(fd, o1, o2, p1, p2)	getsockopt(fd, o1, o2, (char *)p1,\
+						   (int *)p2)
+
+/* These are in latest versions of arpa/nameser.h in BIND */
+#ifndef	HFIXEDSZ
+#define HFIXEDSZ	12	/* #/bytes of fixed data in header */
+#endif
+#ifndef NS_NOTIFY_OP
+#define NS_NOTIFY_OP	0x4	/* notify secondary of SOA change */
+#endif
+#ifndef INT16SZ
+#define INT16SZ		2	/* for systems without 16-bit ints */
+#endif
+#ifndef INT32SZ
+#define INT32SZ		4	/* for systems without 32-bit ints */
+#endif
+
 
 #endif /* __sys_include__ */

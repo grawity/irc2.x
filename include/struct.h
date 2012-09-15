@@ -22,22 +22,29 @@
 #define __struct_include__
 
 #include "config.h"
+#include "common.h"
 #include "service.h"
 
 #include <stdio.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <netdb.h>
-#ifdef STDDEFH
-# include <stddef.h>
-#endif
-#ifndef CDEFSH
+/* Give sys/cdefs.h a chance here, so that netdb.h won't call the wrong one */
+#ifdef HAVE_SYS_CDEFS_H
+#include <sys/cdefs.h>
+#else
 #include "cdefs.h"
+#endif
+#include <netdb.h>
+#include <assert.h>
+#ifdef HAVE_STDEF_H
+# include <stddef.h>
 #endif
 
 #ifdef USE_SYSLOG
-# include <syslog.h>
-# ifdef SYSSYSLOGH
+# ifndef ultrix
+#  include <syslog.h>
+# endif
+# ifdef HAVE_SYS_SYSLOG_H
 #  include <sys/syslog.h>
 # endif
 #endif
@@ -83,11 +90,11 @@ typedef	struct	CPing	aCPing;
  * Make up some numbers which should reflect average leaf server connect
  * queue max size.
  */
-#define	QUEUELEN	(((MAXCONNECTIONS / 2) * (CHANNELLEN + BANLEN + 16) + \
-			  (HOSTLEN * 4 + REALLEN + NICKLEN + USERLEN + 24) * \
-			  MAXCONNECTIONS) * 2)
+#define	QUEUELEN	(((MAXCONNECTIONS / 16) * (CHANNELLEN + BANLEN + 16) +\
+			  (HOSTLEN * 4 + REALLEN + NICKLEN + USERLEN + 24) *\
+			  (MAXCONNECTIONS / 16)) * 2)
 
-#define	BUFFERPOOL	(QUEUELEN * MAXCONNECTIONS / 2)
+#define	BUFFERPOOL	(QUEUELEN * MAXCONNECTIONS / 16)
 
 #define	USERHOST_REPLYLEN	(NICKLEN+HOSTLEN+USERLEN+5)
 
@@ -165,18 +172,24 @@ typedef	struct	CPing	aCPing;
 #define	FLAGS_WRAUTH	 0x0400	/* set if we havent writen to ident server */
 #define	FLAGS_LOCAL	 0x0800 /* set for local clients */
 #define	FLAGS_GOTID	 0x1000	/* successful ident lookup achieved */
-#define	FLAGS_DOID	 0x2000	/* I-lines say must use ident return */
+#define	FLAGS_DOID	 0x2000	/* I-lines say must use ident return [unused]*/
 #define	FLAGS_NONL	 0x4000 /* No \n in buffer */
 #define	FLAGS_HELD	 0x8000	/* connection held and reconnect try */
 #define	FLAGS_CBURST	0x10000	/* st to mark connection being sent c. burt */
+#define FLAGS_RILINE    0x20000 /* Restricted i-line */
+#define FLAGS_QUIT      0x40000 /* QUIT :comment shows it's not a split */
+#define FLAGS_SPLIT     0x80000 /* client QUITting because of a netsplit */
+#define FLAGS_HIDDEN   0x100000 /* netsplit is behind a hostmask */
+#define	FLAGS_UNKCMD   0x200000	/* has sent an unknown command */
 
 #define	FLAGS_OPER       0x0001	/* Operator */
 #define	FLAGS_LOCOP      0x0002 /* Local operator -- SRB */
 #define	FLAGS_WALLOP     0x0004 /* send wallops to them */
 #define	FLAGS_INVISIBLE  0x0008 /* makes user invisible */
+#define FLAGS_RESTRICTED 0x0010 /* Restricted user */
 
 #define	SEND_UMODES	(FLAGS_INVISIBLE|FLAGS_OPER|FLAGS_WALLOP)
-#define	ALL_UMODES	(SEND_UMODES|FLAGS_LOCOP)
+#define	ALL_UMODES	(SEND_UMODES|FLAGS_LOCOP|FLAGS_RESTRICTED)
 #define	FLAGS_ID	(FLAGS_DOID|FLAGS_GOTID)
 
 /*
@@ -185,6 +198,8 @@ typedef	struct	CPing	aCPing;
 #define	IsOper(x)		((x)->user && (x)->user->flags & FLAGS_OPER)
 #define	IsLocOp(x)		((x)->user && (x)->user->flags & FLAGS_LOCOP)
 #define	IsInvisible(x)		((x)->user->flags & FLAGS_INVISIBLE)
+#define IsRestricted(x)         ((x)->user && \
+				 (x)->user->flags & FLAGS_RESTRICTED)
 #define	IsAnOper(x)		((x)->user && \
 				 (x)->user->flags & (FLAGS_OPER|FLAGS_LOCOP))
 #define	IsPerson(x)		((x)->user && IsClient(x))
@@ -201,6 +216,7 @@ typedef	struct	CPing	aCPing;
 #define	SetOper(x)		((x)->user->flags |= FLAGS_OPER)
 #define	SetLocOp(x)    		((x)->user->flags |= FLAGS_LOCOP)
 #define	SetInvisible(x)		((x)->user->flags |= FLAGS_INVISIBLE)
+#define SetRestricted(x)        ((x)->user->flags |= FLAGS_RESTRICTED)
 #define	SetWallops(x)  		((x)->user->flags |= FLAGS_WALLOP)
 #define	SetUnixSock(x)		((x)->flags |= FLAGS_UNIX)
 #define	SetDNS(x)		((x)->flags |= FLAGS_DOINGDNS)
@@ -211,6 +227,7 @@ typedef	struct	CPing	aCPing;
 
 #define	ClearOper(x)		((x)->user->flags &= ~FLAGS_OPER)
 #define	ClearInvisible(x)	((x)->user->flags &= ~FLAGS_INVISIBLE)
+#define ClearRestricted(x)      ((x)->user->flags &= ~FLAGS_RESTRICTED)
 #define	ClearWallops(x)		((x)->user->flags &= ~FLAGS_WALLOP)
 #define	ClearDNS(x)		((x)->flags &= ~FLAGS_DOINGDNS)
 #define	ClearAuth(x)		((x)->flags &= ~FLAGS_AUTH)
@@ -221,6 +238,8 @@ typedef	struct	CPing	aCPing;
  */
 #define	DEBUG_FATAL  0
 #define	DEBUG_ERROR  1	/* report_error() and other errors that are found */
+#define	DEBUG_READ   2
+#define	DEBUG_WRITE  2
 #define	DEBUG_NOTICE 3
 #define	DEBUG_DNS    4	/* used by all DNS related routines - a *lot* */
 #define	DEBUG_INFO   5	/* general usful info */
@@ -240,6 +259,7 @@ typedef	struct	CPing	aCPing;
 #define	TERMCAP_TERM	2
 
 struct	CPing	{
+	u_short	port;		/* port to send pings to */
 	u_long	rtt;		/* average RTT */
 	u_long	ping;
 	u_long	seq;		/* sequence # of last sent */
@@ -255,8 +275,8 @@ struct	ConfItem	{
 	char	*host;
 	char	*passwd;
 	char	*name;
-	int	port,
-		pref;		/* preference value */
+	int	port;
+	u_int	pref;		/* preference value */
 	struct	CPing	*ping;
 	time_t	hold;	/* Hold action until this time (calendar time) */
 #ifndef VMSP
@@ -269,25 +289,26 @@ struct	ConfItem	{
 #define	CONF_MATCH		0x40000000
 #define	CONF_QUARANTINED_SERVER	0x0001
 #define	CONF_CLIENT		0x0002
-#define	CONF_CONNECT_SERVER	0x0004
-#define	CONF_NOCONNECT_SERVER	0x0008
-#define	CONF_LOCOP		0x0010
-#define	CONF_OPERATOR		0x0020
-#define	CONF_ME			0x0040
-#define	CONF_KILL		0x0080
-#define	CONF_ADMIN		0x0100
+#define CONF_RCLIENT            0x0004
+#define	CONF_CONNECT_SERVER	0x0008
+#define	CONF_NOCONNECT_SERVER	0x0010
+#define	CONF_LOCOP		0x0020
+#define	CONF_OPERATOR		0x0040
+#define	CONF_ME			0x0080
+#define	CONF_KILL		0x0100
+#define	CONF_ADMIN		0x0200
 #ifdef 	R_LINES
-#define	CONF_RESTRICT		0x0200
+#define	CONF_RESTRICT		0x0400
 #endif
-#define	CONF_CLASS		0x0400
-#define	CONF_SERVICE		0x0800
-#define	CONF_LEAF		0x1000
-#define	CONF_LISTEN_PORT	0x2000
-#define	CONF_HUB		0x4000
+#define	CONF_CLASS		0x0800
+#define	CONF_SERVICE		0x1000
+#define	CONF_LEAF		0x2000
+#define	CONF_LISTEN_PORT	0x4000
+#define	CONF_HUB		0x8000
 
 #define	CONF_OPS		(CONF_OPERATOR | CONF_LOCOP)
 #define	CONF_SERVER_MASK	(CONF_CONNECT_SERVER | CONF_NOCONNECT_SERVER)
-#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_SERVICE | CONF_OPS | \
+#define	CONF_CLIENT_MASK	(CONF_CLIENT | CONF_RCLIENT | CONF_SERVICE | CONF_OPS | \
 				 CONF_SERVER_MASK)
 
 #define	IsIllegal(x)	((x)->status & CONF_ILLEGAL)
@@ -309,9 +330,13 @@ typedef	struct	{
 struct	User	{
 	Link	*channel;	/* chain of channel pointer blocks */
 	Link	*invited;	/* chain of invite pointer blocks */
+	Link	*uwas;		/* chain of whowas pointer blocks */
 	char	*away;		/* pointer to away message */
 	time_t	last;
-	int	refcnt;		/* Number of times this block is referenced */
+	int	refcnt;		/* Number of times this block is referenced
+				** from aClient (field user), aServer (field
+				** by) and whowas array (field ww_user).
+				*/
 	int	joined;		/* number of channels joined */
 	int	flags;
         struct	Server	*servp;
@@ -327,18 +352,28 @@ struct	User	{
 	aClient	*bcptr;
 	char	username[USERLEN+1];
 	char	host[HOSTLEN+1];
+#ifdef KRYS
+	char	*server;
+#else
 	char	server[HOSTLEN+1];
-	char	tok[5];
+#endif
 };
 
 struct	Server	{
 	anUser	*user;		/* who activated this connection */
+	anUser  *userlist;      /* first user on this server in the user list*/
 	char	*up;	/* uplink for this server */
 	aConfItem *nline;	/* N-line pointer for this server */
 	int	version;        /* version id for local client */
+#ifdef KRYS
+	int	snum;
+#endif
 	int	stok,
 		ltok;
-	int	refcnt;
+	int	refcnt;		/* Number of times this block is referenced
+				** from anUser (field servp), aService (field
+				** servp) and aClient (field serv)
+				*/
 	struct	Server	*nexts, *prevs, *shnext;
 	aClient	*bcptr;
 	char	by[NICKLEN+1];
@@ -353,7 +388,6 @@ struct	Service	{
 	struct	Service	*nexts, *prevs;
 	aClient	*bcptr;
 	char	dist[HOSTLEN+1];
-	char	tok[5];
 };
 
 struct Client	{
@@ -362,9 +396,11 @@ struct Client	{
 	aServer	*serv;		/* ...defined, if this is a server */
 	aService *service;
 	int	hashv;		/* raw hash value */
+#ifndef KRYS
 	time_t	lasttime;	/* ...should be only LOCAL clients? --msa */
 	time_t	firsttime;	/* time client was created */
 	time_t	since;		/* last time we parsed something */
+#endif
 	long	flags;		/* client flags */
 	aClient	*from;		/* == self, if Local Client, *NEVER* NULL! */
 	int	fd;		/* >= 0, for local clients */
@@ -391,6 +427,11 @@ struct Client	{
 	long	receiveK;	/* Statistics: total k-bytes received */
 	u_short	sendB;		/* counters to count upto 1-k lots of bytes */
 	u_short	receiveB;	/* sent and received. */
+#ifdef KRYS
+	time_t	lasttime;
+	time_t	firsttime;	/* time client was created */
+	time_t	since;		/* last time we parsed something */
+#endif
 	u_int	sact;		/* could conceivably grow large...*/
 	aClient	*acpt;		/* listening client which we accepted from */
 	Link	*confs;		/* Configuration record associated */
@@ -429,8 +470,8 @@ struct	stats {
 	u_long	is_ckr;	/* k-bytes received to clients */
 	u_long	is_sks;	/* k-bytes sent to servers */
 	u_long	is_skr;	/* k-bytes received to servers */
-	time_t 		is_cti;	/* time spent connected by clients */
-	time_t		is_sti;	/* time spent connected by servers */
+	time_t	is_cti;	/* time spent connected by clients */
+	time_t	is_sti;	/* time spent connected by servers */
 	u_int	is_ac;	/* connections accepted */
 	u_int	is_ref;	/* accepts refused */
 	u_int	is_unco; /* unknown commands */
@@ -444,6 +485,16 @@ struct	stats {
 	u_int	is_abad; /* bad auth requests */
 	u_int	is_udp;	/* packets recv'd on udp port */
 	u_int	is_loc;	/* local connections made */
+	u_int	is_ghost; /* ghost dropped */
+	u_int	is_nosrv; /* user without server */
+	u_long	is_wwcnt; /* number of nicks overwritten in whowas[] */
+	u_long	is_wwt;	  /* sum of elapsed time on when overwriting whowas[]*/
+	u_long	is_wwMt;  /* max elapsed time on when overwriting whowas[] */
+	u_long	is_wwmt;  /* min elapsed time on when overwriting whowas[] */
+	u_long	is_lkcnt; /* number of nicks overwritten in locked[] */
+	u_long	is_lkt;   /* sum of elapsed time on when overwriting locked[]*/
+	u_long	is_lkMt;  /* max elapsed time on when overwriting locked[] */
+	u_long	is_lkmt;  /* min elapsed time on when overwriting locked[] */
 };
 
 /* mode structure for channels */
@@ -465,6 +516,7 @@ struct	Message	{
 		/* bit 0 set means that this command is allowed to be used
 		 * only on the average of once per 2 seconds -SRB */
 	u_long	bytes;
+	int	penalty;	/* extra penalty for clients executing it */
 };
 
 #define	MSG_LAG		0x0001
@@ -494,6 +546,7 @@ struct	SLink	{
 		aChannel *chptr;
 		aConfItem *aconf;
 		char	*cp;
+		int	i;
 	} value;
 	int	flags;
 };
@@ -510,6 +563,7 @@ struct Channel	{
 	Link	*invites;	/* outstanding invitations */
 	Link	*banlist;
 	Link	*clist;		/* list of connections which are members */
+	time_t	history;
 	char	chname[1];
 };
 
@@ -537,7 +591,8 @@ struct Channel	{
 #define	MODE_BAN	0x0200
 #define	MODE_LIMIT	0x0400
 #define	MODE_ANONYMOUS	0x0800
-#define MODE_FLAGS	0x0fff
+#define	MODE_QUIET	0x1000
+#define MODE_FLAGS	0x1fff
 /*
  * mode flags which take another parameter (With PARAmeterS)
  */
@@ -560,9 +615,11 @@ struct Channel	{
 #define	PubChannel(x)		((!x) || ((x)->mode.mode &\
 				 (MODE_PRIVATE | MODE_SECRET)) == 0)
 
+/* #define	IsMember(u, c)		(assert(*(c)->chname != '\0'), find_user_link((c)->members, u) ? 1 : 0) */
 #define	IsMember(u, c)		(find_user_link((c)->members, u) ? 1 : 0)
 #define	IsChannelName(n)	((n) && (*(n) == '#' || *(n) == '&' || \
 					*(n) == '+'))
+#define	IsQuiet(x)		((x)->mode.mode & MODE_QUIET)
 #define	UseModes(n)		((n) && (*(n) == '#' || *(n) == '&'))
 
 /* Misc macros */
@@ -576,6 +633,40 @@ struct Channel	{
 #define	MyPerson(x)			(MyConnect(x) && IsPerson(x))
 #define	MyOper(x)			(MyConnect(x) && IsOper(x))
 #define	ME	me.name
+
+typedef	struct	{
+	u_long	is_user[2];	/* users, non[0] invis and invis[1] */
+	u_long	is_serv;	/* servers */
+	u_long	is_service;	/* services */
+	u_long	is_chan;	/* channels */
+	u_long	is_chanmem;
+	u_long	is_chanusers;	/* channels users */
+	u_long	is_hchan;	/* channels in history */
+	u_long	is_hchanmem;
+	u_long	is_away;	/* away sets */
+	u_long	is_awaymem;
+	u_long	is_oper;	/* opers */
+	u_long	is_bans;	/* bans */
+	u_long	is_banmem;
+	u_long	is_invite;	/* invites */
+	u_long	is_class;	/* classes */
+	u_long	is_conf;	/* conf lines */
+	u_long	is_confmem;
+	u_long	is_conflink;	/* attached conf lines */
+	u_long	is_myclnt;	/* local clients */
+	u_long	is_myserv;	/* local servers */
+	u_long	is_myservice;	/* local services */
+	u_long	is_unknown;	/* unknown (local) connections */
+	u_long	is_wwusers;	/* users kept for whowas[] */
+	u_long	is_wwaways;	/* aways in users in whowas[] */
+	u_long	is_wwawaysmem;
+	u_long	is_wwuwas;	/* uwas links */
+	u_long	is_localc;	/* local items (serv+service+client+..) */
+	u_long	is_remc;	/* remote clients */
+	u_long	is_users;	/* user structs */
+	u_long	is_useri;	/* user invites */
+	u_long	is_userc;	/* user links to channels */
+} istat_t;
 
 /* String manipulation macros */
 
@@ -619,9 +710,10 @@ typedef	struct	{
 #define	SCH_KILL	3
 #define	SCH_CHAN	4
 #define	SCH_NUM		5
-#define	SCH_SQUIT	6
+#define	SCH_SERVER	6
 #define	SCH_HASH	7
-#define	SCH_MAX		7
+#define	SCH_LOCAL	8
+#define	SCH_MAX		8
 
 /* used for async dns values */
 
@@ -631,9 +723,21 @@ typedef	struct	{
 #define	ASYNC_CONF	2
 #define	ASYNC_SERVER	3
 
+/* Client exit codes for log file */
+#define EXITC_UNDEF	'-'	/* unregistered client */
+#define EXITC_REG	'0'	/* normal exit */
+#define EXITC_DIE	'd'	/* server died */
+#define EXITC_DEAD	'D'	/* socket died */
+#define EXITC_ERROR	'E'	/* socket error */
+#define EXITC_FLOOD	'F'	/* client flooding */
+#define EXITC_KLINE	'k'	/* K-lined */
+#define EXITC_KILL	'K'	/* KILLed */
+#define EXITC_PING	'P'	/* ping timeout */
+#define EXITC_RLINE	'r'	/* R-lined */
+
 /* misc variable externs */
 
-extern	char	*version, *infotext[];
+extern	char	*version, *pass_version, *infotext[];
 extern	char	*generation, *creation;
 
 /* misc defines */
@@ -641,6 +745,8 @@ extern	char	*generation, *creation;
 #define	FLUSH_BUFFER	-2
 #define	UTMP		"/etc/utmp"
 #define	COMMA		","
+
+#define	SAP	struct sockaddr *
 
 /* IRC client structures */
 
@@ -658,6 +764,6 @@ typedef	struct	Ignore {
 
 #define	HEADERLEN	200
 
-#endif
+#endif /* CLIENT_COMPILE */
 
 #endif /* __struct_include__ */

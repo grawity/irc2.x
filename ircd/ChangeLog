@@ -17,92 +17,6 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-Sat Jun 26 09:31:07 1993
-	* all		2.8.10 released.
-
-Sun Apr 11 02:28:56 1993
-	* s_serv.c, s_user.c
-			Local Operator (o-lines) 'power' is now more flexible
-			and automatically invoked on those the server deems
-			that are non-local to it.
-
-Sat Mar  6 14:08:30 1993
-	* s_conf.c	Added m4 preprocessing option to reading the server
-			configuration file.
-
-Tue Feb 16 06:27:14 1993
-	* s_misc.c, s_serv.c
-			Fixed bug where server handled host masking
-			incorrectly in SQUIT and SERVER handling when H and L
-			lines are used in addition to C/N lines.
-
-Mon Feb  8 05:22:25 1993
-	* ircd.c, s_bsd.c
-			Rewrote initialization of the server to properly
-			handle starting from inetd as well as being restarted
-			internally.
-
-Tue Feb  2 02:42:37 1993
-	* ircd.c, s_bsd.c, s_conf.c, ircd.c, s_user.c
-			Removed #ifdefs for BAD_DNS, FULL_HOSTNAME and
-			IDENT.  Code for these otions mandatory.
-
-	* general	Patch fixes doc'd in sccs comments.  Mostly
-			trivial patches of little significance.
-
-Mon Nov 30 02:19:19 1992
-	* general
-			Some changes have gone in SCCS logs.  Some of the bugs
-			and changes are as follows:
-
-			* huge problems with DNS resolving and ident checkups
-			  found and fixed.
-
-			* privmsg/notice not delivering messages to nicks
-			  fixed.
-
-			* stats h created for H/L lines. L lines removed from
-			  stats c.
-
-			* patches for Convex and Solaris2 incorporated
-
-			* move +v propogation fixed as well as flags problem
-	
-			* channel count for luers altered to change with 
-			  SHOW_INVISIBLE_LUSERS
-
-			* problem with inet_ntoa and varying struct in_addr
-			  differences fixed by creating inetntoa which uses
-			  pointer to structure always.
-
-			* free-list trial reversed.
-
-			* fixed check_server
-
-			* problems with authd scanning fixed.
-
-			* any other numerous small changes.
-
-Fri Oct 30 22:50:27 1992
-	* s_serv.c    * encrypted storage of server passwords in ircd.conf
-			file done.
-
-Tue Oct 27 17:32:41 1992
-	* s_bsd.c     * Flood control done properly now and fixed.  Buffers
-			data using sendq bufs and pulls messages out as
-			they are due (if present).
-
-Mon Oct 26 04:02:22 1992
-	* s_conf.c    * H-lines added, detach_conf fixed (was broken)
-
-Thu Oct 22 02:41:11 1992
-	* s_conf.c, s_bsd.c, s_user.c
-		      * attaching and use of I-lines fixed up properly.
-	* general     * I've not been listing bugs as I find them or changes,
-			but most have been minor and getting things right
-			and to agree with the upcoming RFC. SCCS being used
-			now too (havent done a delta for a while :-/).
-
 Tue Sep  1 20:16:42 1992
 	* s_bsd.c, s_bsd.c, s_serv.c
 		      * TRACE/STATS now show logfiles if logging is enabled.
@@ -114,7 +28,7 @@ Tue Sep  1 03:56:21 1992
 			well.
 
 	* s_bsd.c, s_auth.c
-		      * RFC913 (authd) / TAP code separated from s_bsd.c to
+		      * RFC913 (authd) / TAP code separated from s_bsd,c to
 			s_auth.c
 
 	* s_misc.c, s_debug.c
@@ -287,7 +201,7 @@ Mon Sep 02 16:27:53 1991  Darren Reed <avalon@coombs.anu.edu.au>
 	   for 2.6.2. Following is changes from 2.6.1 to 2.6.2).
 
 	* s_conf.c    - added L-line handling for Leaf Enforcement.
-			(Courtesy Wumpus (Greg Lindahl))
+			(Courtesy Wumpus (Greg Lindhal))
 		      - added det_I_lines_butfirst to make sure each client
 			connection only ever has (at most) 1 I-line attached
 			to it.
@@ -540,10 +454,5 @@ Sat Jan  6 17:36:28 1990  Mike Bolotski  (mikeb at coho.ee.ubc.ca)
 	* date.c
 
 	Added HPUX-specific code since it lacks the timezone() function.
-
-Thu Oct 21 13:45:31 1993 Armin Gruner <gruner@informatik.tu-muenchen.de>
-
-      * s_conf.c, find_restrict. Added argv0 to execlp() call. login
-        name was not passed to external program
 
 

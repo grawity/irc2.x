@@ -48,7 +48,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_conf.c	1.1 1/21/95 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -60,7 +60,11 @@ Computing Center and Jarkko Oikarinen";
 #include <fcntl.h>
 #include <sys/wait.h>
 #ifdef __hpux
-#include "inet.h"
+# ifdef HAVE_ARPA_INET_H
+#  include <arpa/inet.h>
+# else
+#  include "inet.h"
+# endif
 #endif
 #if defined(PCS) || defined(AIX) || defined(DYNIXPTX) || defined(SVR3)
 #include <time.h>
@@ -110,7 +114,8 @@ char	*sockhost;
 
 	for (aconf = conf; aconf; aconf = aconf->next)
 	    {
-		if (aconf->status != CONF_CLIENT)
+		if ((aconf->status != CONF_CLIENT) &&
+		    (aconf->status != CONF_RCLIENT))
 			continue;
 		if (aconf->port && aconf->port != cptr->acpt->port)
 			continue;
@@ -152,6 +157,8 @@ char	*sockhost;
 attach_iline:
 		if (index(uhost, '@'))
 			cptr->flags |= FLAGS_DOID;
+		if (aconf->status & CONF_RCLIENT)
+			SetRestricted(cptr);
 		get_sockhost(cptr, uhost);
 		return attach_conf(cptr, aconf);
 	    }
@@ -214,6 +221,7 @@ aConfItem *aconf;
 			tmp = *lp;
 			*lp = tmp->next;
 			free_link(tmp);
+			istat.is_conflink--;
 			return 0;
 		    }
 		else
@@ -252,10 +260,29 @@ aClient *cptr;
 		return 1;
 	if (IsIllegal(aconf))
 		return -1;
-	if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR | CONF_CLIENT)) &&
-	    aconf->clients >= ConfMaxLinks(aconf) && ConfMaxLinks(aconf) > 0)
-		return -3;	/* Use this for printing error message */
+	if ((aconf->status & (CONF_LOCOP | CONF_OPERATOR | CONF_CLIENT |
+			      CONF_RCLIENT)))
+	    {
+		if (aconf->clients >= ConfMaxLinks(aconf) &&
+		    ConfMaxLinks(aconf) > 0)
+			return -3;    /* Use this for printing error message */
+		if (ConfConFreq(aconf) > 0)
+		    {
+			Reg	aClient	*acptr;
+			Reg	int	i, cnt = 0;
+
+			for (i = highest_fd; i >= 0; i--)
+				if ((acptr = local[i]) && (cptr != acptr) &&
+				    !bcmp((char *)&cptr->ip, (char *)&acptr->ip,
+					  sizeof(cptr->ip)))
+					cnt++;
+			if (cnt >= ConfConFreq(aconf))
+				return -4;	/* Use this for printing error message */
+		    }
+	    }
+
 	lp = make_link();
+	istat.is_conflink++;
 	lp->next = cptr->confs;
 	lp->value.aconf = aconf;
 	cptr->confs = lp;
@@ -546,7 +573,7 @@ int	rehash(cptr, sptr, sig)
 aClient	*cptr, *sptr;
 int	sig;
 {
-	Reg	aConfItem **tmp = &conf, *tmp2;
+	Reg	aConfItem **tmp = &conf, *tmp2 = NULL;
 	Reg	aClass	*cltmp;
 	Reg	aClient	*acptr;
 	Reg	int	i;
@@ -579,7 +606,7 @@ int	sig;
 				sendto_flag(SCH_NOTICE,
 					    "Restricting %s, closing lp",
 					    get_client_name(acptr,FALSE));
-				acptr->exitc = 'r';
+				acptr->exitc = EXITC_RLINE;
 				if (exit_client(cptr,acptr,&me,"R-lined") ==
 				    FLUSH_BUFFER)
 					ret = FLUSH_BUFFER;
@@ -644,7 +671,7 @@ int	sig;
  * openconf
  *
  * returns -1 on any error or else the fd opened from which to read the
- * configuration file from.  This may either be th4 file direct or one end
+ * configuration file from.  This may either be the file direct or one end
  * of a pipe from m4.
  */
 int	openconf()
@@ -705,7 +732,7 @@ int	opt;
 					{'\\', '\\'}, { 0, 0}};
 	Reg	char	*tmp, *s;
 	int	fd, i;
-	char	line[512], c[80];
+	char	line[512], c[80], *tmp2 = NULL;
 	int	ccount = 0, ncount = 0;
 	aConfItem *aconf = NULL;
 
@@ -747,11 +774,14 @@ int	opt;
 				if (!*(tmp+1))
 					break;
 				else
-					for (s = tmp; *s = *(s+1); s++)
+					for (s = tmp; (*s = *(s+1)); s++)
 						;
 			    }
 			else if (*tmp == '#')
+			    {
 				*tmp = '\0';
+				break;	/* Ignore the rest of the line */
+			    }
 		    }
 		if (!*line || line[0] == '#' || line[0] == '\n' ||
 		    line[0] == ' ' || line[0] == '\t')
@@ -766,6 +796,9 @@ int	opt;
 			free_conf(aconf);
 		aconf = make_conf();
 
+		if (tmp2)
+			MyFree(tmp2);
+		tmp2 = NULL;
 		tmp = getfield(line);
 		if (!tmp)
 			continue;
@@ -785,8 +818,11 @@ int	opt;
 				aconf->status = CONF_HUB;
 				break;
 			case 'I': /* Just plain normal irc client trying  */
-			case 'i': /* to connect me */
+			          /* to connect me */
 				aconf->status = CONF_CLIENT;
+				break;
+			case 'i' : /* Restricted client */
+				aconf->status = CONF_RCLIENT;
 				break;
 			case 'K': /* Kill user line on irc.conf           */
 			case 'k':
@@ -865,11 +901,17 @@ int	opt;
 			if ((tmp = getfield(NULL)) == NULL)
 				break;
 			aconf->port = atoi(tmp);
+			if (aconf->status == CONF_CONNECT_SERVER)
+				DupString(tmp2, tmp);
 			if ((tmp = getfield(NULL)) == NULL)
 				break;
 			Class(aconf) = find_class(atoi(tmp));
 			break;
 		    }
+		istat.is_confmem += aconf->host ? strlen(aconf->host)+1 : 0;
+		istat.is_confmem += aconf->passwd ? strlen(aconf->passwd)+1 :0;
+		istat.is_confmem += aconf->name ? strlen(aconf->name)+1 : 0;
+
 		/*
                 ** If conf line is a class definition, create a class entry
                 ** for it and make the conf_line illegal and delete it.
@@ -896,7 +938,7 @@ int	opt;
 		    {
 			aConfItem *bconf;
 
-			if (bconf = find_conf_entry(aconf, aconf->status))
+			if ((bconf = find_conf_entry(aconf, aconf->status)))
 			    {
 				delist_conf(bconf);
 				bconf->status &= ~CONF_ILLEGAL;
@@ -931,6 +973,7 @@ int	opt;
 				SPRINTF(newhost, "*@%s", aconf->host);
 				MyFree(aconf->host);
 				aconf->host = newhost;
+				istat.is_confmem += 2;
 			    }
 		if (aconf->status & CONF_SERVER_MASK)
 		    {
@@ -940,9 +983,23 @@ int	opt;
 				(void)lookup_confhost(aconf);
 		    }
 		if (aconf->status & CONF_CONNECT_SERVER)
+		    {
 			aconf->ping = (aCPing *)MyMalloc(sizeof(aCPing));
+			bzero((char *)aconf->ping, sizeof(*aconf->ping));
+			istat.is_confmem += sizeof(*aconf->ping);
+			if (tmp2 && index(tmp2, '.'))
+				aconf->ping->port = atoi(index(tmp2, '.') + 1);
+			else
+				aconf->ping->port = aconf->port;
+			if (tmp2)
+			    {
+				MyFree(tmp2);
+				tmp2 = NULL;
+			    }
+				
+		    }
 		/*
-		** Own port and name cannot be changed after the startup.
+		** Name cannot be changed after the startup.
 		** (or could be allowed, but only if all links are closed
 		** first).
 		** Configuration info does not override the name and port
@@ -961,7 +1018,9 @@ int	opt;
 		Debug((DEBUG_NOTICE,
 		      "Read Init: (%d) (%s) (%s) (%s) (%d) (%d)",
 		      aconf->status, aconf->host, aconf->passwd,
-		      aconf->name, aconf->port, Class(aconf)));
+		      aconf->name, aconf->port,
+		      aconf->class ? ConfClass(aconf) : 0));
+
 		aconf->next = conf;
 		conf = aconf;
 		aconf = NULL;
@@ -974,9 +1033,9 @@ int	opt;
 	(void)wait(0);
 #endif
 	check_class();
-	nextping = nextconnect = time(NULL);
+	nextping = nextconnect = timeofday;
 	return 0;
-    }
+}
 
 /*
  * lookup_confhost
@@ -1195,14 +1254,12 @@ static	int	check_time_interval(interval, reply)
 char	*interval, *reply;
 {
 	struct tm *tptr;
- 	time_t	tick;
  	char	*p;
  	int	perm_min_hours, perm_min_minutes,
  		perm_max_hours, perm_max_minutes;
  	int	now, perm_min, perm_max;
 
- 	tick = time(NULL);
-	tptr = localtime(&tick);
+	tptr = localtime(&timeofday);
  	now = tptr->tm_hour * 60 + tptr->tm_min;
 
 	while (interval)

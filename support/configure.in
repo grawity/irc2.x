@@ -7,7 +7,7 @@ dnl copyright (c) 1995.
 
 AC_REVISION(1.2)dnl
 AC_INIT(ircd/ircd.c)
-AC_CONFIG_HEADER(include/setup.h)
+AC_CONFIG_HEADER(setup.h:include/setup.h.in)
 
 AC_PROG_CC
 AC_PROG_CPP
@@ -18,8 +18,11 @@ AC_PROG_GCC_TRADITIONAL
 AC_PATH_PROGS(SUM, sum cksum, true)
 
 AC_CHECK_LIB(crypt, crypt)
+AC_CHECK_LIB(socket, socket)
+AC_CHECK_LIB(nsl, socket)
+dnl AC_CHECK_LIB(resolv, res_init)
 
-AC_CHECK_HEADERS(sys/syslog.h stdlib.h stdef.h sys/malloc.h sys/param.h unistd.h string.h strings.h sys/cdefs.h)
+AC_CHECK_HEADERS(sys/syslog.h stdlib.h stdef.h sys/malloc.h sys/param.h unistd.h string.h strings.h sys/cdefs.h arpa/inet.h arpa/nameser.h resolv.h sys/bitypes.h netdb.h)
 
 AC_CHECK_FUNC(index, , AC_DEFINE(NOINDEX))
 AC_CHECK_FUNC(strerror, , AC_DEFINE(NEED_STRERROR))
@@ -129,10 +132,11 @@ AC_TRY_RUN($code,
     :),
   :)
 
-if test x$ac_cv_headers_sys_malloc_h != xno
-then
-	AC_DEFINE_UNQUOTED(MALLOCH, <sys/malloc.h>)
-fi
+dnl Uh, what is this? Other than broken..
+dnl if test x$ac_cv_headers_sys_malloc_h != xno
+dnl then
+dnl 	AC_DEFINE_UNQUOTED(MALLOCH, <sys/malloc.h>)
+dnl fi
 
 dnl
 dnl check for sys_errlist declaration
@@ -151,4 +155,4 @@ main()
 ],AC_DEFINE(SYS_ERRLIST_DECLARED) AC_MSG_RESULT(yes), AC_MSG_RESULT(no), :)
 
 
-AC_OUTPUT(Makefile ircd/version.c.SH ircd/crypt/sums)
+AC_OUTPUT(Makefile:support/Makefile.in version.c.SH:ircd/version.c.SH.in sums:ircd/crypt/sums.in)

@@ -24,12 +24,23 @@ CC = @CC@
 DEFS = @DEFS@
 LIBS = @LIBS@
 
-INCLUDES = -I../include
-CFLAGS = @CFLAGS@ $(DEFS) $(INCLUDES)
+INCLUDEDIR = -I. -I../include
+CFLAGS = @CFLAGS@ $(DEFS) $(INCLUDEDIR)
 
 IRCDLIBS = $(LIBS)
 
 RM=/bin/rm
+
+# IRCDMODE is the mode you want the binary to be.
+# The 4 at the front is important (allows for setuidness)
+#
+# WARNING: if you are making ircd SUID or SGID, check config.h to make sure
+#          you are not defining CMDLINE_CONFIG 
+IRCDMODE = 711
+
+# IRCDDIR must be the same as DPATH in include/config.h
+#
+IRCDDIR = $(prefix)/lib/irc
 
 #L/home/ch1/avalon/lib -lefence
 IRCLIBS=-lcurses -ltermcap
@@ -74,82 +85,63 @@ IRCLIBS=-lcurses -ltermcap
 # -Bstatic here.
 #LDFLAGS=-Bstatic
 # HP-UX
-#INSTALL=../bsdinstall
 #LDFLAGS=-Wl,-a,archive -y
-#
-# IRCDMODE is the mode you want the binary to be.
-# The 4 at the front is important (allows for setuidness)
-#
-# WARNING: if you are making ircd SUID or SGID, check config.h to make sure
-#          you are not defining CMDLINE_CONFIG 
-IRCDMODE = 711
-
-# IRCDDIR must be the same as DPATH in include/config.h
-#
-IRCDDIR = \"$(prefix)/lib/irc\"
 
 SHELL=/bin/sh
-SUBDIRS=common ircd
+TARGETS=ircd irc
 BINDIR=$(IRCDDIR)
 MANDIR= $(prefix)/man
-INSTALL=/usr/bin/install
+INSTALL=../support/bsdinstall
 
 MAKE=make 'CFLAGS=${CFLAGS}' 'CC=${CC}' 'IRCDLIBS=${IRCDLIBS}' \
 	'LDFLAGS=${LDFLAGS}' 'IRCDMODE=${IRCDMODE}' 'BINDIR=${BINDIR}' \
 	'INSTALL=${INSTALL}' 'IRCLIBS=${IRCLIBS}' 'INCLUDEDIR=${INCLUDEDIR}' \
-	'IRCDDIR=${IRCDDIR}'
+	'IRCDDIR=${IRCDDIR}' 'SHELL=${SHELL}' 'RM=${RM}'
 
 all:	build
 
 server:
-	@echo 'Making server'; cd ircd; ${MAKE} build; cd ..;
+	@echo 'Making server'; ${MAKE} build -f Makefile.ircd
 
 client:
-	@echo 'Making client'; cd irc; ${MAKE} build; cd ..;
+	@echo 'Making client'; ${MAKE} build -f Makefile.irc
 
 build:
-	@if [ ! -f include/setup.h ] ; then \
-		echo "Hmm...doesn't look like you've run configure..."; \
-		echo "Doing so now."; \
-		sh configure; \
-	fi
-	@for i in $(SUBDIRS); do \
+	@for i in $(TARGETS); do \
 		echo "Building $$i";\
-		cd $$i;\
-		${MAKE} build; cd ..;\
+		${MAKE} build -f Makefile.$$i; \
 	done
 
+config configure:
+	${SHELL} ../support/configure
+
 clean:
-	${RM} -f *~ #* core
-	@for i in $(SUBDIRS); do \
+	${RM} -f *.o *~ #* core *.bak
+	@for i in $(TARGETS); do \
 		echo "Cleaning $$i";\
-		cd $$i;\
-		${MAKE} clean; cd ..;\
+		${MAKE} clean -f Makefile.$$i; \
 	done
 
 distclean realclean: clean
-	${RM} -f config.log config.cache config.status include/setup.h Makefile ircd/version.c.SH ircd/crypt/mkpasswd ircd/crypt/sums
+	${RM} -f config.log config.cache config.status setup.h Makefile version.c.SH mkpasswd sums
+	@echo "Run sh ../support/configure to reconfigure"
 
 depend:
-	@for i in $(SUBDIRS); do \
+	@for i in $(TARGETS); do \
 		echo "Making dependencies in $$i";\
-		cd $$i;\
-		${MAKE} depend; cd ..;\
+		${MAKE} depend -f Makefile.$$i; \
 	done
 
 install: all
-	chmod +x ./install
-	@for i in ircd irc; do \
+	-@chmod +x ${INSTALL}
+	@for i in $(TARGETS); do \
 		echo "Installing $$i";\
-		cd $$i;\
-		${MAKE} 'INSTALL=${INSTALL}' install; cd ..;\
+		${MAKE} 'INSTALL=${INSTALL}' install -f Makefile.$$i; \
 	done
-	./install -c -m 644 doc/ircd.8 ${MANDIR}/man8
-	./install -c -m 644 doc/irc.1 ${MANDIR}/man1
-	-./install -c doc/ircd.8 ${MANDIR}/man8
-	-./install -c doc/irc.1 ${MANDIR}/man1
+	-${INSTALL} -c -m 644 ../doc/ircd.8 ${MANDIR}/man8
+	-${INSTALL} -c -m 644 ../doc/irc.1 ${MANDIR}/man1
 
 
 rcs:
-	cii -H -R Makefile common include ircd
+	cii -H -R common include ircd
 

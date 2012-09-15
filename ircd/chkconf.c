@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1993 Darren Reed";
+static  char sccsid[] = "@(#)chkconf.c	1.1 1/21/95 (C) 1993 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -28,9 +28,8 @@ static  char sccsid[] = "%W% %G% (C) 1993 Darren Reed";
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #ifdef __hpux
-#include "inet.h"
+# include "inet.h"
 #endif
 #ifdef PCS
 #include <time.h>
@@ -58,17 +57,19 @@ static	char	*configfile = CONFIGFILE;
 static	char	nullfield[] = "";
 static	char	maxsendq[12];
 
+#define	SHOWSTR(x)	((x) ? (x) : "*")
+
 main(argc, argv)
 int	argc;
 char	*argv[];
 {
+	if (argc > 1 && !strncmp(argv[1], "-h", 2)) {
+		(void)fprintf(stderr, "Usage: %s [-h] [-d[#]] [%s]\n",
+			      argv[0], CPATH);
+		exit(0);
+	}
 	new_class(0);
 
-	if (chdir(DPATH))
-	    {
-		perror("chdir");
-		exit(-1);
-	    }
 	if (argc > 1 && !strncmp(argv[1], "-d", 2))
    	    {
 		debugflag = 1;
@@ -78,6 +79,12 @@ char	*argv[];
 	    }
 	if (argc > 1)
 		configfile = argv[1];
+	else if (chdir(DPATH)) {
+		perror("chdir");
+                (void)fprintf(stderr, "%s: Error in daemon path: %s.\n",
+                              argv[0], DPATH);
+		exit(-1);
+	}
 	return validate(initconf());
 }
 
@@ -711,14 +718,14 @@ aConfItem *top;
 		else
 			(void)fprintf(stderr, "Unmatched %c:%s:%s:%s\n",
 				confchar(aconf->status), aconf->host,
-				aconf->passwd, aconf->name);
+				SHOWSTR(aconf->passwd), aconf->name);
 	return valid ? 0 : -1;
 }
 
 static	char	confchar(status)
 u_int	status;
 {
-	static	char	letrs[] = "QICNoOMKARYSLPH";
+	static	char	letrs[] = "QIiCNoOMKARYSLPH";
 	char	*s = letrs;
 
 	status &= ~(CONF_MATCH|CONF_ILLEGAL);

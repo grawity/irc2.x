@@ -15,7 +15,7 @@
 		    + Only a link for ONE server should be given to the new
 		      server site, that means the new site shouldn't be able to
 		      connect test-servers to other than its own server.
-		      (This avoids confusion about linking hierachy).
+		      (This avoids confusion about linking hierarchy).
 
 		    + Be sure that if a toplevel domain hostmask link is given,
 		      all hubs of that domain can connect the masked server!

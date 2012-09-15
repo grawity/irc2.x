@@ -143,6 +143,7 @@
 #define ERR_NOTOPLEVEL       413
 #define ERR_WILDTOPLEVEL     414
 #define	ERR_BADMASK          415
+#define	ERR_TOOMANYMATCHES   416
 
 #define ERR_UNKNOWNCOMMAND   421
 #define	ERR_NOMOTD           422
@@ -155,6 +156,8 @@
 #define ERR_SERVICENAMEINUSE 434
 #define ERR_SERVICECONFUSED  435
 #define	ERR_NICKCOLLISION    436
+#define ERR_UNAVAILRESOURCE  437
+/* #define ERR_DEAD    438  reserved for later use -krys */
 
 #define ERR_USERNOTINCHANNEL 441
 #define ERR_NOTONCHANNEL     442
@@ -184,6 +187,7 @@
 #define ERR_NOPRIVILEGES     481
 #define ERR_CHANOPRIVSNEEDED 482
 #define	ERR_CANTKILLSERVER   483
+#define ERR_RESTRICTED       484
 
 #define ERR_NOOPERHOST       491
 #define ERR_NOSERVICEHOST    492
@@ -274,6 +278,7 @@
 #define RPL_TRACESERVICE     207
 #define RPL_TRACENEWTYPE     208
 #define RPL_TRACECLASS       209
+#define RPL_TRACERECONNECT   210
 
 #define RPL_STATSLINKINFO    211
 #define RPL_STATSCOMMANDS    212
@@ -299,6 +304,7 @@
 #define	RPL_STATSHLINE       244
 #define	RPL_STATSSLINE       245
 #define	RPL_STATSPING        246
+#define RPL_STATSDEFINE      248
 #define	RPL_STATSDEBUG	     249
 
 #define	RPL_LUSERCLIENT      251

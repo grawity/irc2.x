@@ -31,6 +31,11 @@ typedef struct aname {
 	char	ww_info[REALLEN+1];
 } aName;
 
+typedef struct alock {
+	time_t	logout;
+	char	nick[NICKLEN];
+} aLock;
+
 /*
 ** add_history
 **	Add the currently defined name of the client to history.
@@ -38,7 +43,7 @@ typedef struct aname {
 **	Client must be a fully registered user (specifically,
 **	the user structure must have been allocated).
 */
-void	add_history __P((aClient *));
+void	add_history __P((aClient *, aClient *));
 
 /*
 ** off_history
@@ -59,11 +64,18 @@ aClient	*get_history __P((char *, time_t));
 					/* Nick name */
 					/* Time limit in seconds */
 
+/*
+** find_history
+**      Return 1 if a user was using the given nickname within
+**      the timelimit. Returns NULL, if none found...
+*/
+int	find_history __P((char *, time_t));
+
 int	m_whowas __P((aClient *, aClient *, int, char *[]));
 
 /*
 ** for debugging...counts related structures stored in whowas array.
 */
-void	count_whowas_memory __P((int *, int *, u_long *));
+void	count_whowas_memory __P((int *, int *, u_long *, int *));
 
 #endif /* __whowas_include__ */

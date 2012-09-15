@@ -55,20 +55,25 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
-static char rcsid[] = "$Id: res_comp.c,v 4.9.1.4 1993/11/12 01:23:34 vixie Exp $";
+static char rcsid[] = "$Id: res_comp.c,v 8.3 1995/12/06 20:34:50 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-#include "config.h"
 #include <sys/param.h>
 #include <netinet/in.h>
-#include <stdio.h>
 #include "nameser.h"
 
+#include <stdio.h>
 #include "resolv.h"
+#include <ctype.h>
 
-#include "sys.h"
+#if defined(BSD) && (BSD >= 199103)
+# include <unistd.h>
+# include <string.h>
+#endif
+# include "config.h"
 
-static int dn_find();
+static int	dn_find __P((u_char *exp_dn, u_char *msg,
+			     u_char **dnptrs, u_char **lastdnptr));
 
 /*
  * Expand compressed domain name 'comp_dn' to full domain name.
@@ -77,18 +82,20 @@ static int dn_find();
  * 'exp_dn' is a pointer to a buffer of size 'length' for the result.
  * Return size of compressed name or -1 if there was an error.
  */
+int
 dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 	const u_char *msg, *eomorig, *comp_dn;
-	u_char *exp_dn;
+	char *exp_dn;
 	int length;
 {
-	register u_char *cp, *dn;
+	register const u_char *cp;
+	register char *dn;
 	register int n, c;
-	u_char *eom;
+	char *eom;
 	int len = -1, checked = 0;
 
 	dn = exp_dn;
-	cp = (u_char *)comp_dn;
+	cp = comp_dn;
 	eom = exp_dn + length;
 	/*
 	 * fetch next label in domain name
@@ -108,23 +115,23 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 				return (-1);
 			checked += n + 1;
 			while (--n >= 0) {
-				if ((c = *cp++) == '.') {
+				if (((c = *cp++) == '.') || (c == '\\')) {
 					if (dn + n + 2 >= eom)
 						return (-1);
 					*dn++ = '\\';
 				}
 				*dn++ = c;
 				if (cp >= eomorig)	/* out of range */
-					return(-1);
+					return (-1);
 			}
 			break;
 
 		case INDIR_MASK:
 			if (len < 0)
 				len = cp - comp_dn + 1;
-			cp = (u_char *)msg + (((n & 0x3f) << 8) | (*cp & 0xff));
+			cp = msg + (((n & 0x3f) << 8) | (*cp & 0xff));
 			if (cp < msg || cp >= eomorig)	/* out of range */
-				return(-1);
+				return (-1);
 			checked += 2;
 			/*
 			 * Check for loops in the compressed name;
@@ -140,6 +147,9 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
 		}
 	}
 	*dn = '\0';
+	for (dn = exp_dn; (c = *dn) != '\0'; dn++)
+		if (isascii(c) && isspace(c))
+			return (-1);
 	if (len < 0)
 		len = cp - comp_dn;
 	return (len);
@@ -157,8 +167,9 @@ dn_expand(msg, eomorig, comp_dn, exp_dn, length)
  * If 'dnptr' is NULL, we don't try to compress names. If 'lastdnptr'
  * is NULL, we don't update the list.
  */
+int
 dn_comp(exp_dn, comp_dn, length, dnptrs, lastdnptr)
-	const u_char *exp_dn;
+	const char *exp_dn;
 	u_char *comp_dn, **dnptrs, **lastdnptr;
 	int length;
 {
@@ -170,6 +181,7 @@ dn_comp(exp_dn, comp_dn, length, dnptrs, lastdnptr)
 	dn = (u_char *)exp_dn;
 	cp = comp_dn;
 	eob = cp + length;
+	lpp = cpp = NULL;
 	if (dnptrs != NULL) {
 		if ((msg = *dnptrs++) != NULL) {
 			for (cpp = dnptrs; *cpp != NULL; cpp++)
@@ -235,13 +247,14 @@ dn_comp(exp_dn, comp_dn, length, dnptrs, lastdnptr)
 /*
  * Skip over a compressed domain name. Return the size or -1.
  */
+int
 __dn_skipname(comp_dn, eom)
 	const u_char *comp_dn, *eom;
 {
-	register u_char *cp;
+	register const u_char *cp;
 	register int n;
 
-	cp = (u_char *)comp_dn;
+	cp = comp_dn;
 	while (cp < eom && (n = *cp++)) {
 		/*
 		 * check for indirection
@@ -254,13 +267,22 @@ __dn_skipname(comp_dn, eom)
 			cp++;
 			break;
 		default:		/* illegal type */
-			return -1;
+			return (-1);
 		}
 		break;
 	}
 	if (cp > eom)
-		return -1;
+		return (-1);
 	return (cp - comp_dn);
+}
+
+static int
+mklower(ch)
+	register int ch;
+{
+	if (isascii(ch) && isupper(ch))
+		return (tolower(ch));
+	return (ch);
 }
 
 /*
@@ -292,7 +314,7 @@ dn_find(exp_dn, msg, dnptrs, lastdnptr)
 						goto next;
 					if (*dn == '\\')
 						dn++;
-					if (*dn++ != *cp++)
+					if (mklower(*dn++) != mklower(*cp++))
 						goto next;
 				}
 				if ((n = *dn++) == '\0' && *cp == '\0')
@@ -301,11 +323,12 @@ dn_find(exp_dn, msg, dnptrs, lastdnptr)
 					continue;
 				goto next;
 
-			default:	/* illegal type */
-				return (-1);
-
 			case INDIR_MASK:	/* indirection */
 				cp = msg + (((n & 0x3f) << 8) | *cp);
+				break;
+
+			default:	/* illegal type */
+				return (-1);
 			}
 		}
 		if (*dn == '\0')
@@ -316,16 +339,12 @@ dn_find(exp_dn, msg, dnptrs, lastdnptr)
 }
 
 /*
- * Routines to insert/extract short/long's. Must account for byte
- * order and non-alignment problems. This code at least has the
- * advantage of being portable.
- *
- * used by sendmail.
+ * Routines to insert/extract short/long's.
  */
 
 u_int16_t
 _getshort(msgp)
-	register u_char *msgp;
+	register const u_char *msgp;
 {
 	register u_int16_t u;
 
@@ -333,9 +352,21 @@ _getshort(msgp)
 	return (u);
 }
 
+#ifdef NeXT
+/*
+ * nExt machines have some funky library conventions, which we must maintain.
+ */
+u_int16_t
+res_getshort(msgp)
+	register const u_char *msgp;
+{
+	return (_getshort(msgp));
+}
+#endif
+
 u_int32_t
 _getlong(msgp)
-	register u_char *msgp;
+	register const u_char *msgp;
 {
 	register u_int32_t u;
 
@@ -345,7 +376,7 @@ _getlong(msgp)
 
 void
 #if defined(__STDC__) || defined(__cplusplus)
-__putshort(register u_short s, register u_char *msgp)	/* must match proto */
+__putshort(register u_int16_t s, register u_char *msgp)	/* must match proto */
 #else
 __putshort(s, msgp)
 	register u_int16_t s;
@@ -363,8 +394,10 @@ __putlong(l, msgp)
 	PUTLONG(l, msgp);
 }
 
-/* #ifdef ultrix - not only ultrix, but older systems - av */
-/* ultrix 4.0 had some icky packaging in its libc.a.  alias for it here. */
+#ifdef ultrix
+/* ultrix 4.0 had some icky packaging in its libc.a.  alias for it here.
+ * there is more gunk of this kind over in res_debug.c.
+ */
 #undef putshort
 void
 #if defined(__STDC__) || defined(__cplusplus)
@@ -390,6 +423,6 @@ putlong(l, msgp)
 dn_skipname(comp_dn, eom)
 	const u_char *comp_dn, *eom;
 {
-	return __dn_skipname(comp_dn, eom);
+	return (__dn_skipname(comp_dn, eom));
 }
-/* #endif /* Ultrix 4.0 hackery */
+#endif /* Ultrix 4.0 hackery */

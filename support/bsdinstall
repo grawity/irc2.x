@@ -3,31 +3,31 @@
 #	@(#)install.sh	4.5	(Berkeley)	10/12/83
 #
 cmd=/bin/mv
-strip=""
-chmod="/bin/chmod 755"
-chown="/etc/chown -f root"
-chgrp="/bin/chgrp -f bin"
+strip="strip"
+chmod="chmod 755"
+chown="chown -f root"
+chgrp="chgrp -f bin"
 while true ; do
 	case $1 in
-		-s )	strip="/bin/strip"
+		-s )	strip="strip"
 			shift
 			;;
-		-c )	cmd="/bin/cp"
+		-c )	cmd="cp"
 			shift
 			;;
-		-m )	chmod="/bin/chmod $2"
-			shift
-			shift
-			;;
-		-o )	chown="/etc/chown -f $2"
+		-m )	chmod="chmod $2"
 			shift
 			shift
 			;;
-		-g )	chgrp="/bin/chgrp -f $2"
+		-o )	chown="chown -f $2"
 			shift
 			shift
 			;;
-		-d )	cmd="/bin/mkdir"
+		-g )	chgrp="chgrp -f $2"
+			shift
+			shift
+			;;
+		-d )	cmd="mkdir"
 			shift
 			;;
 		* )	break

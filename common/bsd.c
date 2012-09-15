@@ -99,7 +99,9 @@ char	*str;
 #ifdef	DEBUGMODE
 	writecalls++;
 #endif
+#ifndef	NOWRITEALARM
 	(void)alarm(WRITEWAITDELAY);
+#endif
 #ifdef VMS
 	retval = netwrite(cptr->fd, str, len);
 #else
@@ -130,7 +132,9 @@ char	*str;
 	    }
 
 #endif
+#ifndef	NOWRITEALARM
 	(void )alarm(0);
+#endif
 #ifdef DEBUGMODE
 	if (retval < 0) {
 		writeb[0]++;
@@ -160,6 +164,10 @@ char	*str;
 #endif
 	if (retval > 0)
 	    {
+#if defined(DEBUGMODE) && defined(DEBUG_WRITE)
+		Debug((DEBUG_WRITE, "send = %d bytes to %d[%s]:[%*.*s]\n",
+			retval, cptr->fd, cptr->name, retval, retval, str));
+#endif
 		cptr->sendB += retval;
 		me.sendB += retval;
 		if (cptr->sendB > 1023)

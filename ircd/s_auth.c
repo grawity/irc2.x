@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "@(#)s_auth.c	1.19 27 Apr 1994 (C) 1992 Darren Reed";
+static  char sccsid[] = "%W% %G% (C) 1992-1995 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -26,7 +26,6 @@ static  char sccsid[] = "@(#)s_auth.c	1.19 27 Apr 1994 (C) 1992 Darren Reed";
 #include "sys.h"
 #include "res.h"
 #include "numeric.h"
-#include "patchlevel.h"
 #include <sys/socket.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -64,12 +63,15 @@ Reg	aClient	*cptr;
 		syslog(LOG_ERR, "Unable to create auth socket for %s:%m",
 			get_client_name(cptr,TRUE));
 #endif
+		Debug((DEBUG_ERROR, "Unable to create auth socket for %s:%s",
+			get_client_name(cptr, TRUE),
+			strerror(get_sockerr(cptr))));
 		if (!DoingDNS(cptr))
 			SetAccess(cptr);
 		ircstp->is_abad++;
 		return;
 	    }
-	if (cptr->authfd >= MAXCONNECTIONS)
+	if (cptr->authfd >= (MAXCONNECTIONS - 2))
 	    {
 		sendto_flag(SCH_ERROR, "Can't allocate fd for auth on %s",
 			   get_client_name(cptr, TRUE));
@@ -96,33 +98,34 @@ Reg	aClient	*cptr;
 	Debug((DEBUG_NOTICE,"auth(%x) from %s",
 	       cptr, inetntoa((char *)&us.sin_addr)));
 	if (bind(cptr->authfd, (struct sockaddr *)&us, ulen) >= 0)
-	  {
-	    (void)getsockname(cptr->fd, (struct sockaddr *)&us, &ulen);
-	    Debug((DEBUG_NOTICE,"auth(%x) to %s",
-		   cptr, inetntoa((char *)&them.sin_addr)));
-	    (void)alarm((unsigned)4);
-	    if (connect(cptr->authfd, (struct sockaddr *)&them,
-			tlen) == -1 && errno != EINPROGRESS)
-	      {
-		Debug((DEBUG_ERROR,"auth(%x) connect failed to %s - %d",
-		       cptr, inetntoa((char *)&them.sin_addr), errno));
-		ircstp->is_abad++;
-		/*
-		 * No error report from this...
-		 */
+	    {
+		(void)getsockname(cptr->fd, (struct sockaddr *)&us, &ulen);
+		Debug((DEBUG_NOTICE,"auth(%x) to %s",
+			cptr, inetntoa((char *)&them.sin_addr)));
+		(void)alarm((unsigned)4);
+		if (connect(cptr->authfd, (struct sockaddr *)&them,
+			    tlen) == -1 && errno != EINPROGRESS)
+		    {
+			Debug((DEBUG_ERROR,
+				"auth(%x) connect failed to %s - %d", cptr,
+				inetntoa((char *)&them.sin_addr), errno));
+			ircstp->is_abad++;
+			/*
+			 * No error report from this...
+			 */
+			(void)alarm((unsigned)0);
+			(void)close(cptr->authfd);
+			cptr->authfd = -1;
+			if (!DoingDNS(cptr))
+				SetAccess(cptr);
+			return;
+		    }
 		(void)alarm((unsigned)0);
-		(void)close(cptr->authfd);
-		cptr->authfd = -1;
-		if (!DoingDNS(cptr))
-			SetAccess(cptr);
-		return;
-	      }
-	    (void)alarm((unsigned)0);
-	  } else {
-	    Debug((DEBUG_ERROR,"auth(%x) bind failed on %s port %d - %d",
-		  cptr, inetntoa((char *)&us.sin_addr),
-		  ntohs(us.sin_port), errno));
-	  }
+	    }
+	else
+		Debug((DEBUG_ERROR,"auth(%x) bind failed on %s port %d - %d",
+		      cptr, inetntoa((char *)&us.sin_addr),
+		      ntohs(us.sin_port), errno));
 
 
 	cptr->flags |= (FLAGS_WRAUTH|FLAGS_AUTH);
@@ -160,7 +163,7 @@ aClient	*cptr;
 		goto authsenderr;
 	    }
 
-	(void)sprintf(authbuf, "%u , %u\r\n",
+	(void)irc_sprintf(authbuf, "%u , %u\r\n",
 		(unsigned int)ntohs(them.sin_port),
 		(unsigned int)ntohs(us.sin_port));
 
@@ -181,7 +184,6 @@ authsenderr:
 		return;
 	    }
 	cptr->flags &= ~FLAGS_WRAUTH;
-
 	return;
 }
 
@@ -228,7 +230,7 @@ Reg	aClient	*cptr;
 				break;
 		strncpyzt(system, t, sizeof(system));
 		for (t = ruser; *s && (t < ruser + sizeof(ruser)); s++)
-			if (!isspace(*s) && *s != ':')
+			if (!isspace(*s) && *s != ':' && *s != '@')
 				*t++ = *s;
 		*t = '\0';
 		Debug((DEBUG_INFO,"auth reply ok [%s] [%s]", system, ruser));
@@ -259,9 +261,15 @@ Reg	aClient	*cptr;
 		return;
 	    }
 	ircstp->is_asuc++;
-	strncpyzt(cptr->username, ruser, USERLEN+1);
-	if (strncmp(system, "OTHER", 5))
-		cptr->flags |= FLAGS_GOTID;
+  	if (strncmp(system, "OTHER", 5))
+ 		strncpy(cptr->username, ruser, USERLEN+1);
+ 	else
+	    { /* OTHER type of identifier */
+ 		*cptr->username = '-';	/* -> add '-' prefix into ident */
+ 		strncpy(&cptr->username[1], ruser, USERLEN);
+	    }
+ 	cptr->username[USERLEN] = '\0';
+ 	cptr->flags |= FLAGS_GOTID;
 	Debug((DEBUG_INFO, "got username [%s]", ruser));
 	return;
 }

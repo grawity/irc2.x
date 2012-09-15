@@ -36,30 +36,147 @@ static  char sccsid[] = "%W% %G% (C) 1988 Markku Savela";
 
 static	aName	*was;
 int	ww_index = 0, ww_size = MAXCONNECTIONS*2;
+static	aLock	*locked;
+int	lk_index = 0, lk_size = MAXCONNECTIONS*2;
 
 static	void	grow_history()
 {
 	int	osize = ww_size;
 
+	Debug((DEBUG_ERROR, "Whowas/grow_history ww:%d, lk:%d, #%d, %#x/%#x",
+			    ww_size, lk_size, numclients, was, locked));
 	ww_size = (int)((float)numclients * 1.1);
 	was = (aName *)MyRealloc((char *)was, sizeof(*was) * ww_size);
-	bzero(was + osize, sizeof(*was) * (ww_size - osize));
+	bzero((char *)was + osize, sizeof(*was) * (ww_size - osize));
+	lk_size = (int)((float)numclients * 1.1);
+	locked = (aLock *)MyRealloc((char *)locked, sizeof(*locked) * lk_size);
+	bzero((char *)locked + osize, sizeof(*locked) * (lk_size - osize));
+	Debug((DEBUG_ERROR, "Whowas/grow_history %#x/%#x", was, locked));
+	ircd_writetune(tunefile);
 }
 
 
-void	add_history(cptr)
-Reg	aClient	*cptr;
+void	add_history(cptr, nodelay)
+Reg	aClient	*cptr, *nodelay;
 {
 	Reg	aName	*np;
+	Reg	Link	*uwas;
 
 	cptr->user->refcnt++;
 
 	np = &was[ww_index];
-	if (np->ww_user)
+
+	if ((np->ww_online && (np->ww_online != &me))
+	    && !(np->ww_user && np->ww_user->uwas))
+#ifdef DEBUGMODE
+		dumpcore("whowas[%d] %#x %#x %#x", ww_index, np->ww_online,
+			 np->ww_user, np->ww_user->uwas);
+#else
+		sendto_flag(SCH_ERROR, "whowas[%d] %#x %#x %#x", ww_index,
+			    np->ww_online, np->ww_user, np->ww_user->uwas);
+#endif
+	/*
+	** The entry to be overwritten in was[] is still online.
+	** its uwas has to be updated
+	*/
+	if (np->ww_online && (np->ww_online != &me))
+	    {
+		Reg	Link	**old_uwas;
+
+		old_uwas = &(np->ww_user->uwas);
+		/* (*old_uwas) should NEVER happen to be NULL. -krys */
+		while ((*old_uwas)->value.i != ww_index)
+			old_uwas = &((*old_uwas)->next);
+		uwas = *old_uwas;
+		*old_uwas = uwas->next;
+		free_link(uwas);
 		free_user(np->ww_user, np->ww_online);
+		istat.is_wwuwas--;
+	    }
+	else if (np->ww_user)
+	    {
+		/*
+		** Testing refcnt here is quite ugly, and unexact.
+		** Nonetheless, the result is almost correct, and another
+		** ugly thing in free_server() shoud make it exact.
+		** The problem is that 1 anUser structure might be
+		** referenced several times from whowas[] but is only counted
+		** once. One knows when to add, not when to substract - krys
+		*/
+		if (np->ww_user->refcnt == 1)
+		    {
+			istat.is_wwusers--;
+			if (np->ww_user->away)
+			    {
+				istat.is_wwaways--;
+				istat.is_wwawaysmem -=strlen(np->ww_user->away)
+							+ 1;
+			    }
+		    }
+		free_user(np->ww_user, NULL);
+	    }
+
+	if (np->ww_logout != 0)
+	    {
+		int	elapsed = timeofday - np->ww_logout;
+
+		/* some stats */
+		ircstp->is_wwcnt++;
+		ircstp->is_wwt += elapsed;
+		if (elapsed < ircstp->is_wwmt)
+			ircstp->is_wwmt = elapsed;
+		if (elapsed > ircstp->is_wwMt)
+			ircstp->is_wwMt = elapsed;
+
+		if (np->ww_online == NULL)
+		    {
+			if (locked[lk_index].logout)
+			    {
+				elapsed = timeofday - locked[lk_index].logout;
+				/* some stats first */
+				ircstp->is_lkcnt++;
+				ircstp->is_lkt += elapsed;
+				if (elapsed < ircstp->is_lkmt)
+					ircstp->is_lkmt = elapsed;
+				if (elapsed > ircstp->is_lkMt)
+					ircstp->is_lkMt = elapsed;
+			    }
+
+			/*
+			 ** This nickname has to be locked, thus copy it to the
+			 ** lock[] array.
+			 */
+			strncpyzt(locked[lk_index].nick, np->ww_nick, NICKLEN);
+			locked[lk_index++].logout = np->ww_logout;
+			if (lk_index >= lk_size)
+				lk_index = 0;
+		    }
+	    }
+
+	if (nodelay == cptr) /* &me is NOT a valid value, see off_history() */
+	    {
+		/*
+		** The client is online, np->ww_online is going to point to
+		** it. The client user struct has to point to this entry
+		** as well for faster off_history()
+		** this uwas, and the ww_online form a pair.
+		*/
+		uwas = make_link();
+		istat.is_wwuwas++;
+		/*
+		** because of reallocs, one can not store a pointer inside
+		** the array. store the index instead.
+		*/
+		uwas->value.i = ww_index;
+		uwas->flags = timeofday;
+		uwas->next = cptr->user->uwas;
+		cptr->user->uwas = uwas;
+	    }
+
+	np->ww_logout = timeofday;
 	np->ww_user = cptr->user;
-	np->ww_logout = time(NULL);
-	np->ww_online = (cptr->from != NULL) ? cptr : NULL;
+	np->ww_online = (nodelay != NULL) ? nodelay : NULL;
+
 	strncpyzt(np->ww_nick, cptr->name, NICKLEN+1);
 	strncpyzt(np->ww_info, cptr->info, REALLEN+1);
 
@@ -85,7 +202,7 @@ time_t	timelimit;
 	Reg	int	i = 0;
 
 	wp = wp2 = &was[ww_index];
-	timelimit = time(NULL)-timelimit;
+	timelimit = timeofday - timelimit;
 
 	do {
 		if (!mycmp(nick, wp->ww_nick) && wp->ww_logout >= timelimit)
@@ -96,19 +213,99 @@ time_t	timelimit;
 	} while (wp != wp2);
 
 	if (wp != wp2 || !i)
-		return (wp->ww_online);
+		if (wp->ww_online == &me)
+			return (NULL);
+		else
+			return (wp->ww_online);
 	return (NULL);
+}
+
+/*
+** find_history
+**      Returns 1 if a user was using the given nickname within
+**   the timelimit. Returns 0, if none found...
+*/
+int	find_history(nick, timelimit)
+char  *nick;
+time_t        timelimit;
+{
+	Reg     aName   *wp, *wp2;
+	Reg	aLock	*lp, *lp2;
+	Reg     int     i = 0;
+	
+	wp = wp2 = &was[ww_index];
+#ifdef RANDOM_NDELAY	
+	timelimit = timeofday - timelimit - (lk_index % 60);
+#else
+	timelimit = timeofday - timelimit;
+#endif
+	
+	do {
+		if (!mycmp(nick, wp->ww_nick) &&
+		    (wp->ww_logout >= timelimit) && (wp->ww_online == NULL))
+			break;
+		wp++;
+		if (wp == &was[ww_size])
+			i = 1, wp = was;
+	} while (wp != wp2);
+	if ((wp != wp2 || !i) && (wp->ww_online == NULL))
+		return (1);
+
+	lp = lp2 = &locked[lk_index];
+	i = 0;
+	do {
+		if (!myncmp(nick, lp->nick, NICKLEN) &&
+		    (lp->logout >= timelimit))
+			break;
+		lp++;
+		if (lp == &locked[lk_size])
+			i = 1, lp = locked;
+	} while (lp != lp2);
+	if (lp != lp2 || !i)
+		return (1);
+
+	return (0);
 }
 
 void	off_history(cptr)
 Reg	aClient	*cptr;
 {
 	Reg	aName	*wp;
-	Reg	int	i;
+	Reg	Link	*uwas;
 
-	for (i = ww_size, wp = was; i; wp++, i--)
-		if (wp->ww_online == cptr)
-			wp->ww_online = NULL;
+	/*
+	** If the client has uwas entry/ies, there are also entries in
+	** the whowas array which point back to it.
+	** They have to be removed, by pairs
+	*/
+	while (uwas = cptr->user->uwas)
+	    {
+		if (was[uwas->value.i].ww_online != cptr)
+#ifdef DEBUGMODE
+			dumpcore("was[%d]: %#x != %#x", uwas->value.i,
+				 was[uwas->value.i].ww_online, cptr);
+#else
+			sendto_flag(SCH_ERROR, "was[%d]: %#x != %#x", 
+				    uwas->value.i, 
+				    was[uwas->value.i].ww_online, cptr);
+#endif
+		/*
+		** using &me to make ww_online non NULL (nicknames to be
+		** locked). &me can safely be used, it is constant.
+		*/
+		was[uwas->value.i].ww_online = &me;
+		cptr->user->uwas = uwas->next;
+		free_link(uwas);
+		istat.is_wwuwas--;
+	    }
+
+	istat.is_wwusers++;
+	if (cptr->user->away)
+	    {
+		istat.is_wwaways++;
+		istat.is_wwawaysmem += strlen(cptr->user->away) + 1;
+	    }
+		
 	return;
 }
 
@@ -117,8 +314,15 @@ void	initwhowas()
 	Reg	int	i;
 
 	was = (aName *)MyMalloc(sizeof(*was) * ww_size);
+
 	for (i = 0; i < ww_size; i++)
 		bzero((char *)&was[i], sizeof(aName));
+	locked = (aLock *)MyMalloc(sizeof(*locked) * lk_size);
+	for (i = 0; i < lk_size; i++)
+		bzero((char *)&locked[i], sizeof(aLock));
+
+	ircstp->is_wwmt = ircstp->is_lkmt = DELAYCHASETIMELIMIT
+						* DELAYCHASETIMELIMIT;
 	return;
 }
 
@@ -178,8 +382,12 @@ char	*parv[];
 		} while (wp != wp2);
 
 		if (up == NULL)
+		    {
+			if (strlen(parv[1]) > (size_t) NICKLEN)
+				parv[1][NICKLEN] = '\0';
 			sendto_one(sptr, err_str(ERR_WASNOSUCHNICK, parv[0]),
 				   parv[1]);
+		    }
 
 		if (p)
 			p[-1] = ',';
@@ -189,34 +397,48 @@ char	*parv[];
     }
 
 
-void	count_whowas_memory(wwu, wwa, wwam)
-int	*wwu, *wwa;
+void	count_whowas_memory(wwu, wwa, wwam, wwuw)
+int	*wwu, *wwa, *wwuw;
 u_long	*wwam;
 {
 	Reg	anUser	*tmp;
+	Reg	Link	*tmpl;
 	Reg	int	i, j;
-	int	u = 0, a = 0;
+	int	u = 0, a = 0, w = 0;
 	u_long	am = 0;
 
 	for (i = 0; i < ww_size; i++)
-		if ((tmp = was[i].ww_user))
-			if (!was[i].ww_online)
-			    {
-				for (j = 0; j < i; j++)
-					if (was[j].ww_user == tmp)
-						break;
-				if (j < i)
-					continue;
+		if (tmp = was[i].ww_user)
+		{
+			for (j = 0; j < i; j++)
+				if (was[j].ww_user == tmp)
+					break;
+			if (j < i)
+				continue;
+			if (was[i].ww_online == NULL ||
+			    was[i].ww_online == &me)
+			{
 				u++;
 				if (tmp->away)
-				    {
+				{
 					a++;
 					am += (strlen(tmp->away)+1);
-				    }
-			    }
+				}
+			}
+			else
+			{
+				tmpl = tmp->uwas;
+				while (tmpl)
+				{
+					w++;
+					tmpl = tmpl->next;
+				}
+			}
+		}
 	*wwu = u;
 	*wwa = a;
 	*wwam = am;
+	*wwuw = w;
 
 	return;
 }

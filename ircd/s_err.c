@@ -23,7 +23,7 @@
 #include "h.h"
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1992 Darren Reed";
+static  char sccsid[] = "@(#)s_err.c	1.1 1/21/95 (C) 1992 Darren Reed";
 #endif
 
 typedef	struct	{
@@ -60,11 +60,12 @@ static	Numeric	numeric_errors[] = {
 /* 413 */	ERR_NOTOPLEVEL, "%s :No toplevel domain specified",
 /* 414 */	ERR_WILDTOPLEVEL, "%s :Wildcard in toplevel Domain",
 /* 415 */	ERR_BADMASK, "%s :Bad Server/host mask",
+/* 416 */	ERR_TOOMANYMATCHES, "%s %s :Output too long (try locally)",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL, 0, (char *)NULL,
+		0, (char *)NULL,
 /* 421 */	ERR_UNKNOWNCOMMAND, "%s :Unknown command",
 /* 422 */	ERR_NOMOTD, ":MOTD File is missing",
-/* 424 */	ERR_NOADMININFO,
+/* 423 */	ERR_NOADMININFO,
 		"%s :No administrative info available",
 /* 424 */	ERR_FILEERROR, ":File error doing %s on %s",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
@@ -75,7 +76,9 @@ static	Numeric	numeric_errors[] = {
 /* 434 */	ERR_SERVICENAMEINUSE, (char *)NULL,
 /* 435 */	ERR_SERVICECONFUSED, (char *)NULL,
 /* 436 */	ERR_NICKCOLLISION, "%s :Nickname collision KILL from %s@%s",
-		0, (char *)NULL, 0, (char *)NULL,
+/* 437 */	ERR_UNAVAILRESOURCE,
+		"%s :Nick/channel is temporarily unavailable",
+/* 438 */	0, (char *)NULL, /* reserved for later use -krys */
 		0, (char *)NULL, 0, (char *)NULL,
 		ERR_USERNOTINCHANNEL, "%s %s :They aren't on that channel",
 		ERR_NOTONCHANNEL, "%s :You're not on that channel",
@@ -98,7 +101,8 @@ static	Numeric	numeric_errors[] = {
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 /* 461 */	ERR_NEEDMOREPARAMS, "%s :Not enough parameters",
-/* 462 */	ERR_ALREADYREGISTRED, ":You may not reregister",
+/* 462 */	ERR_ALREADYREGISTRED,
+		":Unauthorized command (already registered)",
 /* 463 */	ERR_NOPERMFORHOST, ":Your host isn't among the privileged",
 /* 464 */	ERR_PASSWDMISMATCH, ":Password Incorrect",
 /* 465 */	ERR_YOUREBANNEDCREEP, ":You are banned from this server",
@@ -116,10 +120,10 @@ static	Numeric	numeric_errors[] = {
 /* 481 */	ERR_NOPRIVILEGES,
 		":Permission Denied- You're not an IRC operator",
 /* 482 */	ERR_CHANOPRIVSNEEDED, "%s :You're not channel operator",
-/* 483 */	ERR_CANTKILLSERVER, ":You cant kill a server!",
+/* 483 */	ERR_CANTKILLSERVER, "%s :You cant kill a server!",
+/* 484 */	ERR_RESTRICTED, ":Your connection is restricted!",
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
-		0, (char *)NULL,
 /* 491 */	ERR_NOOPERHOST, ":No O-lines for your host",
 /* 492 */	ERR_NOSERVICEHOST, (char *)NULL,
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
@@ -215,11 +219,11 @@ static	Numeric	numeric_replies[] = {
 /* 203 */	RPL_TRACEUNKNOWN, "???? %d %s",
 /* 204 */	RPL_TRACEOPERATOR, "Oper %d %s",
 /* 205 */	RPL_TRACEUSER, "User %d %s",
-/* 206 */	RPL_TRACESERVER, "Serv %d %dS %dC %s %s!%s@%s",
-/* 207 */	RPL_TRACESERVICE, "Service %d %s",
+/* 206 */	RPL_TRACESERVER, "Serv %d %dS %dC %s %s!%s@%s V%d",
+/* 207 */	RPL_TRACESERVICE, "Service %d %s %d %d",
 /* 208 */	RPL_TRACENEWTYPE, "<newtype> 0 %s",
 /* 209 */	RPL_TRACECLASS, "Class %d %d",
-		0, (char *)NULL,
+/* 210 */	RPL_TRACERECONNECT, "Retry. %d %s",
 /* 211 */	RPL_STATSLINKINFO, (char *)NULL,
 /* 212 */	RPL_STATSCOMMANDS, "%s %u %u",
 /* 213 */	RPL_STATSCLINE, "%c %s * %s %d %d",
@@ -250,18 +254,18 @@ static	Numeric	numeric_replies[] = {
 		0, (char *)NULL, 0, (char *)NULL, 0, (char *)NULL,
 		0, (char *)NULL,
 /* 251 */	RPL_LUSERCLIENT,
-		":There are %d users and %d invisible on %d servers",
-/* 252 */	RPL_LUSEROP, "%d :operator(s) online",
-/* 253 */	RPL_LUSERUNKNOWN, "%d :unknown connection(s)",
+		":There are %d users and %d services on %d servers",
+/* 252 */	RPL_LUSEROP, "%d :operators online",
+/* 253 */	RPL_LUSERUNKNOWN, "%d :unknown connections",
 /* 254 */	RPL_LUSERCHANNELS, "%d :channels formed",
-/* 255 */	RPL_LUSERME, ":I have %d clients and %d servers",
+/* 255 */	RPL_LUSERME, ":I have %d clients, %d services and %d servers",
 /* 256 */	RPL_ADMINME, ":Administrative info about %s",
 /* 257 */	RPL_ADMINLOC1, ":%s",
 /* 258 */	RPL_ADMINLOC2, ":%s",
 /* 259 */	RPL_ADMINEMAIL, ":%s",
 		0, (char *)NULL,
 /* 261 */	RPL_TRACELOG, "File %s %d",
-/* 262 */	RPL_TRACEEND, "%s :End of TRACE",
+/* 262 */	RPL_TRACEEND, "%s %s.%s :End of TRACE",
 		0, (char *)NULL
 };
 

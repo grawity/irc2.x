@@ -17,12 +17,12 @@
 #*   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #*/
 
-CC=cc
+CC=gcc
 RM=/bin/rm
 INCLUDE=../include
 
 # For MIPS, use:
-# CFLAGS=-O2 -systype bsd43 -I${INCLUDE}
+# CFLAGS=-O -systype bsd43 -I${INCLUDE}
 # and otherwise:
 #CFLAGS=-O2 -I${INCLUDE}
 CFLAGS=-g -I${INCLUDE}

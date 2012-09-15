@@ -17,7 +17,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #ifndef lint
-static char sccsid[] = "%W% %G% (C) 1991 Darren Reed";
+static char sccsid[] = "@(#)hash.c	1.1 1/21/95 (C) 1991 Darren Reed";
 #endif
 
 #include "struct.h"
@@ -154,7 +154,7 @@ int	size;
 		if (!failure)
 			return size;
 	    }
-	return -1;
+	/* return -1;	/* Never reached */
 }
 
 /*
@@ -204,9 +204,10 @@ int	size;
 
 void	inithashtables()
 {
-	clear_client_hash_table(HASHSIZE);
-	clear_channel_hash_table(CHANNELHASHSIZE);
-	clear_server_hash_table(SERVERSIZE);
+	clear_client_hash_table((_HASHSIZE) ? _HASHSIZE : HASHSIZE);
+	clear_channel_hash_table((_CHANNELHASHSIZE) ? _CHANNELHASHSIZE
+                                 : CHANNELHASHSIZE);
+	clear_server_hash_table((_SERVERSIZE) ? _SERVERSIZE : SERVERSIZE);
 }
 
 static	void	bigger_hash_table(size, table, new)
@@ -280,6 +281,7 @@ int	new;
 		for (sptr = svrtop; sptr; sptr = sptr->nexts)
 			(void)add_to_server_hash_table(sptr, sptr->bcptr);
 	    }
+	ircd_writetune(tunefile);
 	return;
 }
 
@@ -379,7 +381,8 @@ aClient	*cptr;
 			    }
 			else
 			    {
-				Debug((DEBUG_ERROR, "ch-hash table failure")); 
+				sendto_flag(SCH_ERROR, "cl-hash table failure");
+				Debug((DEBUG_ERROR, "cl-hash table failure")); 
 				/*
 				 * Should never actually return from here and
 				 * if we do it is an error/inconsistency in the
@@ -425,7 +428,10 @@ aChannel	*chptr;
 				return 1;
 			    }
 			else
+			    {
+                                sendto_flag(SCH_ERROR, "ch-hash table failure");
 				return -1;
+			    }
 		    }
 		prev = tmp;
 	    }
@@ -464,7 +470,10 @@ aClient	*cptr;
 				return 1;
 			    }
 			else
+			    {
+                                sendto_flag(SCH_ERROR, "se-hash table failure");
 				return -1;
+			    }
 		    }
 		prev = tmp;
 	    }
@@ -773,7 +782,7 @@ char	*parv[];
 		Reg	aClient	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Client List.", parv[0]);
-		clear_client_hash_table();
+		clear_client_hash_table(_HASHSIZE);
 		for (acptr = client; acptr; acptr = acptr->next)
 			(void)add_to_client_hash_table(acptr->name, acptr);
 		break;
@@ -783,7 +792,7 @@ char	*parv[];
 		Reg	aChannel	*acptr;
 
 		sendto_one(sptr,"NOTICE %s :Rehashing Channel List.", parv[0]);
-		clear_channel_hash_table();
+		clear_channel_hash_table(_CHANNELHASHSIZE);
 		for (acptr = channel; acptr; acptr = acptr->nextch)
 			(void)add_to_channel_hash_table(acptr->chname, acptr);
 		break;
@@ -846,11 +855,11 @@ char	*parv[];
 #else
 	if (parc>1&&!strcmp(parv[1],"sums")){
 #endif
-	sendto_one(sptr, "NOTICE %s :[35223 115 s_bsd.c] [36420 114 s_user.c]", parv[0]);
-	sendto_one(sptr, "NOTICE %s :[3296 100 s_serv.c] [6666 41 ircd.c]", parv[0]);
-	sendto_one(sptr, "NOTICE %s :[42410 89 channel.c] [9670 37 s_misc.c]", parv[0]);
-	sendto_one(sptr, "NOTICE %s :[24417 34 hash.c.old] [43910 8 version.c.SH]", parv[0]);
-	sendto_one(sptr, "NOTICE %s :[35223 115 s_bsd.c] HOSTID", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[SBSDC] [SUSER]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[SSERV] [IRCDC]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[CHANC] [SMISC]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[HASHC] [VERSH]", parv[0]);
+	sendto_one(sptr, "NOTICE %s :[SBSDC] HOSTID", parv[0]);
 #ifndef	DEBUGMODE
 	}
 #endif

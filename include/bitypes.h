@@ -57,7 +57,7 @@
  * --Copyright--
  */
 
-#if !defined(__BIT_TYPES_DEFINED__)
+#if !defined(__BIT_TYPES_DEFINED__) && !defined(HAVE_BIT_TYPES)
 #define __BIT_TYPES_DEFINED__
 
 	/*

@@ -32,6 +32,7 @@ Computing Center and Jarkko Oikarinen";
 #include "sys.h"
 #include "h.h"
 #include <stdio.h>
+#include <fcntl.h>
 
 static	char	sendbuf[2048], psendbuf[2048];
 static	int	send_message __P((aClient *, char *, int));
@@ -117,6 +118,8 @@ char	*msg;	/* if msg is a null pointer, we are flushing connection */
 int	len;
 #ifdef SENDQ_ALWAYS
 {
+	int i;
+
 	Debug((DEBUG_SEND,"Sending %s %d [%s] ", to->name, to->fd, msg));
 
 	if (to->from)
@@ -127,13 +130,13 @@ int	len;
 		      "Local socket %s with negative fd... AARGH!",
 		      to->name));
 	    }
-# ifndef	CLIENT_COMPILE
+#ifndef	CLIENT_COMPILE
 	else if (IsMe(to))
 	    {
 		sendto_flag(SCH_ERROR, "Trying to send to myself! [%s]", msg);
 		return;
 	    }
-# endif
+#endif
 	if (IsDead(to))
 		return 0; /* This socket has already been marked as dead */
 # ifndef	CLIENT_COMPILE
@@ -147,6 +150,8 @@ int	len;
 			poolsize -= MaxSendq(aconf->class) >> 1;
 			IncSendq(aconf->class);
 			poolsize += MaxSendq(aconf->class) >> 1;
+			sendto_flag(SCH_NOTICE, "New poolsize %d.",
+				    poolsize);
 		    }
 		else if (IsServer(to))
 			sendto_flag(SCH_ERROR,
@@ -166,8 +171,22 @@ int	len;
 	    }
 	else
 # endif
-		if (dbuf_put(&to->sendQ, msg, len) < 0)
-		return dead_link(to, "Buffer allocation error for %s");
+tryagain:
+		if ((i = dbuf_put(&to->sendQ, msg, len)) < 0)
+			if (i == -2 && CBurst(to))
+			    {	/* poolsize was exceeded while connect burst */
+				aConfItem	*aconf = to->serv->nline;
+
+				poolsize -= MaxSendq(aconf->class) >> 1;
+				IncSendq(aconf->class);
+				poolsize += MaxSendq(aconf->class) >> 1;
+				sendto_flag(SCH_NOTICE, "New poolsize %d. (r)",
+					    poolsize);
+				goto tryagain;
+			    }
+			else
+				return dead_link(to,
+					"Buffer allocation error for %s");
 	/*
 	** Update statistics. The following is slightly incorrect
 	** because it counts messages even if queued, but bytes
@@ -402,30 +421,27 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
 /*
 ** send message to single client
 */
-void	sendto_one(to, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)
+int	sendto_one(to, pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)
 aClient *to;
 char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9, *p10, *p11;
 {
-
+	int	len;
 #ifdef VMS
 	extern int goodbye;
 	
 	if (StrEq("QUIT", pattern)) 
 		goodbye = 1;
 #endif
-
-	sendprep(pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
-	(void)send_message(to, sendbuf, strlen(sendbuf));
+	len = sendprep(pattern, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
+	(void)send_message(to, sendbuf, len);
+	return len;
 }
 
 #ifndef CLIENT_COMPILE
-/*
-static	anUser	ausr = { NULL, NULL, NULL, 0, 0, 0, 0, "anonymous",
-			 "anonymous.", "anonymous.", NULL, NULL, NULL };
-*/
-static	anUser	ausr = { NULL, NULL, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL,
-			 "anonymous", "anonymous.", "anonymous.", "" };
+static	anUser	ausr = { NULL, NULL, NULL, NULL, 0, 0, 0, 0, NULL, NULL, NULL,
+			 NULL, "anonymous", "anonymous.", "anonymous."};
 
+#ifndef KRYS
 static	aClient	anon = { NULL, NULL, NULL, &ausr, NULL, NULL, 0, 0, 0, 0,
 			 0,/*flags*/
 			 &anon, -2, 0, STAT_CLIENT, "anonymous", "anonymous",
@@ -436,6 +452,17 @@ static	aClient	anon = { NULL, NULL, NULL, &ausr, NULL, NULL, 0, 0, 0, 0,
 			 ,{0}, NULL, "", ""
 #endif
 			};
+#else
+static	aClient	anon = { NULL, NULL, NULL, &ausr, NULL, NULL, 0, 0,/*flags*/
+			 &anon, -2, 0, STAT_CLIENT, "anonymous", "anonymous",
+			 "anonymous identity hider", 0, "", 0,
+			 {0, 0, NULL }, {0, 0, NULL },
+			 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, 0, 0, 0, 0
+#if defined(__STDC__)	/* hack around union{} initialization	-Vesa */
+			 ,{0}, NULL, "", ""
+#endif
+			};
+#endif
 
 /*VARARGS*/
 void	sendto_channel_butone(one, from, chptr, pattern,
@@ -475,7 +502,9 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 			if (acptr != from)
 				(void)send_message(acptr, psendbuf, len2);
 		    }
-		else
+		else if (!IsAnonymous(chptr) || /* Anonymous channel msgs */
+			 !IsServer(acptr) ||    /* are not sent to old    */
+			 !(acptr->serv->version == SV_OLD))/* server versions*/
 			(void)send_message(acptr, sendbuf, len1);
 	    }
 	return;
@@ -491,36 +520,41 @@ void	sendto_serv_butone(one, pattern, p1, p2, p3, p4, p5, p6, p7, p8)
 aClient *one;
 char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 {
-	Reg	int	i, len;
+	Reg	int	i, len=0;
 	Reg	aClient *cptr;
-
-	len = sendprep(pattern, p1, p2, p3, p4, p5, p6, p7, p8);
 
 	for (i = fdas.highest; i >= 0; i--)
 		if ((cptr = local[fdas.fd[i]]) &&
-		    (!one || cptr != one->from) && !IsMe(cptr))
+		    (!one || cptr != one->from) && !IsMe(cptr)) {
+			if (!len)
+				len = sendprep(pattern, p1, p2, p3, p4, p5,
+					       p6, p7, p8);
 			(void)send_message(cptr, sendbuf, len);
+	}
 	return;
 }
 
-
+#ifndef NoV28Links
 void	sendto_serv_v(one, ver, pattern, p1, p2, p3, p4, p5, p6, p7, p8)
 aClient *one;
 int	ver;
 char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 {
-	Reg	int	i, len;
+	Reg	int	i, len=0;
 	Reg	aClient *cptr;
-
-	len = sendprep(pattern, p1, p2, p3, p4, p5, p6, p7, p8);
 
 	for (i = fdas.highest; i >= 0; i--)
 		if ((cptr = local[fdas.fd[i]]) &&
 		    (!one || cptr != one->from) && !IsMe(cptr) &&
-		    cptr->serv->version == ver)
+		    cptr->serv->version == ver) {
+			if (!len)
+				len = sendprep(pattern, p1, p2, p3, p4, p5,
+					       p6, p7, p8);
 			(void)send_message(cptr, sendbuf, len);
+	}
 	return;
 }
+#endif
 
 /*
  * sendto_common_channels()
@@ -550,9 +584,13 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 		    user == cptr || !user->user)
 			continue;
 		for (lp = user->user->channel; lp; lp = lp->next)
-			if (IsMember(cptr, lp->value.chptr))
+			if (IsMember(cptr, lp->value.chptr) &&
+			    !IsQuiet(lp->value.chptr))
 			    {
-				if (!len)
+#ifndef DEBUGMODE
+				if (!len) /* This saves little cpu,
+					     but breaks the debug code.. */
+#endif
 					len = sendpreprep(cptr, user, pattern,
 							  p1, p2, p3, p4,
 							  p5, p6, p7, p8);
@@ -582,8 +620,12 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 	int	len = 0;
 
 	if (MyClient(from))
+	    {	/* Always send to the client itself */
 		sendto_prefix_one(from, from, pattern, p1, p2, p3, p4,
 				  p5, p6, p7, p8);
+		if (IsQuiet(chptr))	/* Really shut up.. */
+			return;
+	    }
 	if (IsAnonymous(chptr) && IsClient(from))
 	    {
 		if (p1 && *p1 && !mycmp(p1, from->name))
@@ -639,11 +681,9 @@ aChannel *chptr;
 aClient	*from;
 char	*format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 {
-	Reg	int	i, len;
+	Reg	int	i, len=0;
 	Reg	aClient	*cptr;
 	char	*mask;
-
-	len = sendprep(format, p1, p2, p3, p4, p5, p6, p7, p8, p9);
 
 	if (chptr)
 	    {
@@ -662,6 +702,9 @@ char	*format, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8, *p9;
 			continue;
 		if (!BadPtr(mask) && matches(mask, cptr->name))
 			continue;
+		if (!len)
+			len = sendprep(format, p1, p2, p3, p4, p5, p6, p7,
+				       p8, p9);
 		(void)send_message(cptr, sendbuf, len);
 	    }
 }
@@ -700,7 +743,7 @@ char	*mask, *pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 				continue;
 		    }
 		/* my client, does he match ? */
-		else if (IsRegisteredUser(cptr) && !match_it(cptr, mask, what))
+		else if (IsRegisteredUser(cptr) && match_it(cptr, mask, what))
 			sendto_prefix_one(cptr, from, pattern,
 					  p1, p2, p3, p4, p5, p6, p7, p8);
 	    }
@@ -807,8 +850,9 @@ static	SChan	svchans[SCH_MAX] = {
 	{ SCH_KILL,	"&KILLS",	NULL },
 	{ SCH_CHAN,	"&CHANNEL",	NULL },
 	{ SCH_NUM,	"&NUMERICS",	NULL },
-	{ SCH_SQUIT,	"&SQUITS",	NULL },
+	{ SCH_SERVER,	"&SERVERS",	NULL },
 	{ SCH_HASH,	"&HASH",	NULL },
+	{ SCH_LOCAL,	"&LOCAL",	NULL },
 };
 
 
@@ -822,9 +866,9 @@ void	setup_svchans()
 }
 
 
-void	sendto_flag(chan, pattern, p1, p2, p3, p4, p5, p6, p7, p8)
+void	sendto_flag(chan, pattern, p1, p2, p3, p4, p5, p6)
 u_int	chan;
-char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
+char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6;
 {
 	Reg	aClient	*cptr;
 	Reg	int	i;
@@ -841,8 +885,61 @@ char	*pattern, *p1, *p2, *p3, *p4, *p5, *p6, *p7, *p8;
 		(void)strcpy(nbuf, ":%s NOTICE %s :");
 		(void)strcat(nbuf, pattern);
 		sendto_channel_butserv(chptr, &me, nbuf, ME, chptr->chname,
-				       p1, p2, p3, p4, p5, p6, p7, p8);
+				       p1, p2, p3, p4, p5, p6);
 	    }
 	return;
+}
+
+void	sendto_flog(ftime, msg, duration, username, hostname, ident, exitc)
+char	*ftime, *msg, *username, *hostname, *ident, exitc;
+time_t	duration;
+{
+	char	linebuf[160];
+	int	logfile;
+
+	/*
+	 * This conditional makes the logfile active only after
+	 * it's been created, thus logging can be turned off by
+	 * removing the file.
+	 *
+	 * stop NFS hangs...most systems should be able to
+	 * file in 3 seconds. -avalon (curtesy of wumpus)
+	 */
+	(void)alarm(3);
+	if (
+#ifdef	FNAME_USERLOG
+	    (duration && 
+	     (logfile = open(FNAME_USERLOG, O_WRONLY|O_APPEND)) != -1)
+# ifdef	FNAME_CONNLOG
+	    ||
+# endif
+#endif
+#ifdef	FNAME_CONNLOG
+	    (!duration && 
+	     (logfile = open(FNAME_CONNLOG, O_WRONLY|O_APPEND)) != -1)
+#else
+# ifndef	FNAME_USERLOG
+	    0
+# endif
+#endif
+	   )
+	    {
+		(void)alarm(0);
+		if (duration)
+			(void)sprintf(linebuf,
+				     "%s (%3d:%02d:%02d): %s@%s [%s] %c\n",
+				     ftime, duration / 3600,
+				     (duration % 3600)/60, duration % 60,
+				     username, hostname, ident, exitc);
+		else
+			(void)sprintf(linebuf, "%s (%s): %s@%s [%s] %c\n",
+				      ftime, msg, username, hostname, ident,
+				      exitc);
+		(void)alarm(3);
+		(void)write(logfile, linebuf, strlen(linebuf));
+		(void)alarm(0);
+		(void)close(logfile);
+	    }
+	(void)alarm(0);
 }
 #endif /* CLIENT_COMPILE */

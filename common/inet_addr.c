@@ -57,7 +57,11 @@
 #include "common.h"
 #include "sys.h"
 #include <netinet/in.h>
-#include "nameser.h"
+#ifdef HAVE_ARPA_NAMESER_H
+# include <arpa/nameser.h>
+#else
+# include "nameser.h"
+#endif
 #include "resolv.h"
 
 #ifndef	INADDR_NONE

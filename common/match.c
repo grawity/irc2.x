@@ -18,7 +18,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)match.c	1.1 1/22/95 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 

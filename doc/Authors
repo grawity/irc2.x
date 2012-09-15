@@ -5,7 +5,7 @@
  * AUTHORS FILE:
  *   This file attempts to remember all contributors to the IRC
  *   developement. Names can be only added this file, no name
- *   should never be removed. This file must be included into all
+ *   should ever be removed. This file must be included into all
  *   distributions of IRC and derived works.
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,8 @@
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+The email addresses listed in here may or may not be up to date. 
 
 IRC was conceived of and written by Jarkko Oikarinen <jto@tolsun.oulu.fi>.
 IRC was originally written in University of Oulu, Computing Center.
@@ -80,7 +82,7 @@ and Tom Hopkins.
 The versions 2.6.2, 2.7 and 2.8 releases were coordinated by Darren Reed.
 
 Contributions for the 2.8 release from the following people:
-Matthew Green <phone@coombs.anu.edu.au>
+Matthew Green <phone@cairo.anu.edu.au>
 Chuck Kane <ckane@ece.uiuc.edu>
 Matt Lyle <matt@oc.com>
 Vesa Ruokonen <ruokonen@lut.fi>
@@ -96,7 +98,7 @@ the Makefile macros, numerous reformatting of server text messages, and
 added mkversion.sh to keep track of compilation statistics. Numerous
 bug fixes and enhancements, and co-coordinator of the 2.4 release.
 
-Jarle Lyngaas (nmijl@alf.uib.no) added Note functions to ircd.
+jarlek@ifi.uio.no added mail functions to irc.
 
 Armin Gruner <gruner@informatik.tu-muenchen.de> / May, June 1990:
 * Patched KILL-line feature for ircd.conf, works now.
@@ -124,14 +126,14 @@ opinions, and code to IRC.
 Various modifications, bugreports, cleanups and testing by:
 
 Hugo Calendar <hugo@ucscb.ucsc.edu>
-Bo Adler <adler@csvax.cs.caltech.edu>
-Michael Sandrof <ms5n+@andrew.cmu.edu>
+Bo Adler <thumper@ugcs.caltech.edu>
+Michael Sandrof <mike@uniteq.com>
 Jon Solomon <jsol@cs.bu.edu>
 Jan Peterson <jlp@hamblin.math.byu.edu>
 Nathan Glasser <nathan@brokaw.lcs.mit.edu>
-Helen Rose <hrose@eff.org>
+Helen Rose <hrose@kei.com>
 Mike Pelletier <stealth@caen.engin.umich.edu>
-Basalat Ali Raja <gwydion@tavi.rice.edu>
+Basalat Ali Raja <gwydion@gnu.ai.mit.edu>
 Eric P. Scott <eps@toaster.sfsu.edu>
 Dan Goodwin <fornax@wpi.wpi.edu>
 Noah Friedman <friedman@ai.mit.edu>

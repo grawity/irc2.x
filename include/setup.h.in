@@ -22,7 +22,7 @@
 #undef HAVE_GETTIMEOFDAY
 #undef HAVE_LRAND48
 #undef HAVE_MEMMOVE
-#undef MALLOCH
+/* #undef MALLOCH	/* Removed, broken.. */
 #undef NBLOCK_BSD
 #undef NBLOCK_POSIX
 #undef NBLOCK_SYSV
@@ -69,5 +69,23 @@
 /* Define if you have the <unistd.h> header file.  */
 #undef HAVE_UNISTD_H
 
+/* Define if you have the <arpa/inet.h> header file.  */
+#undef HAVE_ARPA_INET_H
+
+/* Define if you have the <arpa/nameser.h> header file.  */
+#undef HAVE_ARPA_NAMESER_H
+
+/* Define if you have the <resolv.h> header file.  */
+#undef HAVE_RESOLV_H
+
+/* Define if you have the <sys/bitypes.h> header file.  */
+#undef HAVE_SYS_BITYPES_H
+
+/* Define if you have the <netdb.h> header file.  */
+#undef HAVE_NETDB_H
+
 /* Define if you have the crypt library (-lcrypt).  */
 #undef HAVE_LIBCRYPT
+
+/* Define if you have bit types defined in system include files */
+#undef HAVE_BIT_TYPES   

@@ -20,7 +20,7 @@
  */
 
 #ifndef lint
-static  char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
+static  char sccsid[] = "@(#)s_numeric.c	1.1 1/21/95 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -97,20 +97,23 @@ char	*parv[];
 			** - Avalon
 			*/
 			if (IsMe(acptr))
-			    {
-				chptr = find_channel("&numerics", NULL);
-				sendto_channel_butone(cptr, sptr, chptr,
-						      ":%s NOTICE %s :%d %s",
-						      parv[0], chptr->chname,
-						      numeric, buffer);
-			    }
-			else if (IsPerson(acptr))
+				sendto_flag(SCH_NUM, "From %s: %s %d %s %s.",
+					    cptr->name, sptr->name,
+					    numeric, nick, buffer);
+			else if (IsPerson(acptr) && acptr->from != cptr)
 				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 					parv[0], numeric, nick, buffer);
 			else if (IsServer(acptr) && acptr->from != cptr)
 				sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 					parv[0], numeric, nick, buffer);
+			else if (acptr->from == cptr)
+				sendto_flag(SCH_NOTICE,
+					  "Dropping numeric %d from %s for %s",
+					    numeric,
+					    get_client_name(cptr, TRUE),
+					    acptr->name);
 		    }
+		/* any reason why no cptr == acptr->from checks here? -krys */
 		else if ((acptr = find_nickserv(nick, (aClient *)NULL)))
 			sendto_prefix_one(acptr, sptr,":%s %d %s%s",
 				parv[0], numeric, nick, buffer);

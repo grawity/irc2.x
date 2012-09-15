@@ -27,7 +27,11 @@ char c_bsd_id[] = "c_bsd.c v2.0 (c) 1988 University of Oulu, Computing Center\
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <arpa/inet.h>
+#ifdef HAVE_ARPA_INET_H
+# include <arpa/inet.h>
+#else
+# include "res/inet.h"
+#endif
 #ifndef AUTOMATON
 #include <curses.h>
 #endif
@@ -80,7 +84,7 @@ aClient	*cptr;
 		bcopy(hp->h_addr, (char *)&server.sin_addr, hp->h_length);
 	}
 	server.sin_port = htons(portnum);
-	if (connect(sock, &server, sizeof(server)) == -1) {
+	if (connect(sock, (SAP)&server, sizeof(server)) == -1) {
 		perror("irc");
 	 	exit(1);
 	}
@@ -112,7 +116,11 @@ int	sock;
 		if (termtype == TERMCAP_TERM)
 			move (-1, i);
 #endif
+#ifdef HPUX
+		if (select(32, (int *)&ready, 0, 0, NULL) < 0) {
+#else
 		if (select(32, &ready, 0, 0, NULL) < 0) {
+#endif
 /*      perror("select"); */
 			continue;
 		}

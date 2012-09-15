@@ -19,7 +19,7 @@
  */
 
 #ifndef lint
-static	char sccsid[] = "%W% %G% (C) 1988 University of Oulu, \
+static	char sccsid[] = "@(#)ircd.c	1.1 1/21/95 (C) 1988 University of Oulu, \
 Computing Center and Jarkko Oikarinen";
 #endif
 
@@ -27,6 +27,7 @@ Computing Center and Jarkko Oikarinen";
 #include "common.h"
 #include "sys.h"
 #include "numeric.h"
+#include "hash.h"
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <pwd.h>
@@ -42,19 +43,22 @@ void	server_reboot();
 void	restart __P((char *));
 static	void	open_debugfile(), setup_signals();
 
+istat_t	istat;
 char	**myargv;
 int	rehashed = 0;
 int	portnum = -1;		    /* Server port number, listening this */
 char	*configfile = CONFIGFILE;	/* Server configuration file */
 int	debuglevel = -1;		/* Server debug level */
 int	bootopt = 0;			/* Server boot option flags */
-char	*debugmode = "";		/*  -"-    -"-   -"-  */
+char	*debugmode = "";		/*  -"-    -"-   -"-   -"- */
 char	*sbrk0;				/* initial sbrk(0) */
+char	*tunefile = TPATH;
 static	int	dorehash = 0,
 		dorestart = 0;
 static	char	*dpath = DPATH;
 
 time_t	nextconnect = 1;	/* time for next try_connections call */
+time_t	nextgarbage = 1;        /* time for next collect_channel_garbage call*/
 time_t	nextping = 1;		/* same as above for check_pings() */
 time_t	nextdnscheck = 0;	/* next time to poll dns to force timeouts */
 time_t	nextexpire = 1;	/* next expire run on the dns cache */
@@ -88,6 +92,7 @@ VOIDSIG s_die()
 #ifdef	USE_SYSLOG
 	(void)syslog(LOG_CRIT, "Server Killed By SIGTERM");
 #endif
+	ircd_writetune(tunefile);
 	flush_connections(me.fd);
 	exit(-1);
 }
@@ -112,8 +117,9 @@ void	restart(mesg)
 char	*mesg;
 {
 #ifdef	USE_SYSLOG
-	(void)syslog(LOG_WARNING, "Restarting Server because: %s",mesg);
+	(void)syslog(LOG_WARNING, "Restarting Server because: %s", mesg);
 #endif
+	sendto_flag(SCH_NOTICE, "Restarting server because: %s", mesg);
 	server_reboot();
 }
 
@@ -136,6 +142,7 @@ VOIDSIG s_restart()
 void	server_reboot()
 {
 	Reg	int	i;
+	char	*myname;
 
 	sendto_flag(SCH_NOTICE, "Aieeeee!!!  Restarting server...");
 	Debug((DEBUG_NOTICE,"Restarting server..."));
@@ -154,13 +161,16 @@ void	server_reboot()
 	(void)close(1);
 	if ((bootopt & BOOT_CONSOLE) || isatty(0))
 		(void)close(0);
+	ircd_writetune(tunefile);
+	myname = (char *)malloc(strlen(MYNAME) + 6);
+	(void)strcpy(myname, MYNAME);
 	if (!(bootopt & (BOOT_INETD|BOOT_OPER)))
-		(void)execv(MYNAME, myargv);
+		(void)execv(myname, myargv);
 #ifdef USE_SYSLOG
 	/* Have to reopen since it has been closed above */
 
 	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
-	syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", MYNAME, myargv[0]);
+	syslog(LOG_CRIT, "execv(%s,%s) failed: %m\n", myname, myargv[0]);
 	closelog();
 #endif
 	Debug((DEBUG_FATAL,"Couldn't restart server: %s", strerror(errno)));
@@ -187,7 +197,7 @@ time_t	currenttime;
 	time_t	next = 0;
 	aClass	*cltmp;
 	aConfItem *con_conf = NULL;
-	double	f;
+	double	f, f2;
 	aCPing	*cp;
 
 	Debug((DEBUG_NOTICE,"Connection check at   : %s",
@@ -195,9 +205,8 @@ time_t	currenttime;
 	for (aconf = conf; aconf; aconf = aconf->next )
 	    {
 		/* Also when already connecting! (update holdtimes) --SRB */
-		if (!(aconf->status & CONF_CONNECT_SERVER) || aconf->port <= 0)
+		if (!(aconf->status & CONF_CONNECT_SERVER))
 			continue;
-		cltmp = Class(aconf);
 		/*
 		** Skip this entry if the use of it is still on hold until
 		** future. Otherwise handle this entry (and set it on hold
@@ -211,15 +220,20 @@ time_t	currenttime;
 				next = aconf->hold;
 			continue;
 		    }
+		send_ping(aconf);
+		if (aconf->port <= 0)
+			continue;
 
+		cltmp = Class(aconf);
 		confrq = get_con_freq(cltmp);
 		aconf->hold = currenttime + confrq;
-		send_ping(aconf);
 		/*
 		** Found a CONNECT config with port specified, scan clients
 		** and see if this server is already connected?
 		*/
 		cptr = find_name(aconf->name, (aClient *)NULL);
+		if (!cptr)
+			cptr = find_mask(aconf->name, (aClient *)NULL);
 
 		if (!cptr && (Links(cltmp) < MaxLinks(cltmp)) &&
 		    (!con_conf ||
@@ -261,10 +275,16 @@ time_t	currenttime;
 			else
 			    {
 				f = (double)cp->recv / (double)cp->seq;
-				f = pow(f, (double)20.0);
-				f = (double)cp->ping /
-				    (double)cp->recv / f;
-				aconf->pref = (int) (f * 100.0);
+				f2 = pow(f, (double)20.0);
+				if (f2 < (double)0.001)
+					f = (double)0.001;
+				else
+					f = f2;
+				f2 = (double)cp->ping / (double)cp->recv;
+				f = f2 / f;
+				if (f > 100000.0)
+					f = 100000.0;
+				aconf->pref = (u_int) (f * (double)100.0);
 			    }
 		lastsort = currenttime + 60;
 	    }
@@ -310,7 +330,7 @@ time_t	currenttime;
 		 * K and R lines once per minute, max.  This is the max.
 		 * granularity in K-lines anyway (with time field).
 		 */
-		if (currenttime - lkill > 60)
+		if ((currenttime - lkill > 60) || rehashed)
 		    {
 			if (IsPerson(cptr))
 			    {
@@ -389,7 +409,9 @@ time_t	currenttime;
 				sendto_flag(SCH_NOTICE,
 					    "Kill line active for %s",
 					    get_client_name(cptr, FALSE));
-				cptr->exitc = 'k';
+				cptr->exitc = EXITC_KLINE;
+				(void)exit_client(cptr, cptr, &me,
+						  "Kill line active");
 			    }
 
 #if defined(R_LINES) && defined(R_LINES_OFTEN)
@@ -398,12 +420,17 @@ time_t	currenttime;
 				sendto_flag(SCH_NOTICE,
 					   "Restricting %s, closing link.",
 					   get_client_name(cptr,FALSE));
-				cptr->exitc = 'r';
+				cptr->exitc = EXITC_RLINE;
+				(void)exit_client(cptr, cptr, &me,
+						  "Restricting");
 			    }
 #endif
 			else
-				cptr->exitc = 'P';
-			(void)exit_client(cptr, cptr, &me, "Ping timeout");
+			    {
+				cptr->exitc = EXITC_PING;
+				(void)exit_client(cptr, cptr, &me,
+						  "Ping timeout");
+			    }
 			continue;
 		    }
 		else if (IsRegistered(cptr) &&
@@ -459,10 +486,19 @@ aClient	*mp;
 	mp->fd = -1;
 	SetMe(mp);
 	(void) make_server(mp);
+#ifdef KRYS
+	mp->serv->snum = find_server_num (ME);
+#endif
 	(void) make_user(mp);
+	istat.is_users++;	/* here, cptr->next is NULL, see make_user() */
+	usrtop = mp->user;
 	mp->user->flags |= FLAGS_OPER;
 	mp->serv->up = mp->name;
+#ifdef KRYS
+	mp->user->server = find_server_string(mp->serv->snum);
+#else
 	(void) strcpy(mp->user->server, mp->name);
+#endif
 	strncpyzt(mp->user->username, p->pw_name, sizeof(mp->user->username));
 	(void) strcpy(mp->user->host, mp->name);
 
@@ -487,7 +523,7 @@ static	int	bad_command()
 #endif
 	 );
   (void)printf("Server not started\n\n");
-  return (-1);
+  exit(-1);
 }
 
 int	main(argc, argv)
@@ -511,12 +547,15 @@ char	*argv[];
 	if (chdir(dpath))
 	    {
 		perror("chdir");
+		(void)fprintf(stderr, "%s: Error in daemon path: %s.\n",
+			      SPATH, dpath);
 		exit(-1);
 	    }
 	res_init();
 	if (chroot(DPATH))
 	    {
-		(void)fprintf(stderr,"ERROR:  Cannot chdir/chroot\n");
+		perror("chroot");
+		(void)fprintf(stderr,"%s: Cannot chroot: %s.\n", SPATH, DPATH);
 		exit(5);
 	    }
 #endif /*CHROOTDIR*/
@@ -526,6 +565,7 @@ char	*argv[];
 	bzero((char *)&me, sizeof(me));
 
 	setup_signals();
+	version = make_version();	/* Generate readable version string */
 
 	/*
 	** All command line parameters have the syntax "-fstring"
@@ -582,6 +622,9 @@ char	*argv[];
                         (void)setuid((uid_t)uid);
 			bootopt |= BOOT_TTY;
 			break;
+		    case 'T':
+			tunefile = p;
+			break;
 		    case 'v':
 			(void)printf("ircd %s\n", version);
 			exit(0);
@@ -600,7 +643,6 @@ char	*argv[];
 #endif
 		    default:
 			bad_command();
-			break;
 		    }
 	    }
 
@@ -608,6 +650,8 @@ char	*argv[];
 	if (chdir(dpath))
 	    {
 		perror("chdir");
+		(void)fprintf(stderr, "%s: Error in daemon path: %s.\n",
+                              SPATH, dpath);
 		exit(-1);
 	    }
 #endif
@@ -622,29 +666,19 @@ char	*argv[];
 	    }
 #endif
 
-#if !defined(CHROOTDIR) || (defined(IRC_UID) && defined(IRC_GID))
-# ifndef	AIX
+#if !defined(CHROOTDIR)
 	(void)setuid((uid_t)euid);
-# endif
-
+# if defined(IRC_UID) && defined(IRC_GID)
 	if ((int)getuid() == 0)
 	    {
-# if defined(IRC_UID) && defined(IRC_GID)
-
 		/* run as a specified user */
 		(void)fprintf(stderr,"WARNING: running ircd with uid = %d\n",
 			IRC_UID);
 		(void)fprintf(stderr,"         changing to gid %d.\n",IRC_GID);
 		(void)setuid(IRC_UID);
 		(void)setgid(IRC_GID);
-#else
-		/* check for setuid root as usual */
-		(void)fprintf(stderr,
-			"ERROR: do not run ircd setuid root. Make it setuid a\
- normal user.\n");
-		exit(-1);
-# endif	
 	    } 
+# endif
 #endif /*CHROOTDIR/UID/GID*/
 
 	/* didn't set debuglevel */
@@ -657,19 +691,24 @@ char	*argv[];
 	    }
 
 	if (argc > 0)
-		return bad_command(); /* This should exit out */
+		bad_command(); /* This exits out */
 
+	ircd_readtune(tunefile);
+	timeofday = time(NULL);
+	initstats();
 	inithashtables();
 	initlists();
 	initclass();
 	initwhowas();
-	initstats();
+	timeofday = time(NULL);
 	open_debugfile();
+	timeofday = time(NULL);
 	(void)init_sys();
 
 #ifdef USE_SYSLOG
 	openlog(myargv[0], LOG_PID|LOG_NDELAY, LOG_FACILITY);
 #endif
+	timeofday = time(NULL);
 	if (initconf(bootopt) == -1)
 	    {
 		Debug((DEBUG_FATAL, "Failed in reading configuration file %s",
@@ -679,14 +718,17 @@ char	*argv[];
 		exit(-1);
 	    }
 
+	dbuf_init();
 	setup_me(&me);
 	check_class();
+	ircd_writetune(tunefile);
 
 	if (bootopt & BOOT_INETD)
 	    {
 		aClient	*tmp;
 
 		tmp = make_client(NULL);
+
 		tmp->fd = 0;
 		tmp->flags = FLAGS_LISTEN;
 		tmp->acpt = tmp;
@@ -712,7 +754,7 @@ char	*argv[];
 #ifdef USE_SYSLOG
 	syslog(LOG_NOTICE, "Server Ready");
 #endif
-
+	timeofday = time(NULL);
 	while (1)
 		delay = io_loop(delay);
 }
@@ -722,24 +764,28 @@ io_loop(delay)
 time_t	delay;
 {
 	static	time_t	nextc = 0, nextactive = 0, lastl = 0;
-	time_t	now;
 
-	now = time(NULL);
 	/*
 	** We only want to connect if a connection is due,
 	** not every time through.  Note, if there are no
 	** active C lines, this call to Tryconnections is
 	** made once only; it will return 0. - avalon
 	*/
-	if (nextconnect && now >= nextconnect)
-		nextconnect = try_connections(now);
+	if (nextconnect && timeofday >= nextconnect)
+		nextconnect = try_connections(timeofday);
+	/*
+	** Every once in a while, hunt channel structures that
+	** can be freed.
+	*/
+	if (timeofday >= nextgarbage)
+		nextgarbage = collect_channel_garbage(timeofday);
 	/*
 	** DNS checks. One to timeout queries, one for cache expiries.
 	*/
-	if (now >= nextdnscheck)
-		nextdnscheck = timeout_query_list(now);
-	if (now >= nextexpire)
-		nextexpire = expire_cache(now);
+	if (timeofday >= nextdnscheck)
+		nextdnscheck = timeout_query_list(timeofday);
+	if (timeofday >= nextexpire)
+		nextexpire = expire_cache(timeofday);
 	/*
 	** take the smaller of the two 'timed' event times as
 	** the time of next event (stops us being late :) - avalon
@@ -751,7 +797,7 @@ time_t	delay;
 		delay = nextping;
 	delay = MIN(nextdnscheck, delay);
 	delay = MIN(nextexpire, delay);
-	delay -= now;
+	delay -= timeofday;
 	/*
 	** Adjust delay to something reasonable [ad hoc values]
 	** (one might think something more clever here... --msa)
@@ -767,33 +813,35 @@ time_t	delay;
 		delay = MIN(delay, TIMESEC);
 
 #ifdef	HUB
+	(void)read_message(1, &fdas);
+	flush_connections(me.fd);
 	Debug((DEBUG_DEBUG, "delay for %d", delay));
-	if (now > nextc)
+	if (timeofday > nextc)
 	    {
 		(void)read_message(delay, &fdall);
-		nextc = now + HUB + 1;
+		nextc = timeofday + HUB + 1;
 	    }
 	else
 	    {
-		if (now > nextactive)
+		if (timeofday > nextactive)
 		    {
 			(void)read_message(0, &fdaa);
-			nextactive = now + HUB;
+			nextactive = timeofday + HUB;
 		    }
 		(void)read_message(1, &fdas);
 	    }
-	if (now > lastl)
+	timeofday = time(NULL);
+	if (timeofday > lastl)
 	    {
 		decay_activity();
-		lastl = now;
+		lastl = timeofday;
 	    }
 #else
 	(void)read_message(delay, &fdall);
+	timeofday = time(NULL);
 #endif
 
 	Debug((DEBUG_DEBUG ,"Got message(s)"));
-
-	now = time(NULL);
 	/*
 	** ...perhaps should not do these loops every time,
 	** but only if there is some chance of something
@@ -802,9 +850,9 @@ time_t	delay;
 	** time might be too far away... (similarly with
 	** ping times) --msa
 	*/
-	if (now >= nextping)
+	if (timeofday >= nextping)
 	    {
-		nextping = check_pings(now);
+		nextping = check_pings(timeofday);
 		rehashed = 0;
 	    }
 
@@ -937,4 +985,55 @@ static	void	setup_signals()
 	*/
 	(void)siginterrupt(SIGALRM, 1);
 #endif
+}
+
+/*
+ * Called from bigger_hash_table(), s_die(), server_reboot(),
+ * main(after initializations), grow_history().
+ */
+void ircd_writetune(filename)
+char *filename;
+{
+	FILE	*fp;
+
+	if ((fp = fopen(filename, "w")))
+	    {
+		(void) fprintf(fp, "%d\n%d\n%d\n%d\n%d\n%d\n", ww_size,
+			       lk_size, _HASHSIZE, _CHANNELHASHSIZE,
+			       _SERVERSIZE, poolsize);
+		fclose(fp);
+	    }
+}
+
+/*
+ * Called only from main() at startup.
+ */
+void ircd_readtune(filename)
+char *filename;
+{
+	FILE	*fp;
+
+	(void)alarm(3);
+	fp = fopen(filename, "r");
+	(void)alarm(0);
+	if (fp)
+	    {
+		if (fscanf(fp, "%d\n%d\n%d\n%d\n%d\n%d\n", &ww_size, &lk_size,
+			   &_HASHSIZE, &_CHANNELHASHSIZE, &_SERVERSIZE,
+			   &poolsize) != 6)
+		    {
+			fprintf(stderr, "ircd tune file %s: bad format\n",
+				filename);
+			fclose(fp);
+			exit(1);
+		    }
+		/*
+		** the lock array only grows if the whowas array grows,
+		** I don't think it should be initialized with a lower
+		** size since it will never adjust unless whowas array does.
+		*/
+		if (lk_size < ww_size)
+			lk_size = ww_size;
+		fclose(fp);
+	    }
 }

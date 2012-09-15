@@ -36,5 +36,6 @@ typedef	struct	hashentry {
 
 extern	int	_HASHSIZE;
 extern	int	_CHANNELHASHSIZE;
+extern	int	_SERVERSIZE;
 
 #endif	/* __hash_include__ */
