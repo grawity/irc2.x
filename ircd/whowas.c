@@ -24,7 +24,7 @@
  */
 
 #ifndef lint
-static const volatile char rcsid[] = "@(#)$Id: whowas.c,v 1.11 2004/10/01 20:22:16 chopin Exp $";
+static const volatile char rcsid[] = "@(#)$Id: whowas.c,v 1.12 2004/11/19 15:10:08 chopin Exp $";
 #endif
 
 #include "os.h"
@@ -375,7 +375,7 @@ int	m_whowas(aClient *cptr, aClient *sptr, int parc, char *parv[])
 	Reg	int	j = 0;
 	Reg	anUser	*up = NULL;
 	int	max = -1;
-	char	*p, *nick, *s;
+	char	*p = NULL, *nick, *s;
 
  	if (parc < 2)
 	    {
