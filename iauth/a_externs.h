@@ -34,3 +34,6 @@
 #include "mod_lhex_ext.h"
 #include "mod_webproxy_ext.h"
 #include "mod_dnsbl_ext.h"
+#ifdef USE_PGSQL
+# include "mod_pgsql_ext.h"
+#endif
